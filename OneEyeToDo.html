@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一眼 Todo - 多彩字牆</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700;900&family=Noto+Serif+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%);
+            --text-main: #1E293B;
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.8);
+        }
+        body {
+            font-family: 'Noto Sans TC', system-ui, -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+        .font-serif-tc {
+            font-family: 'Noto Serif TC', "Georgia", "Times New Roman", "PMingLiU", "TW-Sung", serif;
+        }
+        
+        .glass-app {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1), inset 0 0 15px rgba(255, 255, 255, 0.5);
+        }
+
+        @keyframes fadeInScale {
+            0% { opacity: 0; transform: scale(0.8) rotate(var(--target-rot)); }
+            100% { opacity: 1; transform: scale(1) rotate(var(--target-rot)); }
+        }
+
+        .word-item {
+            position: absolute; 
+            transition: filter 0.6s, opacity 0.6s;
+            display: block;
+            cursor: pointer;
+            transform-origin: center center;
+            padding: 8px; /* 微調 padding 讓邊界更貼合 */
+            text-align: center;
+            white-space: normal; 
+            word-wrap: break-word; 
+            /* 動畫會帶入各自的目標旋轉角度 */
+            animation: fadeInScale 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+            line-height: 1.1;
+        }
+        
+        .word-item:hover {
+            z-index: 100 !important;
+            filter: brightness(1.1) drop-shadow(0 10px 20px rgba(0,0,0,0.15));
+        }
+
+        .horizontal-text {
+            writing-mode: horizontal-tb;
+            max-width: 7em; 
+        }
+
+        .vertical-text {
+            writing-mode: vertical-lr; 
+            text-orientation: upright; 
+            max-height: 8em; 
+            max-width: none; 
+            line-height: 1.2; 
+        }
+
+        .completed-task {
+            opacity: 0.15 !important;
+            filter: grayscale(1) blur(1px);
+            text-decoration: line-through;
+            pointer-events: none;
+        }
+
+        .delete-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #EF4444;
+            color: white;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
+            transform: scale(0);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 110;
+            cursor: pointer;
+        }
+        .is-deleting .word-item {
+            animation: gentle-shake 0.5s infinite alternate ease-in-out forwards;
+        }
+        .is-deleting .delete-badge {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        @keyframes gentle-shake {
+            0% { transform: scale(1) rotate(calc(var(--target-rot) - 1deg)); }
+            100% { transform: scale(1) rotate(calc(var(--target-rot) + 1deg)); }
+        }
+
+        .cal-day {
+            padding: 8px 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            color: #64748B;
+        }
+        .cal-day:hover { background: rgba(255, 255, 255, 0.7); color: #0F172A; }
+        .cal-day.active {
+            background-color: #1E293B;
+            color: #FFFFFF !important;
+            box-shadow: 0 8px 20px rgba(30, 41, 59, 0.2);
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        @keyframes pulse-warm {
+            0%, 100% { border-color: rgba(239, 68, 68, 0.1); }
+            50% { border-color: rgba(239, 68, 68, 0.4); }
+        }
+        .limit-reached { animation: pulse-warm 1s infinite; border-width: 2px; }
+
+        #undo-toast, #save-toast {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%) translateY(200px);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+        }
+        #undo-toast.show, #save-toast.show { transform: translateX(-50%) translateY(0); }
+        
+        #file-input { display: none; }
+        
+        .spin-slow { animation: spin 2s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+
+    <div class="w-full max-w-5xl h-[94vh] glass-app rounded-[3rem] overflow-hidden flex flex-col relative">
+        
+        <!-- Header -->
+        <header class="px-12 pt-10 pb-2 flex justify-between items-end shrink-0 border-b border-white/50 relative z-20">
+            <div>
+                <h1 class="text-3xl font-serif-tc font-black tracking-widest text-slate-800 mb-3 drop-shadow-sm">一眼 Todo</h1>
+                <div class="flex items-center gap-4">
+                    <span id="display-date" class="text-3xl font-serif-tc font-bold tracking-tight text-slate-500">MAY 20</span>
+                </div>
+            </div>
+            <div class="flex flex-col items-end pb-1">
+                <div id="task-counter" class="text-5xl font-serif-tc font-black text-slate-400 tabular-nums leading-none mb-2">0/10</div>
+                <div class="flex gap-2">
+                    <button type="button" onclick="exportData()" class="text-[10px] font-bold tracking-widest px-3 py-1 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 transition-all" title="匯出備份檔">匯出資料</button>
+                    <button type="button" onclick="document.getElementById('file-input').click()" class="text-[10px] font-bold tracking-widest px-3 py-1 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 transition-all" title="載入備份檔">匯入資料</button>
+                    <input type="file" id="file-input" accept=".json" onchange="importData(event)">
+                </div>
+            </div>
+        </header>
+
+        <!-- Calendar Section -->
+        <div class="px-12 mt-6 shrink-0 relative z-20">
+            <div class="bg-white/40 rounded-[2rem] p-5 backdrop-blur-md shadow-sm border border-white/60">
+                <div class="flex justify-between items-center mb-4 px-2">
+                    <span id="calendar-title" class="text-xs font-bold tracking-[0.2em] uppercase text-slate-500"></span>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="changeCalendarMode('week')" id="mode-week" class="text-[10px] font-bold tracking-widest px-3 py-1 rounded-full transition-all border border-transparent">WEEK</button>
+                        <button type="button" onclick="changeCalendarMode('month')" id="mode-month" class="text-[10px] font-bold tracking-widest px-3 py-1 rounded-full transition-all border border-transparent">MONTH</button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-7 gap-2 text-center mb-2 border-b border-white/40 pb-2">
+                    <span class="text-[10px] font-sans tracking-widest font-bold text-rose-400">SUN</span>
+                    <span class="text-[10px] font-sans tracking-widest font-bold text-slate-400">MON</span>
+                    <span class="text-[10px] font-sans tracking-widest font-bold text-slate-400">TUE</span>
+                    <span class="text-[10px] font-sans tracking-widest font-bold text-slate-400">WED</span>
+                    <span class="text-[10px] font-sans tracking-widest font-bold text-slate-400">THU</span>
+                    <span class="text-[10px] font-sans tracking-widest font-bold text-slate-400">FRI</span>
+                    <span class="text-[10px] font-sans tracking-widest font-bold text-slate-400">SAT</span>
+                </div>
+                
+                <div id="calendar-grid" class="grid grid-cols-7 gap-2 text-center"></div>
+            </div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="px-12 mt-6 shrink-0 relative z-20">
+            <div id="input-bar" class="bg-white/80 rounded-[2rem] p-2 flex items-center gap-4 shadow-sm border border-white transition-all">
+                <input type="text" id="task-input" placeholder="寫下盤踞在腦海中的事..." 
+                    class="flex-1 bg-transparent px-6 py-4 outline-none font-bold text-lg text-slate-800 placeholder:text-slate-400 placeholder:font-normal"
+                    maxlength="30"
+                    onkeydown="handleInputKey(event)">
+                
+                <div class="flex bg-slate-100/80 rounded-full p-1 border border-white/50">
+                    <button type="button" onclick="setWeight(1)" id="w-btn-1" class="w-12 h-10 rounded-full text-xs font-bold tracking-widest transition-all text-slate-500">輕</button>
+                    <button type="button" onclick="setWeight(2)" id="w-btn-2" class="w-12 h-10 rounded-full text-xs font-bold tracking-widest transition-all bg-white shadow-sm text-slate-800">中</button>
+                    <button type="button" onclick="setWeight(3)" id="w-btn-3" class="w-12 h-10 rounded-full text-xs font-bold tracking-widest transition-all text-slate-500">重</button>
+                </div>
+
+                <button type="button" onclick="addTask()" class="bg-slate-800 text-white w-14 h-14 rounded-full flex items-center justify-center hover:bg-black transition-all shadow-md active:scale-95">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- 字牆畫布 (核心區域) -->
+        <main class="flex-1 relative overflow-auto m-8 mt-6 no-scrollbar z-10" id="cloud-container">
+            <!-- JS 將在此絕對定位所有字體 -->
+        </main>
+
+        <!-- Footer -->
+        <footer class="px-12 py-8 flex items-center justify-between bg-white/30 border-t border-white/50 shrink-0 relative z-20">
+            <p id="secretary-msg" class="text-sm font-serif-tc text-slate-600 max-w-xl italic tracking-wide">「 歡迎回來，讓壓力視覺化，然後逐一擊破。 」</p>
+            <div class="flex items-center gap-4">
+                
+                <!-- 自動存檔狀態指示器 -->
+                <div class="flex items-center gap-2 bg-white/60 px-4 py-2 rounded-full border border-white shadow-sm transition-all duration-300" id="auto-save-indicator">
+                    <svg id="save-icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-500"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    <span id="save-status-text" class="text-xs font-bold tracking-widest text-slate-500 uppercase">已自動儲存</span>
+                </div>
+
+                <!-- 刪除模式按鈕 -->
+                <button type="button" onclick="toggleDeleteMode()" id="delete-btn" class="text-slate-500 hover:text-red-500 transition-colors bg-white p-3 rounded-full shadow-sm hover:shadow-md border border-white">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                </button>
+            </div>
+        </footer>
+
+        <!-- Toasts -->
+        <div id="undo-toast" class="bg-slate-800 text-white px-8 py-4 rounded-full shadow-xl flex items-center gap-6 border border-slate-700">
+            <span class="text-sm font-bold tracking-widest">項目已清除</span>
+            <button type="button" onclick="undoDelete()" class="text-blue-400 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border border-blue-400/30 hover:bg-blue-400/10 transition-colors">Undo</button>
+        </div>
+        
+        <div id="save-toast" class="bg-emerald-600 text-white px-8 py-4 rounded-full shadow-xl flex items-center gap-6 border border-emerald-500">
+            <span id="save-toast-msg" class="text-sm font-bold tracking-widest">資料處理成功</span>
+        </div>
+
+    </div>
+
+    <script>
+        const COLOR_PALETTE = {
+            3: ["#B91C1C", "#1D4ED8", "#047857", "#C2410C", "#6D28D9"], 
+            2: ["#EF4444", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6"], 
+            1: ["#F87171", "#60A5FA", "#34D399", "#FBBF24", "#A78BFA"]  
+        };
+
+        const MESSAGES = {
+            morning: ["早安。今天的字牆還算清爽，維持這份留白。", "在能量最高的時刻，挑戰那個最沉重的字體。"],
+            afternoon: ["午後容易分心，盯著字牆中心看十秒再出發。", "任憑思緒蔓延，不如親手劃掉一個變淡的任務。"],
+            evening: ["入夜了，別讓沉重的字體陪你過夜。", "清空這面牆，是給明天最好的禮物。"],
+            overload: ["十個了。你的字牆已經滿載，請勿再增添壓力。", "停止輸入。現在最重要的是解決眼前的巨字。"],
+            productive: ["舒服。看著文字消失是種純粹的享受。", "節奏很好，這面牆漸漸透出呼吸的空間了。"]
+        };
+
+        // --- 資料載入與初始化 ---
+        let allData = {};
+        
+        function loadDataFromStorage() {
+            try {
+                const storedData = localStorage.getItem('eye_todo_v5');
+                if (storedData) {
+                    allData = JSON.parse(storedData);
+                } else {
+                    allData = {};
+                }
+            } catch (e) {
+                console.error("解析 Local Storage 資料失敗，可能資料已損毀", e);
+                allData = {};
+            }
+        }
+        
+        loadDataFromStorage();
+
+        let currentWeight = 2;
+        let isDeleteMode = false;
+        let lastDeleted = null;
+        let undoTimeout = null;
+        let saveToastTimeout = null;
+        let calendarMode = 'week';
+
+        const getToday = () => {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        };
+        let currentDay = getToday();
+
+        // --- 核心邏輯 ---
+
+        function changeCalendarMode(mode) {
+            calendarMode = mode;
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = "";
+            
+            const parts = currentDay.split('-');
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1; 
+            const day = parseInt(parts[2], 10);
+            
+            const selectedDateObj = new Date(year, month, day);
+            const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            
+            document.getElementById('calendar-title').innerText = `${months[selectedDateObj.getMonth()]} ${selectedDateObj.getFullYear()}`;
+            
+            const activeModeClass = "bg-slate-800 shadow-sm text-white border-slate-800";
+            const inactiveModeClass = "text-slate-400 hover:text-slate-800 border-transparent";
+            document.getElementById('mode-week').className = `text-[10px] font-bold tracking-widest px-4 py-1.5 rounded-full transition-all border ${calendarMode === 'week' ? activeModeClass : inactiveModeClass}`;
+            document.getElementById('mode-month').className = `text-[10px] font-bold tracking-widest px-4 py-1.5 rounded-full transition-all border ${calendarMode === 'month' ? activeModeClass : inactiveModeClass}`;
+
+            let days = [];
+            if (calendarMode === 'week') {
+                const start = new Date(selectedDateObj);
+                start.setDate(selectedDateObj.getDate() - selectedDateObj.getDay());
+                for (let i = 0; i < 7; i++) {
+                    days.push(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
+                }
+            } else {
+                const startOfView = new Date(selectedDateObj.getFullYear(), selectedDateObj.getMonth(), 1);
+                startOfView.setDate(startOfView.getDate() - startOfView.getDay());
+                for (let i = 0; i < 35; i++) {
+                    days.push(new Date(startOfView.getFullYear(), startOfView.getMonth(), startOfView.getDate() + i));
+                }
+            }
+
+            days.forEach((dayObj) => {
+                const dateKey = `${dayObj.getFullYear()}-${String(dayObj.getMonth() + 1).padStart(2, '0')}-${String(dayObj.getDate()).padStart(2, '0')}`;
+                const hasTasks = allData[dateKey] && allData[dateKey].length > 0;
+                const isActive = dateKey === currentDay;
+                
+                const dayEl = document.createElement('div');
+                dayEl.className = `cal-day ${isActive ? 'active' : ''}`;
+                dayEl.innerHTML = `
+                    <span class="text-base font-serif-tc font-bold">${dayObj.getDate()}</span>
+                    <div class="w-1.5 h-1.5 mt-1 rounded-full ${hasTasks ? 'bg-current opacity-80' : 'opacity-0'}"></div>
+                `;
+                dayEl.onclick = () => { currentDay = dateKey; render(); };
+                grid.appendChild(dayEl);
+            });
+        }
+
+        function setWeight(w) {
+            currentWeight = w;
+            [1, 2, 3].forEach(i => {
+                const btn = document.getElementById(`w-btn-${i}`);
+                btn.classList.toggle('bg-white', i === w);
+                btn.classList.toggle('shadow-sm', i === w);
+                btn.classList.toggle('text-slate-800', i === w);
+                btn.classList.toggle('text-slate-500', i !== w);
+            });
+        }
+
+        function handleInputKey(event) {
+            if (event.key === 'Enter') {
+                if (event.isComposing || event.keyCode === 229) return;
+                event.preventDefault();
+                addTask();
+            }
+        }
+
+        function addTask() {
+            const input = document.getElementById('task-input');
+            const text = input.value.trim();
+            const tasks = allData[currentDay] || [];
+
+            if (!text) return;
+            if (tasks.length >= 10) {
+                document.getElementById('input-bar').classList.add('limit-reached');
+                setTimeout(() => document.getElementById('input-bar').classList.remove('limit-reached'), 1000);
+                updateMsg("overload");
+                return;
+            }
+
+            const newTask = {
+                id: Date.now(),
+                text: text,
+                weight: currentWeight,
+                completed: false,
+                // 直橫交錯稍微偏重橫向較易閱讀，但保有隨機性
+                isVertical: Math.random() > 0.7, 
+                color: COLOR_PALETTE[currentWeight][Math.floor(Math.random() * COLOR_PALETTE[currentWeight].length)]
+            };
+
+            if (!allData[currentDay]) allData[currentDay] = [];
+            allData[currentDay].push(newTask);
+            input.value = "";
+            
+            saveData(false); 
+            render();
+            updateMsg();
+        }
+
+        function toggleTask(id) {
+            if (isDeleteMode) { deleteTask(id); return; }
+            const tasks = allData[currentDay] || [];
+            const t = tasks.find(x => x.id === id);
+            if (t) {
+                t.completed = !t.completed;
+                if (t.completed) updateMsg("productive");
+                saveData(false);
+                render();
+            }
+        }
+
+        function deleteTask(id) {
+            const tasks = allData[currentDay] || [];
+            const idx = tasks.findIndex(x => x.id === id);
+            if (idx !== -1) {
+                lastDeleted = { task: tasks[idx], index: idx, date: currentDay };
+                tasks.splice(idx, 1);
+                
+                if (tasks.length === 0) {
+                    delete allData[currentDay];
+                }
+                
+                const toast = document.getElementById('undo-toast');
+                toast.classList.add('show');
+                clearTimeout(undoTimeout);
+                undoTimeout = setTimeout(() => toast.classList.remove('show'), 5000);
+                
+                if (tasks.length === 0) {
+                    isDeleteMode = false;
+                    document.getElementById('delete-btn').classList.remove('text-red-500', 'bg-red-50', 'border-red-200');
+                    document.getElementById('cloud-container').classList.remove('is-deleting');
+                }
+                saveData(false);
+                render();
+            }
+        }
+
+        function undoDelete() {
+            if (!lastDeleted) return;
+            if (!allData[lastDeleted.date]) {
+                 allData[lastDeleted.date] = [];
+            }
+            allData[lastDeleted.date].splice(lastDeleted.index, 0, lastDeleted.task);
+            lastDeleted = null;
+            document.getElementById('undo-toast').classList.remove('show');
+            saveData(false);
+            render();
+        }
+
+        function toggleDeleteMode() {
+            const tasks = allData[currentDay] || [];
+            if (tasks.length === 0) return; 
+            
+            isDeleteMode = !isDeleteMode;
+            document.getElementById('delete-btn').classList.toggle('text-red-500', isDeleteMode);
+            document.getElementById('delete-btn').classList.toggle('bg-red-50', isDeleteMode);
+            document.getElementById('delete-btn').classList.toggle('border-red-200', isDeleteMode);
+            document.getElementById('cloud-container').classList.toggle('is-deleting', isDeleteMode);
+        }
+        
+        function showSaveToast(msg) {
+             const toast = document.getElementById('save-toast');
+             document.getElementById('save-toast-msg').innerText = msg;
+             toast.classList.add('show');
+             clearTimeout(saveToastTimeout);
+             saveToastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // --- 自動儲存機制與視覺回饋 ---
+        function saveData(showToast = false) {
+            try {
+                localStorage.setItem('eye_todo_v5', JSON.stringify(allData));
+                
+                // 動態狀態列，給予「正在自動儲存」的安全感
+                const statusText = document.getElementById('save-status-text');
+                const saveIcon = document.getElementById('save-icon-svg');
+                
+                if(statusText && saveIcon) {
+                    statusText.innerText = '儲存中...';
+                    statusText.classList.replace('text-slate-500', 'text-emerald-600');
+                    saveIcon.classList.add('spin-slow');
+                    saveIcon.innerHTML = `<circle cx="12" cy="12" r="10" stroke-width="2" stroke-dasharray="30" stroke-linecap="round"></circle>`;
+                    
+                    setTimeout(() => {
+                        statusText.innerText = '已自動儲存';
+                        statusText.classList.replace('text-emerald-600', 'text-slate-500');
+                        saveIcon.classList.remove('spin-slow');
+                        saveIcon.innerHTML = `<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline>`;
+                    }, 600);
+                }
+
+                if (showToast) showSaveToast("資料已儲存");
+            } catch (e) {
+                console.error("無法儲存至 Local Storage。", e);
+                if (showToast) alert("儲存失敗！請確認瀏覽器是否允許本地儲存。");
+                const statusText = document.getElementById('save-status-text');
+                if(statusText) {
+                    statusText.innerText = '儲存失敗';
+                    statusText.classList.replace('text-slate-500', 'text-red-500');
+                }
+            }
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(allData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = 'eye_todo_backup_' + getToday() + '.json';
+
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            showSaveToast("已下載備份檔");
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (typeof importedData === 'object' && importedData !== null && !Array.isArray(importedData)) {
+                        allData = importedData;
+                        saveData(false);
+                        render();
+                        showSaveToast("資料匯入成功");
+                    } else {
+                        alert("檔案格式不正確。");
+                    }
+                } catch (err) {
+                    alert("讀取檔案失敗，請確認檔案是否為有效的 JSON 格式。");
+                }
+                event.target.value = ''; 
+            };
+            reader.readAsText(file);
+        }
+
+        function updateMsg(type = null) {
+            const hour = new Date().getHours();
+            let t = type || (hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening');
+            const pool = MESSAGES[t];
+            document.getElementById('secretary-msg').innerText = `「 ${pool[Math.floor(Math.random()*pool.length)]} 」`;
+        }
+
+        // --- 核心排列演算法優化 (緊密排列) ---
+        function render() {
+            const container = document.getElementById('cloud-container');
+            const tasks = (allData[currentDay] || []);
+            
+            document.getElementById('task-counter').innerText = `${tasks.length}/10`;
+            const parts = currentDay.split('-');
+            const displayDateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            document.getElementById('display-date').innerText = displayDateObj.toLocaleDateString('en-US', {month:'short', day:'numeric'}).toUpperCase();
+
+            renderCalendar();
+
+            container.innerHTML = "";
+            if (tasks.length === 0) {
+                container.innerHTML = `<div class="w-full h-full flex items-center justify-center opacity-10 text-4xl font-serif-tc font-black italic tracking-widest">ZERO PRESSURE</div>`;
+                return;
+            }
+
+            // 【優化點 1】改為「權重優先」排序：越重的越先畫（擺在中心），同權重才打亂
+            const sortedTasks = [...tasks].sort((a, b) => {
+                if(b.weight !== a.weight) return b.weight - a.weight;
+                return Math.random() - 0.5;
+            });
+
+            const inner = document.createElement('div');
+            inner.style.position = 'relative';
+            inner.style.width = '10000px';
+            inner.style.height = '10000px';
+            container.appendChild(inner);
+
+            const placedRects = [];
+            let minX = 0, maxX = 0, minY = 0, maxY = 0;
+            
+            const itemsData = sortedTasks.map(task => {
+                const item = document.createElement('div');
+                
+                item.className = `word-item ${task.isVertical ? 'vertical-text' : 'horizontal-text'} ${task.completed ? 'completed-task' : ''}`;
+                
+                const sizeMap = { 
+                    3: [4.8, 900, 'serif'], 
+                    2: [2.5, 700, 'sans'], 
+                    1: [1.3, 400, 'sans'] 
+                };
+                item.style.fontSize = `${sizeMap[task.weight][0]}rem`;
+                item.style.fontWeight = sizeMap[task.weight][1];
+                item.className += sizeMap[task.weight][2] === 'serif' ? ' font-serif-tc' : '';
+                item.style.color = task.color;
+                
+                const deleteBtnHtml = `<div class="delete-badge" onclick="event.stopPropagation(); deleteTask(${task.id})">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </div>`;
+                
+                item.innerHTML = task.text + deleteBtnHtml;
+                item.onclick = () => toggleTask(task.id);
+
+                inner.appendChild(item);
+
+                // 隨機傾斜 -5 到 5 度，帶來凌亂的視覺動態感
+                const rot = (Math.random() * 10 - 5);
+                item.style.setProperty('--target-rot', `${rot}deg`);
+                
+                return { item, task, rot };
+            });
+
+            // 取得真實長寬與 AABB (旋轉後的邊界框)
+            itemsData.forEach(data => {
+                data.rawW = data.item.offsetWidth;
+                data.rawH = data.item.offsetHeight;
+                
+                const rad = Math.abs(data.rot) * Math.PI / 180;
+                data.w = data.rawW * Math.cos(rad) + data.rawH * Math.sin(rad);
+                data.h = data.rawW * Math.sin(rad) + data.rawH * Math.cos(rad);
+            });
+
+            // 【優化點 2】緊密螺旋碰撞演算 (Tight Archimedean Spiral)
+            itemsData.forEach((data, index) => {
+                let found = false;
+                let cx = 0, cy = 0;
+                let theta = 0;
+                // 螺旋參數：a 決定螺旋線的間距，越小代表縫隙越少
+                const a = 1.0; 
+
+                while (!found) {
+                    let r = a * theta;
+                    cx = r * Math.cos(theta);
+                    cy = r * Math.sin(theta);
+
+                    const testX = cx - data.w / 2;
+                    const testY = cy - data.h / 2;
+                    // gap 設為極小，讓單字有緊緊相連的感覺
+                    const gap = 1;
+
+                    // 碰撞偵測 (AABB)
+                    const isOverlap = placedRects.some(rect => {
+                        return !(testX + data.w + gap <= rect.x || 
+                                 testX >= rect.x + rect.w + gap || 
+                                 testY + data.h + gap <= rect.y || 
+                                 testY >= rect.y + rect.h + gap);
+                    });
+
+                    // 第一個物件強制放在中心，或沒有重疊時放置
+                    if (!isOverlap || index === 0) {
+                        found = true;
+                        placedRects.push({ x: testX, y: testY, w: data.w, h: data.h });
+                        
+                        if (index === 0) {
+                            minX = testX; maxX = testX + data.w;
+                            minY = testY; maxY = testY + data.h;
+                        } else {
+                            minX = Math.min(minX, testX);
+                            maxX = Math.max(maxX, testX + data.w);
+                            minY = Math.min(minY, testY);
+                            maxY = Math.max(maxY, testY + data.h);
+                        }
+                    } else {
+                        // 依照目前的半徑，決定走多少角度才能剛好前進約 2~3 個像素
+                        // 這樣能保證極其細緻地尋找空隙，不會跳過能塞入單字的空間
+                        theta += 3.0 / Math.max(r, 1); 
+                    }
+                }
+                
+                data.elementLeft = cx - data.rawW / 2;
+                data.elementTop = cy - data.rawH / 2;
+            });
+
+            // 中心校正與畫布裁切
+            const reqWidth = maxX - minX;
+            const reqHeight = maxY - minY;
+            const containerW = container.offsetWidth;
+            const containerH = container.offsetHeight;
+            
+            const finalW = Math.max(containerW, reqWidth + 80);
+            const finalH = Math.max(containerH, reqHeight + 80);
+            
+            inner.style.width = `${finalW}px`;
+            inner.style.height = `${finalH}px`;
+
+            const offsetX = (finalW - reqWidth) / 2 - minX;
+            const offsetY = (finalH - reqHeight) / 2 - minY;
+
+            itemsData.forEach(data => {
+                data.item.style.left = `${data.elementLeft + offsetX}px`;
+                data.item.style.top = `${data.elementTop + offsetY}px`;
+                // 旋轉交給 CSS 變數動畫控制
+            });
+            
+            // 每次重新繪製確保有對齊畫布中央
+            container.scrollTo({
+                left: (finalW - containerW) / 2,
+                top: (finalH - containerH) / 2,
+                behavior: 'smooth'
+            });
+        }
+
+        window.onload = () => {
+            loadDataFromStorage();
+            render();
+            updateMsg();
+            
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'eye_todo_v5') {
+                    loadDataFromStorage();
+                    render();
+                }
+            });
+        };
+        
+        // 確保視窗縮放時能正確再對齊一次
+        let resizeTimeout;
+        window.onresize = () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(render, 100);
+        }; 
+    </script>
+</body>
+</html>
