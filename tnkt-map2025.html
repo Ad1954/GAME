@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>北北基桃房價全區地圖 - 2025年11月版</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #map { height: 750px; width: 100%; border-radius: 12px; }
+        .info-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .legend { background: white; padding: 12px; line-height: 1.8; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 13px; border: 1px solid #e2e8f0; }
+        .legend i { width: 14px; height: 14px; float: left; margin-right: 10px; border-radius: 50%; margin-top: 4px; }
+        .city-tag { font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 9999px; margin-bottom: 4px; display: inline-block; }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900">
+    <div class="max-w-7xl mx-auto p-4 md:p-8">
+        <header class="mb-8 flex flex-col md:flex-row justify-between items-end border-b border-slate-200 pb-6">
+            <div>
+                <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight">北北基桃房價實價資訊地圖</h1>
+                <p class="text-slate-500 mt-2 flex items-center gap-2">
+                    <span class="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    全區 61 個行政區行情配置 (數據最後更新：2025年11月)
+                </p>
+            </div>
+            <div class="text-right text-xs text-slate-400 mt-4 md:mt-0">
+                Data Source: 實價登錄模擬分析模型
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- 地圖區域 -->
+            <div class="lg:col-span-3">
+                <div id="map" class="border border-slate-200 shadow-2xl"></div>
+            </div>
+
+            <!-- 資訊看板 -->
+            <div class="lg:col-span-1 space-y-6">
+                <div id="info-panel" class="info-box border border-slate-100">
+                    <h2 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        區域行情詳情
+                    </h2>
+                    <div id="info-content">
+                        <div class="text-center py-20">
+                            <div class="bg-slate-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                                </svg>
+                            </div>
+                            <p class="text-slate-400 text-sm italic">請在左側地圖選取行政區</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-slate-800 text-white p-5 rounded-xl shadow-lg">
+                    <h3 class="font-bold mb-4 text-sm flex items-center gap-2 text-blue-400">
+                        <span class="w-1 h-4 bg-blue-400 rounded-full"></span>
+                        行情單位說明
+                    </h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        本圖表標示之數值皆為該行政區之「平均成交單價」，單位為 <span class="text-white font-bold">萬/坪</span>。
+                        <br><br>
+                        實際成交價受房地屋齡、樓層、裝潢影響，本數據僅供區域橫向對比參考。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map', {
+            zoomSnap: 0.5,
+            scrollWheelZoom: true
+        }).setView([25.04, 121.52], 10.5);
+
+        // 使用高質感的灰階底圖
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+        }).addTo(map);
+
+        const cityColors = { 
+            1: "#ef4444", // 台北 - 紅
+            2: "#3b82f6", // 新北 - 藍
+            3: "#f59e0b", // 基隆 - 橘
+            4: "#10b981"  // 桃園 - 綠
+        };
+
+        const cityNames = { 1: "台北市", 2: "新北市", 3: "基隆市", 4: "桃園市" };
+
+        // 2025年11月 預估行情數據 (萬/坪)
+        const areaData = [
+            // 台北市 (12)
+            ["中正區", 25.0324, 121.5190, 235, 82, 105, 128, 1],
+            ["大同區", 25.0645, 121.5133, 165, 68, 85, 105, 1],
+            ["中山區", 25.0685, 121.5266, 195, 75, 92, 118, 1],
+            ["萬華區", 25.0354, 121.4997, 145, 58, 72, 88, 1],
+            ["大安區", 25.0263, 121.5434, 310, 105, 128, 165, 1],
+            ["信義區", 25.0339, 121.5646, 280, 95, 115, 155, 1],
+            ["松山區", 25.0599, 121.5572, 245, 88, 108, 142, 1],
+            ["內湖區", 25.0697, 121.5886, 175, 68, 82, 102, 1],
+            ["南港區", 25.0546, 121.6070, 170, 65, 85, 110, 1],
+            ["士林區", 25.0933, 121.5260, 185, 70, 88, 115, 1],
+            ["北投區", 25.1321, 121.4988, 135, 58, 70, 92, 1],
+            ["文山區", 24.9893, 121.5701, 125, 58, 68, 85, 1],
+            // 新北市 (29)
+            ["板橋區", 25.0117, 121.4658, 125, 52, 65, 85, 2],
+            ["三重區", 25.0620, 121.4881, 110, 48, 58, 78, 2],
+            ["中和區", 24.9960, 121.5030, 105, 52, 62, 78, 2],
+            ["永和區", 25.0080, 121.5170, 120, 58, 72, 88, 2],
+            ["新莊區", 25.0330, 121.4420, 102, 45, 55, 75, 2],
+            ["新店區", 24.9650, 121.5400, 108, 48, 62, 82, 2],
+            ["樹林區", 24.9800, 121.4200, 75, 38, 45, 55, 2],
+            ["鶯歌區", 24.9550, 121.3500, 52, 28, 35, 45, 2],
+            ["三峽區", 24.9350, 121.3700, 65, 32, 42, 55, 2],
+            ["淡水區", 25.1750, 121.4450, 58, 28, 35, 48, 2],
+            ["汐止區", 25.0650, 121.6600, 85, 42, 52, 65, 2],
+            ["瑞芳區", 25.1050, 121.8000, 28, 15, 18, 22, 2],
+            ["土城區", 24.9750, 121.4450, 92, 45, 55, 72, 2],
+            ["蘆洲區", 25.0850, 121.4750, 95, 48, 58, 72, 2],
+            ["五股區", 25.0800, 121.4350, 68, 35, 42, 52, 2],
+            ["泰山區", 25.0550, 121.4300, 72, 38, 45, 58, 2],
+            ["林口區", 25.0750, 121.3900, 82, 32, 45, 62, 2],
+            ["深坑區", 25.0000, 121.6150, 55, 32, 40, 48, 2],
+            ["石碇區", 24.9900, 121.6600, 25, 12, 15, 18, 2],
+            ["坪林區", 24.9350, 121.7100, 22, 12, 15, 18, 2],
+            ["三芝區", 25.2550, 121.5000, 28, 15, 18, 22, 2],
+            ["石門區", 25.2900, 121.5600, 22, 10, 15, 18, 2],
+            ["八里區", 25.1450, 121.4000, 48, 25, 32, 42, 2],
+            ["平溪區", 25.0250, 121.7400, 18, 8, 10, 12, 2],
+            ["雙溪區", 25.0350, 121.8600, 18, 8, 10, 12, 2],
+            ["貢寮區", 25.0250, 121.9400, 20, 10, 12, 15, 2],
+            ["金山區", 25.2200, 121.6350, 28, 15, 18, 22, 2],
+            ["萬里區", 25.1750, 121.6900, 25, 12, 18, 20, 2],
+            ["烏來區", 24.8650, 121.5500, 20, 10, 12, 15, 2],
+            // 基隆市 (7)
+            ["基隆仁愛區", 25.1282, 121.7410, 52, 25, 32, 40, 3],
+            ["基隆信義區", 25.1290, 121.7650, 38, 20, 25, 32, 3],
+            ["基隆中正區", 25.1500, 121.7650, 35, 18, 22, 28, 3],
+            ["基隆中山區", 25.1400, 121.7300, 32, 18, 20, 25, 3],
+            ["基隆安樂區", 25.1300, 121.7100, 38, 22, 28, 35, 3],
+            ["基隆暖暖區", 25.1000, 121.7350, 32, 18, 22, 28, 3],
+            ["基隆七堵區", 25.0950, 121.7150, 35, 20, 25, 30, 3],
+            // 桃園市 (13)
+            ["桃園區", 24.9936, 121.3010, 75, 32, 42, 52, 4],
+            ["中壢區", 24.9537, 121.2257, 72, 30, 38, 50, 4],
+            ["平鎮區", 24.9200, 121.2100, 55, 25, 32, 42, 4],
+            ["八德區", 24.9300, 121.2900, 60, 28, 35, 45, 4],
+            ["楊梅區", 24.9100, 121.1400, 38, 18, 22, 30, 4],
+            ["蘆竹區", 25.0450, 121.2850, 68, 30, 40, 52, 4],
+            ["大溪區", 24.8800, 121.2850, 38, 20, 25, 32, 4],
+            ["龍潭區", 24.8600, 121.2100, 40, 20, 25, 32, 4],
+            ["龜山區", 24.9950, 121.3350, 68, 30, 38, 55, 4],
+            ["大園區", 25.0600, 121.2000, 55, 22, 32, 48, 4],
+            ["觀音區", 25.0350, 121.0800, 32, 15, 20, 28, 4],
+            ["新屋區", 24.9700, 121.1000, 28, 12, 18, 25, 4],
+            ["復興區", 24.8200, 121.3500, 20, 8, 12, 15, 4]
+        ];
+
+        function updatePanel(data) {
+            const content = document.getElementById('info-content');
+            const cityName = cityNames[data.cityType];
+            const color = cityColors[data.cityType];
+
+            content.innerHTML = `
+                <div class="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div>
+                        <span class="city-tag text-white shadow-sm" style="background-color:${color}">${cityName}</span>
+                        <h3 class="text-2xl font-black text-slate-800">${data.name}</h3>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg group hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-slate-100">
+                            <span class="text-slate-500 text-sm">🌱 土地均價</span>
+                            <span class="font-bold text-slate-700">${data.land} <small class="text-[10px]">萬</small></span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg group hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-slate-100">
+                            <span class="text-slate-500 text-sm">🏘️ 公寓行情</span>
+                            <span class="font-bold text-slate-700">${data.apt} <small class="text-[10px]">萬</small></span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg group hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-slate-100">
+                            <span class="text-slate-500 text-sm">🏢 華廈行情</span>
+                            <span class="font-bold text-slate-700">${data.mansion} <small class="text-[10px]">萬</small></span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <span class="text-blue-600 text-sm font-bold">🏙️ 住宅大樓</span>
+                            <span class="font-black text-blue-700 text-lg">${data.building} <small class="text-[10px]">萬/坪</small></span>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function initMarkers() {
+            areaData.forEach(item => {
+                const [name, lat, lng, land, apt, mansion, building, cityType] = item;
+                const circle = L.circle([lat, lng], {
+                    color: cityColors[cityType],
+                    fillColor: cityColors[cityType],
+                    fillOpacity: 0.5,
+                    radius: 1200,
+                    weight: 2
+                }).addTo(map);
+
+                // 互動事件
+                circle.on('mouseover', function(e) {
+                    this.setStyle({ fillOpacity: 0.8, weight: 4 });
+                    updatePanel({ name, land, apt, mansion, building, cityType });
+                });
+
+                circle.on('mouseout', function(e) {
+                    this.setStyle({ fillOpacity: 0.5, weight: 2 });
+                });
+
+                circle.on('click', function(e) {
+                    map.flyTo([lat, lng], 13);
+                });
+            });
+        }
+
+        // 添加圖例
+        const legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function () {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = '<h4 class="font-bold mb-2 border-b pb-1 text-slate-700 text-xs">行政區標示</h4>';
+            Object.keys(cityColors).forEach(key => {
+                div.innerHTML += `<div><i style="background:${cityColors[key]}"></i>${cityNames[key]}</div>`;
+            });
+            return div;
+        };
+        legend.addTo(map);
+
+        window.onload = initMarkers;
+    </script>
+</body>
+</html>
