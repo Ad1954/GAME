@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ComfyUI Workflow 完整指南</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Noto+Sans+TC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0c0e12;
+    --bg2: #12151b;
+    --bg3: #1a1e28;
+    --border: rgba(255,255,255,0.07);
+    --text: #e8e6df;
+    --muted: #7a7870;
+    --accent: #c8f060;
+    --accent2: #60c8f0;
+    --accent3: #f06080;
+    --purple: #a078f0;
+    --amber: #f0b860;
+    --teal: #60f0c0;
+    --radius: 10px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 48px 40px 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -60px; left: -60px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(200,240,96,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    top: -40px; right: 100px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(96,200,240,0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: #fff;
+    margin-bottom: 16px;
+  }
+  h1 span { color: var(--accent); }
+  .header-sub {
+    font-size: 15px;
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.6;
+  }
+  .workflow-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 24px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 100px;
+  }
+  .workflow-count b { color: var(--text); }
+
+  /* ─── NAV DOTS ─── */
+  .toc {
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .toc a {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .toc a:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ─── WORKFLOW SECTION ─── */
+  .workflow {
+    border-bottom: 1px solid var(--border);
+    padding: 0;
+  }
+
+  .wf-diagram {
+    padding: 40px 40px 32px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .wf-diagram::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--glow, transparent);
+    pointer-events: none;
+  }
+
+  .wf-info {
+    padding: 32px 40px 40px;
+  }
+  .wf-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .wf-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--num-color, var(--accent));
+    border: 1px solid currentColor;
+    padding: 3px 10px;
+    border-radius: 100px;
+    white-space: nowrap;
+    margin-top: 4px;
+    opacity: 0.8;
+  }
+  h2 {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(18px, 2.5vw, 26px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: #fff;
+    line-height: 1.2;
+  }
+  h2 em {
+    font-style: normal;
+    color: var(--num-color, var(--accent));
+  }
+  .wf-desc {
+    font-size: 15px;
+    color: var(--text);
+    line-height: 1.75;
+    max-width: 720px;
+    margin-bottom: 20px;
+  }
+  .wf-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    background: var(--tag-bg, rgba(255,255,255,0.06));
+    color: var(--tag-color, var(--muted));
+    border: 1px solid var(--border);
+  }
+
+  /* ─── NODE DIAGRAM (SVG inline) ─── */
+  .diagram-wrap { overflow-x: auto; }
+  .diagram-wrap svg { display: block; max-width: 100%; }
+
+  /* ─── COLORS PER WORKFLOW ─── */
+  .wf-1 { --num-color: #c8f060; --glow: radial-gradient(ellipse at 10% 50%, rgba(200,240,96,0.04), transparent 60%); }
+  .wf-2 { --num-color: #60c8f0; --glow: radial-gradient(ellipse at 10% 50%, rgba(96,200,240,0.04), transparent 60%); }
+  .wf-3 { --num-color: #f06080; --glow: radial-gradient(ellipse at 10% 50%, rgba(240,96,128,0.04), transparent 60%); }
+  .wf-4 { --num-color: #a078f0; --glow: radial-gradient(ellipse at 10% 50%, rgba(160,120,240,0.04), transparent 60%); }
+  .wf-5 { --num-color: #f0b860; --glow: radial-gradient(ellipse at 10% 50%, rgba(240,184,96,0.04), transparent 60%); }
+  .wf-6 { --num-color: #60f0c0; --glow: radial-gradient(ellipse at 10% 50%, rgba(96,240,192,0.04), transparent 60%); }
+  .wf-7 { --num-color: #c8f060; --glow: radial-gradient(ellipse at 10% 50%, rgba(200,240,96,0.04), transparent 60%); }
+  .wf-8 { --num-color: #60c8f0; --glow: radial-gradient(ellipse at 10% 50%, rgba(96,200,240,0.04), transparent 60%); }
+  .wf-9 { --num-color: #f06080; --glow: radial-gradient(ellipse at 10% 50%, rgba(240,96,128,0.04), transparent 60%); }
+  .wf-10 { --num-color: #a078f0; --glow: radial-gradient(ellipse at 10% 50%, rgba(160,120,240,0.04), transparent 60%); }
+  .wf-11 { --num-color: #f0b860; --glow: radial-gradient(ellipse at 10% 50%, rgba(240,184,96,0.04), transparent 60%); }
+  .wf-12 { --num-color: #60f0c0; --glow: radial-gradient(ellipse at 10% 50%, rgba(96,240,192,0.04), transparent 60%); }
+
+  /* ─── NODE STYLES ─── */
+  .n { font-family: 'DM Mono', monospace; }
+  .nb { font-family: 'DM Mono', monospace; font-weight: 500; }
+  .ns { font-family: 'DM Mono', monospace; font-size: 10px; }
+
+  /* ─── KEY-NOTES LIST ─── */
+  .notes {
+    list-style: none;
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .notes li {
+    font-size: 14px;
+    color: var(--muted);
+    padding-left: 18px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .notes li::before {
+    content: '›';
+    position: absolute;
+    left: 0;
+    color: var(--num-color, var(--accent));
+    font-weight: 700;
+  }
+  .notes b { color: var(--text); font-weight: 500; }
+
+  /* ─── FOOTER ─── */
+  footer {
+    padding: 40px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  footer p { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+
+  /* ─── ANIMATION ─── */
+  .workflow { opacity: 0; transform: translateY(20px); transition: opacity 0.5s, transform 0.5s; }
+  .workflow.visible { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 600px) {
+    header, .wf-diagram, .wf-info, .toc, footer { padding-left: 20px; padding-right: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-eyebrow">Node-Based AI Image Generator</div>
+  <h1>ComfyUI<br><span>Workflow</span> 完整指南</h1>
+  <p class="header-sub">12 種核心節點流程，從基礎文生圖到 Flux 現代架構，一頁覽盡 ComfyUI 的完整能力版圖。</p>
+  <div class="workflow-count">共 <b>12</b> 種 Workflow · 涵蓋生成、修復、動畫、放大</div>
+</header>
+
+<nav class="toc">
+  <a href="#wf1">1 · 文生圖</a>
+  <a href="#wf2">2 · 圖生圖</a>
+  <a href="#wf3">3 · 多圖混合</a>
+  <a href="#wf4">4 · 單張→動畫</a>
+  <a href="#wf5">5 · 多張→動畫</a>
+  <a href="#wf6">6 · Inpainting</a>
+  <a href="#wf7">7 · Hires Fix</a>
+  <a href="#wf8">8 · LoRA</a>
+  <a href="#wf9">9 · SDXL Refiner</a>
+  <a href="#wf10">10 · Prompt 插值</a>
+  <a href="#wf11">11 · 臉部修復</a>
+  <a href="#wf12">12 · Flux / DiT</a>
+</nav>
+
+<!-- ══════════════════════════════════════
+     WF 1: 文生圖（含 LoRA + ControlNet）
+════════════════════════════════════════ -->
+<section class="workflow wf-1" id="wf1">
+  <div class="wf-diagram">
+    <div class="diagram-wrap">
+    <!-- 兩層圖：基礎流程 + 附加節點 -->
+    <svg viewBox="0 0 980 230" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:980px;">
+      <defs>
+        <marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#c8f060" stroke-width="1.5"/></marker>
+        <marker id="a1b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#a078f0" stroke-width="1.5"/></marker>
+        <marker id="a1c" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#60f0c0" stroke-width="1.5"/></marker>
+      </defs>
+
+      <!-- ── 區塊標籤 ── -->
+      <text x="8" y="13" class="ns" font-size="9" fill="#556040" letter-spacing="0.1em">▸ 基礎流程</text>
+      <text x="8" y="128" class="ns" font-size="9" fill="#604890" letter-spacing="0.1em">▸ 附加節點（可選）</text>
+
+      <!-- ══ 基礎流程（上排）══ -->
+      <!-- Checkpoint -->
+      <rect x="8" y="18" width="130" height="72" rx="8" fill="#1e2a16" stroke="#c8f060" stroke-width="0.8" stroke-opacity="0.6"/>
+      <text x="73" y="46" text-anchor="middle" class="nb" font-size="11" fill="#c8f060">Checkpoint</text>
+      <text x="73" y="62" text-anchor="middle" class="ns" font-size="10" fill="#a8b890">Loader</text>
+      <text x="73" y="78" text-anchor="middle" class="ns" font-size="9" fill="#556040">SD / SDXL 模型</text>
+
+      <!-- CLIP Pos -->
+      <rect x="158" y="8" width="136" height="48" rx="8" fill="#162224" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.6"/>
+      <text x="226" y="27" text-anchor="middle" class="nb" font-size="11" fill="#60c8f0">CLIP Text Encode</text>
+      <text x="226" y="43" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">正向 Prompt</text>
+
+      <!-- CLIP Neg -->
+      <rect x="158" y="62" width="136" height="48" rx="8" fill="#241a1c" stroke="#f06080" stroke-width="0.8" stroke-opacity="0.6"/>
+      <text x="226" y="81" text-anchor="middle" class="nb" font-size="11" fill="#f06080">CLIP Text Encode</text>
+      <text x="226" y="97" text-anchor="middle" class="ns" font-size="9" fill="#803050">負向 Prompt</text>
+
+      <!-- Empty Latent -->
+      <rect x="8" y="98" width="130" height="36" rx="8" fill="#1a1a2a" stroke="#6060a0" stroke-width="0.8" stroke-opacity="0.4"/>
+      <text x="73" y="113" text-anchor="middle" class="nb" font-size="10" fill="#8080c0">Empty Latent Image</text>
+      <text x="73" y="127" text-anchor="middle" class="ns" font-size="9" fill="#505080">尺寸設定</text>
+
+      <!-- KSampler -->
+      <rect x="314" y="18" width="148" height="72" rx="8" fill="#162030" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.6"/>
+      <text x="388" y="46" text-anchor="middle" class="nb" font-size="12" fill="#6090f0">KSampler</text>
+      <text x="388" y="62" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">steps / cfg / sampler</text>
+      <text x="388" y="76" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">去噪推理</text>
+
+      <!-- VAE Decode -->
+      <rect x="478" y="18" width="116" height="72" rx="8" fill="#242012" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.6"/>
+      <text x="536" y="50" text-anchor="middle" class="nb" font-size="11" fill="#f0b860">VAE Decode</text>
+      <text x="536" y="66" text-anchor="middle" class="ns" font-size="9" fill="#806030">Latent → 像素圖</text>
+
+      <!-- Save -->
+      <rect x="612" y="18" width="108" height="72" rx="8" fill="#162016" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.6"/>
+      <text x="666" y="50" text-anchor="middle" class="nb" font-size="11" fill="#60f0c0">Save Image</text>
+      <text x="666" y="66" text-anchor="middle" class="ns" font-size="9" fill="#306040">PNG / WebP</text>
+
+      <!-- 基礎箭頭 -->
+      <line x1="138" y1="44" x2="156" y2="30" stroke="#c8f060" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a1)"/>
+      <line x1="138" y1="66" x2="156" y2="84" stroke="#c8f060" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a1)"/>
+      <line x1="138" y1="108" x2="312" y2="80" stroke="#8080c0" stroke-width="0.8" stroke-opacity="0.5" marker-end="url(#a1)"/>
+      <line x1="294" y1="32" x2="312" y2="42" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a1)"/>
+      <line x1="294" y1="86" x2="312" y2="70" stroke="#f06080" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a1)"/>
+      <line x1="462" y1="54" x2="476" y2="54" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a1)"/>
+      <line x1="594" y1="54" x2="610" y2="54" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a1)"/>
+
+      <!-- ══ 附加節點（下排）══ -->
+
+      <!-- LoRA Loader -->
+      <rect x="8" y="138" width="148" height="72" rx="8" fill="#20162a" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.7"/>
+      <text x="82" y="162" text-anchor="middle" class="nb" font-size="11" fill="#a078f0">LoRA Loader</text>
+      <text x="82" y="178" text-anchor="middle" class="ns" font-size="9" fill="#604890">風格 / 角色 LoRA</text>
+      <text x="82" y="193" text-anchor="middle" class="ns" font-size="9" fill="#604890">strength 0.6～0.9</text>
+
+      <!-- ControlNet Loader -->
+      <rect x="174" y="138" width="148" height="72" rx="8" fill="#162224" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.7"/>
+      <text x="248" y="162" text-anchor="middle" class="nb" font-size="11" fill="#60c8f0">ControlNet Loader</text>
+      <text x="248" y="178" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">Canny / Depth</text>
+      <text x="248" y="193" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">OpenPose / Lineart</text>
+
+      <!-- Load Image (for ControlNet) -->
+      <rect x="174" y="218" width="148" height="0" rx="8"/>
+      <rect x="340" y="138" width="130" height="72" rx="8" fill="#241828" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.7"/>
+      <text x="405" y="162" text-anchor="middle" class="nb" font-size="11" fill="#d060a0">Load Image</text>
+      <text x="405" y="178" text-anchor="middle" class="ns" font-size="9" fill="#804060">姿勢 / 線稿 / 深度圖</text>
+      <text x="405" y="193" text-anchor="middle" class="ns" font-size="9" fill="#804060">控制條件圖</text>
+
+      <!-- ControlNet Apply -->
+      <rect x="490" y="138" width="148" height="72" rx="8" fill="#1a2420" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.7"/>
+      <text x="564" y="158" text-anchor="middle" class="nb" font-size="11" fill="#60f0c0">Apply ControlNet</text>
+      <text x="564" y="174" text-anchor="middle" class="ns" font-size="9" fill="#306040">注入控制條件</text>
+      <text x="564" y="189" text-anchor="middle" class="ns" font-size="9" fill="#306040">strength 控制強度</text>
+
+      <!-- → KSampler 指示 -->
+      <rect x="658" y="155" width="110" height="38" rx="8" fill="#0e1622" stroke="#6090f0" stroke-width="0.6" stroke-opacity="0.4" stroke-dasharray="4,3"/>
+      <text x="713" y="172" text-anchor="middle" class="nb" font-size="10" fill="#6090f0">→ KSampler</text>
+      <text x="713" y="185" text-anchor="middle" class="ns" font-size="8.5" fill="#3a5090">model / cond 更新</text>
+
+      <!-- 附加節點箭頭 -->
+      <!-- LoRA → KSampler (model pipe) -->
+      <path d="M82 210 L82 222 L388 222 L388 92" fill="none" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.5" stroke-dasharray="5,3" marker-end="url(#a1b)"/>
+      <!-- ControlNet Loader → Apply -->
+      <line x1="322" y1="174" x2="338" y2="174" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a1c)"/>
+      <!-- Load Image → Apply -->
+      <line x1="470" y1="174" x2="488" y2="174" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a1c)"/>
+      <!-- Apply → KSampler box -->
+      <line x1="638" y1="174" x2="656" y2="174" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a1c)"/>
+      <!-- KSampler box → real KSampler -->
+      <path d="M713 155 L713 54 L764 54" fill="none" stroke="#6090f0" stroke-width="0.7" stroke-opacity="0.4" stroke-dasharray="4,3" marker-end="url(#a1)"/>
+    </svg>
+    </div>
+  </div>
+  <div class="wf-info">
+    <div class="wf-header">
+      <div class="wf-num">01</div>
+      <h2>文生圖 <em>Text-to-Image</em></h2>
+    </div>
+    <p class="wf-desc">ComfyUI 最基礎的 workflow，輸入文字描述產出全新圖像。下方附加節點（LoRA、ControlNet）可按需插入主流程，無需改動基礎骨架。</p>
+
+    <ul class="notes">
+      <li><b>Checkpoint Loader</b> 載入 SD / SDXL 模型，輸出三條線：model、CLIP、VAE</li>
+      <li><b>CLIP Text Encode × 2</b> 分別輸入正向與負向 Prompt；<b>Empty Latent Image</b> 設定輸出尺寸</li>
+      <li><b>KSampler</b> 接收模型、正負 Prompt、Latent，設定 steps（20～30）、cfg（7）、sampler 後去噪</li>
+      <li><b>VAE Decode → Save Image</b> 將 Latent 解碼為像素圖並存檔</li>
+    </ul>
+
+    <!-- LoRA 子說明 -->
+    <div style="margin-top:18px;padding:14px 16px;background:rgba(160,120,240,0.06);border-left:2px solid #a078f0;border-radius:6px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#a078f0;letter-spacing:0.12em;margin-bottom:8px;">＋ LoRA Loader（附加節點）</div>
+      <ul class="notes">
+        <li>插在 Checkpoint 後，串接 model 與 CLIP 兩條線，不破壞後續節點</li>
+        <li>可疊加多個 LoRA（串接），各自設 <b>strength（0.6～0.9）</b>，總強度建議 ≤ 1.5</li>
+        <li>常見 LoRA 類型：<b>畫風</b>（水彩、像素）、<b>角色</b>（特定 IP）、<b>動作姿勢</b>、<b>光線技法</b></li>
+        <li>部分 LoRA 需在 Prompt 加入 <b>觸發詞（trigger word）</b> 才能啟用</li>
+      </ul>
+    </div>
+
+    <!-- ControlNet 子說明 -->
+    <div style="margin-top:12px;padding:14px 16px;background:rgba(96,240,192,0.05);border-left:2px solid #60f0c0;border-radius:6px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#60f0c0;letter-spacing:0.12em;margin-bottom:8px;">＋ ControlNet（附加節點）</div>
+      <ul class="notes">
+        <li><b>ControlNet Loader</b> 載入對應模型；<b>Load Image</b> 提供控制條件圖</li>
+        <li><b>Apply ControlNet</b> 節點將條件注入 positive conditioning，再送進 KSampler</li>
+        <li>常用模型：<b>Canny</b>（線稿邊緣）、<b>Depth</b>（深度圖）、<b>OpenPose</b>（人體骨架）、<b>Lineart</b>（線稿上色）、<b>Tile</b>（細節補強）</li>
+        <li>strength 調控影響程度：0.8～1.0 強制跟隨控制圖，0.4～0.6 保留生成自由度</li>
+      </ul>
+    </div>
+
+    <div class="wf-tags" style="margin-top:16px">
+      <span class="tag">入門必學</span><span class="tag">SD 1.5 / SDXL</span><span class="tag">LoRA 串接</span><span class="tag">ControlNet</span><span class="tag">OpenPose</span><span class="tag">Canny / Depth</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ WF 2: 圖生圖（含 LoRA + ControlNet）══ -->
+<section class="workflow wf-2" id="wf2">
+  <div class="wf-diagram">
+    <div class="diagram-wrap">
+    <svg viewBox="0 0 980 240" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:980px;">
+      <defs>
+        <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#60c8f0" stroke-width="1.5"/></marker>
+        <marker id="a2b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#a078f0" stroke-width="1.5"/></marker>
+        <marker id="a2c" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#60f0c0" stroke-width="1.5"/></marker>
+      </defs>
+
+      <text x="8" y="13" class="ns" font-size="9" fill="#3d7080" letter-spacing="0.1em">▸ 基礎流程</text>
+      <text x="8" y="132" class="ns" font-size="9" fill="#604890" letter-spacing="0.1em">▸ 附加節點（可選）</text>
+
+      <!-- ══ 基礎流程 ══ -->
+      <!-- Load Image -->
+      <rect x="8" y="18" width="112" height="72" rx="8" fill="#241828" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.6"/>
+      <text x="64" y="46" text-anchor="middle" class="nb" font-size="11" fill="#d060a0">Load Image</text>
+      <text x="64" y="62" text-anchor="middle" class="ns" font-size="9" fill="#804060">參考圖輸入</text>
+      <text x="64" y="77" text-anchor="middle" class="ns" font-size="9" fill="#804060">任意尺寸</text>
+
+      <!-- VAE Encode -->
+      <rect x="130" y="18" width="112" height="72" rx="8" fill="#242012" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.6"/>
+      <text x="186" y="46" text-anchor="middle" class="nb" font-size="11" fill="#f0b860">VAE Encode</text>
+      <text x="186" y="62" text-anchor="middle" class="ns" font-size="9" fill="#806030">壓縮為 Latent</text>
+      <text x="186" y="77" text-anchor="middle" class="ns" font-size="9" fill="#806030">保留結構資訊</text>
+
+      <!-- Checkpoint -->
+      <rect x="252" y="48" width="132" height="42" rx="8" fill="#1e2a16" stroke="#c8f060" stroke-width="0.8" stroke-opacity="0.6"/>
+      <text x="318" y="65" text-anchor="middle" class="nb" font-size="11" fill="#c8f060">Checkpoint Loader</text>
+      <text x="318" y="81" text-anchor="middle" class="ns" font-size="9" fill="#556040">model / clip / vae</text>
+
+      <!-- CLIP Pos -->
+      <rect x="252" y="8" width="132" height="34" rx="8" fill="#162224" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.6"/>
+      <text x="318" y="22" text-anchor="middle" class="nb" font-size="10.5" fill="#60c8f0">CLIP Text Encode</text>
+      <text x="318" y="36" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">Prompt（重繪方向）</text>
+
+      <!-- KSampler -->
+      <rect x="404" y="18" width="150" height="72" rx="8" fill="#162030" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.6"/>
+      <text x="479" y="42" text-anchor="middle" class="nb" font-size="12" fill="#6090f0">KSampler</text>
+      <text x="479" y="58" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">denoise 0.5～0.8</text>
+      <text x="479" y="73" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">越低越貼近原圖</text>
+
+      <!-- VAE Decode -->
+      <rect x="570" y="18" width="112" height="72" rx="8" fill="#242012" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.6"/>
+      <text x="626" y="50" text-anchor="middle" class="nb" font-size="11" fill="#f0b860">VAE Decode</text>
+      <text x="626" y="66" text-anchor="middle" class="ns" font-size="9" fill="#806030">解碼像素</text>
+
+      <!-- Save -->
+      <rect x="698" y="18" width="112" height="72" rx="8" fill="#162016" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.6"/>
+      <text x="754" y="50" text-anchor="middle" class="nb" font-size="11" fill="#60f0c0">Save Image</text>
+      <text x="754" y="66" text-anchor="middle" class="ns" font-size="9" fill="#306040">輸出重繪結果</text>
+
+      <!-- 基礎箭頭 -->
+      <line x1="120" y1="54" x2="128" y2="54" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a2)"/>
+      <line x1="242" y1="54" x2="250" y2="65" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a2)"/>
+      <line x1="242" y1="36" x2="250" y2="25" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a2)"/>
+      <line x1="384" y1="25" x2="402" y2="38" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a2)"/>
+      <line x1="384" y1="69" x2="402" y2="58" stroke="#c8f060" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a2)"/>
+      <!-- Latent → KSampler -->
+      <path d="M242 54 L398 54" fill="none" stroke="#f0b860" stroke-width="0.7" stroke-opacity="0.4" stroke-dasharray="4,3" marker-end="url(#a2)"/>
+      <line x1="554" y1="54" x2="568" y2="54" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a2)"/>
+      <line x1="682" y1="54" x2="696" y2="54" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a2)"/>
+
+      <!-- ══ 附加節點 ══ -->
+      <!-- LoRA Loader -->
+      <rect x="8" y="142" width="148" height="72" rx="8" fill="#20162a" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.7"/>
+      <text x="82" y="166" text-anchor="middle" class="nb" font-size="11" fill="#a078f0">LoRA Loader</text>
+      <text x="82" y="182" text-anchor="middle" class="ns" font-size="9" fill="#604890">風格轉換 LoRA</text>
+      <text x="82" y="197" text-anchor="middle" class="ns" font-size="9" fill="#604890">strength 0.5～0.8</text>
+
+      <!-- ControlNet Preprocessor -->
+      <rect x="174" y="142" width="150" height="72" rx="8" fill="#1a2030" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.7"/>
+      <text x="249" y="163" text-anchor="middle" class="nb" font-size="10.5" fill="#60c8f0">Preprocessor</text>
+      <text x="249" y="179" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">CannyEdge / HED</text>
+      <text x="249" y="194" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">Depth / DWPose</text>
+
+      <!-- ref image for preprocessor -->
+      <rect x="174" y="220" width="150" height="14" rx="4" fill="#1a1624" stroke="#d060a0" stroke-width="0.5" stroke-opacity="0.5"/>
+      <text x="249" y="230" text-anchor="middle" class="ns" font-size="8.5" fill="#d060a0">← 同一張參考圖 / 骨架圖</text>
+
+      <!-- ControlNet Loader -->
+      <rect x="342" y="142" width="150" height="72" rx="8" fill="#162224" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.7"/>
+      <text x="417" y="166" text-anchor="middle" class="nb" font-size="10.5" fill="#60c8f0">ControlNet Loader</text>
+      <text x="417" y="182" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">載入對應 CN 模型</text>
+      <text x="417" y="197" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">Canny / Depth / Pose</text>
+
+      <!-- Apply ControlNet -->
+      <rect x="510" y="142" width="150" height="72" rx="8" fill="#1a2420" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.7"/>
+      <text x="585" y="163" text-anchor="middle" class="nb" font-size="10.5" fill="#60f0c0">Apply ControlNet</text>
+      <text x="585" y="179" text-anchor="middle" class="ns" font-size="9" fill="#306040">strength 0.8 鎖構圖</text>
+      <text x="585" y="194" text-anchor="middle" class="ns" font-size="9" fill="#306040">注入 conditioning</text>
+
+      <!-- → KSampler 虛框 -->
+      <rect x="680" y="158" width="118" height="40" rx="8" fill="#0e1622" stroke="#6090f0" stroke-width="0.6" stroke-opacity="0.4" stroke-dasharray="4,3"/>
+      <text x="739" y="176" text-anchor="middle" class="nb" font-size="10" fill="#6090f0">→ KSampler</text>
+      <text x="739" y="190" text-anchor="middle" class="ns" font-size="8.5" fill="#3a5090">model / cond 更新</text>
+
+      <!-- 附加箭頭 -->
+      <!-- LoRA → KSampler pipe -->
+      <path d="M82 214 L82 228 L479 228 L479 92" fill="none" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.5" stroke-dasharray="5,3" marker-end="url(#a2b)"/>
+      <!-- Preprocessor → ControlNet Loader -->
+      <line x1="324" y1="178" x2="340" y2="178" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a2c)"/>
+      <!-- ControlNet Loader → Apply -->
+      <line x1="492" y1="178" x2="508" y2="178" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a2c)"/>
+      <!-- Apply → KSampler box -->
+      <line x1="660" y1="178" x2="678" y2="178" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a2c)"/>
+      <!-- KSampler box → real KSampler -->
+      <path d="M739 158 L739 54 L802 54" fill="none" stroke="#6090f0" stroke-width="0.7" stroke-opacity="0.4" stroke-dasharray="4,3" marker-end="url(#a2)"/>
+    </svg>
+    </div>
+  </div>
+  <div class="wf-info">
+    <div class="wf-header">
+      <div class="wf-num">02</div>
+      <h2>圖生圖 <em>Image-to-Image</em></h2>
+    </div>
+    <p class="wf-desc">以現有圖像為起點，透過 VAE Encode 進入 Latent 空間，KSampler 按 Prompt 引導重繪。搭配 LoRA 強化風格一致性，搭配 ControlNet 鎖定構圖與姿勢。</p>
+
+    <ul class="notes">
+      <li><b>Load Image → VAE Encode</b> 將參考圖壓縮進 Latent 空間，保留結構與色彩資訊作為去噪起點</li>
+      <li>KSampler 的 <b>denoise 值</b>是核心參數：0.3 幾乎不改動，0.9 接近完全重繪</li>
+      <li>常見應用：<b>換風格</b>（真實→動漫）、換季節、換光線、線稿上色</li>
+    </ul>
+
+    <!-- LoRA in img2img -->
+    <div style="margin-top:18px;padding:14px 16px;background:rgba(160,120,240,0.06);border-left:2px solid #a078f0;border-radius:6px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#a078f0;letter-spacing:0.12em;margin-bottom:8px;">＋ LoRA Loader（附加節點）</div>
+      <ul class="notes">
+        <li>插在 Checkpoint 與 KSampler 之間；圖生圖的 strength 建議略低（<b>0.5～0.7</b>），避免 LoRA 風格壓過原圖結構</li>
+        <li>典型用途：讓重繪結果套上特定<b>動漫畫風 LoRA</b>，在保留原圖構圖的同時轉換風格</li>
+        <li>可堆疊多個 LoRA：先掛<b>畫風 LoRA</b>（線條感），再掛<b>色調 LoRA</b>（暖色/冷色），精準控制目標風格</li>
+      </ul>
+    </div>
+
+    <!-- ControlNet in img2img -->
+    <div style="margin-top:12px;padding:14px 16px;background:rgba(96,240,192,0.05);border-left:2px solid #60f0c0;border-radius:6px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#60f0c0;letter-spacing:0.12em;margin-bottom:8px;">＋ ControlNet（附加節點）</div>
+      <ul class="notes">
+        <li><b>Preprocessor 先行處理參考圖</b>，提取邊緣、深度或骨架等控制圖，再送入 ControlNet Apply</li>
+        <li>圖生圖常用搭配：<b>Canny</b> 保留線條結構（denoise 可拉高到 0.8）、<b>Depth</b> 鎖定空間透視關係</li>
+        <li><b>DWPose / OpenPose</b>：即使換了服裝風格，人物姿勢依然與原圖一致</li>
+        <li>雙重控制策略：<b>ControlNet strength 0.8 鎖構圖 + denoise 0.65 允許色彩與風格自由發揮</b></li>
+      </ul>
+    </div>
+
+    <div class="wf-tags" style="margin-top:16px">
+      <span class="tag">denoise 調控</span><span class="tag">風格轉換</span><span class="tag">LoRA 風格強化</span><span class="tag">Preprocessor</span><span class="tag">Canny / Depth</span><span class="tag">DWPose</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ WF 3: 多圖混合 ══ -->
+<section class="workflow wf-3" id="wf3">
+  <div class="wf-diagram">
+    <div class="diagram-wrap">
+    <svg viewBox="0 0 880 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:880px;">
+      <defs><marker id="a3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#f06080" stroke-width="1.5"/></marker></defs>
+
+      <rect x="8" y="8" width="110" height="48" rx="8" fill="#241828" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="63" y="28" text-anchor="middle" class="nb" font-size="11" fill="#d060a0">Load Image</text>
+      <text x="63" y="44" text-anchor="middle" class="ns" font-size="9" fill="#804060">背景圖</text>
+
+      <rect x="8" y="72" width="110" height="48" rx="8" fill="#241828" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="63" y="92" text-anchor="middle" class="nb" font-size="11" fill="#d060a0">Load Image</text>
+      <text x="63" y="108" text-anchor="middle" class="ns" font-size="9" fill="#804060">前景圖 / 遮罩</text>
+
+      <rect x="138" y="8" width="130" height="48" rx="8" fill="#162224" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="203" y="28" text-anchor="middle" class="nb" font-size="11" fill="#60c8f0">ControlNet Apply</text>
+      <text x="203" y="44" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">保留背景構圖</text>
+
+      <rect x="138" y="72" width="130" height="48" rx="8" fill="#241a1c" stroke="#f06080" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="203" y="92" text-anchor="middle" class="nb" font-size="11" fill="#f06080">IP-Adapter Apply</text>
+      <text x="203" y="108" text-anchor="middle" class="ns" font-size="9" fill="#803050">前景風格注入</text>
+
+      <rect x="290" y="40" width="130" height="60" rx="8" fill="#1e2a16" stroke="#c8f060" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="355" y="62" text-anchor="middle" class="nb" font-size="11" fill="#c8f060">Checkpoint</text>
+      <text x="355" y="78" text-anchor="middle" class="ns" font-size="9" fill="#556040">+ CLIP Encode</text>
+      <text x="355" y="92" text-anchor="middle" class="ns" font-size="9" fill="#556040">Prompt 語義引導</text>
+
+      <rect x="440" y="30" width="140" height="70" rx="8" fill="#162030" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="510" y="56" text-anchor="middle" class="nb" font-size="12" fill="#6090f0">KSampler</text>
+      <text x="510" y="72" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">多條件合成推理</text>
+      <text x="510" y="86" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">兩路約束並行</text>
+
+      <rect x="600" y="30" width="110" height="70" rx="8" fill="#242012" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="655" y="60" text-anchor="middle" class="nb" font-size="11" fill="#f0b860">VAE Decode</text>
+      <text x="655" y="76" text-anchor="middle" class="ns" font-size="9" fill="#806030">解碼合成圖</text>
+
+      <rect x="730" y="30" width="110" height="70" rx="8" fill="#162016" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="785" y="60" text-anchor="middle" class="nb" font-size="11" fill="#60f0c0">Save Image</text>
+      <text x="785" y="76" text-anchor="middle" class="ns" font-size="9" fill="#306040">背景+前景合成</text>
+
+      <line x1="118" y1="32" x2="136" y2="32" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a3)"/>
+      <line x1="118" y1="96" x2="136" y2="96" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a3)"/>
+      <line x1="268" y1="32" x2="288" y2="60" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a3)"/>
+      <line x1="268" y1="96" x2="288" y2="80" stroke="#f06080" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a3)"/>
+      <line x1="420" y1="70" x2="438" y2="65" stroke="#c8f060" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a3)"/>
+      <line x1="580" y1="65" x2="598" y2="65" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a3)"/>
+      <line x1="710" y1="65" x2="728" y2="65" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a3)"/>
+    </svg>
+    </div>
+  </div>
+  <div class="wf-info">
+    <div class="wf-header">
+      <div class="wf-num">03</div>
+      <h2>多圖混合生圖 <em>Composite</em></h2>
+    </div>
+    <p class="wf-desc">指定背景圖保留空間結構，前景圖注入角色或風格，兩路條件同時作用於 KSampler，輸出合成結果。</p>
+    <ul class="notes">
+      <li><b>ControlNet Apply</b>（接背景圖）以 Depth/Canny 模式鎖定空間構圖</li>
+      <li><b>IP-Adapter Apply</b>（接前景圖）將主體的外觀或風格注入生成過程</li>
+      <li>兩路條件各有 <b>strength 權重</b>，可調整背景構圖與前景風格誰佔主導</li>
+      <li>加入 <b>Mask</b> 節點可做精確的局部合成：只讓前景圖影響遮罩範圍</li>
+    </ul>
+    <div class="wf-tags" style="margin-top:16px">
+      <span class="tag">ControlNet</span><span class="tag">IP-Adapter</span><span class="tag">背景鎖定</span><span class="tag">Mask 合成</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ WF 4: 單張→動畫 ══ -->
+<section class="workflow wf-4" id="wf4">
+  <div class="wf-diagram">
+    <div class="diagram-wrap">
+    <svg viewBox="0 0 840 110" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:840px;">
+      <defs><marker id="a4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#a078f0" stroke-width="1.5"/></marker></defs>
+
+      <rect x="8" y="20" width="110" height="70" rx="8" fill="#241828" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="63" y="48" text-anchor="middle" class="nb" font-size="11" fill="#d060a0">Load Image</text>
+      <text x="63" y="64" text-anchor="middle" class="ns" font-size="9" fill="#804060">起始靜態圖</text>
+      <text x="63" y="79" text-anchor="middle" class="ns" font-size="9" fill="#804060">任意風格</text>
+
+      <rect x="138" y="20" width="140" height="70" rx="8" fill="#162224" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="208" y="44" text-anchor="middle" class="nb" font-size="11" fill="#60c8f0">SVD Image Encoder</text>
+      <text x="208" y="60" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">條件化起始圖</text>
+      <text x="208" y="76" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">提取運動語義</text>
+
+      <rect x="298" y="20" width="150" height="70" rx="8" fill="#20162a" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="373" y="44" text-anchor="middle" class="nb" font-size="11" fill="#a078f0">SVD / AnimateDiff</text>
+      <text x="373" y="60" text-anchor="middle" class="ns" font-size="9" fill="#604890">motion_bucket / fps</text>
+      <text x="373" y="76" text-anchor="middle" class="ns" font-size="9" fill="#604890">生成多幀 Latent</text>
+
+      <rect x="468" y="20" width="130" height="70" rx="8" fill="#242012" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="533" y="44" text-anchor="middle" class="nb" font-size="11" fill="#f0b860">VAE Decode</text>
+      <text x="533" y="60" text-anchor="middle" class="ns" font-size="9" fill="#806030">批次解碼各幀</text>
+      <text x="533" y="76" text-anchor="middle" class="ns" font-size="9" fill="#806030">Frame 0～N</text>
+
+      <rect x="618" y="20" width="120" height="70" rx="8" fill="#162016" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="678" y="44" text-anchor="middle" class="nb" font-size="11" fill="#60f0c0">VHS Save Video</text>
+      <text x="678" y="60" text-anchor="middle" class="ns" font-size="9" fill="#306040">MP4 / GIF / WebP</text>
+      <text x="678" y="76" text-anchor="middle" class="ns" font-size="9" fill="#306040">合併輸出動畫</text>
+
+      <line x1="118" y1="55" x2="136" y2="55" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a4)"/>
+      <line x1="278" y1="55" x2="296" y2="55" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a4)"/>
+      <line x1="448" y1="55" x2="466" y2="55" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a4)"/>
+      <line x1="598" y1="55" x2="616" y2="55" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a4)"/>
+    </svg>
+    </div>
+  </div>
+  <div class="wf-info">
+    <div class="wf-header">
+      <div class="wf-num">04</div>
+      <h2>單張靜畫 → 動畫 <em>Img2Video</em></h2>
+    </div>
+    <p class="wf-desc">使用 Stable Video Diffusion（SVD）或 AnimateDiff，從單一靜態圖出發，生成連續多幀動畫。</p>
+    <ul class="notes">
+      <li><b>SVD 路線</b>：SVD Image Encoder 提取起始圖語義 → VideoSampler 生成多幀 Latent → VAE 批次解碼 → 合併輸出</li>
+      <li><b>AnimateDiff 路線</b>：在文生圖 workflow 中插入 AnimateDiff Loader，KSampler 直接輸出多幀</li>
+      <li><b>motion_bucket_id</b> 控制運動幅度（127=中等），值越大動得越劇烈</li>
+      <li>建議輸出 16～25 幀（約 1～2 秒），幀數過多容易出現 temporal artifacts</li>
+    </ul>
+    <div class="wf-tags" style="margin-top:16px">
+      <span class="tag">SVD</span><span class="tag">AnimateDiff</span><span class="tag">motion_bucket</span><span class="tag">VHS 節點</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ WF 5: 多張→動畫 ══ -->
+<section class="workflow wf-5" id="wf5">
+  <div class="wf-diagram">
+    <div class="diagram-wrap">
+    <svg viewBox="0 0 860 140" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:860px;">
+      <defs><marker id="a5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#f0b860" stroke-width="1.5"/></marker></defs>
+
+      <rect x="8" y="8" width="100" height="38" rx="8" fill="#241828" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="58" y="24" text-anchor="middle" class="nb" font-size="10.5" fill="#d060a0">Load Image</text>
+      <text x="58" y="38" text-anchor="middle" class="ns" font-size="9" fill="#804060">Frame 1</text>
+
+      <rect x="8" y="54" width="100" height="38" rx="8" fill="#241828" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="58" y="70" text-anchor="middle" class="nb" font-size="10.5" fill="#d060a0">Load Image</text>
+      <text x="58" y="84" text-anchor="middle" class="ns" font-size="9" fill="#804060">Frame 2</text>
+
+      <rect x="8" y="100" width="100" height="38" rx="8" fill="#241828" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="58" y="116" text-anchor="middle" class="nb" font-size="10.5" fill="#d060a0">Load Image</text>
+      <text x="58" y="130" text-anchor="middle" class="ns" font-size="9" fill="#804060">Frame N …</text>
+
+      <rect x="128" y="46" width="110" height="56" rx="8" fill="#1e1e22" stroke="#8080a0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="183" y="70" text-anchor="middle" class="nb" font-size="11" fill="#a0a0c0">Image Batch</text>
+      <text x="183" y="86" text-anchor="middle" class="ns" font-size="9" fill="#606080">組合序列</text>
+
+      <rect x="258" y="46" width="110" height="56" rx="8" fill="#242012" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="313" y="70" text-anchor="middle" class="nb" font-size="11" fill="#f0b860">VAE Encode</text>
+      <text x="313" y="86" text-anchor="middle" class="ns" font-size="9" fill="#806030">批次 Latent</text>
+
+      <rect x="388" y="46" width="140" height="56" rx="8" fill="#20162a" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="458" y="66" text-anchor="middle" class="nb" font-size="11" fill="#a078f0">AnimateDiff</text>
+      <text x="458" y="82" text-anchor="middle" class="ns" font-size="9" fill="#604890">運動模型 + 插幀</text>
+      <text x="458" y="95" text-anchor="middle" class="ns" font-size="9" fill="#604890">video_length</text>
+
+      <rect x="548" y="46" width="130" height="56" rx="8" fill="#162030" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="613" y="70" text-anchor="middle" class="nb" font-size="12" fill="#6090f0">KSampler</text>
+      <text x="613" y="86" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">補間幀推理</text>
+
+      <rect x="698" y="46" width="110" height="56" rx="8" fill="#162016" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="753" y="66" text-anchor="middle" class="nb" font-size="11" fill="#60f0c0">VAE Decode</text>
+      <text x="753" y="82" text-anchor="middle" class="ns" font-size="9" fill="#306040">+Save Video</text>
+      <text x="753" y="95" text-anchor="middle" class="ns" font-size="9" fill="#306040">MP4 / GIF</text>
+
+      <line x1="108" y1="27" x2="126" y2="66" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a5)"/>
+      <line x1="108" y1="73" x2="126" y2="73" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a5)"/>
+      <line x1="108" y1="119" x2="126" y2="82" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a5)"/>
+      <line x1="238" y1="74" x2="256" y2="74" stroke="#a0a0c0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a5)"/>
+      <line x1="368" y1="74" x2="386" y2="74" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a5)"/>
+      <line x1="528" y1="74" x2="546" y2="74" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a5)"/>
+      <line x1="678" y1="74" x2="696" y2="74" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a5)"/>
+    </svg>
+    </div>
+  </div>
+  <div class="wf-info">
+    <div class="wf-header">
+      <div class="wf-num">05</div>
+      <h2>多張靜畫 → 動畫 <em>Keyframe Animation</em></h2>
+    </div>
+    <p class="wf-desc">載入多張關鍵幀，以 Image Batch 組合為序列，AnimateDiff 負責關鍵幀間的動態補間。</p>
+    <ul class="notes">
+      <li><b>Image Batch</b> 節點將所有幀依順序組合成 batch，維度為 [N, H, W, C]</li>
+      <li><b>AnimateDiff Loader</b> 載入運動模型（mm_sd_v15 等），搭配 Motion LoRA 控制運動類型</li>
+      <li><b>video_length</b> 設為目標幀數（如 24 幀 = 1 秒 @ 24fps），超出關鍵幀的部分由模型補間</li>
+      <li>適合製作 <b>循環動畫、角色動作序列</b>，比 SVD 更可控</li>
+    </ul>
+    <div class="wf-tags" style="margin-top:16px">
+      <span class="tag">Image Batch</span><span class="tag">AnimateDiff</span><span class="tag">Motion LoRA</span><span class="tag">關鍵幀補間</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ WF 6: Inpainting ══ -->
+<section class="workflow wf-6" id="wf6">
+  <div class="wf-diagram">
+    <div class="diagram-wrap">
+    <svg viewBox="0 0 840 110" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:840px;">
+      <defs><marker id="a6" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#60f0c0" stroke-width="1.5"/></marker></defs>
+
+      <rect x="8" y="8" width="110" height="44" rx="8" fill="#241828" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="63" y="26" text-anchor="middle" class="nb" font-size="11" fill="#d060a0">Load Image</text>
+      <text x="63" y="42" text-anchor="middle" class="ns" font-size="9" fill="#804060">原始圖像</text>
+
+      <rect x="8" y="60" width="110" height="44" rx="8" fill="#241a1c" stroke="#f06080" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="63" y="78" text-anchor="middle" class="nb" font-size="11" fill="#f06080">Load Mask</text>
+      <text x="63" y="94" text-anchor="middle" class="ns" font-size="9" fill="#803050">白=重繪區域</text>
+
+      <rect x="138" y="30" width="140" height="50" rx="8" fill="#242012" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="208" y="50" text-anchor="middle" class="nb" font-size="11" fill="#f0b860">VAE Encode</text>
+      <text x="208" y="66" text-anchor="middle" class="ns" font-size="9" fill="#806030">Inpaint 模式</text>
+
+      <rect x="298" y="6" width="130" height="44" rx="8" fill="#162224" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="363" y="24" text-anchor="middle" class="nb" font-size="11" fill="#60c8f0">CLIP Text Encode</text>
+      <text x="363" y="40" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">遮罩區 Prompt</text>
+
+      <rect x="448" y="20" width="140" height="70" rx="8" fill="#162030" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="518" y="44" text-anchor="middle" class="nb" font-size="12" fill="#6090f0">KSampler</text>
+      <text x="518" y="60" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">只對遮罩去噪</text>
+      <text x="518" y="76" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">denoise = 1.0</text>
+
+      <rect x="608" y="20" width="110" height="70" rx="8" fill="#242012" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="663" y="50" text-anchor="middle" class="nb" font-size="11" fill="#f0b860">VAE Decode</text>
+      <text x="663" y="66" text-anchor="middle" class="ns" font-size="9" fill="#806030">遮罩外保持原樣</text>
+
+      <rect x="738" y="20" width="90" height="70" rx="8" fill="#162016" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="783" y="52" text-anchor="middle" class="nb" font-size="11" fill="#60f0c0">Save</text>
+      <text x="783" y="68" text-anchor="middle" class="ns" font-size="9" fill="#306040">輸出</text>
+
+      <line x1="118" y1="30" x2="136" y2="46" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a6)"/>
+      <line x1="118" y1="82" x2="136" y2="60" stroke="#f06080" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a6)"/>
+      <line x1="278" y1="55" x2="296" y2="55" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a6)"/>
+      <line x1="428" y1="28" x2="446" y2="44" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a6)"/>
+      <line x1="596" y1="55" x2="606" y2="55" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a6)"/>
+      <line x1="718" y1="55" x2="736" y2="55" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a6)"/>
+    </svg>
+    </div>
+  </div>
+  <div class="wf-info">
+    <div class="wf-header">
+      <div class="wf-num">06</div>
+      <h2>Inpainting <em>局部重繪</em></h2>
+    </div>
+    <p class="wf-desc">用遮罩精確指定要修改的區域，模型只對白色遮罩範圍去噪生成，其餘像素完全保持不動。</p>
+    <ul class="notes">
+      <li><b>Load Mask</b> 可直接繪製或從圖像提取：白色=要重繪，黑色=保留</li>
+      <li><b>VAE Encode 需切換 Inpaint 模式</b>，否則遮罩資訊無法正確傳入 Latent</li>
+      <li>遮罩區的 KSampler 設 denoise=1.0，讓模型完全自由地生成新內容</li>
+      <li>常見應用：<b>換臉、換背景、消除物件、替換服裝</b>、修補瑕疵</li>
+      <li>進階：搭配 <b>FaceDetailer</b> 自動偵測臉部區域做局部重繪</li>
+    </ul>
+    <div class="wf-tags" style="margin-top:16px">
+      <span class="tag">局部修改</span><span class="tag">Mask</span><span class="tag">換背景</span><span class="tag">消除物件</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ WF 7: Hires Fix ══ -->
+<section class="workflow wf-7" id="wf7">
+  <div class="wf-diagram">
+    <div class="diagram-wrap">
+    <svg viewBox="0 0 880 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:880px;">
+      <defs><marker id="a7" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#c8f060" stroke-width="1.5"/></marker></defs>
+
+      <rect x="8" y="30" width="130" height="70" rx="8" fill="#162030" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="73" y="54" text-anchor="middle" class="nb" font-size="11" fill="#6090f0">KSampler ①</text>
+      <text x="73" y="70" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">低解析初稿</text>
+      <text x="73" y="85" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">512 × 512</text>
+
+      <rect x="158" y="30" width="110" height="70" rx="8" fill="#242012" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="213" y="60" text-anchor="middle" class="nb" font-size="11" fill="#f0b860">VAE Decode</text>
+      <text x="213" y="76" text-anchor="middle" class="ns" font-size="9" fill="#806030">解碼初稿</text>
+
+      <rect x="288" y="30" width="150" height="70" rx="8" fill="#1e1e22" stroke="#8080a0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="363" y="54" text-anchor="middle" class="nb" font-size="11" fill="#a0a0c0">Upscale Image</text>
+      <text x="363" y="70" text-anchor="middle" class="ns" font-size="9" fill="#606080">RealESRGAN 等</text>
+      <text x="363" y="85" text-anchor="middle" class="ns" font-size="9" fill="#606080">2× / 4× 放大</text>
+
+      <rect x="458" y="30" width="110" height="70" rx="8" fill="#242012" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="513" y="60" text-anchor="middle" class="nb" font-size="11" fill="#f0b860">VAE Encode</text>
+      <text x="513" y="76" text-anchor="middle" class="ns" font-size="9" fill="#806030">再編碼大圖</text>
+
+      <rect x="588" y="8" width="140" height="94" rx="8" fill="#162030" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="658" y="44" text-anchor="middle" class="nb" font-size="11" fill="#6090f0">KSampler ②</text>
+      <text x="658" y="60" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">denoise ≈ 0.35</text>
+      <text x="658" y="76" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">補強細節紋理</text>
+      <text x="658" y="91" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">不破壞整體構圖</text>
+
+      <rect x="748" y="30" width="110" height="70" rx="8" fill="#162016" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="803" y="60" text-anchor="middle" class="nb" font-size="11" fill="#60f0c0">Save Image</text>
+      <text x="803" y="76" text-anchor="middle" class="ns" font-size="9" fill="#306040">高清大圖輸出</text>
+
+      <line x1="138" y1="65" x2="156" y2="65" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a7)"/>
+      <line x1="268" y1="65" x2="286" y2="65" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a7)"/>
+      <line x1="438" y1="65" x2="456" y2="65" stroke="#a0a0c0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a7)"/>
+      <line x1="568" y1="65" x2="586" y2="55" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a7)"/>
+      <line x1="728" y1="55" x2="746" y2="65" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a7)"/>
+    </svg>
+    </div>
+  </div>
+  <div class="wf-info">
+    <div class="wf-header">
+      <div class="wf-num">07</div>
+      <h2>Hires Fix <em>高解析放大</em></h2>
+    </div>
+    <p class="wf-desc">先以低解析度生成構圖草稿，放大後二次去噪補強細節，避免直接大圖生成的結構崩潰問題。</p>
+    <ul class="notes">
+      <li>直接生成 2048px 大圖容易出現<b>重複結構、臉部扭曲</b>等問題，分兩階段可有效避免</li>
+      <li>推薦放大模型：<b>4x-UltraSharp、RealESRGAN x4plus</b>（照片），<b>4x_AnimeSharp</b>（動漫）</li>
+      <li>第二次 KSampler 的 <b>denoise 約 0.3～0.45</b>，太高會破壞構圖，太低細節不夠銳利</li>
+      <li>也可用 <b>Tiled KSampler</b> 分塊處理超大圖（4K+），節省 VRAM</li>
+    </ul>
+    <div class="wf-tags" style="margin-top:16px">
+      <span class="tag">2x / 4x 放大</span><span class="tag">Upscale 模型</span><span class="tag">Tiled 分塊</span><span class="tag">細節補強</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ WF 8: LoRA ══ -->
+<section class="workflow wf-8" id="wf8">
+  <div class="wf-diagram">
+    <div class="diagram-wrap">
+    <svg viewBox="0 0 820 110" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:820px;">
+      <defs><marker id="a8" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#60c8f0" stroke-width="1.5"/></marker></defs>
+
+      <rect x="8" y="20" width="140" height="70" rx="8" fill="#1e2a16" stroke="#c8f060" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="78" y="48" text-anchor="middle" class="nb" font-size="11" fill="#c8f060">Checkpoint Loader</text>
+      <text x="78" y="64" text-anchor="middle" class="ns" font-size="9" fill="#556040">基底模型</text>
+      <text x="78" y="79" text-anchor="middle" class="ns" font-size="9" fill="#556040">model + CLIP</text>
+
+      <rect x="168" y="20" width="140" height="70" rx="8" fill="#20162a" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="238" y="44" text-anchor="middle" class="nb" font-size="11" fill="#a078f0">LoRA Loader ①</text>
+      <text x="238" y="60" text-anchor="middle" class="ns" font-size="9" fill="#604890">風格 / 技法 LoRA</text>
+      <text x="238" y="75" text-anchor="middle" class="ns" font-size="9" fill="#604890">strength 0.6～0.9</text>
+
+      <rect x="328" y="20" width="140" height="70" rx="8" fill="#20162a" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="398" y="44" text-anchor="middle" class="nb" font-size="11" fill="#a078f0">LoRA Loader ②</text>
+      <text x="398" y="60" text-anchor="middle" class="ns" font-size="9" fill="#604890">角色 / 概念 LoRA</text>
+      <text x="398" y="75" text-anchor="middle" class="ns" font-size="9" fill="#604890">可繼續串接</text>
+
+      <rect x="488" y="20" width="130" height="70" rx="8" fill="#162224" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="553" y="44" text-anchor="middle" class="nb" font-size="11" fill="#60c8f0">CLIP Encode</text>
+      <text x="553" y="60" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">加入 LoRA 觸發詞</text>
+      <text x="553" y="75" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">trigger word</text>
+
+      <rect x="638" y="20" width="110" height="70" rx="8" fill="#162030" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="693" y="44" text-anchor="middle" class="nb" font-size="12" fill="#6090f0">KSampler</text>
+      <text x="693" y="60" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">套用混合權重</text>
+      <text x="693" y="75" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">→ Save Image</text>
+
+      <line x1="148" y1="55" x2="166" y2="55" stroke="#c8f060" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a8)"/>
+      <line x1="308" y1="55" x2="326" y2="55" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a8)"/>
+      <line x1="468" y1="55" x2="486" y2="55" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a8)"/>
+      <line x1="618" y1="55" x2="636" y2="55" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a8)"/>
+    </svg>
+    </div>
+  </div>
+  <div class="wf-info">
+    <div class="wf-header">
+      <div class="wf-num">08</div>
+      <h2>LoRA 風格微調</h2>
+    </div>
+    <p class="wf-desc">在 Checkpoint 基礎上插入一到多個 LoRA，精確注入特定風格、角色或技法，不需重新訓練主模型。</p>
+    <ul class="notes">
+      <li>LoRA 串接不限數量，但<b>總 strength 建議 ≤ 1.5</b>，避免多個 LoRA 互相干擾造成畫面崩潰</li>
+      <li>部分 LoRA 有<b>觸發詞（trigger word）</b>，必須加進 Prompt 才能啟用，查看 LoRA 說明頁</li>
+      <li>常見類型：<b>畫風 LoRA</b>（水彩、油畫、像素）、<b>角色 LoRA</b>（特定 IP）、<b>動作 LoRA</b>（構圖、光線）</li>
+      <li>搭配 <b>LoRA Stacker</b> 節點可一次管理多個 LoRA 的 strength，更方便</li>
+    </ul>
+    <div class="wf-tags" style="margin-top:16px">
+      <span class="tag">LoRA Loader</span><span class="tag">串接疊加</span><span class="tag">觸發詞</span><span class="tag">風格注入</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ WF 9: SDXL Refiner ══ -->
+<section class="workflow wf-9" id="wf9">
+  <div class="wf-diagram">
+    <div class="diagram-wrap">
+    <svg viewBox="0 0 880 120" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:880px;">
+      <defs><marker id="a9" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#f06080" stroke-width="1.5"/></marker></defs>
+
+      <rect x="8" y="20" width="130" height="80" rx="8" fill="#20162a" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="73" y="46" text-anchor="middle" class="nb" font-size="11" fill="#a078f0">SDXL Base</text>
+      <text x="73" y="62" text-anchor="middle" class="ns" font-size="9" fill="#604890">+ CLIP Encode</text>
+      <text x="73" y="78" text-anchor="middle" class="ns" font-size="9" fill="#604890">+ Empty Latent</text>
+
+      <rect x="158" y="10" width="160" height="100" rx="8" fill="#162030" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="238" y="40" text-anchor="middle" class="nb" font-size="11" fill="#6090f0">KSampler Base</text>
+      <text x="238" y="57" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">steps = 20</text>
+      <text x="238" y="72" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">end_at_step = 15</text>
+      <text x="238" y="87" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">粗稿前 75% 去噪</text>
+
+      <rect x="338" y="20" width="130" height="80" rx="8" fill="#20162a" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="403" y="46" text-anchor="middle" class="nb" font-size="11" fill="#a078f0">SDXL Refiner</text>
+      <text x="403" y="62" text-anchor="middle" class="ns" font-size="9" fill="#604890">細節精修模型</text>
+      <text x="403" y="78" text-anchor="middle" class="ns" font-size="9" fill="#604890">專用 CLIP Encode</text>
+
+      <rect x="488" y="10" width="160" height="100" rx="8" fill="#162030" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="568" y="38" text-anchor="middle" class="nb" font-size="11" fill="#6090f0">KSampler Refiner</text>
+      <text x="568" y="55" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">start_at_step = 15</text>
+      <text x="568" y="70" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">steps = 20</text>
+      <text x="568" y="85" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">後 25% 補細節</text>
+
+      <rect x="668" y="20" width="110" height="80" rx="8" fill="#242012" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="723" y="54" text-anchor="middle" class="nb" font-size="11" fill="#f0b860">VAE Decode</text>
+      <text x="723" y="70" text-anchor="middle" class="ns" font-size="9" fill="#806030">→ Save Image</text>
+
+      <rect x="798" y="30" width="70" height="60" rx="8" fill="#162016" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="833" y="58" text-anchor="middle" class="nb" font-size="10" fill="#60f0c0">Save</text>
+
+      <line x1="138" y1="60" x2="156" y2="60" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a9)"/>
+      <line x1="318" y1="60" x2="336" y2="60" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a9)"/>
+      <line x1="468" y1="60" x2="486" y2="60" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a9)"/>
+      <line x1="648" y1="60" x2="666" y2="60" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a9)"/>
+      <line x1="778" y1="60" x2="796" y2="60" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a9)"/>
+    </svg>
+    </div>
+  </div>
+  <div class="wf-info">
+    <div class="wf-header">
+      <div class="wf-num">09</div>
+      <h2>SDXL + Refiner <em>兩階段生成</em></h2>
+    </div>
+    <p class="wf-desc">SDXL 官方推薦雙模型流程：Base 負責前 75% 去噪建立構圖，Refiner 接手後 25% 強化細節，品質顯著優於單模型。</p>
+    <ul class="notes">
+      <li>兩個 KSampler 共用同一個 <b>Latent 張量</b>，不需 VAE 中間解碼，速度快</li>
+      <li>Base：steps=20、end_at_step=15；Refiner：start_at_step=15、steps=20（<b>共享 step 計數</b>）</li>
+      <li>Refiner 有專屬 CLIP Encode，Prompt 可以<b>與 Base 不同</b>，用來補強細節描述</li>
+      <li>僅限 SDXL 系列（含 Juggernaut XL 等衍生模型），SD 1.5 無此機制</li>
+    </ul>
+    <div class="wf-tags" style="margin-top:16px">
+      <span class="tag">SDXL 專屬</span><span class="tag">end_at_step</span><span class="tag">兩階段推理</span><span class="tag">細節精修</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ WF 10: Prompt 插值 ══ -->
+<section class="workflow wf-10" id="wf10">
+  <div class="wf-diagram">
+    <div class="diagram-wrap">
+    <svg viewBox="0 0 820 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:820px;">
+      <defs><marker id="a10" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#a078f0" stroke-width="1.5"/></marker></defs>
+
+      <rect x="8" y="40" width="110" height="50" rx="8" fill="#1e1e22" stroke="#8080a0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="63" y="60" text-anchor="middle" class="nb" font-size="11" fill="#a0a0c0">Fixed Seed</text>
+      <text x="63" y="76" text-anchor="middle" class="ns" font-size="9" fill="#606080">固定隨機數種子</text>
+
+      <rect x="138" y="8" width="130" height="46" rx="8" fill="#162224" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="203" y="27" text-anchor="middle" class="nb" font-size="11" fill="#60c8f0">Prompt A</text>
+      <text x="203" y="43" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">風格 / 場景 A</text>
+
+      <rect x="138" y="76" width="130" height="46" rx="8" fill="#162224" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="203" y="95" text-anchor="middle" class="nb" font-size="11" fill="#60c8f0">Prompt B</text>
+      <text x="203" y="111" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">風格 / 場景 B</text>
+
+      <rect x="288" y="8" width="130" height="46" rx="8" fill="#162030" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="353" y="27" text-anchor="middle" class="nb" font-size="11" fill="#6090f0">KSampler A</text>
+      <text x="353" y="43" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">同 seed，Prompt A</text>
+
+      <rect x="288" y="76" width="130" height="46" rx="8" fill="#162030" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="353" y="95" text-anchor="middle" class="nb" font-size="11" fill="#6090f0">KSampler B</text>
+      <text x="353" y="111" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">同 seed，Prompt B</text>
+
+      <rect x="438" y="40" width="130" height="50" rx="8" fill="#20162a" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="503" y="60" text-anchor="middle" class="nb" font-size="11" fill="#a078f0">Image Compare</text>
+      <text x="503" y="76" text-anchor="middle" class="ns" font-size="9" fill="#604890">批次對比輸出</text>
+
+      <rect x="588" y="8" width="110" height="114" rx="8" fill="#162016" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="643" y="60" text-anchor="middle" class="nb" font-size="11" fill="#60f0c0">Preview /</text>
+      <text x="643" y="78" text-anchor="middle" class="nb" font-size="11" fill="#60f0c0">Save All</text>
+      <text x="643" y="96" text-anchor="middle" class="ns" font-size="9" fill="#306040">多版本對比存檔</text>
+
+      <line x1="118" y1="65" x2="136" y2="31" stroke="#a0a0c0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a10)"/>
+      <line x1="118" y1="65" x2="136" y2="99" stroke="#a0a0c0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a10)"/>
+      <line x1="268" y1="31" x2="286" y2="31" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a10)"/>
+      <line x1="268" y1="99" x2="286" y2="99" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a10)"/>
+      <line x1="418" y1="31" x2="436" y2="55" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a10)"/>
+      <line x1="418" y1="99" x2="436" y2="75" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a10)"/>
+      <line x1="568" y1="65" x2="586" y2="65" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.6" marker-end="url(#a10)"/>
+    </svg>
+    </div>
+  </div>
+  <div class="wf-info">
+    <div class="wf-header">
+      <div class="wf-num">10</div>
+      <h2>Prompt 插值 / 圖像變體</h2>
+    </div>
+    <p class="wf-desc">固定同一 seed，只改變 Prompt 或 CFG，批次生成多個版本對比，精準觀察每個詞語的影響力。</p>
+    <ul class="notes">
+      <li>固定 seed 讓<b>初始噪聲相同</b>，差異完全來自 Prompt 或參數變化，控制變數更精準</li>
+      <li>可用 <b>Batch Count</b> 或 <b>XY Plot</b> 節點一次跑多組（如 CFG 從 5 到 12 每步 1）</li>
+      <li><b>XY Plot</b>：X 軸控制一個變數（CFG），Y 軸控制另一個（steps），輸出格狀比較圖</li>
+      <li>常用來確認最佳 cfg、steps 組合，或比較不同 Sampler 的風格差異</li>
+    </ul>
+    <div class="wf-tags" style="margin-top:16px">
+      <span class="tag">固定 Seed</span><span class="tag">XY Plot</span><span class="tag">批次對比</span><span class="tag">參數調優</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ WF 11: FaceDetailer ══ -->
+<section class="workflow wf-11" id="wf11">
+  <div class="wf-diagram">
+    <div class="diagram-wrap">
+    <svg viewBox="0 0 860 120" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:860px;">
+      <defs><marker id="a11" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#f0b860" stroke-width="1.5"/></marker></defs>
+
+      <rect x="8" y="20" width="110" height="80" rx="8" fill="#241828" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="63" y="48" text-anchor="middle" class="nb" font-size="11" fill="#d060a0">原始生成圖</text>
+      <text x="63" y="64" text-anchor="middle" class="ns" font-size="9" fill="#804060">臉部模糊 / 扭曲</text>
+      <text x="63" y="79" text-anchor="middle" class="ns" font-size="9" fill="#804060">全圖任意尺寸</text>
+
+      <rect x="138" y="20" width="140" height="80" rx="8" fill="#241a1c" stroke="#f06080" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="208" y="48" text-anchor="middle" class="nb" font-size="11" fill="#f06080">FaceDetailer</text>
+      <text x="208" y="64" text-anchor="middle" class="ns" font-size="9" fill="#803050">YOLO 偵測臉部</text>
+      <text x="208" y="79" text-anchor="middle" class="ns" font-size="9" fill="#803050">生成 bbox + mask</text>
+
+      <rect x="298" y="6" width="130" height="44" rx="8" fill="#162224" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="363" y="22" text-anchor="middle" class="nb" font-size="11" fill="#60c8f0">CLIP Encode</text>
+      <text x="363" y="38" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">高清臉部 Prompt</text>
+
+      <rect x="448" y="20" width="130" height="80" rx="8" fill="#162030" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="513" y="48" text-anchor="middle" class="nb" font-size="12" fill="#6090f0">KSampler</text>
+      <text x="513" y="64" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">臉部區域局部重繪</text>
+      <text x="513" y="79" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">512px crop 推理</text>
+
+      <rect x="598" y="20" width="130" height="80" rx="8" fill="#1e1e22" stroke="#8080a0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="663" y="48" text-anchor="middle" class="nb" font-size="11" fill="#a0a0c0">Paste Back</text>
+      <text x="663" y="64" text-anchor="middle" class="ns" font-size="9" fill="#606080">貼回原圖正確位置</text>
+      <text x="663" y="79" text-anchor="middle" class="ns" font-size="9" fill="#606080">→ Save Image</text>
+
+      <rect x="748" y="30" width="100" height="60" rx="8" fill="#162016" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="798" y="56" text-anchor="middle" class="nb" font-size="11" fill="#60f0c0">Save Image</text>
+      <text x="798" y="72" text-anchor="middle" class="ns" font-size="9" fill="#306040">臉部修復完成</text>
+
+      <line x1="118" y1="60" x2="136" y2="60" stroke="#d060a0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a11)"/>
+      <line x1="278" y1="60" x2="296" y2="42" stroke="#f06080" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a11)"/>
+      <line x1="278" y1="60" x2="446" y2="52" stroke="#f06080" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a11)"/>
+      <line x1="428" y1="28" x2="446" y2="38" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a11)"/>
+      <line x1="578" y1="60" x2="596" y2="60" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a11)"/>
+      <line x1="728" y1="60" x2="746" y2="60" stroke="#a0a0c0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a11)"/>
+    </svg>
+    </div>
+  </div>
+  <div class="wf-info">
+    <div class="wf-header">
+      <div class="wf-num">11</div>
+      <h2>臉部修復 <em>FaceDetailer / ADetailer</em></h2>
+    </div>
+    <p class="wf-desc">以 YOLO 自動偵測圖中所有臉部，裁切為高解析局部圖後重繪，再精準貼回原圖位置。</p>
+    <ul class="notes">
+      <li><b>FaceDetailer</b>（來自 ComfyUI-Impact-Pack）包含偵測→裁切→重繪→貼回完整流程</li>
+      <li>裁切後的局部圖通常在 <b>512～768px</b> 推理，解析度夠高才能生出清晰臉部</li>
+      <li>Prompt 可以是 <b>「detailed face, sharp eyes, natural skin」</b>，針對臉部細節描述</li>
+      <li>可設定 <b>bbox_threshold</b>（偵測閾值）避免誤偵測非人臉物件</li>
+      <li>通常置於主 workflow 最後，幾乎是<b>人像生成的標準後處理</b></li>
+    </ul>
+    <div class="wf-tags" style="margin-top:16px">
+      <span class="tag">YOLO 偵測</span><span class="tag">局部重繪</span><span class="tag">Paste Back</span><span class="tag">人像必備</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ WF 12: Flux ══ -->
+<section class="workflow wf-12" id="wf12">
+  <div class="wf-diagram">
+    <div class="diagram-wrap">
+    <svg viewBox="0 0 880 120" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:880px;">
+      <defs><marker id="a12" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#60f0c0" stroke-width="1.5"/></marker></defs>
+
+      <rect x="8" y="20" width="140" height="80" rx="8" fill="#20162a" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="78" y="46" text-anchor="middle" class="nb" font-size="11" fill="#a078f0">Flux Checkpoint</text>
+      <text x="78" y="62" text-anchor="middle" class="ns" font-size="9" fill="#604890">flux1-dev / schnell</text>
+      <text x="78" y="78" text-anchor="middle" class="ns" font-size="9" fill="#604890">DiT 架構</text>
+
+      <rect x="168" y="6" width="140" height="50" rx="8" fill="#162224" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="238" y="26" text-anchor="middle" class="nb" font-size="11" fill="#60c8f0">CLIP-L Encode</text>
+      <text x="238" y="42" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">短 Prompt（風格）</text>
+
+      <rect x="168" y="64" width="140" height="50" rx="8" fill="#162224" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="238" y="84" text-anchor="middle" class="nb" font-size="11" fill="#60c8f0">T5-XXL Encode</text>
+      <text x="238" y="100" text-anchor="middle" class="ns" font-size="9" fill="#3d7080">長 Prompt（細節）</text>
+
+      <rect x="328" y="10" width="160" height="100" rx="8" fill="#162030" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="408" y="38" text-anchor="middle" class="nb" font-size="11" fill="#6090f0">Flux Sampler</text>
+      <text x="408" y="55" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">guidance（取代 CFG）</text>
+      <text x="408" y="70" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">無負向 Prompt</text>
+      <text x="408" y="85" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">steps 4～50</text>
+      <text x="408" y="100" text-anchor="middle" class="ns" font-size="9" fill="#3a5090">schnell=4步</text>
+
+      <rect x="508" y="20" width="130" height="80" rx="8" fill="#242012" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="573" y="56" text-anchor="middle" class="nb" font-size="11" fill="#f0b860">VAE Decode</text>
+      <text x="573" y="72" text-anchor="middle" class="ns" font-size="9" fill="#806030">AE（Flux 專用）</text>
+
+      <rect x="658" y="20" width="130" height="80" rx="8" fill="#162016" stroke="#60f0c0" stroke-width="0.8" stroke-opacity="0.5"/>
+      <text x="723" y="52" text-anchor="middle" class="nb" font-size="11" fill="#60f0c0">Save Image</text>
+      <text x="723" y="68" text-anchor="middle" class="ns" font-size="9" fill="#306040">高品質圖像</text>
+      <text x="723" y="83" text-anchor="middle" class="ns" font-size="9" fill="#306040">文字理解大幅提升</text>
+
+      <line x1="148" y1="60" x2="166" y2="31" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a12)"/>
+      <line x1="148" y1="60" x2="166" y2="89" stroke="#a078f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a12)"/>
+      <line x1="308" y1="31" x2="326" y2="45" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a12)"/>
+      <line x1="308" y1="89" x2="326" y2="72" stroke="#60c8f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a12)"/>
+      <line x1="488" y1="60" x2="506" y2="60" stroke="#6090f0" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a12)"/>
+      <line x1="638" y1="60" x2="656" y2="60" stroke="#f0b860" stroke-width="0.8" stroke-opacity="0.7" marker-end="url(#a12)"/>
+    </svg>
+    </div>
+  </div>
+  <div class="wf-info">
+    <div class="wf-header">
+      <div class="wf-num">12</div>
+      <h2>Flux / DiT <em>現代架構</em></h2>
+    </div>
+    <p class="wf-desc">Flux.1、SD3 等新世代 DiT 架構模型，採用雙文字編碼器與全新 Sampler，節點結構與傳統 SD 截然不同。</p>
+    <ul class="notes">
+      <li><b>CLIP-L + T5-XXL 雙編碼器</b>：短 Prompt 用 CLIP-L 抓風格，長細節描述交給 T5-XXL（理解能力遠優於 CLIP）</li>
+      <li><b>無負向 Prompt</b>：Flux 以 guidance 參數（≈ 3.5）取代 CFG，不支援也不需要負向詞</li>
+      <li>Flux-schnell：<b>僅需 4 步</b>即可生成高品質圖，速度極快但適合輕量應用</li>
+      <li>Flux-dev：steps 約 20～30，品質更高，<b>文字生成、複雜構圖、手部描繪</b>都顯著優於 SD</li>
+      <li>VAE 使用 Flux 專用的 <b>AE（Autoencoder）</b>，不能混用 SD 的 VAE</li>
+    </ul>
+    <div class="wf-tags" style="margin-top:16px">
+      <span class="tag">Flux.1-dev</span><span class="tag">T5-XXL</span><span class="tag">DiT 架構</span><span class="tag">4步生成</span><span class="tag">文字理解強</span>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>ComfyUI Workflow 完整指南 · 12 種核心流程</p>
+  <p>各 workflow 均可組合疊加 · 如 LoRA + Hires Fix + FaceDetailer 串接使用</p>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.workflow').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
