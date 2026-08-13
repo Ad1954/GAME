@@ -107,6 +107,7 @@ const DOMElements = {
   exportChunkGroup: document.getElementById('export-chunk-group'),
   exportChunkSize: document.getElementById('export-chunk-size'),
   btnExportBook: document.getElementById('btn-export-book'),
+  btnExportBackupJson: document.getElementById('btn-export-backup-json'),
   
   // Crawler Progress Overlay
   crawlerOverlay: document.getElementById('crawler-overlay'),
@@ -434,6 +435,41 @@ async function processUploadedFile(file) {
 
   try {
     let result = null;
+    
+    // Handle JSON Book Backup Restore directly
+    if (ext === 'json') {
+      updateStatus('正在解析 Xreader 備份檔...');
+      
+      const backupText = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => reject(new Error('讀取備份檔失敗'));
+        reader.readAsText(file);
+      });
+
+      const backupData = JSON.parse(backupText);
+      if (backupData.type !== 'xreader-backup') {
+        throw new Error('此檔案不是有效的 Xreader 書籍備份檔！');
+      }
+
+      const book = backupData.book;
+      book.addedAt = Date.now(); // Update import date
+      await db.saveBook(book);
+
+      let chapCount = 0;
+      for (const chap of backupData.chapters) {
+        chapCount++;
+        updateStatus(`正在還原章節：${chapCount}/${backupData.chapters.length}`);
+        await db.saveChapter(chap);
+      }
+
+      DOMElements.fileStatus.style.display = 'none';
+      await loadLibrary();
+      await loadBook(book.id);
+      alert(`書籍《${book.title}》已成功從備份檔還原匯入！`);
+      return;
+    }
+
     if (ext === 'txt') {
       result = await FileParser.parseTXT(file);
     } else if (ext === 'docx') {
@@ -443,7 +479,7 @@ async function processUploadedFile(file) {
     } else if (ext === 'epub') {
       result = await FileParser.parseEPUB(file, updateStatus);
     } else {
-      throw new Error('未支援的檔案格式，請上傳 .txt, .pdf, .docx, 或 .epub');
+      throw new Error('未支援的檔案格式，請上傳 .txt, .pdf, .docx, .epub 或 .json 備份檔');
     }
 
     // Save metadata
@@ -1066,6 +1102,9 @@ function setupSettingsDrawerEvents() {
 
   // Handle entire book backup export
   DOMElements.btnExportBook.addEventListener('click', exportEntireBook);
+
+  // Handle entire book JSON backup export
+  DOMElements.btnExportBackupJson.addEventListener('click', exportBookBackupJson);
 }
 
 // --- Content Exporter ---
@@ -1271,6 +1310,54 @@ function chineseToNumber(cn) {
   }
   result += temp;
   return result;
+}
+
+async function exportBookBackupJson() {
+  if (!currentBook) {
+    alert('尚未選取書籍，無法匯出');
+    return;
+  }
+
+  DOMElements.btnExportBackupJson.disabled = true;
+  DOMElements.btnExportBackupJson.textContent = '備份生成中...';
+
+  try {
+    const allChapters = await db.getBookChaptersList(currentBook.id);
+    if (allChapters.length === 0) {
+      alert('本機資料庫中無此書籍的章節內容，請先下載！');
+      return;
+    }
+
+    const backupData = {
+      type: 'xreader-backup',
+      version: 1,
+      book: currentBook,
+      chapters: allChapters
+    };
+
+    const jsonString = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const bookTitle = currentBook.title.replace(/\s+/g, '_');
+    a.download = `${bookTitle}_Xreader備份.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    alert('書籍備份包匯出成功！您可以將此 .json 檔案在其他版本的 Xreader 中拖曳上傳來還原！');
+  } catch (err) {
+    console.error(err);
+    alert(`備份檔案生成失敗: ${err.message}`);
+  } finally {
+    DOMElements.btnExportBackupJson.disabled = false;
+    DOMElements.btnExportBackupJson.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+      匯出 Xreader 備份檔 (.json)
+    `;
+  }
 }
 
 // --- Bookmarklet Handshake Receiver ---
