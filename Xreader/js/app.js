@@ -678,11 +678,15 @@ function highlightSentenceNode(index) {
   if (activeNode) {
     activeNode.classList.add('active-reading');
     
-    // Smooth scroll active sentence to center 1/3 viewport
+    // Smooth scroll active sentence to center 1/3 viewport (safe for both PC and iOS)
     const bodyEl = DOMElements.readerBody;
-    const offset = activeNode.offsetTop - bodyEl.offsetTop - (bodyEl.clientHeight / 3);
+    const containerRect = bodyEl.getBoundingClientRect();
+    const elemRect = activeNode.getBoundingClientRect();
+    const relativeTop = elemRect.top - containerRect.top + bodyEl.scrollTop;
+    const scrollTarget = relativeTop - (containerRect.height / 3);
+
     bodyEl.scrollTo({
-      top: offset,
+      top: scrollTarget,
       behavior: 'smooth'
     });
   }
