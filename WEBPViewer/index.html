@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>WebP Folder Player & Viewer</title>
+  <!-- Import Inter / Playfair Google Fonts for premium appearance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Landing Drop Zone & Select buttons (visible when no folder loaded) -->
+  <div id="drop-zone" class="drop-zone">
+    <div class="drop-zone-content">
+      <div class="drop-zone-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <h2>請選取或拖放包含 WebP 檔案的資料夾</h2>
+      <p>支援資料夾內子目錄遞迴讀取與檔名自然排序</p>
+      
+      <div class="upload-buttons">
+        <button id="btn-select-folder" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          選擇資料夾
+        </button>
+        <button id="btn-select-files" class="btn btn-secondary">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="12" y1="18" x2="12" y2="12"></line>
+            <line x1="9" y1="15" x2="15" y2="15"></line>
+          </svg>
+          選取多個檔案
+        </button>
+      </div>
+      
+      <!-- Hidden file inputs -->
+      <input type="file" id="folder-input" webkitdirectory directory multiple style="display: none;">
+      <input type="file" id="file-input" multiple accept="image/webp" style="display: none;">
+    </div>
+  </div>
+
+  <!-- Main Application Container -->
+  <div id="app-container" class="app-container hidden">
+
+    <!-- Top Header Toolbar -->
+    <header id="header-toolbar" class="toolbar toolbar-top">
+      <div class="toolbar-section toolbar-left">
+        <button id="btn-toggle-sidebar" class="btn btn-icon-only" title="切換側邊欄">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+          </svg>
+        </button>
+        <div class="source-info">
+          <h1 id="lbl-source-title" class="source-title">未命名序列</h1>
+          <span id="lbl-file-count" class="badge">0 張圖</span>
+        </div>
+      </div>
+
+      <div class="toolbar-section toolbar-center">
+        <!-- Layout Mode Toggles -->
+        <div class="segmented-control">
+          <button id="btn-mode-single" class="btn active" data-mode="single">單頁</button>
+          <button id="btn-mode-double" class="btn" data-mode="double">雙頁</button>
+          <button id="btn-mode-scroll" class="btn" data-mode="scroll">垂直捲動</button>
+        </div>
+        
+        <!-- Image Sizing Toggles -->
+        <div class="segmented-control" id="fit-controls">
+          <button id="btn-fit-height" class="btn active" data-fit="height" title="適應高度">高</button>
+          <button id="btn-fit-width" class="btn" data-fit="width" title="適應寬度">寬</button>
+          <button id="btn-fit-original" class="btn" data-fit="original" title="原始大小">原</button>
+        </div>
+      </div>
+
+      <div class="toolbar-section toolbar-right">
+        <button id="btn-reupload" class="btn btn-secondary btn-sm">
+          重新載入
+        </button>
+      </div>
+    </header>
+
+    <!-- Sidebar (Thumbnails & Navigation List) -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <h3>檔案清單</h3>
+        <input type="text" id="txt-search" class="search-input" placeholder="搜尋檔案名稱...">
+      </div>
+      <div id="thumbnail-list" class="thumbnail-list">
+        <!-- Dynamic content will be injected by app.js -->
+      </div>
+    </aside>
+
+    <!-- Main Viewer Area -->
+    <main id="viewer-container" class="viewer-container">
+      
+      <!-- Interactive Tap Zones (Overlays) for ipad and reading navigation -->
+      <div id="prev-zone" class="tap-zone left-zone" title="上一頁 (點擊或左滑)"></div>
+      <div id="toggle-ui-zone" class="tap-zone center-zone" title="切換工具列"></div>
+      <div id="next-zone" class="tap-zone right-zone" title="下一頁 (點擊或右滑)"></div>
+
+      <!-- Canvas Area for Page Render -->
+      <div id="canvas-area" class="canvas-area fit-height">
+        <!-- Render views dynamically:
+             - In 'single' and 'double' layouts: imgs will be rendered inside a wrapper.
+             - In 'scroll' layout: all images stack vertically.
+        -->
+        <div id="viewport-reader" class="viewport-reader">
+          <!-- Main images loaded dynamically -->
+        </div>
+      </div>
+      
+      <!-- Continuous Scroll Wrapper -->
+      <div id="viewport-scroll" class="viewport-scroll hidden">
+        <!-- Vertical stacking of images will go here -->
+      </div>
+
+    </main>
+
+    <!-- Bottom Player / Slideshow Toolbar -->
+    <footer id="footer-toolbar" class="toolbar toolbar-bottom">
+      <div class="footer-row-scrub">
+        <input type="range" id="progress-scrub" class="progress-scrub" min="0" max="0" value="0">
+      </div>
+      
+      <div class="footer-row-controls">
+        <div class="toolbar-section toolbar-left">
+          <span id="lbl-page-indicator" class="page-indicator">0 / 0</span>
+        </div>
+
+        <div class="toolbar-section toolbar-center">
+          <button id="btn-prev" class="btn btn-icon-only btn-nav" title="上一頁">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+          
+          <button id="btn-play-pause" class="btn btn-primary btn-play" title="播放/暫停投影片">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-play">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-pause hidden">
+              <rect x="6" y="4" width="4" height="16"></rect>
+              <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+          </button>
+
+          <button id="btn-next" class="btn btn-icon-only btn-nav" title="下一頁">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <div class="toolbar-section toolbar-right">
+          <!-- Autoplay configuration -->
+          <div class="autoplay-settings">
+            <label for="select-speed" class="speed-label">播放間隔</label>
+            <select id="select-speed" class="select-control">
+              <option value="500">0.5 秒</option>
+              <option value="1000">1.0 秒</option>
+              <option value="2000" selected>2.0 秒</option>
+              <option value="3000">3.0 秒</option>
+              <option value="5000">5.0 秒</option>
+              <option value="10000">10 秒</option>
+            </select>
+            
+            <label class="checkbox-container">
+              <input type="checkbox" id="chk-loop" checked>
+              <span class="checkbox-checkmark"></span>
+              循環
+            </label>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
