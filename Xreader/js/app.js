@@ -35,6 +35,7 @@ let emulatedPlatform = 'auto'; // 'auto', 'PC', 'iOS', 'Android'
 let chromeKeepAliveInterval = null;
 let silentAudioSource = null;
 let audioContext = null;
+let silentAudioHTML5 = null;
 
 // --- DOM References ---
 const DOMElements = {
@@ -846,6 +847,39 @@ function setupSpeechEvents() {
 
   // Export as Markdown
   DOMElements.btnExportContent.addEventListener('click', exportMarkdown);
+
+  // Register Media Session (Bluetooth) remote controls
+  setupMediaSessionHandlers();
+}
+
+function setupMediaSessionHandlers() {
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('play', () => {
+      console.log('Bluetooth / MediaSession: Play clicked');
+      if (!isPlaying) togglePlayback();
+    });
+
+    navigator.mediaSession.setActionHandler('pause', () => {
+      console.log('Bluetooth / MediaSession: Pause clicked');
+      if (isPlaying) togglePlayback();
+    });
+
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      console.log('Bluetooth / MediaSession: Prev sentence clicked');
+      if (currentSentenceIndex > 0) {
+        jumpToSentence(currentSentenceIndex - 1);
+        if (isPlaying) playSentence(currentSentenceIndex);
+      }
+    });
+
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      console.log('Bluetooth / MediaSession: Next sentence clicked');
+      if (currentSentenceIndex < flatSentences.length - 1) {
+        jumpToSentence(currentSentenceIndex + 1);
+        if (isPlaying) playSentence(currentSentenceIndex);
+      }
+    });
+  }
 }
 
 function applySpeechSettingsChange() {
@@ -866,10 +900,21 @@ function togglePlayback() {
     // Start anti-sleep oscillator and Chrome heartbeat
     startAudioKeepAlive();
     
+    // Update Media Session State
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'playing';
+    }
+    
     playSentence(currentSentenceIndex);
   } else {
     DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
     synth.cancel();
+    
+    // Update Media Session State
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
+    }
+    
     stopAudioKeepAlive();
   }
 }
@@ -897,6 +942,20 @@ function playSentence(index) {
   DOMElements.playbackSlider.value = index;
   updateProgressUI();
   highlightSentenceNode(index);
+
+  // Sync to media session metadata (displays active book & chapter on lock screen)
+  if ('mediaSession' in navigator) {
+    const currentChapter = currentChapters[currentChapterIndex];
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentBook ? currentBook.title : 'Xreader 朗讀中',
+      artist: currentChapter ? currentChapter.title : `第 ${index + 1} 句`,
+      album: 'Xreader 聽書工具',
+      artwork: [
+        { src: window.location.origin + window.location.pathname + 'icon.png', sizes: '512x512', type: 'image/png' }
+      ]
+    });
+    navigator.mediaSession.playbackState = 'playing';
+  }
 
   // Stop current utterance cleanly
   synth.cancel();
@@ -969,7 +1028,7 @@ function startAudioKeepAlive() {
     }
   }, 10000);
 
-  // 2. iOS Safari Wake Lock Audio Hack
+  // 2. iOS Safari Wake Lock Audio Hack (Web Audio API)
   try {
     if (!audioContext) {
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -995,6 +1054,17 @@ function startAudioKeepAlive() {
   } catch (e) {
     console.warn('AudioContext Wake Lock failed to initialize:', e);
   }
+
+  // 3. HTML5 Audio Loop Wake Lock for iOS background tab execution & Media Session API
+  try {
+    if (!silentAudioHTML5) {
+      silentAudioHTML5 = new Audio("data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==");
+      silentAudioHTML5.loop = true;
+    }
+    silentAudioHTML5.play().catch(e => console.warn('HTML5 silent audio play failed:', e));
+  } catch (e) {
+    console.warn('HTML5 silent audio failed to start:', e);
+  }
 }
 
 function stopAudioKeepAlive() {
@@ -1008,6 +1078,12 @@ function stopAudioKeepAlive() {
       silentAudioSource.stop();
     } catch(e){}
     silentAudioSource = null;
+  }
+
+  if (silentAudioHTML5) {
+    try {
+      silentAudioHTML5.pause();
+    } catch(e){}
   }
 }
 
