@@ -36,6 +36,7 @@ let chromeKeepAliveInterval = null;
 let silentAudioSource = null;
 let audioContext = null;
 let silentAudioHTML5 = null;
+let playlistSentences = [];
 
 // --- DOM References ---
 const DOMElements = {
@@ -602,7 +603,7 @@ async function loadBook(bookId) {
   await loadChapter(currentBook.id, currentChapterIndex, book.lastReadSentenceIndex || 0);
 }
 
-async function loadChapter(bookId, chapterIndex, sentenceIndexStart = 0) {
+async function loadChapter(bookId, chapterIndex, sentenceIndexStart = 0, isBackgroundSync = false) {
   if (currentChapters.length === 0) return;
   const chapter = currentChapters[chapterIndex];
   if (!chapter) return;
@@ -645,7 +646,7 @@ async function loadChapter(bookId, chapterIndex, sentenceIndexStart = 0) {
           togglePlayback();
         } else {
           // If already playing, cancel current speech and start from clicked sentence immediately
-          playSentence(sentenceIdx);
+          playSentence(currentChapterIndex, sentenceIdx);
         }
       });
 
@@ -668,6 +669,13 @@ async function loadChapter(bookId, chapterIndex, sentenceIndexStart = 0) {
 
   // Highlight starting sentence (if not empty)
   highlightSentenceNode(currentSentenceIndex);
+
+  // CRITICAL BACKGROUND SYNC / MANUAL CHANGE ACTION:
+  // If the user manually changed the chapter (isBackgroundSync = false) and it is playing,
+  // we must cancel the old speech session and start playing the new chapter!
+  if (isPlaying && !isBackgroundSync) {
+    playSentence(currentChapterIndex, currentSentenceIndex);
+  }
 }
 
 function highlightSentenceNode(index) {
@@ -824,7 +832,7 @@ function setupSpeechEvents() {
     const idx = parseInt(e.target.value);
     jumpToSentence(idx);
     if (isPlaying) {
-      playSentence(idx);
+      playSentence(currentChapterIndex, idx);
     }
   });
 
@@ -834,14 +842,14 @@ function setupSpeechEvents() {
   DOMElements.playbackPrev.addEventListener('click', () => {
     if (currentSentenceIndex > 0) {
       jumpToSentence(currentSentenceIndex - 1);
-      if (isPlaying) playSentence(currentSentenceIndex);
+      if (isPlaying) playSentence(currentChapterIndex, currentSentenceIndex);
     }
   });
 
   DOMElements.playbackNext.addEventListener('click', () => {
     if (currentSentenceIndex < flatSentences.length - 1) {
       jumpToSentence(currentSentenceIndex + 1);
-      if (isPlaying) playSentence(currentSentenceIndex);
+      if (isPlaying) playSentence(currentChapterIndex, currentSentenceIndex);
     }
   });
 
@@ -868,7 +876,7 @@ function setupMediaSessionHandlers() {
       console.log('Bluetooth / MediaSession: Prev sentence clicked');
       if (currentSentenceIndex > 0) {
         jumpToSentence(currentSentenceIndex - 1);
-        if (isPlaying) playSentence(currentSentenceIndex);
+        if (isPlaying) playSentence(currentChapterIndex, currentSentenceIndex);
       }
     });
 
@@ -876,7 +884,7 @@ function setupMediaSessionHandlers() {
       console.log('Bluetooth / MediaSession: Next sentence clicked');
       if (currentSentenceIndex < flatSentences.length - 1) {
         jumpToSentence(currentSentenceIndex + 1);
-        if (isPlaying) playSentence(currentSentenceIndex);
+        if (isPlaying) playSentence(currentChapterIndex, currentSentenceIndex);
       }
     });
   }
@@ -885,8 +893,55 @@ function setupMediaSessionHandlers() {
 function applySpeechSettingsChange() {
   if (isPlaying) {
     // If speaking, restart sentence with new parameters instantly
-    playSentence(currentSentenceIndex);
+    playSentence(currentChapterIndex, currentSentenceIndex);
   }
+}
+
+// --- Helper Functions for Playlist Compilation & Blob Conversion ---
+function base64ToAudioUrl(base64Data, contentType = 'audio/wav') {
+  const byteCharacters = atob(base64Data);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  const blob = new Blob([byteArray], { type: contentType });
+  return URL.createObjectURL(blob);
+}
+
+function compilePlaylist(startChapterIdx, startSentenceIdx) {
+  playlistSentences = [];
+  let accumulatedLength = 0;
+  const remainingTextParts = [];
+
+  // Combine up to 20 chapters starting from the current chapter
+  const endChapterIdx = Math.min(currentChapters.length - 1, startChapterIdx + 19);
+
+  for (let cIdx = startChapterIdx; cIdx <= endChapterIdx; cIdx++) {
+    const chapter = currentChapters[cIdx];
+    if (!chapter) continue;
+    
+    chapter.content.forEach((para) => {
+      para.sentences.forEach((sentenceText, sIdx) => {
+        // Skip sentences in the starting chapter that are before the starting sentence
+        if (cIdx === startChapterIdx && sIdx < startSentenceIdx) {
+          return;
+        }
+
+        playlistSentences.push({
+          chapterIndex: cIdx,
+          sentenceIndex: sIdx,
+          text: sentenceText,
+          start: accumulatedLength,
+          end: accumulatedLength + sentenceText.length
+        });
+        remainingTextParts.push(sentenceText);
+        accumulatedLength += sentenceText.length;
+      });
+    });
+  }
+
+  return remainingTextParts.join('');
 }
 
 // --- TTS Engine Execution Loop & Bug Workarounds ---
@@ -927,39 +982,25 @@ function togglePlayback() {
       navigator.mediaSession.playbackState = 'playing';
     }
     
-    playSentence(currentSentenceIndex);
+    playSentence(currentChapterIndex, currentSentenceIndex);
   }
 }
 
-function playSentence(index) {
-  if (index < 0 || index >= flatSentences.length) {
-    // Out of sentences in this chapter!
-    // Try to auto-advance to next chapter
-    if (currentChapterIndex < currentChapters.length - 1) {
-      console.log('Chapter ended. Moving to next chapter.');
-      loadChapter(currentBook.id, currentChapterIndex + 1, 0).then(() => {
-        if (isPlaying) playSentence(0);
-      });
-    } else {
-      // Entire book read
-      resetPlaybackState();
-      alert('已朗讀完畢全書內容！');
-    }
-    return;
-  }
-
+function playSentence(chapterIndex, sentenceIndex) {
   // Update indices
-  currentSentenceIndex = index;
-  DOMElements.playbackSlider.value = index;
+  currentChapterIndex = chapterIndex;
+  currentSentenceIndex = sentenceIndex;
+  
+  DOMElements.playbackSlider.value = sentenceIndex;
   updateProgressUI();
-  highlightSentenceNode(index);
+  highlightSentenceNode(sentenceIndex);
 
   // Sync to media session metadata (displays active book & chapter on lock screen)
   if ('mediaSession' in navigator) {
-    const currentChapter = currentChapters[currentChapterIndex];
+    const currentChapter = currentChapters[chapterIndex];
     navigator.mediaSession.metadata = new MediaMetadata({
       title: currentBook ? currentBook.title : 'Xreader 朗讀中',
-      artist: currentChapter ? currentChapter.title : `第 ${index + 1} 句`,
+      artist: currentChapter ? currentChapter.title : `第 ${sentenceIndex + 1} 句`,
       album: 'Xreader 聽書工具',
       artwork: [
         { src: window.location.origin + window.location.pathname + 'icon.png', sizes: '512x512', type: 'image/png' }
@@ -973,23 +1014,16 @@ function playSentence(index) {
 
   // iOS Safari Queue Freeze Workaround:
   setTimeout(() => {
-    // Calculate sentence offsets for boundary detection
-    let accumulatedLength = 0;
-    const sentenceOffsets = [];
-    const remainingSentences = [];
-
-    for (let i = index; i < flatSentences.length; i++) {
-      const sentence = flatSentences[i];
-      sentenceOffsets.push({
-        index: i,
-        start: accumulatedLength,
-        end: accumulatedLength + sentence.length
-      });
-      remainingSentences.push(sentence);
-      accumulatedLength += sentence.length;
+    // Compile text for the next 20 chapters starting from current position
+    const textToSpeak = compilePlaylist(chapterIndex, sentenceIndex);
+    
+    if (!textToSpeak) {
+      // End of book!
+      resetPlaybackState();
+      alert('已朗讀完畢全書內容！');
+      return;
     }
 
-    const textToSpeak = remainingSentences.join('');
     currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
 
     if (activeVoice) currentUtterance.voice = activeVoice;
@@ -1000,25 +1034,40 @@ function playSentence(index) {
       // event.charIndex is the character offset in the currently spoken remaining text
       if (event.name === 'sentence' || event.name === 'word') {
         const charIdx = event.charIndex;
-        // Find which sentence this charIdx belongs to
-        const matched = sentenceOffsets.find(offset => charIdx >= offset.start && charIdx < offset.end);
-        if (matched && matched.index !== currentSentenceIndex) {
-          currentSentenceIndex = matched.index;
-          DOMElements.playbackSlider.value = currentSentenceIndex;
-          updateProgressUI();
-          highlightSentenceNode(currentSentenceIndex);
+        // Find which sentence in the playlist this charIdx belongs to
+        const matched = playlistSentences.find(item => charIdx >= item.start && charIdx < item.end);
+        if (matched) {
+          // If we crossed into a new chapter, load the chapter UI in background sync mode
+          if (matched.chapterIndex !== currentChapterIndex) {
+            currentChapterIndex = matched.chapterIndex;
+            loadChapter(currentBook.id, currentChapterIndex, matched.sentenceIndex, true);
+          } else if (matched.sentenceIndex !== currentSentenceIndex) {
+            currentSentenceIndex = matched.sentenceIndex;
+            DOMElements.playbackSlider.value = currentSentenceIndex;
+            updateProgressUI();
+            highlightSentenceNode(currentSentenceIndex);
+          }
         }
       }
     };
 
     currentUtterance.onend = () => {
-      // If we finished the entire utterance naturally (which means the chapter ended)
-      if (isPlaying && currentSentenceIndex >= flatSentences.length - 1) {
-        setTimeout(() => {
-          if (isPlaying) {
-            playSentence(flatSentences.length); // Trigger chapter end handling
+      // If we finished the entire playlist naturally (which means the chapter ended)
+      if (isPlaying) {
+        const lastPlaylistSentence = playlistSentences[playlistSentences.length - 1];
+        if (lastPlaylistSentence) {
+          const nextChapterIdx = lastPlaylistSentence.chapterIndex + 1;
+          if (nextChapterIdx < currentChapters.length) {
+            // Load next chapter and continue playing in background
+            loadChapter(currentBook.id, nextChapterIdx, 0, true).then(() => {
+              playSentence(nextChapterIdx, 0);
+            });
+          } else {
+            // End of book
+            resetPlaybackState();
+            alert('已朗讀完畢全書內容！');
           }
-        }, 100);
+        }
       }
     };
 
@@ -1027,13 +1076,23 @@ function playSentence(index) {
       if (e.error !== 'interrupted' && isPlaying) {
         setTimeout(() => {
           if (isPlaying) {
-            playSentence(currentSentenceIndex + 1);
+            const nextIdx = currentSentenceIndex + 1;
+            if (nextIdx < flatSentences.length) {
+              playSentence(currentChapterIndex, nextIdx);
+            } else if (currentChapterIndex < currentChapters.length - 1) {
+              loadChapter(currentBook.id, currentChapterIndex + 1, 0, true).then(() => {
+                playSentence(currentChapterIndex + 1, 0);
+              });
+            }
           }
         }, 100);
       }
     };
 
     synth.speak(currentUtterance);
+    
+    // Force resume in case SpeechSynthesis got stuck in paused state
+    synth.resume();
   }, 60);
 }
 
@@ -1099,7 +1158,9 @@ function startAudioKeepAlive() {
   // 3. HTML5 Audio Loop Wake Lock for iOS background tab execution & Media Session API
   try {
     if (!silentAudioHTML5) {
-      silentAudioHTML5 = new Audio("data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==");
+      const base64SilentWav = "UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+      const audioUrl = base64ToAudioUrl(base64SilentWav, 'audio/wav');
+      silentAudioHTML5 = new Audio(audioUrl);
       silentAudioHTML5.loop = true;
     }
     silentAudioHTML5.play().catch(e => console.warn('HTML5 silent audio play failed:', e));
