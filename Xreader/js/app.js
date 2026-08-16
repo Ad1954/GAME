@@ -892,30 +892,42 @@ function applySpeechSettingsChange() {
 // --- TTS Engine Execution Loop & Bug Workarounds ---
 function togglePlayback() {
   if (flatSentences.length === 0) return;
-  isPlaying = !isPlaying;
 
-  if (isPlaying) {
+  if (synth.speaking) {
+    if (isPlaying) {
+      // Currently playing -> Pause it
+      isPlaying = false;
+      DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+      synth.pause();
+      
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'paused';
+      }
+      stopAudioKeepAlive();
+    } else {
+      // Currently paused -> Resume it
+      isPlaying = true;
+      DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>`;
+      
+      startAudioKeepAlive();
+      
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'playing';
+      }
+      synth.resume();
+    }
+  } else {
+    // Not speaking at all -> Start fresh
+    isPlaying = true;
     DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>`;
     
-    // Start anti-sleep oscillator and Chrome heartbeat
     startAudioKeepAlive();
     
-    // Update Media Session State
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'playing';
     }
     
     playSentence(currentSentenceIndex);
-  } else {
-    DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
-    synth.cancel();
-    
-    // Update Media Session State
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.playbackState = 'paused';
-    }
-    
-    stopAudioKeepAlive();
   }
 }
 
@@ -930,8 +942,7 @@ function playSentence(index) {
       });
     } else {
       // Entire book read
-      togglePlayback();
-      jumpToSentence(0);
+      resetPlaybackState();
       alert('已朗讀完畢全書內容！');
     }
     return;
@@ -961,33 +972,63 @@ function playSentence(index) {
   synth.cancel();
 
   // iOS Safari Queue Freeze Workaround:
-  // Short 60ms delay ensures browser completely resets speech state before next execution
   setTimeout(() => {
-    const textToSpeak = flatSentences[index];
+    // Calculate sentence offsets for boundary detection
+    let accumulatedLength = 0;
+    const sentenceOffsets = [];
+    const remainingSentences = [];
+
+    for (let i = index; i < flatSentences.length; i++) {
+      const sentence = flatSentences[i];
+      sentenceOffsets.push({
+        index: i,
+        start: accumulatedLength,
+        end: accumulatedLength + sentence.length
+      });
+      remainingSentences.push(sentence);
+      accumulatedLength += sentence.length;
+    }
+
+    const textToSpeak = remainingSentences.join('');
     currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
 
     if (activeVoice) currentUtterance.voice = activeVoice;
     currentUtterance.rate = speechRate;
     currentUtterance.pitch = speechPitch;
 
+    currentUtterance.onboundary = (event) => {
+      // event.charIndex is the character offset in the currently spoken remaining text
+      if (event.name === 'sentence' || event.name === 'word') {
+        const charIdx = event.charIndex;
+        // Find which sentence this charIdx belongs to
+        const matched = sentenceOffsets.find(offset => charIdx >= offset.start && charIdx < offset.end);
+        if (matched && matched.index !== currentSentenceIndex) {
+          currentSentenceIndex = matched.index;
+          DOMElements.playbackSlider.value = currentSentenceIndex;
+          updateProgressUI();
+          highlightSentenceNode(currentSentenceIndex);
+        }
+      }
+    };
+
     currentUtterance.onend = () => {
-      if (isPlaying) {
-        // Enqueue next sentence sequentially
-        // Short delay prevents queue locking
+      // If we finished the entire utterance naturally (which means the chapter ended)
+      if (isPlaying && currentSentenceIndex >= flatSentences.length - 1) {
         setTimeout(() => {
           if (isPlaying) {
-            playSentence(currentSentenceIndex + 1);
+            playSentence(flatSentences.length); // Trigger chapter end handling
           }
-        }, 80);
+        }, 100);
       }
     };
 
     currentUtterance.onerror = (e) => {
       console.warn('SpeechSynthesisUtterance error event:', e);
-      // Ignore interruption cancels
       if (e.error !== 'interrupted' && isPlaying) {
         setTimeout(() => {
-          playSentence(currentSentenceIndex + 1);
+          if (isPlaying) {
+            playSentence(currentSentenceIndex + 1);
+          }
         }, 100);
       }
     };
