@@ -717,20 +717,29 @@ function jumpToSentence(index) {
 
 // --- Chapter navigation triggers ---
 function setupReaderNavigation() {
-  DOMElements.chapterSelect.addEventListener('change', (e) => {
+  DOMElements.chapterSelect.addEventListener('change', async (e) => {
     const idx = parseInt(e.target.value);
-    loadChapter(currentBook.id, idx, 0);
-  });
-
-  DOMElements.btnPrevChap.addEventListener('click', () => {
-    if (currentChapterIndex > 0) {
-      loadChapter(currentBook.id, currentChapterIndex - 1, 0);
+    await loadChapter(currentBook.id, idx, 0);
+    if (isPlaying) {
+      playSentence(0);
     }
   });
 
-  DOMElements.btnNextChap.addEventListener('click', () => {
+  DOMElements.btnPrevChap.addEventListener('click', async () => {
+    if (currentChapterIndex > 0) {
+      await loadChapter(currentBook.id, currentChapterIndex - 1, 0);
+      if (isPlaying) {
+        playSentence(0);
+      }
+    }
+  });
+
+  DOMElements.btnNextChap.addEventListener('click', async () => {
     if (currentChapterIndex < currentChapters.length - 1) {
-      loadChapter(currentBook.id, currentChapterIndex + 1, 0);
+      await loadChapter(currentBook.id, currentChapterIndex + 1, 0);
+      if (isPlaying) {
+        playSentence(0);
+      }
     }
   });
 }
@@ -832,7 +841,7 @@ function setupSpeechEvents() {
     const idx = parseInt(e.target.value);
     jumpToSentence(idx);
     if (isPlaying) {
-      playSentence(currentChapterIndex, idx);
+      playSentence(idx);
     }
   });
 
@@ -842,14 +851,14 @@ function setupSpeechEvents() {
   DOMElements.playbackPrev.addEventListener('click', () => {
     if (currentSentenceIndex > 0) {
       jumpToSentence(currentSentenceIndex - 1);
-      if (isPlaying) playSentence(currentChapterIndex, currentSentenceIndex);
+      if (isPlaying) playSentence(currentSentenceIndex);
     }
   });
 
   DOMElements.playbackNext.addEventListener('click', () => {
     if (currentSentenceIndex < flatSentences.length - 1) {
       jumpToSentence(currentSentenceIndex + 1);
-      if (isPlaying) playSentence(currentChapterIndex, currentSentenceIndex);
+      if (isPlaying) playSentence(currentSentenceIndex);
     }
   });
 
@@ -876,7 +885,16 @@ function setupMediaSessionHandlers() {
       console.log('Bluetooth / MediaSession: Prev sentence clicked');
       if (currentSentenceIndex > 0) {
         jumpToSentence(currentSentenceIndex - 1);
-        if (isPlaying) playSentence(currentChapterIndex, currentSentenceIndex);
+        if (isPlaying) playSentence(currentSentenceIndex);
+      } else if (currentChapterIndex > 0) {
+        // Go to previous chapter last sentence
+        const prevChapIdx = currentChapterIndex - 1;
+        loadChapter(currentBook.id, prevChapIdx, 0).then(() => {
+          const lastSentenceIdx = flatSentences.length - 1;
+          loadChapter(currentBook.id, prevChapIdx, lastSentenceIdx).then(() => {
+            if (isPlaying) playSentence(lastSentenceIdx);
+          });
+        });
       }
     });
 
@@ -884,7 +902,12 @@ function setupMediaSessionHandlers() {
       console.log('Bluetooth / MediaSession: Next sentence clicked');
       if (currentSentenceIndex < flatSentences.length - 1) {
         jumpToSentence(currentSentenceIndex + 1);
-        if (isPlaying) playSentence(currentChapterIndex, currentSentenceIndex);
+        if (isPlaying) playSentence(currentSentenceIndex);
+      } else if (currentChapterIndex < currentChapters.length - 1) {
+        const nextChapIdx = currentChapterIndex + 1;
+        loadChapter(currentBook.id, nextChapIdx, 0).then(() => {
+          if (isPlaying) playSentence(0);
+        });
       }
     });
   }
@@ -893,11 +916,11 @@ function setupMediaSessionHandlers() {
 function applySpeechSettingsChange() {
   if (isPlaying) {
     // If speaking, restart sentence with new parameters instantly
-    playSentence(currentChapterIndex, currentSentenceIndex);
+    playSentence(currentSentenceIndex);
   }
 }
 
-// --- Helper Functions for Playlist Compilation & Blob Conversion ---
+// --- Helper Functions for Blob Conversion & Media Metadata ---
 function base64ToAudioUrl(base64Data, contentType = 'audio/wav') {
   const byteCharacters = atob(base64Data);
   const byteNumbers = new Array(byteCharacters.length);
@@ -909,39 +932,18 @@ function base64ToAudioUrl(base64Data, contentType = 'audio/wav') {
   return URL.createObjectURL(blob);
 }
 
-function compilePlaylist(startChapterIdx, startSentenceIdx) {
-  playlistSentences = [];
-  let accumulatedLength = 0;
-  const remainingTextParts = [];
-
-  // Combine up to 20 chapters starting from the current chapter
-  const endChapterIdx = Math.min(currentChapters.length - 1, startChapterIdx + 19);
-
-  for (let cIdx = startChapterIdx; cIdx <= endChapterIdx; cIdx++) {
-    const chapter = currentChapters[cIdx];
-    if (!chapter) continue;
-    
-    chapter.content.forEach((para) => {
-      para.sentences.forEach((sentenceText, sIdx) => {
-        // Skip sentences in the starting chapter that are before the starting sentence
-        if (cIdx === startChapterIdx && sIdx < startSentenceIdx) {
-          return;
-        }
-
-        playlistSentences.push({
-          chapterIndex: cIdx,
-          sentenceIndex: sIdx,
-          text: sentenceText,
-          start: accumulatedLength,
-          end: accumulatedLength + sentenceText.length
-        });
-        remainingTextParts.push(sentenceText);
-        accumulatedLength += sentenceText.length;
-      });
+function updateMediaSessionMetadata(chapterIndex, sentenceIndex) {
+  if ('mediaSession' in navigator) {
+    const chapter = currentChapters[chapterIndex];
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentBook ? currentBook.title : 'Xreader 朗讀中',
+      artist: chapter ? chapter.title : `第 ${sentenceIndex + 1} 句`,
+      album: 'Xreader 聽書工具',
+      artwork: [
+        { src: window.location.origin + window.location.pathname + 'icon.png', sizes: '512x512', type: 'image/png' }
+      ]
     });
   }
-
-  return remainingTextParts.join('');
 }
 
 // --- TTS Engine Execution Loop & Bug Workarounds ---
@@ -982,92 +984,72 @@ function togglePlayback() {
       navigator.mediaSession.playbackState = 'playing';
     }
     
-    playSentence(currentChapterIndex, currentSentenceIndex);
+    playSentence(currentSentenceIndex);
   }
 }
 
-function playSentence(chapterIndex, sentenceIndex) {
-  // Update indices
-  currentChapterIndex = chapterIndex;
-  currentSentenceIndex = sentenceIndex;
-  
-  DOMElements.playbackSlider.value = sentenceIndex;
-  updateProgressUI();
-  highlightSentenceNode(sentenceIndex);
+function playSentence(index) {
+  if (index < 0 || index >= flatSentences.length) return;
 
-  // Sync to media session metadata (displays active book & chapter on lock screen)
-  if ('mediaSession' in navigator) {
-    const currentChapter = currentChapters[chapterIndex];
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: currentBook ? currentBook.title : 'Xreader 朗讀中',
-      artist: currentChapter ? currentChapter.title : `第 ${sentenceIndex + 1} 句`,
-      album: 'Xreader 聽書工具',
-      artwork: [
-        { src: window.location.origin + window.location.pathname + 'icon.png', sizes: '512x512', type: 'image/png' }
-      ]
-    });
-    navigator.mediaSession.playbackState = 'playing';
-  }
+  // Update indices
+  currentSentenceIndex = index;
+  DOMElements.playbackSlider.value = index;
+  updateProgressUI();
+  highlightSentenceNode(index);
+
+  // Sync to media session metadata
+  updateMediaSessionMetadata(currentChapterIndex, index);
 
   // Stop current utterance cleanly
   synth.cancel();
 
   // iOS Safari Queue Freeze Workaround:
   setTimeout(() => {
-    // Compile text for the next 20 chapters starting from current position
-    const textToSpeak = compilePlaylist(chapterIndex, sentenceIndex);
-    
-    if (!textToSpeak) {
-      // End of book!
-      resetPlaybackState();
-      alert('已朗讀完畢全書內容！');
-      return;
-    }
-
+    const textToSpeak = flatSentences[index];
     currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
 
     if (activeVoice) currentUtterance.voice = activeVoice;
     currentUtterance.rate = speechRate;
     currentUtterance.pitch = speechPitch;
 
-    currentUtterance.onboundary = (event) => {
-      // event.charIndex is the character offset in the currently spoken remaining text
-      if (event.name === 'sentence' || event.name === 'word') {
-        const charIdx = event.charIndex;
-        // Find which sentence in the playlist this charIdx belongs to
-        const matched = playlistSentences.find(item => charIdx >= item.start && charIdx < item.end);
-        if (matched) {
-          // If we crossed into a new chapter, load the chapter UI in background sync mode
-          if (matched.chapterIndex !== currentChapterIndex) {
-            currentChapterIndex = matched.chapterIndex;
-            loadChapter(currentBook.id, currentChapterIndex, matched.sentenceIndex, true);
-          } else if (matched.sentenceIndex !== currentSentenceIndex) {
-            currentSentenceIndex = matched.sentenceIndex;
-            DOMElements.playbackSlider.value = currentSentenceIndex;
-            updateProgressUI();
-            highlightSentenceNode(currentSentenceIndex);
-          }
-        }
-      }
-    };
-
     currentUtterance.onend = () => {
-      // If we finished the entire playlist naturally (which means the chapter ended)
       if (isPlaying) {
-        const lastPlaylistSentence = playlistSentences[playlistSentences.length - 1];
-        if (lastPlaylistSentence) {
-          const nextChapterIdx = lastPlaylistSentence.chapterIndex + 1;
-          if (nextChapterIdx < currentChapters.length) {
-            // Load next chapter and continue playing in background
-            loadChapter(currentBook.id, nextChapterIdx, 0, true).then(() => {
-              playSentence(nextChapterIdx, 0);
-            });
-          } else {
-            // End of book
-            resetPlaybackState();
-            alert('已朗讀完畢全書內容！');
+        // Enqueue next sentence sequentially
+        setTimeout(() => {
+          if (isPlaying) {
+            if (currentSentenceIndex < flatSentences.length - 1) {
+              playSentence(currentSentenceIndex + 1);
+            } else {
+              // End of chapter! Advance to next chapter
+              const nextChapterIdx = currentChapterIndex + 1;
+              if (nextChapterIdx < currentChapters.length) {
+                console.log('Chapter ended in background. Moving to next chapter synchronously.');
+                currentChapterIndex = nextChapterIdx;
+                const nextChapter = currentChapters[nextChapterIdx];
+                
+                // Rebuild flatSentences synchronously in memory to prevent background throttling
+                flatSentences = [];
+                nextChapter.content.forEach(para => {
+                  para.sentences.forEach(sentenceText => {
+                    flatSentences.push(sentenceText);
+                  });
+                });
+                
+                // Play first sentence of new chapter instantly
+                playSentence(0);
+
+                // Update UI DOM asynchronously
+                setTimeout(() => {
+                  loadChapter(currentBook.id, nextChapterIdx, 0);
+                }, 0);
+              } else {
+                // End of book
+                resetPlaybackState();
+                alert('已朗讀完畢全書內容！');
+              }
+            }
           }
-        }
+        }, 80);
       }
     };
 
@@ -1076,13 +1058,8 @@ function playSentence(chapterIndex, sentenceIndex) {
       if (e.error !== 'interrupted' && isPlaying) {
         setTimeout(() => {
           if (isPlaying) {
-            const nextIdx = currentSentenceIndex + 1;
-            if (nextIdx < flatSentences.length) {
-              playSentence(currentChapterIndex, nextIdx);
-            } else if (currentChapterIndex < currentChapters.length - 1) {
-              loadChapter(currentBook.id, currentChapterIndex + 1, 0, true).then(() => {
-                playSentence(currentChapterIndex + 1, 0);
-              });
+            if (currentSentenceIndex < flatSentences.length - 1) {
+              playSentence(currentSentenceIndex + 1);
             }
           }
         }, 100);
@@ -1091,7 +1068,7 @@ function playSentence(chapterIndex, sentenceIndex) {
 
     synth.speak(currentUtterance);
     
-    // Force resume in case SpeechSynthesis got stuck in paused state
+    // Force resume in case it got stuck in paused state
     synth.resume();
   }, 60);
 }
