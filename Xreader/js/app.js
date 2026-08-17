@@ -36,7 +36,8 @@ let chromeKeepAliveInterval = null;
 let silentAudioSource = null;
 let audioContext = null;
 let silentAudioHTML5 = null;
-let playlistSentences = [];
+let playTimeoutId = null;
+let ignoreNextOnEnd = false;
 
 // --- DOM References ---
 const DOMElements = {
@@ -920,18 +921,7 @@ function applySpeechSettingsChange() {
   }
 }
 
-// --- Helper Functions for Blob Conversion & Media Metadata ---
-function base64ToAudioUrl(base64Data, contentType = 'audio/wav') {
-  const byteCharacters = atob(base64Data);
-  const byteNumbers = new Array(byteCharacters.length);
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i);
-  }
-  const byteArray = new Uint8Array(byteNumbers);
-  const blob = new Blob([byteArray], { type: contentType });
-  return URL.createObjectURL(blob);
-}
-
+// --- Helper Functions for Media Metadata ---
 function updateMediaSessionMetadata(chapterIndex, sentenceIndex) {
   if ('mediaSession' in navigator) {
     const chapter = currentChapters[chapterIndex];
@@ -988,8 +978,15 @@ function togglePlayback() {
   }
 }
 
-function playSentence(index) {
+function playSentence(index, isNaturalTransition = false) {
+  if (playTimeoutId) clearTimeout(playTimeoutId);
+  
   if (index < 0 || index >= flatSentences.length) return;
+
+  // If this is a manual settings change or user jump while speaking, ignore the next onend event
+  if (synth.speaking && !isNaturalTransition) {
+    ignoreNextOnEnd = true;
+  }
 
   // Update indices
   currentSentenceIndex = index;
@@ -1000,11 +997,16 @@ function playSentence(index) {
   // Sync to media session metadata
   updateMediaSessionMetadata(currentChapterIndex, index);
 
-  // Stop current utterance cleanly
+  // Stop current utterance cleanly (triggers currentUtterance.onend)
   synth.cancel();
 
+  // Play/resume silent audio loop to refresh system background wake lock
+  if (silentAudioHTML5 && isPlaying) {
+    silentAudioHTML5.play().catch(e => console.warn('Refresh silent audio failed:', e));
+  }
+
   // iOS Safari Queue Freeze Workaround:
-  setTimeout(() => {
+  playTimeoutId = setTimeout(() => {
     const textToSpeak = flatSentences[index];
     currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
 
@@ -1013,12 +1015,18 @@ function playSentence(index) {
     currentUtterance.pitch = speechPitch;
 
     currentUtterance.onend = () => {
+      // If the skip control lock is active, consume it and return immediately without advancing
+      if (ignoreNextOnEnd) {
+        ignoreNextOnEnd = false;
+        return;
+      }
+
       if (isPlaying) {
         // Enqueue next sentence sequentially
         setTimeout(() => {
           if (isPlaying) {
             if (currentSentenceIndex < flatSentences.length - 1) {
-              playSentence(currentSentenceIndex + 1);
+              playSentence(currentSentenceIndex + 1, true);
             } else {
               // End of chapter! Advance to next chapter
               const nextChapterIdx = currentChapterIndex + 1;
@@ -1035,8 +1043,8 @@ function playSentence(index) {
                   });
                 });
                 
-                // Play first sentence of new chapter instantly
-                playSentence(0);
+                // Play first sentence of new chapter instantly as a natural transition
+                playSentence(0, true);
 
                 // Update UI DOM asynchronously
                 setTimeout(() => {
@@ -1059,7 +1067,7 @@ function playSentence(index) {
         setTimeout(() => {
           if (isPlaying) {
             if (currentSentenceIndex < flatSentences.length - 1) {
-              playSentence(currentSentenceIndex + 1);
+              playSentence(currentSentenceIndex + 1, true);
             }
           }
         }, 100);
@@ -1085,6 +1093,7 @@ function updateProgressUI() {
 function resetPlaybackState() {
   isPlaying = false;
   synth.cancel();
+  ignoreNextOnEnd = false; // Reset controls flag
   DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
   DOMElements.playbackSlider.max = 0;
   DOMElements.playbackSlider.value = 0;
@@ -1135,9 +1144,8 @@ function startAudioKeepAlive() {
   // 3. HTML5 Audio Loop Wake Lock for iOS background tab execution & Media Session API
   try {
     if (!silentAudioHTML5) {
-      const base64SilentWav = "UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
-      const audioUrl = base64ToAudioUrl(base64SilentWav, 'audio/wav');
-      silentAudioHTML5 = new Audio(audioUrl);
+      // Use direct inline Base64 WAV data URI to ensure iOS Safari decodes it correctly in lock screen background
+      silentAudioHTML5 = new Audio("data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==");
       silentAudioHTML5.loop = true;
     }
     silentAudioHTML5.play().catch(e => console.warn('HTML5 silent audio play failed:', e));
