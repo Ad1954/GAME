@@ -604,7 +604,7 @@ async function loadBook(bookId) {
   await loadChapter(currentBook.id, currentChapterIndex, book.lastReadSentenceIndex || 0);
 }
 
-async function loadChapter(bookId, chapterIndex, sentenceIndexStart = 0, isBackgroundSync = false) {
+async function loadChapter(bookId, chapterIndex, sentenceIndexStart = 0) {
   if (currentChapters.length === 0) return;
   const chapter = currentChapters[chapterIndex];
   if (!chapter) return;
@@ -647,7 +647,7 @@ async function loadChapter(bookId, chapterIndex, sentenceIndexStart = 0, isBackg
           togglePlayback();
         } else {
           // If already playing, cancel current speech and start from clicked sentence immediately
-          playSentence(currentChapterIndex, sentenceIdx);
+          playSentence(sentenceIdx);
         }
       });
 
@@ -670,13 +670,6 @@ async function loadChapter(bookId, chapterIndex, sentenceIndexStart = 0, isBackg
 
   // Highlight starting sentence (if not empty)
   highlightSentenceNode(currentSentenceIndex);
-
-  // CRITICAL BACKGROUND SYNC / MANUAL CHANGE ACTION:
-  // If the user manually changed the chapter (isBackgroundSync = false) and it is playing,
-  // we must cancel the old speech session and start playing the new chapter!
-  if (isPlaying && !isBackgroundSync) {
-    playSentence(currentChapterIndex, currentSentenceIndex);
-  }
 }
 
 function highlightSentenceNode(index) {
@@ -999,11 +992,6 @@ function playSentence(index, isNaturalTransition = false) {
 
   // Stop current utterance cleanly (triggers currentUtterance.onend)
   synth.cancel();
-
-  // Play/resume silent audio loop to refresh system background wake lock
-  if (silentAudioHTML5 && isPlaying) {
-    silentAudioHTML5.play().catch(e => console.warn('Refresh silent audio failed:', e));
-  }
 
   // iOS Safari Queue Freeze Workaround:
   playTimeoutId = setTimeout(() => {
