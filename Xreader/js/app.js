@@ -1090,6 +1090,46 @@ function resetPlaybackState() {
   stopAudioKeepAlive();
 }
 
+// --- Helper to dynamically generate a 10-second silent PCM WAV Blob ---
+function createSilentWavBlob(duration = 10) {
+  const sampleRate = 8000;
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const dataSize = sampleRate * duration * numChannels * (bitsPerSample / 8);
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  // RIFF identifier
+  view.setUint32(0, 0x52494646, false); // "RIFF"
+  // File length
+  view.setUint32(4, 36 + dataSize, true);
+  // WAVE identifier
+  view.setUint32(8, 0x57415645, false); // "WAVE"
+  // fmt chunk identifier
+  view.setUint32(12, 0x666d7420, false); // "fmt "
+  // fmt chunk length (16)
+  view.setUint32(16, 16, true);
+  // sample format (1 = PCM)
+  view.setUint16(20, 1, true);
+  // channel count (1)
+  view.setUint16(22, numChannels, true);
+  // sample rate (8000)
+  view.setUint32(24, sampleRate, true);
+  // byte rate
+  view.setUint32(28, sampleRate * numChannels * (bitsPerSample / 8), true);
+  // block align
+  view.setUint16(32, numChannels * (bitsPerSample / 8), true);
+  // bits per sample (16)
+  view.setUint16(34, bitsPerSample, true);
+  // data chunk identifier
+  view.setUint32(38, 0x64617461, false); // "data"
+  // data chunk length
+  view.setUint32(42, dataSize, true);
+
+  // ArrayBuffer is naturally zero-initialized (digital silence)
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
 // --- Background Audio Wake Lock / Chrome Fixes ---
 function startAudioKeepAlive() {
   // 1. Chrome Speech Heartbeat (Prevents 15-second speech timeout crash)
@@ -1132,9 +1172,20 @@ function startAudioKeepAlive() {
   // 3. HTML5 Audio Loop Wake Lock for iOS background tab execution & Media Session API
   try {
     if (!silentAudioHTML5) {
-      // Use direct inline Base64 WAV data URI to ensure iOS Safari decodes it correctly in lock screen background
-      silentAudioHTML5 = new Audio("data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==");
+      const wavBlob = createSilentWavBlob(10); // Generate 10-second silent WAV
+      const wavUrl = URL.createObjectURL(wavBlob);
+      silentAudioHTML5 = new Audio(wavUrl);
       silentAudioHTML5.loop = true;
+      
+      // Audio session interruption handler (State 2 support)
+      // If another app plays audio and interrupts us, iOS automatically pauses our audio tag.
+      // We listen to the pause event and gracefully sync the player UI to paused state.
+      silentAudioHTML5.addEventListener('pause', () => {
+        if (isPlaying) {
+          console.log('HTML5 silent audio paused by system interruption. Syncing state.');
+          togglePlayback();
+        }
+      });
     }
     silentAudioHTML5.play().catch(e => console.warn('HTML5 silent audio play failed:', e));
   } catch (e) {
