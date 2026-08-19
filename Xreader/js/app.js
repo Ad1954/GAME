@@ -39,6 +39,8 @@ let silentAudioHTML5 = null;
 let playTimeoutId = null;
 let ignoreNextOnEnd = false;
 let playlistSentences = [];
+let speechEngine = 'google'; // 'google', 'native'
+let googleAudio = null;
 
 // --- DOM References ---
 const DOMElements = {
@@ -99,6 +101,7 @@ const DOMElements = {
   btnCloseSettings: document.getElementById('btn-close-settings'),
   drawerOverlay: document.getElementById('drawer-overlay'),
   settingPlatform: document.getElementById('setting-platform'),
+  settingEngine: document.getElementById('setting-engine'),
   settingVoice: document.getElementById('setting-voice'),
   settingRate: document.getElementById('setting-rate'),
   rateVal: document.getElementById('rate-val'),
@@ -831,6 +834,11 @@ function setupSpeechEvents() {
     autoSelectPlatformDefaultVoice();
   });
 
+  DOMElements.settingEngine.addEventListener('change', (e) => {
+    speechEngine = e.target.value;
+    applySpeechSettingsChange();
+  });
+
   // Dynamic progress slider
   DOMElements.playbackSlider.addEventListener('input', (e) => {
     const idx = parseInt(e.target.value);
@@ -930,94 +938,90 @@ function updateMediaSessionMetadata(chapterIndex, sentenceIndex) {
   }
 }
 
-function compilePlaylist(startChapterIdx, startSentenceIdx) {
-  playlistSentences = [];
-  let accumulatedLength = 0;
-  const remainingTextParts = [];
-
-  // Combine up to 10 chapters starting from the current chapter
-  const endChapterIdx = Math.min(currentChapters.length - 1, startChapterIdx + 9);
-
-  for (let cIdx = startChapterIdx; cIdx <= endChapterIdx; cIdx++) {
-    const chapter = currentChapters[cIdx];
-    if (!chapter) continue;
-    
-    chapter.content.forEach((para) => {
-      para.sentences.forEach((sentenceText, sIdx) => {
-        // Skip sentences in the starting chapter that are before the starting sentence
-        if (cIdx === startChapterIdx && sIdx < startSentenceIdx) {
-          return;
-        }
-
-        const textLength = sentenceText.length;
-        playlistSentences.push({
-          chapterIndex: cIdx,
-          sentenceIndex: sIdx,
-          text: sentenceText,
-          start: accumulatedLength,
-          end: accumulatedLength + textLength
-        });
-        
-        remainingTextParts.push(sentenceText);
-        accumulatedLength += textLength + 1; // +1 for the joining space
-      });
-    });
+function showEngineFallbackNotice() {
+  let toast = document.getElementById('engine-fallback-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'engine-fallback-toast';
+    toast.style.position = 'fixed';
+    toast.style.bottom = '100px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.backgroundColor = 'rgba(220, 53, 69, 0.9)';
+    toast.style.color = '#fff';
+    toast.style.padding = '10px 20px';
+    toast.style.borderRadius = '8px';
+    toast.style.fontSize = '0.9rem';
+    toast.style.zIndex = '9999';
+    toast.style.pointerEvents = 'none';
+    toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+    toast.style.transition = 'opacity 0.3s ease';
+    document.body.appendChild(toast);
   }
-
-  return remainingTextParts.join(' ');
+  toast.textContent = '⚠️ 網路語音載入失敗，已自動切換至本機語音模式';
+  toast.style.opacity = '1';
+  
+  setTimeout(() => {
+    toast.style.opacity = '0';
+  }, 4000);
 }
 
-function syncPlaylistSentenceToUI(playlistIdx) {
-  const item = playlistSentences[playlistIdx];
-  if (!item) return;
-
-  const chapChanged = item.chapterIndex !== currentChapterIndex;
-  currentChapterIndex = item.chapterIndex;
-  currentSentenceIndex = item.sentenceIndex;
-
-  if (chapChanged) {
-    // Dynamically load the chapter DOM (does not trigger playSentence)
-    loadChapter(currentBook.id, currentChapterIndex, currentSentenceIndex);
+function advanceToNextSentence() {
+  if (currentSentenceIndex < flatSentences.length - 1) {
+    playSentence(currentSentenceIndex + 1, true);
   } else {
-    // Just sync the progress UI and highlight sentence in the active chapter
-    DOMElements.playbackSlider.value = currentSentenceIndex;
-    updateProgressUI();
-    highlightSentenceNode(currentSentenceIndex);
+    // End of chapter! Advance to next chapter
+    const nextChapterIdx = currentChapterIndex + 1;
+    if (nextChapterIdx < currentChapters.length) {
+      console.log('Chapter ended. Moving to next chapter synchronously.');
+      currentChapterIndex = nextChapterIdx;
+      const nextChapter = currentChapters[nextChapterIdx];
+      
+      // Rebuild flatSentences synchronously in memory
+      flatSentences = [];
+      nextChapter.content.forEach(para => {
+        para.sentences.forEach(sentenceText => {
+          flatSentences.push(sentenceText);
+        });
+      });
+      
+      // Play first sentence of new chapter instantly as natural transition
+      playSentence(0, true);
+
+      // Update UI DOM asynchronously
+      setTimeout(() => {
+        loadChapter(currentBook.id, nextChapterIdx, 0);
+      }, 0);
+    } else {
+      // End of book
+      resetPlaybackState();
+      alert('已朗讀完畢全書內容！');
+    }
   }
-  
-  // Sync lock screen card
-  updateMediaSessionMetadata(currentChapterIndex, currentSentenceIndex);
 }
 
 // --- TTS Engine Execution Loop & Bug Workarounds ---
 function togglePlayback() {
   if (flatSentences.length === 0) return;
 
-  if (synth.speaking) {
-    if (isPlaying) {
-      // Currently playing -> Pause it
-      isPlaying = false;
-      DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+  if (isPlaying) {
+    // Currently playing -> Pause it
+    isPlaying = false;
+    DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+    
+    // Pause active engine
+    if (speechEngine === 'native') {
       synth.pause();
-      
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.playbackState = 'paused';
-      }
-      stopAudioKeepAlive();
     } else {
-      // Currently paused -> Resume it
-      isPlaying = true;
-      DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>`;
-      
-      startAudioKeepAlive();
-      
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.playbackState = 'playing';
-      }
-      synth.resume();
+      if (googleAudio) googleAudio.pause();
     }
+    
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
+    }
+    stopAudioKeepAlive();
   } else {
-    // Not speaking at all -> Start fresh
+    // Currently paused -> Resume it
     isPlaying = true;
     DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>`;
     
@@ -1026,8 +1030,20 @@ function togglePlayback() {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'playing';
     }
-    
-    playSentence(currentSentenceIndex);
+
+    if (speechEngine === 'native') {
+      if (synth.speaking) {
+        synth.resume();
+      } else {
+        playSentence(currentSentenceIndex);
+      }
+    } else {
+      if (googleAudio && googleAudio.src && !googleAudio.ended) {
+        googleAudio.play().catch(e => console.warn('Resume Google audio failed:', e));
+      } else {
+        playSentence(currentSentenceIndex);
+      }
+    }
   }
 }
 
@@ -1050,118 +1066,128 @@ function playSentence(index, isNaturalTransition = false) {
   // Sync to media session metadata
   updateMediaSessionMetadata(currentChapterIndex, index);
 
-  // Stop current utterance cleanly (triggers currentUtterance.onend)
-  synth.cancel();
-
-  // iOS Safari Queue Freeze Workaround:
-  playTimeoutId = setTimeout(() => {
-    // Compile text for the next 10 chapters starting from current position
-    const textToSpeak = compilePlaylist(currentChapterIndex, index);
-    
-    if (!textToSpeak) {
-      resetPlaybackState();
-      alert('已朗讀完畢全書內容！');
-      return;
+  if (speechEngine === 'native') {
+    // Clean up Google Audio if running
+    if (googleAudio) {
+      googleAudio.pause();
+      googleAudio.onended = null;
+      googleAudio.onerror = null;
     }
 
-    currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
+    // Stop current native utterance cleanly (triggers currentUtterance.onend)
+    synth.cancel();
 
-    if (activeVoice) currentUtterance.voice = activeVoice;
-    currentUtterance.rate = speechRate;
-    currentUtterance.pitch = speechPitch;
+    // iOS Safari Queue Freeze Workaround:
+    playTimeoutId = setTimeout(() => {
+      const textToSpeak = flatSentences[index];
+      currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
 
-    let lastBoundaryCharIndex = -1;
-    let currentPlaylistIdx = 0;
+      if (activeVoice) currentUtterance.voice = activeVoice;
+      currentUtterance.rate = speechRate;
+      currentUtterance.pitch = speechPitch;
 
-    currentUtterance.onboundary = (event) => {
-      if (event.name === 'sentence' || event.name === 'word') {
-        const charIdx = event.charIndex;
-        
-        // 1. Detect character index reset (WebKit Chinese voice punctuation bug)
-        if (charIdx < lastBoundaryCharIndex) {
-          if (currentPlaylistIdx < playlistSentences.length - 1) {
-            currentPlaylistIdx++;
-            syncPlaylistSentenceToUI(currentPlaylistIdx);
-          }
-        } else {
-          // 2. Monotonic advance (Handles desktop PC browsers where charIndex doesn't reset)
-          const currentTarget = playlistSentences[currentPlaylistIdx];
-          if (currentTarget && charIdx >= currentTarget.end) {
-            const matchedIdx = playlistSentences.findIndex(item => charIdx >= item.start && charIdx < item.end);
-            if (matchedIdx !== -1 && matchedIdx !== currentPlaylistIdx) {
-              currentPlaylistIdx = matchedIdx;
-              syncPlaylistSentenceToUI(currentPlaylistIdx);
-            }
-          }
+      currentUtterance.onend = () => {
+        // If the skip control lock is active, consume it and return immediately without advancing
+        if (ignoreNextOnEnd) {
+          ignoreNextOnEnd = false;
+          return;
         }
-        
-        lastBoundaryCharIndex = charIdx;
-      }
-    };
 
-    currentUtterance.onend = () => {
-      // If the skip control lock is active, consume it and return immediately without advancing
-      if (ignoreNextOnEnd) {
-        ignoreNextOnEnd = false;
+        if (isPlaying) {
+          setTimeout(() => {
+            if (isPlaying) advanceToNextSentence();
+          }, 80);
+        }
+      };
+
+      currentUtterance.onerror = (e) => {
+        console.warn('SpeechSynthesisUtterance error event:', e);
+        if (e.error !== 'interrupted' && isPlaying) {
+          setTimeout(() => {
+            if (isPlaying) advanceToNextSentence();
+          }, 100);
+        }
+      };
+
+      synth.speak(currentUtterance);
+      synth.resume();
+    }, 60);
+
+  } else {
+    // Google TTS Engine
+    synth.cancel();
+
+    if (googleAudio) {
+      googleAudio.pause();
+      googleAudio.onended = null;
+      googleAudio.onerror = null;
+    }
+
+    playTimeoutId = setTimeout(async () => {
+      const textToSpeak = flatSentences[index];
+      const cleanedText = textToSpeak.replace(/\s+/g, ' ').trim();
+      if (!cleanedText) {
+        advanceToNextSentence();
         return;
       }
 
-      if (isPlaying) {
-        // Natural transition to next playlist block
-        setTimeout(() => {
-          if (isPlaying) {
-            const lastItem = playlistSentences[playlistSentences.length - 1];
-            if (lastItem) {
-              const nextChapterIdx = lastItem.chapterIndex + 1;
-              if (nextChapterIdx < currentChapters.length) {
-                console.log('Playlist ended. Syncing to next chapter synchronously.');
-                currentChapterIndex = nextChapterIdx;
-                const nextChapter = currentChapters[nextChapterIdx];
-                
-                // Rebuild flatSentences synchronously in memory
-                flatSentences = [];
-                nextChapter.content.forEach(para => {
-                  para.sentences.forEach(sentenceText => {
-                    flatSentences.push(sentenceText);
-                  });
-                });
-                
-                // Play first sentence of new chapter instantly as natural transition
-                playSentence(0, true);
+      try {
+        const encodedText = encodeURIComponent(cleanedText);
+        const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-TW&client=tw-ob&q=${encodedText}`;
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(googleTtsUrl)}`;
 
-                // Update UI DOM asynchronously
-                setTimeout(() => {
-                  loadChapter(currentBook.id, nextChapterIdx, 0);
-                }, 0);
-              } else {
-                // End of book
-                resetPlaybackState();
-                alert('已朗讀完畢全書內容！');
-              }
+        if (!googleAudio) {
+          googleAudio = new Audio();
+          googleAudio.addEventListener('pause', () => {
+            if (isPlaying && speechEngine === 'google') {
+              console.log('Google Audio paused by system interruption. Syncing state.');
+              togglePlayback();
             }
-          }
-        }, 80);
-      }
-    };
+          });
+        }
 
-    currentUtterance.onerror = (e) => {
-      console.warn('SpeechSynthesisUtterance error event:', e);
-      if (e.error !== 'interrupted' && isPlaying) {
-        setTimeout(() => {
+        const res = await fetch(proxyUrl);
+        if (!res.ok) throw new Error(`Proxy response error: ${res.status}`);
+        const blob = await res.blob();
+        const localBlobUrl = URL.createObjectURL(blob);
+
+        googleAudio.src = localBlobUrl;
+        googleAudio.playbackRate = speechRate;
+
+        googleAudio.onended = () => {
+          URL.revokeObjectURL(localBlobUrl);
           if (isPlaying) {
-            if (currentSentenceIndex < flatSentences.length - 1) {
-              playSentence(currentSentenceIndex + 1, true);
-            }
+            advanceToNextSentence();
           }
-        }, 100);
-      }
-    };
+        };
 
-    synth.speak(currentUtterance);
-    
-    // Force resume in case it got stuck in paused state
-    synth.resume();
-  }, 60);
+        googleAudio.onerror = (err) => {
+          console.warn('Google Audio playback error. Falling back to native SpeechSynthesis:', err);
+          URL.revokeObjectURL(localBlobUrl);
+          
+          showEngineFallbackNotice();
+          speechEngine = 'native';
+          DOMElements.settingEngine.value = 'native';
+          playSentence(index, isNaturalTransition);
+        };
+
+        if (isPlaying) {
+          googleAudio.play().catch(e => {
+            console.warn('Google Audio play error:', e);
+            speechEngine = 'native';
+            DOMElements.settingEngine.value = 'native';
+            playSentence(index, isNaturalTransition);
+          });
+        }
+      } catch (e) {
+        console.warn('Fetch Google TTS failed, falling back to Native engine:', e);
+        showEngineFallbackNotice();
+        speechEngine = 'native';
+        DOMElements.settingEngine.value = 'native';
+        playSentence(index, isNaturalTransition);
+      }
+    }, 60);
+  }
 }
 
 function updateProgressUI() {
@@ -1176,6 +1202,12 @@ function updateProgressUI() {
 function resetPlaybackState() {
   isPlaying = false;
   synth.cancel();
+  if (googleAudio) {
+    googleAudio.pause();
+    googleAudio.onended = null;
+    googleAudio.onerror = null;
+    googleAudio.src = '';
+  }
   ignoreNextOnEnd = false; // Reset controls flag
   DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
   DOMElements.playbackSlider.max = 0;
