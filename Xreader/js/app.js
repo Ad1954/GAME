@@ -38,6 +38,7 @@ let audioContext = null;
 let silentAudioHTML5 = null;
 let playTimeoutId = null;
 let ignoreNextOnEnd = false;
+let playlistSentences = [];
 
 // --- DOM References ---
 const DOMElements = {
@@ -914,7 +915,7 @@ function applySpeechSettingsChange() {
   }
 }
 
-// --- Helper Functions for Media Metadata ---
+// --- Helper Functions for Media Metadata & Playlist Sync ---
 function updateMediaSessionMetadata(chapterIndex, sentenceIndex) {
   if ('mediaSession' in navigator) {
     const chapter = currentChapters[chapterIndex];
@@ -927,6 +928,65 @@ function updateMediaSessionMetadata(chapterIndex, sentenceIndex) {
       ]
     });
   }
+}
+
+function compilePlaylist(startChapterIdx, startSentenceIdx) {
+  playlistSentences = [];
+  let accumulatedLength = 0;
+  const remainingTextParts = [];
+
+  // Combine up to 10 chapters starting from the current chapter
+  const endChapterIdx = Math.min(currentChapters.length - 1, startChapterIdx + 9);
+
+  for (let cIdx = startChapterIdx; cIdx <= endChapterIdx; cIdx++) {
+    const chapter = currentChapters[cIdx];
+    if (!chapter) continue;
+    
+    chapter.content.forEach((para) => {
+      para.sentences.forEach((sentenceText, sIdx) => {
+        // Skip sentences in the starting chapter that are before the starting sentence
+        if (cIdx === startChapterIdx && sIdx < startSentenceIdx) {
+          return;
+        }
+
+        const textLength = sentenceText.length;
+        playlistSentences.push({
+          chapterIndex: cIdx,
+          sentenceIndex: sIdx,
+          text: sentenceText,
+          start: accumulatedLength,
+          end: accumulatedLength + textLength
+        });
+        
+        remainingTextParts.push(sentenceText);
+        accumulatedLength += textLength + 1; // +1 for the joining space
+      });
+    });
+  }
+
+  return remainingTextParts.join(' ');
+}
+
+function syncPlaylistSentenceToUI(playlistIdx) {
+  const item = playlistSentences[playlistIdx];
+  if (!item) return;
+
+  const chapChanged = item.chapterIndex !== currentChapterIndex;
+  currentChapterIndex = item.chapterIndex;
+  currentSentenceIndex = item.sentenceIndex;
+
+  if (chapChanged) {
+    // Dynamically load the chapter DOM (does not trigger playSentence)
+    loadChapter(currentBook.id, currentChapterIndex, currentSentenceIndex);
+  } else {
+    // Just sync the progress UI and highlight sentence in the active chapter
+    DOMElements.playbackSlider.value = currentSentenceIndex;
+    updateProgressUI();
+    highlightSentenceNode(currentSentenceIndex);
+  }
+  
+  // Sync lock screen card
+  updateMediaSessionMetadata(currentChapterIndex, currentSentenceIndex);
 }
 
 // --- TTS Engine Execution Loop & Bug Workarounds ---
@@ -995,12 +1055,49 @@ function playSentence(index, isNaturalTransition = false) {
 
   // iOS Safari Queue Freeze Workaround:
   playTimeoutId = setTimeout(() => {
-    const textToSpeak = flatSentences[index];
+    // Compile text for the next 10 chapters starting from current position
+    const textToSpeak = compilePlaylist(currentChapterIndex, index);
+    
+    if (!textToSpeak) {
+      resetPlaybackState();
+      alert('已朗讀完畢全書內容！');
+      return;
+    }
+
     currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
 
     if (activeVoice) currentUtterance.voice = activeVoice;
     currentUtterance.rate = speechRate;
     currentUtterance.pitch = speechPitch;
+
+    let lastBoundaryCharIndex = -1;
+    let currentPlaylistIdx = 0;
+
+    currentUtterance.onboundary = (event) => {
+      if (event.name === 'sentence' || event.name === 'word') {
+        const charIdx = event.charIndex;
+        
+        // 1. Detect character index reset (WebKit Chinese voice punctuation bug)
+        if (charIdx < lastBoundaryCharIndex) {
+          if (currentPlaylistIdx < playlistSentences.length - 1) {
+            currentPlaylistIdx++;
+            syncPlaylistSentenceToUI(currentPlaylistIdx);
+          }
+        } else {
+          // 2. Monotonic advance (Handles desktop PC browsers where charIndex doesn't reset)
+          const currentTarget = playlistSentences[currentPlaylistIdx];
+          if (currentTarget && charIdx >= currentTarget.end) {
+            const matchedIdx = playlistSentences.findIndex(item => charIdx >= item.start && charIdx < item.end);
+            if (matchedIdx !== -1 && matchedIdx !== currentPlaylistIdx) {
+              currentPlaylistIdx = matchedIdx;
+              syncPlaylistSentenceToUI(currentPlaylistIdx);
+            }
+          }
+        }
+        
+        lastBoundaryCharIndex = charIdx;
+      }
+    };
 
     currentUtterance.onend = () => {
       // If the skip control lock is active, consume it and return immediately without advancing
@@ -1010,20 +1107,18 @@ function playSentence(index, isNaturalTransition = false) {
       }
 
       if (isPlaying) {
-        // Enqueue next sentence sequentially
+        // Natural transition to next playlist block
         setTimeout(() => {
           if (isPlaying) {
-            if (currentSentenceIndex < flatSentences.length - 1) {
-              playSentence(currentSentenceIndex + 1, true);
-            } else {
-              // End of chapter! Advance to next chapter
-              const nextChapterIdx = currentChapterIndex + 1;
+            const lastItem = playlistSentences[playlistSentences.length - 1];
+            if (lastItem) {
+              const nextChapterIdx = lastItem.chapterIndex + 1;
               if (nextChapterIdx < currentChapters.length) {
-                console.log('Chapter ended in background. Moving to next chapter synchronously.');
+                console.log('Playlist ended. Syncing to next chapter synchronously.');
                 currentChapterIndex = nextChapterIdx;
                 const nextChapter = currentChapters[nextChapterIdx];
                 
-                // Rebuild flatSentences synchronously in memory to prevent background throttling
+                // Rebuild flatSentences synchronously in memory
                 flatSentences = [];
                 nextChapter.content.forEach(para => {
                   para.sentences.forEach(sentenceText => {
@@ -1031,7 +1126,7 @@ function playSentence(index, isNaturalTransition = false) {
                   });
                 });
                 
-                // Play first sentence of new chapter instantly as a natural transition
+                // Play first sentence of new chapter instantly as natural transition
                 playSentence(0, true);
 
                 // Update UI DOM asynchronously
