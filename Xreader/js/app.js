@@ -970,6 +970,206 @@ function advanceToNextSentence() {
   }
 }
 
+// ==========================================
+// Module A: Sentence Highlight Player (Offline Web Speech API)
+// ==========================================
+const HighlightPlayer = {
+  play(index, isNatural = false) {
+    if (playTimeoutId) clearTimeout(playTimeoutId);
+    
+    // Stop other player just in case
+    BackgroundPlayer.stop();
+
+    // If this is a manual settings change or user jump while speaking, ignore the next onend event
+    if (synth.speaking && !isNatural) {
+      ignoreNextOnEnd = true;
+    }
+
+    // Sync indices and UI Immediately
+    currentSentenceIndex = index;
+    DOMElements.playbackSlider.value = index;
+    updateProgressUI();
+    highlightSentenceNode(index);
+    updateMediaSessionMetadata(currentChapterIndex, index);
+
+    synth.cancel();
+
+    // iOS Safari Queue Freeze Workaround:
+    playTimeoutId = setTimeout(() => {
+      const textToSpeak = flatSentences[index];
+      if (!textToSpeak) return;
+
+      currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
+
+      if (activeVoice) currentUtterance.voice = activeVoice;
+      currentUtterance.rate = speechRate;
+      currentUtterance.pitch = speechPitch;
+
+      currentUtterance.onend = () => {
+        if (ignoreNextOnEnd) {
+          ignoreNextOnEnd = false;
+          return;
+        }
+
+        if (isPlaying) {
+          setTimeout(() => {
+            if (isPlaying) advanceToNextSentence();
+          }, 80);
+        }
+      };
+
+      currentUtterance.onerror = (e) => {
+        console.warn('HighlightPlayer SpeechSynthesisUtterance error event:', e);
+        if (e.error !== 'interrupted' && isPlaying) {
+          setTimeout(() => {
+            if (isPlaying) advanceToNextSentence();
+          }, 100);
+        }
+      };
+
+      synth.speak(currentUtterance);
+      synth.resume();
+    }, 60);
+  },
+
+  pause() {
+    synth.pause();
+  },
+
+  resume() {
+    if (synth.speaking) {
+      synth.resume();
+    } else {
+      this.play(currentSentenceIndex);
+    }
+  },
+
+  stop() {
+    synth.cancel();
+    ignoreNextOnEnd = false;
+  }
+};
+
+// ==========================================
+// Module B: Background Audiobook Player (Direct Google TTS + HTML5 Audio)
+// ==========================================
+const BackgroundPlayer = {
+  audio: null,
+  isPausedByUser: false,
+
+  init() {
+    if (this.audio) return;
+    this.audio = new Audio();
+    this.audio.loop = false; // We handle sequential playback manually on 'ended'
+    
+    // Synchronize media session interruptions (State 2 support)
+    this.audio.addEventListener('pause', () => {
+      // If paused by system (not by user clicking pause) and we were playing
+      if (isPlaying && speechEngine === 'background' && this.isPausedByUser === false) {
+        console.log('BackgroundPlayer: System interrupted pause.');
+        togglePlayback();
+      }
+    });
+
+    this.audio.addEventListener('ended', () => {
+      if (isPlaying && speechEngine === 'background') {
+        console.log('BackgroundPlayer: Sentence audio ended. Advancing.');
+        advanceToNextSentence();
+      }
+    });
+
+    this.audio.addEventListener('error', (e) => {
+      console.warn('BackgroundPlayer Audio Error:', e);
+      if (isPlaying && speechEngine === 'background') {
+        // Fallback to next sentence on minor stream loading errors
+        setTimeout(() => {
+          if (isPlaying) advanceToNextSentence();
+        }, 300);
+      }
+    });
+  },
+
+  play(index, isNatural = false) {
+    this.init();
+    if (playTimeoutId) clearTimeout(playTimeoutId);
+
+    // Stop native speech just in case
+    HighlightPlayer.stop();
+
+    this.isPausedByUser = false;
+
+    // Sync indices and UI Immediately
+    currentSentenceIndex = index;
+    DOMElements.playbackSlider.value = index;
+    updateProgressUI();
+    highlightSentenceNode(index);
+    updateMediaSessionMetadata(currentChapterIndex, index);
+
+    // Stop active audio play
+    this.audio.pause();
+
+    playTimeoutId = setTimeout(() => {
+      const textToSpeak = flatSentences[index];
+      if (!textToSpeak) return;
+
+      const cleanedText = textToSpeak.replace(/\s+/g, ' ').trim();
+      if (!cleanedText) {
+        advanceToNextSentence();
+        return;
+      }
+
+      // Load Google TTS URL directly! Bypass CORS proxy with 0ms latency!
+      const encodedText = encodeURIComponent(cleanedText);
+      const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-TW&client=tw-ob&q=${encodedText}`;
+
+      this.audio.src = googleTtsUrl;
+      this.audio.playbackRate = speechRate;
+
+      if (isPlaying) {
+        this.audio.play().catch(e => {
+          console.warn('BackgroundPlayer: Audio play failed:', e);
+        });
+      }
+    }, 60);
+  },
+
+  pause() {
+    this.isPausedByUser = true;
+    if (this.audio) {
+      this.audio.pause();
+    }
+  },
+
+  resume() {
+    this.init();
+    this.isPausedByUser = false;
+    if (this.audio && this.audio.src) {
+      this.audio.play().catch(e => console.warn('Resume BackgroundPlayer failed:', e));
+    } else {
+      this.play(currentSentenceIndex);
+    }
+  },
+
+  stop() {
+    this.isPausedByUser = true;
+    if (this.audio) {
+      this.audio.pause();
+      this.audio.src = '';
+    }
+  }
+};
+
+// Principal Playback 분流 Controller
+function playSentence(index, isNaturalTransition = false) {
+  if (speechEngine === 'native') {
+    BackgroundPlayer.stop();
+    HighlightPlayer.play(index, isNaturalTransition);
+  } else {
+    HighlightPlayer.stop();
+    BackgroundPlayer.play(index, isNaturalTransition);
+  }
+}
+
 // --- TTS Engine Execution Loop & Bug Workarounds ---
 function togglePlayback() {
   if (flatSentences.length === 0) return;
@@ -979,7 +1179,11 @@ function togglePlayback() {
     isPlaying = false;
     DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
     
-    synth.pause();
+    if (speechEngine === 'native') {
+      HighlightPlayer.pause();
+    } else {
+      BackgroundPlayer.pause();
+    }
     
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'paused';
@@ -996,126 +1200,12 @@ function togglePlayback() {
       navigator.mediaSession.playbackState = 'playing';
     }
 
-    if (synth.speaking) {
-      synth.resume();
-    } else {
-      playSentence(currentSentenceIndex);
-    }
-  }
-}
-
-function playSentence(index, isNaturalTransition = false) {
-  if (playTimeoutId) clearTimeout(playTimeoutId);
-  
-  if (index < 0 || index >= flatSentences.length) return;
-
-  // If this is a manual settings change or user jump while speaking, ignore the next onend event
-  if (synth.speaking && !isNaturalTransition) {
-    ignoreNextOnEnd = true;
-  }
-
-  // Update indices
-  currentSentenceIndex = index;
-  DOMElements.playbackSlider.value = index;
-  updateProgressUI();
-  highlightSentenceNode(index);
-
-  // Sync to media session metadata
-  updateMediaSessionMetadata(currentChapterIndex, index);
-
-  // Always cancel active speech to clear engine state
-  synth.cancel();
-
-  // iOS Safari Queue Freeze Workaround:
-  playTimeoutId = setTimeout(() => {
-    let textToSpeak = '';
-
     if (speechEngine === 'native') {
-      // 1. Sentence Highlight Mode (逐句模式)
-      textToSpeak = flatSentences[index];
+      HighlightPlayer.resume();
     } else {
-      // 2. Background Audiobook Mode (背景聽書模式)
-      // Compile remaining text of current chapter
-      const remainingSentences = flatSentences.slice(index);
-      textToSpeak = remainingSentences.join('。 ') + '。';
+      BackgroundPlayer.resume();
     }
-
-    currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
-
-    if (activeVoice) currentUtterance.voice = activeVoice;
-    currentUtterance.rate = speechRate;
-    currentUtterance.pitch = speechPitch;
-
-    currentUtterance.onend = () => {
-      // If the skip control lock is active, consume it and return immediately without advancing
-      if (ignoreNextOnEnd) {
-        ignoreNextOnEnd = false;
-        return;
-      }
-
-      if (isPlaying) {
-        setTimeout(() => {
-          if (isPlaying) {
-            if (speechEngine === 'native') {
-              advanceToNextSentence();
-            } else {
-              // Background Audiobook Mode: natural end of chapter utterance, advance to next chapter
-              const nextChapterIdx = currentChapterIndex + 1;
-              if (nextChapterIdx < currentChapters.length) {
-                console.log('Chapter ended in background mode. Moving to next chapter.');
-                currentChapterIndex = nextChapterIdx;
-                const nextChapter = currentChapters[nextChapterIdx];
-                
-                // Rebuild flatSentences synchronously
-                flatSentences = [];
-                nextChapter.content.forEach(para => {
-                  para.sentences.forEach(sentenceText => {
-                    flatSentences.push(sentenceText);
-                  });
-                });
-                
-                currentSentenceIndex = 0;
-                playSentence(0, true);
-
-                // Update UI DOM asynchronously
-                setTimeout(() => {
-                  loadChapter(currentBook.id, nextChapterIdx, 0);
-                }, 0);
-              } else {
-                resetPlaybackState();
-                alert('已朗讀完畢全書內容！');
-              }
-            }
-          }
-        }, 80);
-      }
-    };
-
-    currentUtterance.onerror = (e) => {
-      console.warn('SpeechSynthesisUtterance error event:', e);
-      if (e.error !== 'interrupted' && isPlaying) {
-        setTimeout(() => {
-          if (isPlaying) {
-            if (speechEngine === 'native') {
-              advanceToNextSentence();
-            } else {
-              // Try to skip current chapter on background synthesis error
-              const nextChapterIdx = currentChapterIndex + 1;
-              if (nextChapterIdx < currentChapters.length) {
-                currentChapterIndex = nextChapterIdx;
-                loadChapter(currentBook.id, nextChapterIdx, 0).then(() => {
-                  playSentence(0, true);
-                });
-              }
-            }
-          }
-        }, 100);
-      }
-    };
-
-    synth.speak(currentUtterance);
-    synth.resume();
-  }, 60);
+  }
 }
 
 function updateProgressUI() {
@@ -1129,8 +1219,8 @@ function updateProgressUI() {
 
 function resetPlaybackState() {
   isPlaying = false;
-  synth.cancel();
-  ignoreNextOnEnd = false; // Reset controls flag
+  HighlightPlayer.stop();
+  BackgroundPlayer.stop();
   DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
   DOMElements.playbackSlider.max = 0;
   DOMElements.playbackSlider.value = 0;
