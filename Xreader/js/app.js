@@ -38,9 +38,7 @@ let audioContext = null;
 let silentAudioHTML5 = null;
 let playTimeoutId = null;
 let ignoreNextOnEnd = false;
-let playlistSentences = [];
-let speechEngine = 'google'; // 'google', 'native'
-let googleAudio = null;
+let speechEngine = 'native'; // 'native', 'background'
 
 // --- DOM References ---
 const DOMElements = {
@@ -938,34 +936,6 @@ function updateMediaSessionMetadata(chapterIndex, sentenceIndex) {
   }
 }
 
-function showEngineFallbackNotice() {
-  let toast = document.getElementById('engine-fallback-toast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'engine-fallback-toast';
-    toast.style.position = 'fixed';
-    toast.style.bottom = '100px';
-    toast.style.left = '50%';
-    toast.style.transform = 'translateX(-50%)';
-    toast.style.backgroundColor = 'rgba(220, 53, 69, 0.9)';
-    toast.style.color = '#fff';
-    toast.style.padding = '10px 20px';
-    toast.style.borderRadius = '8px';
-    toast.style.fontSize = '0.9rem';
-    toast.style.zIndex = '9999';
-    toast.style.pointerEvents = 'none';
-    toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-    toast.style.transition = 'opacity 0.3s ease';
-    document.body.appendChild(toast);
-  }
-  toast.textContent = '⚠️ 網路語音載入失敗，已自動切換至本機語音模式';
-  toast.style.opacity = '1';
-  
-  setTimeout(() => {
-    toast.style.opacity = '0';
-  }, 4000);
-}
-
 function advanceToNextSentence() {
   if (currentSentenceIndex < flatSentences.length - 1) {
     playSentence(currentSentenceIndex + 1, true);
@@ -1009,12 +979,7 @@ function togglePlayback() {
     isPlaying = false;
     DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
     
-    // Pause active engine
-    if (speechEngine === 'native') {
-      synth.pause();
-    } else {
-      if (googleAudio) googleAudio.pause();
-    }
+    synth.pause();
     
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'paused';
@@ -1031,18 +996,10 @@ function togglePlayback() {
       navigator.mediaSession.playbackState = 'playing';
     }
 
-    if (speechEngine === 'native') {
-      if (synth.speaking) {
-        synth.resume();
-      } else {
-        playSentence(currentSentenceIndex);
-      }
+    if (synth.speaking) {
+      synth.resume();
     } else {
-      if (googleAudio && googleAudio.src && !googleAudio.ended) {
-        googleAudio.play().catch(e => console.warn('Resume Google audio failed:', e));
-      } else {
-        playSentence(currentSentenceIndex);
-      }
+      playSentence(currentSentenceIndex);
     }
   }
 }
@@ -1066,128 +1023,99 @@ function playSentence(index, isNaturalTransition = false) {
   // Sync to media session metadata
   updateMediaSessionMetadata(currentChapterIndex, index);
 
-  if (speechEngine === 'native') {
-    // Clean up Google Audio if running
-    if (googleAudio) {
-      googleAudio.pause();
-      googleAudio.onended = null;
-      googleAudio.onerror = null;
+  // Always cancel active speech to clear engine state
+  synth.cancel();
+
+  // iOS Safari Queue Freeze Workaround:
+  playTimeoutId = setTimeout(() => {
+    let textToSpeak = '';
+
+    if (speechEngine === 'native') {
+      // 1. Sentence Highlight Mode (逐句模式)
+      textToSpeak = flatSentences[index];
+    } else {
+      // 2. Background Audiobook Mode (背景聽書模式)
+      // Compile remaining text of current chapter
+      const remainingSentences = flatSentences.slice(index);
+      textToSpeak = remainingSentences.join('。 ') + '。';
     }
 
-    // Stop current native utterance cleanly (triggers currentUtterance.onend)
-    synth.cancel();
+    currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
 
-    // iOS Safari Queue Freeze Workaround:
-    playTimeoutId = setTimeout(() => {
-      const textToSpeak = flatSentences[index];
-      currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
+    if (activeVoice) currentUtterance.voice = activeVoice;
+    currentUtterance.rate = speechRate;
+    currentUtterance.pitch = speechPitch;
 
-      if (activeVoice) currentUtterance.voice = activeVoice;
-      currentUtterance.rate = speechRate;
-      currentUtterance.pitch = speechPitch;
-
-      currentUtterance.onend = () => {
-        // If the skip control lock is active, consume it and return immediately without advancing
-        if (ignoreNextOnEnd) {
-          ignoreNextOnEnd = false;
-          return;
-        }
-
-        if (isPlaying) {
-          setTimeout(() => {
-            if (isPlaying) advanceToNextSentence();
-          }, 80);
-        }
-      };
-
-      currentUtterance.onerror = (e) => {
-        console.warn('SpeechSynthesisUtterance error event:', e);
-        if (e.error !== 'interrupted' && isPlaying) {
-          setTimeout(() => {
-            if (isPlaying) advanceToNextSentence();
-          }, 100);
-        }
-      };
-
-      synth.speak(currentUtterance);
-      synth.resume();
-    }, 60);
-
-  } else {
-    // Google TTS Engine
-    synth.cancel();
-
-    if (googleAudio) {
-      googleAudio.pause();
-      googleAudio.onended = null;
-      googleAudio.onerror = null;
-    }
-
-    playTimeoutId = setTimeout(async () => {
-      const textToSpeak = flatSentences[index];
-      const cleanedText = textToSpeak.replace(/\s+/g, ' ').trim();
-      if (!cleanedText) {
-        advanceToNextSentence();
+    currentUtterance.onend = () => {
+      // If the skip control lock is active, consume it and return immediately without advancing
+      if (ignoreNextOnEnd) {
+        ignoreNextOnEnd = false;
         return;
       }
 
-      try {
-        const encodedText = encodeURIComponent(cleanedText);
-        const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-TW&client=tw-ob&q=${encodedText}`;
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(googleTtsUrl)}`;
-
-        if (!googleAudio) {
-          googleAudio = new Audio();
-          googleAudio.addEventListener('pause', () => {
-            if (isPlaying && speechEngine === 'google') {
-              console.log('Google Audio paused by system interruption. Syncing state.');
-              togglePlayback();
-            }
-          });
-        }
-
-        const res = await fetch(proxyUrl);
-        if (!res.ok) throw new Error(`Proxy response error: ${res.status}`);
-        const blob = await res.blob();
-        const localBlobUrl = URL.createObjectURL(blob);
-
-        googleAudio.src = localBlobUrl;
-        googleAudio.playbackRate = speechRate;
-
-        googleAudio.onended = () => {
-          URL.revokeObjectURL(localBlobUrl);
+      if (isPlaying) {
+        setTimeout(() => {
           if (isPlaying) {
-            advanceToNextSentence();
+            if (speechEngine === 'native') {
+              advanceToNextSentence();
+            } else {
+              // Background Audiobook Mode: natural end of chapter utterance, advance to next chapter
+              const nextChapterIdx = currentChapterIndex + 1;
+              if (nextChapterIdx < currentChapters.length) {
+                console.log('Chapter ended in background mode. Moving to next chapter.');
+                currentChapterIndex = nextChapterIdx;
+                const nextChapter = currentChapters[nextChapterIdx];
+                
+                // Rebuild flatSentences synchronously
+                flatSentences = [];
+                nextChapter.content.forEach(para => {
+                  para.sentences.forEach(sentenceText => {
+                    flatSentences.push(sentenceText);
+                  });
+                });
+                
+                currentSentenceIndex = 0;
+                playSentence(0, true);
+
+                // Update UI DOM asynchronously
+                setTimeout(() => {
+                  loadChapter(currentBook.id, nextChapterIdx, 0);
+                }, 0);
+              } else {
+                resetPlaybackState();
+                alert('已朗讀完畢全書內容！');
+              }
+            }
           }
-        };
-
-        googleAudio.onerror = (err) => {
-          console.warn('Google Audio playback error. Falling back to native SpeechSynthesis:', err);
-          URL.revokeObjectURL(localBlobUrl);
-          
-          showEngineFallbackNotice();
-          speechEngine = 'native';
-          DOMElements.settingEngine.value = 'native';
-          playSentence(index, isNaturalTransition);
-        };
-
-        if (isPlaying) {
-          googleAudio.play().catch(e => {
-            console.warn('Google Audio play error:', e);
-            speechEngine = 'native';
-            DOMElements.settingEngine.value = 'native';
-            playSentence(index, isNaturalTransition);
-          });
-        }
-      } catch (e) {
-        console.warn('Fetch Google TTS failed, falling back to Native engine:', e);
-        showEngineFallbackNotice();
-        speechEngine = 'native';
-        DOMElements.settingEngine.value = 'native';
-        playSentence(index, isNaturalTransition);
+        }, 80);
       }
-    }, 60);
-  }
+    };
+
+    currentUtterance.onerror = (e) => {
+      console.warn('SpeechSynthesisUtterance error event:', e);
+      if (e.error !== 'interrupted' && isPlaying) {
+        setTimeout(() => {
+          if (isPlaying) {
+            if (speechEngine === 'native') {
+              advanceToNextSentence();
+            } else {
+              // Try to skip current chapter on background synthesis error
+              const nextChapterIdx = currentChapterIndex + 1;
+              if (nextChapterIdx < currentChapters.length) {
+                currentChapterIndex = nextChapterIdx;
+                loadChapter(currentBook.id, nextChapterIdx, 0).then(() => {
+                  playSentence(0, true);
+                });
+              }
+            }
+          }
+        }, 100);
+      }
+    };
+
+    synth.speak(currentUtterance);
+    synth.resume();
+  }, 60);
 }
 
 function updateProgressUI() {
@@ -1202,12 +1130,6 @@ function updateProgressUI() {
 function resetPlaybackState() {
   isPlaying = false;
   synth.cancel();
-  if (googleAudio) {
-    googleAudio.pause();
-    googleAudio.onended = null;
-    googleAudio.onerror = null;
-    googleAudio.src = '';
-  }
   ignoreNextOnEnd = false; // Reset controls flag
   DOMElements.playbackPlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="play-icon"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
   DOMElements.playbackSlider.max = 0;
