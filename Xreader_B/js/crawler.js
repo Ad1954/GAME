@@ -6,10 +6,10 @@
 import { db } from './db.js';
 import { TextSegmenter } from './segmenter.js';
 
-// Pre-configured public CORS proxies
+// Pre-configured public & dedicated CORS proxies
 export const PROXIES = [
-  { name: 'CorsProxy.io', template: 'https://corsproxy.io/?{url}' },
-  { name: 'AllOrigins', template: 'https://api.allorigins.win/raw?url={url}' }
+  { name: '專屬 Cloudflare 代理', template: 'https://flat-dust-dbde.zwaxchu1954.workers.dev/?url={url}' },
+  { name: 'AllOrigins (備用)', template: 'https://api.allorigins.win/raw?url={url}' }
 ];
 
 export class XreaderCrawler {
