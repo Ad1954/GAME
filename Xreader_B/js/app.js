@@ -803,13 +803,28 @@ function autoSelectPlatformDefaultVoice() {
   }
 }
 
+let speechRateDebounceTimer = null;
+
+function triggerDebouncedSpeechRateChange() {
+  if (speechRateDebounceTimer) clearTimeout(speechRateDebounceTimer);
+  speechRateDebounceTimer = setTimeout(() => {
+    applySpeechSettingsChange();
+  }, 250);
+}
+
 function setupSpeechEvents() {
-  // Sync sliders
+  // Sync sliders with debounce on drag and immediate apply on release
   DOMElements.speechRateQuick.addEventListener('input', (e) => {
     speechRate = parseFloat(e.target.value);
     DOMElements.speechRateQuickLbl.textContent = speechRate.toFixed(1);
     DOMElements.settingRate.value = speechRate;
     DOMElements.rateVal.textContent = `${speechRate.toFixed(1)}x`;
+    triggerDebouncedSpeechRateChange();
+  });
+
+  DOMElements.speechRateQuick.addEventListener('change', (e) => {
+    if (speechRateDebounceTimer) clearTimeout(speechRateDebounceTimer);
+    speechRate = parseFloat(e.target.value);
     applySpeechSettingsChange();
   });
 
@@ -818,6 +833,12 @@ function setupSpeechEvents() {
     DOMElements.rateVal.textContent = `${speechRate.toFixed(1)}x`;
     DOMElements.speechRateQuick.value = speechRate;
     DOMElements.speechRateQuickLbl.textContent = speechRate.toFixed(1);
+    triggerDebouncedSpeechRateChange();
+  });
+
+  DOMElements.settingRate.addEventListener('change', (e) => {
+    if (speechRateDebounceTimer) clearTimeout(speechRateDebounceTimer);
+    speechRate = parseFloat(e.target.value);
     applySpeechSettingsChange();
   });
 
@@ -1028,7 +1049,7 @@ const HighlightPlayer = {
       currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
 
       if (activeVoice) currentUtterance.voice = activeVoice;
-      currentUtterance.rate = speechRate;
+      currentUtterance.rate = Math.min(Math.max(speechRate, 0.5), 2.5);
       currentUtterance.pitch = speechPitch;
 
       currentUtterance.onend = () => {
@@ -1065,18 +1086,17 @@ const HighlightPlayer = {
   },
 
   resume() {
-    if (synth.speaking) {
-      synth.resume();
-    } else {
-      this.play(currentSentenceIndex);
-    }
+    this.play(currentSentenceIndex);
   },
 
   stop() {
     isUserChangingState = true;
     synth.cancel();
-    // Reset changing state lock asynchronously
-    setTimeout(() => { isUserChangingState = false; }, 50);
+    setTimeout(() => {
+      if (!playTimeoutId) {
+        isUserChangingState = false;
+      }
+    }, 150);
   }
 };
 
@@ -1117,7 +1137,7 @@ const BackgroundPlayer = {
       currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
 
       if (activeVoice) currentUtterance.voice = activeVoice;
-      currentUtterance.rate = speechRate;
+      currentUtterance.rate = Math.min(Math.max(speechRate, 0.5), 2.5);
       currentUtterance.pitch = speechPitch;
 
       currentUtterance.onend = () => {
@@ -1208,18 +1228,17 @@ const BackgroundPlayer = {
   },
 
   resume() {
-    if (synth.speaking) {
-      synth.resume();
-    } else {
-      this.play(currentSentenceIndex);
-    }
+    this.play(currentSentenceIndex);
   },
 
   stop() {
     isUserChangingState = true;
     synth.cancel();
-    // Reset changing state lock asynchronously
-    setTimeout(() => { isUserChangingState = false; }, 50);
+    setTimeout(() => {
+      if (!playTimeoutId) {
+        isUserChangingState = false;
+      }
+    }, 150);
   }
 };
 
