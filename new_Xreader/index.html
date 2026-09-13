@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>new_Xreader - 現代化小說朗讀與爬蟲工具</title>
+  
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/tabs.css">
+  <link rel="stylesheet" href="css/crawler.css">
+  <link rel="stylesheet" href="css/bookshelf.css">
+  <link rel="stylesheet" href="css/reader.css">
+  <link rel="stylesheet" href="css/modal.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">X</div>
+      <span class="brand-name">Xreader</span>
+      <span class="brand-badge">v3.0 模組化</span>
+    </div>
+
+    <!-- Contextual TAG Navigation (Story 1) -->
+    <nav class="nav-tabs-container">
+      <button class="nav-tab active" data-tab="tab-crawler">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        網頁爬蟲與資料導入
+      </button>
+      <button class="nav-tab" data-tab="tab-bookshelf">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
+        書櫃與閱讀
+      </button>
+      <button class="nav-tab" data-tab="tab-settings">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        系統設定
+      </button>
+    </nav>
+  </header>
+
+  <!-- Main Container -->
+  <main class="app-main">
+
+    <!-- ========================================================
+         TAG 1: 網頁爬蟲與資料導入 (Crawler & Ingestion)
+         ======================================================== -->
+    <section id="tab-crawler" class="tab-panel active">
+      <div class="card">
+        <!-- Sub-tabs -->
+        <div class="ingest-subtabs">
+          <button class="ingest-tab-btn active" data-panel="sub-panel-web">線上網頁抓取</button>
+          <button class="ingest-tab-btn" data-panel="sub-panel-file">本地檔案匯入</button>
+          <button class="ingest-tab-btn" data-panel="sub-panel-paste">手動貼上文字</button>
+        </div>
+
+        <!-- Sub-panel: Web Crawler -->
+        <div id="sub-panel-web" class="ingest-panel active">
+          <div class="form-group">
+            <label class="form-label" for="crawler-url">小說目錄網址 (重啟自動清空)</label>
+            <input type="url" id="crawler-url" class="form-input" placeholder="https://tw.hjwzw.com/Book/Chapter/49250" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="crawler-proxy">CORS 跨域代理設定 (Story 8, Story 13)</label>
+            <select id="crawler-proxy" class="form-select">
+              <option value="local" selected>本地伺服器直通代理 (住宅 IP/免 403 封鎖/推薦)</option>
+              <option value="dedicated">專屬 Cloudflare 代理 (遠端/機房 IP: flat-dust-dbde)</option>
+              <option value="custom">自訂代理 URL (持久記憶)</option>
+              <option value="allorigins">AllOrigins (公開備用節點)</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="crawler-custom-proxy-group" style="display: none;">
+            <label class="form-label" for="crawler-custom-proxy">自訂代理 URL 範本 (必須包含 {url})</label>
+            <input type="text" id="crawler-custom-proxy" class="form-input" placeholder="https://your-worker.workers.dev/?url={url}">
+          </div>
+
+          <div class="form-group">
+            <div class="slider-container">
+              <div class="slider-header">
+                <span>防封鎖請求間隔 (秒)</span>
+                <span id="crawler-delay-val" class="slider-val">2.0 秒</span>
+              </div>
+              <input type="range" id="crawler-delay" min="0.5" max="5.0" step="0.5" value="2.0">
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+            <button id="btn-start-crawl" class="btn btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 0 1 9-9"/></svg>
+              解析目錄並開始下載
+            </button>
+            <button id="btn-cancel-crawl" class="btn btn-danger" style="display: none;">取消下載</button>
+          </div>
+
+          <!-- Crawler Progress & Terminal -->
+          <div id="crawler-progress-box" class="crawler-progress-box">
+            <div class="crawler-status-header">
+              <span id="crawler-status-text">初始化下載佇列...</span>
+            </div>
+            <div class="progress-track">
+              <div id="crawler-progress-fill" class="progress-fill"></div>
+            </div>
+            <div id="crawler-log" class="crawler-log-box"></div>
+          </div>
+        </div>
+
+        <!-- Sub-panel: File Upload -->
+        <div id="sub-panel-file" class="ingest-panel">
+          <div class="file-dropzone" id="file-dropzone">
+            <svg class="file-dropzone-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            <p style="font-weight: 600;">拖曳檔案至此，或點擊選擇檔案</p>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">支援純文字小說 (.txt) 或 Xreader 備份檔 (.json)</span>
+            <input type="file" id="file-upload-input" accept=".txt,.json" style="display: none;">
+          </div>
+          <div id="file-upload-status" style="font-size: 0.85rem; text-align: center; color: var(--accent-primary); margin-top: 10px; display: none;"></div>
+        </div>
+
+        <!-- Sub-panel: Manual Paste -->
+        <div id="sub-panel-paste" class="ingest-panel">
+          <div class="form-group">
+            <label class="form-label" for="paste-book-title">書籍標題</label>
+            <input type="text" id="paste-book-title" class="form-input" placeholder="貼上文字朗讀" value="自訂文字朗讀">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="paste-book-content">欲朗讀的文字內容</label>
+            <textarea id="paste-book-content" class="form-textarea" placeholder="請將小說或文章內容貼於此處..."></textarea>
+          </div>
+          <button id="btn-load-paste" class="btn btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            匯入文字開始朗讀
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         TAG 2: 書櫃與閱讀 (Bookshelf & Reader)
+         ======================================================== -->
+    <section id="tab-bookshelf" class="tab-panel">
+      <!-- Bookshelf Grid Area -->
+      <div id="bookshelf-wrapper">
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">
+            <h3 class="card-title" style="margin-bottom: 0;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
+              本機書籍清單 (NewXreaderDB)
+            </h3>
+            <div style="display: flex; gap: 8px;">
+              <button id="btn-bookshelf-import" class="btn btn-secondary btn-sm" title="直接匯入備份檔 (.json) 或純文字小說 (.txt)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                匯入書籍 (JSON / TXT)
+              </button>
+              <input type="file" id="bookshelf-file-input" accept=".txt,.json" style="display: none;">
+            </div>
+          </div>
+          <div id="bookshelf-grid" class="bookshelf-grid"></div>
+          <div id="bookshelf-empty" class="bookshelf-empty-box" style="display: none;">
+            <svg class="bookshelf-empty-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
+            <p>書櫃目前沒有任何書籍</p>
+            <button class="btn btn-secondary btn-sm" style="margin-top: 12px;" onclick="document.querySelector('[data-tab=tab-crawler]').click()">
+              前往導入書籍
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reader Embedded Container -->
+      <div id="reader-container" class="reader-container" style="display: none;">
+        <div class="card" style="padding: 1rem 1.5rem; margin-bottom: 1rem;">
+          <div class="reader-nav-header">
+            <div class="reader-header-left">
+              <button id="btn-back-to-shelf" class="btn btn-secondary btn-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                返回書櫃
+              </button>
+              <h3 id="reader-book-title" class="reader-book-title">書籍標題</h3>
+            </div>
+
+            <!-- Chapter Navigation Controls -->
+            <div class="reader-chapter-controls">
+              <button id="btn-prev-chap" class="btn btn-secondary btn-sm" title="上一章">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <select id="reader-chapter-select" class="form-select" style="width: auto; min-width: 140px; padding: 4px 8px; font-size: 0.85rem;"></select>
+              <button id="btn-next-chap" class="btn btn-secondary btn-sm" title="下一章">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reader Text Surface -->
+        <article id="reader-body" class="reader-surface"></article>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         TAG 3: 系統設定 (Settings)
+         ======================================================== -->
+    <section id="tab-settings" class="tab-panel">
+      <div class="card">
+        <h3 class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          語音引擎與平台設定 (Story 3, GWT 3.1)
+        </h3>
+
+        <div class="form-group">
+          <label class="form-label">目前偵測平台</label>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span id="settings-platform-badge" style="font-weight: 700; color: var(--accent-primary); background-color: var(--bg-elevated); padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">PC</span>
+            <select id="settings-platform-override" class="form-select" style="width: auto;">
+              <option value="auto">自動偵測環境</option>
+              <option value="PC">強制指定為 PC (零延遲原生策略)</option>
+              <option value="iOS">強制指定為 iOS (鎖屏背景保活策略)</option>
+              <option value="Android">強制指定為 Android (背景保活策略)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="settings-voice-select">當前平台獨立語音 (獨立記憶於本機)</label>
+          <select id="settings-voice-select" class="form-select">
+            <option value="">載入系統語音中...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <div class="slider-container">
+            <div class="slider-header">
+              <span>預設語音朗讀速度 (Rate)</span>
+              <span id="settings-default-rate-val" class="slider-val">1.0x</span>
+            </div>
+            <input type="range" id="settings-default-rate" min="0.5" max="6.0" step="0.1" value="3.0">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="slider-container">
+            <div class="slider-header">
+              <span>語音音調 (Pitch)</span>
+              <span id="settings-pitch-val" class="slider-val">1.0</span>
+            </div>
+            <input type="range" id="settings-pitch" min="0.5" max="2.0" step="0.1" value="1.0">
+          </div>
+        </div>
+
+        <div class="form-group" style="border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+          <label class="form-label">閱讀介面佈景主題</label>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary theme-btn" data-theme="dark">深色黑金 (Dark)</button>
+            <button class="btn btn-secondary theme-btn" data-theme="light">明亮簡約 (Light)</button>
+            <button class="btn btn-secondary theme-btn" data-theme="sepia">護眼羊皮紙 (Sepia)</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ========================================================
+       Fixed Bottom Playback Controller Bar (Story 4, 7)
+       ======================================================== -->
+  <footer id="player-bar" class="player-bar">
+    <div class="player-bar-inner">
+      <!-- Media Buttons -->
+      <div class="player-controls-left">
+        <button id="player-btn-prev" class="btn btn-secondary btn-sm" title="上一句">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg>
+        </button>
+        <button id="player-btn-play" class="btn-play-round" title="播放 / 暫停">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+        </button>
+        <button id="player-btn-next" class="btn btn-secondary btn-sm" title="下一句">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg>
+        </button>
+      </div>
+
+      <!-- Progress Slider -->
+      <div class="player-progress-area">
+        <span id="player-lbl-progress" class="player-progress-lbl">0 / 0 句</span>
+        <input type="range" id="player-slider" class="player-progress-slider" min="0" max="0" value="0">
+        <span id="player-lbl-percent" class="player-progress-lbl">0%</span>
+        <span id="player-sleep-countdown" class="player-sleep-badge" title="點擊取消定時器">⏳ 00:00</span>
+      </div>
+
+      <!-- Quick Speed & Sleep Timer -->
+      <div class="player-controls-right">
+        <div class="player-speed-box">
+          <input type="range" id="player-speed-slider" min="0.5" max="6.0" step="0.1" value="3.0" title="語速調節">
+          <span id="player-speed-val">3.0x</span>
+        </div>
+
+        <select id="player-sleep-select" class="form-select" style="padding: 4px 8px; font-size: 0.8rem; width: auto;" title="睡眠定時">
+          <option value="off">定時: 關</option>
+          <option value="15">定時: 15分</option>
+          <option value="30">定時: 30分</option>
+          <option value="45">定時: 45分</option>
+          <option value="60">定時: 60分</option>
+          <option value="chapter">定時: 本章止</option>
+        </select>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========================================================
+       Export Popup Modal (Story 2, GWT 2.2)
+       ======================================================== -->
+  <!-- Import Progress Modal (Story 13, GWT 13.2) -->
+  <div id="import-progress-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 440px; text-align: center; padding: 2rem;">
+      <h3 id="import-progress-title" style="margin-bottom: 0.75rem;">正在還原書籍資料...</h3>
+      <div class="progress-track" style="margin-bottom: 1rem; height: 10px; background-color: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 5px; overflow: hidden;">
+        <div id="import-progress-fill" class="progress-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent-primary), #10b981); transition: width 0.15s ease;"></div>
+      </div>
+      <p id="import-progress-status" style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0;">準備寫入資料庫...</p>
+    </div>
+  </div>
+
+  <div id="export-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="export-modal-book-title" class="modal-title">匯出書籍</h3>
+        <button id="btn-close-export" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 8px;">
+          請選擇您希望導出的檔案格式：
+        </p>
+        <button id="btn-export-txt" class="btn btn-secondary" style="width: 100%; justify-content: flex-start; padding: 12px 16px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          匯出為純文字全本檔案 (.txt)
+        </button>
+        <button id="btn-export-json" class="btn btn-secondary" style="width: 100%; justify-content: flex-start; padding: 12px 16px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          匯出為 Xreader 完整備份檔 (.json)
+        </button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('export-modal').classList.remove('active')">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Main ES Module Bootstrap -->
+  <script type="module" src="js/app.js?v=6.2"></script>
+</body>
+</html>

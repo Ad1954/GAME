@@ -1,0 +1,211 @@
+/* ============================================================
+   new_Xreader - Reader View & Playback Bar Styles (Story 4, 7)
+   ============================================================ */
+
+.reader-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.reader-nav-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.reader-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reader-book-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.reader-chapter-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Reading Surface */
+.reader-surface {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 2rem;
+  min-height: 60vh;
+  box-shadow: var(--shadow-sm);
+  font-size: 1.15rem;
+  line-height: 1.85;
+}
+
+.reader-paragraph {
+  margin-bottom: 1.5rem;
+  text-indent: 2em;
+}
+
+.sentence {
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  padding: 1px 2px;
+}
+
+.sentence:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Synchronized Orange Highlight (Story 4, 5) */
+.sentence.active-sentence {
+  background-color: var(--accent-orange-bg) !important;
+  color: var(--accent-orange) !important;
+  font-weight: 700;
+  border-bottom: 2px solid var(--accent-orange);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.25);
+}
+
+/* Fixed Bottom Player Bar */
+.player-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--player-bar-height);
+  background-color: var(--bg-surface);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.5rem;
+  box-shadow: var(--shadow-lg);
+  z-index: 60;
+}
+
+.player-bar-inner {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.player-controls-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-play-round {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background-color: var(--accent-primary);
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.1s ease, background-color 0.15s ease;
+}
+
+.btn-play-round:hover {
+  background-color: var(--accent-hover);
+  transform: scale(1.05);
+}
+
+.player-progress-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 500px;
+}
+
+.player-progress-slider {
+  flex: 1;
+}
+
+.player-progress-lbl {
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.player-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.player-speed-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
+}
+
+#player-speed-slider {
+  flex: 1;
+  min-width: 80px;
+}
+
+#player-speed-val {
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--accent-primary);
+  min-width: 38px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.player-sleep-badge {
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  color: var(--accent-danger);
+  font-weight: 700;
+  cursor: pointer;
+  background-color: rgba(239, 68, 68, 0.15);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .player-bar-inner {
+    gap: 6px;
+    padding: 0 0.5rem;
+  }
+  .player-speed-box {
+    min-width: 88px;
+    gap: 4px;
+  }
+  #player-speed-slider {
+    min-width: 50px;
+  }
+  #player-speed-val {
+    font-size: 0.75rem;
+    min-width: 32px;
+  }
+  #player-sleep-select {
+    font-size: 0.75rem;
+    padding: 2px 4px;
+  }
+  .reader-surface {
+    padding: 1.5rem 1rem;
+    font-size: 1.05rem;
+  }
+}
