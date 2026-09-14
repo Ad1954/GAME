@@ -1,12 +1,11 @@
 /**
- * new_Xreader - iOS / Mobile Voice Player (Physical Isolation per ADR 0002, Story 4, 5)
- * Encapsulates WebKit silent audio keep-alive, MediaSession integration, and proactive evade.
+ * new_Xreader - iOS / Mobile Voice Player (Physical Isolation per Story 3, 4, 5)
+ * Encapsulates WebKit 15-second silent audio keep-alive, MediaSession integration,
+ * visibility auto-sync, and proactive evade lifecycle.
  */
 
 import { eventBus } from '../../eventBus.js';
-
-// Base64 1-second silent WAV
-const SILENT_WAV_BASE64 = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+import { SILENT_15S_WAV_BASE64 } from '../silentAudioData.js';
 
 export class IosVoicePlayer {
   constructor() {
@@ -23,7 +22,7 @@ export class IosVoicePlayer {
     this.currentUtterance = null;
     this.isProactiveEvade = false;
 
-    // Background Keep-Alive Audio Element
+    // Background Keep-Alive Audio Element (Story 4, GWT 4.1)
     this.silentAudio = null;
     this.isAudioSessionActive = false;
   }
@@ -32,6 +31,7 @@ export class IosVoicePlayer {
     this.setupSilentAudio();
     this.loadVoices();
     this.setupMediaSession();
+    this.setupVisibilitySync();
 
     if (this.synth.onvoiceschanged !== undefined) {
       this.synth.onvoiceschanged = () => this.loadVoices();
@@ -39,40 +39,79 @@ export class IosVoicePlayer {
   }
 
   setupSilentAudio() {
-    if (!this.silentAudio) {
-      this.silentAudio = new Audio(SILENT_WAV_BASE64);
-      this.silentAudio.loop = true;
-      this.silentAudio.volume = 0.01; // Minimal volume for background channel activation
+    // Mount to DOM to guarantee primary media element recognition in WebKit
+    let audio = document.getElementById('ios-keepalive');
+    if (!audio) {
+      audio = document.createElement('audio');
+      audio.id = 'ios-keepalive';
+      audio.setAttribute('playsinline', '');
+      audio.setAttribute('webkit-playsinline', '');
+      audio.style.display = 'none';
+      document.body.appendChild(audio);
     }
+    audio.src = SILENT_15S_WAV_BASE64;
+    audio.loop = true;
+    audio.volume = 0.01; // Non-zero volume ensures audio pipeline stays active
+
+    this.silentAudio = audio;
   }
 
   startKeepAlive() {
-    if (this.silentAudio && !this.isAudioSessionActive) {
-      this.silentAudio.play().then(() => {
+    if (this.silentAudio) {
+      if (this.silentAudio.paused) {
+        this.silentAudio.play().then(() => {
+          this.isAudioSessionActive = true;
+        }).catch(err => {
+          console.warn('[iOS Player] Silent audio play blocked (requires user gesture):', err);
+        });
+      } else {
         this.isAudioSessionActive = true;
-      }).catch(err => {
-        console.warn('[iOS Player] Silent audio play blocked (requires user gesture):', err);
-      });
+      }
     }
   }
 
   stopKeepAlive(forceDestroy = false) {
-    if (this.silentAudio && forceDestroy) {
+    if (this.silentAudio) {
       this.silentAudio.pause();
-      this.silentAudio.currentTime = 0;
-      this.isAudioSessionActive = false;
+      if (forceDestroy) {
+        this.silentAudio.currentTime = 0;
+        this.isAudioSessionActive = false;
+      }
     }
+  }
+
+  setupVisibilitySync() {
+    // GWT 4.2: When unlocking screen or returning to tab, sync sentence highlight immediately
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && this.isPlaying) {
+        this.notifySentenceChange();
+        this.updateMediaSessionMetadata();
+      }
+    });
   }
 
   setupMediaSession() {
     if (!('mediaSession' in navigator)) return;
 
-    navigator.mediaSession.setActionHandler('play', () => this.play());
-    navigator.mediaSession.setActionHandler('pause', () => this.pause());
+    // GWT 5.2: Remote controls for Lock Screen & Bluetooth
+    navigator.mediaSession.setActionHandler('play', () => {
+      console.log('[MediaSession] Play remote action received');
+      this.play();
+    });
+
+    navigator.mediaSession.setActionHandler('pause', () => {
+      console.log('[MediaSession] Pause remote action received');
+      this.pause();
+    });
+
+    // GWT 5.3: Chapter skipping
     navigator.mediaSession.setActionHandler('nexttrack', () => {
+      console.log('[MediaSession] Next chapter remote action received');
       eventBus.emit('audio:requestNextChapter');
     });
+
     navigator.mediaSession.setActionHandler('previoustrack', () => {
+      console.log('[MediaSession] Prev chapter remote action received');
       eventBus.emit('audio:requestPrevChapter');
     });
   }
@@ -80,10 +119,23 @@ export class IosVoicePlayer {
   updateMediaSessionMetadata() {
     if (!('mediaSession' in navigator)) return;
 
+    // Resolve safe absolute URL for 512x512 PNG artwork (GWT 5.1)
+    const origin = window.location.origin;
+    const basePath = window.location.pathname.replace(/\/[^/]*$/, '');
+    const iconUrl = `${origin}${basePath}/icon.png`;
+
+    const chapterTitle = this.currentChapter ? this.currentChapter.title : '小說朗讀';
+    const sentenceProgress = this.flatSentences.length > 0
+      ? `${this.bookTitle} (${this.currentIndex + 1}/${this.flatSentences.length})`
+      : this.bookTitle;
+
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: this.currentChapter ? this.currentChapter.title : '小說朗讀',
-      artist: this.bookTitle,
-      album: 'Xreader 聽書'
+      title: chapterTitle,
+      artist: sentenceProgress,
+      album: 'Xreader 聽書',
+      artwork: [
+        { src: iconUrl, sizes: '512x512', type: 'image/png' }
+      ]
     });
 
     navigator.mediaSession.playbackState = this.isPlaying ? 'playing' : 'paused';
@@ -122,10 +174,17 @@ export class IosVoicePlayer {
 
     this.startKeepAlive();
     this.isPlaying = true;
-    this.notifyStateChange();
-    this.updateMediaSessionMetadata();
 
-    this.speakCurrentSentence();
+    // GWT 5.2: If synth was paused, resume it cleanly without recreating utterance
+    if (this.synth.paused) {
+      this.synth.resume();
+      this.notifyStateChange();
+      this.updateMediaSessionMetadata();
+    } else {
+      this.notifyStateChange();
+      this.updateMediaSessionMetadata();
+      this.speakCurrentSentence();
+    }
   }
 
   speakCurrentSentence() {
@@ -144,6 +203,7 @@ export class IosVoicePlayer {
 
     const text = this.flatSentences[this.currentIndex];
     this.notifySentenceChange();
+    this.updateMediaSessionMetadata();
 
     this.currentUtterance = new SpeechSynthesisUtterance(text);
     this.currentUtterance.rate = Math.min(Math.max(this.rate, 0.5), 2.5);
@@ -171,11 +231,11 @@ export class IosVoicePlayer {
 
   pause() {
     this.isPlaying = false;
-    this.isProactiveEvade = true;
-    this.synth.cancel();
-    setTimeout(() => { this.isProactiveEvade = false; }, 80);
-
-    // Keep silent audio channel alive per ADR 0002 so lock screen / earphone can resume
+    if (this.synth.speaking) {
+      // Use pause instead of cancel so lock screen / earphone resume works (GWT 5.2)
+      this.synth.pause();
+    }
+    this.stopKeepAlive(false);
     this.notifyStateChange();
     this.updateMediaSessionMetadata();
   }
