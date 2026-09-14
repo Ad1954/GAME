@@ -21,6 +21,7 @@ export class IosVoicePlayer {
     this.activeVoice = null;
     this.currentUtterance = null;
     this.isProactiveEvade = false;
+    this.isPausedByUser = false;
 
     // Background Keep-Alive Audio Element (Story 4, GWT 4.1)
     this.silentAudio = null;
@@ -151,6 +152,7 @@ export class IosVoicePlayer {
 
   loadChapter(chapter, startSentenceIndex = 0, bookTitle = 'Xreader') {
     this.stop(false);
+    this.isPausedByUser = false;
     this.currentChapter = chapter;
     this.bookTitle = bookTitle;
     this.flatSentences = [];
@@ -175,12 +177,18 @@ export class IosVoicePlayer {
     this.startKeepAlive();
     this.isPlaying = true;
 
-    // GWT 5.2: If synth was paused, resume it cleanly without recreating utterance
-    if (this.synth.paused) {
+    // GWT 5.2 & GWT 20.2: Clean resume check using internal pause flag
+    if (this.isPausedByUser && this.synth.speaking && this.synth.paused) {
+      this.isPausedByUser = false;
       this.synth.resume();
       this.notifyStateChange();
       this.updateMediaSessionMetadata();
     } else {
+      this.isPausedByUser = false;
+      // If synth had a stuck paused state from WebKit bug, cancel it cleanly
+      if (this.synth.paused) {
+        try { this.synth.cancel(); } catch(e) {}
+      }
       this.notifyStateChange();
       this.updateMediaSessionMetadata();
       this.speakCurrentSentence();
@@ -202,8 +210,6 @@ export class IosVoicePlayer {
     }
 
     const text = this.flatSentences[this.currentIndex];
-    this.notifySentenceChange();
-    this.updateMediaSessionMetadata();
 
     this.currentUtterance = new SpeechSynthesisUtterance(text);
     this.currentUtterance.rate = Math.min(Math.max(this.rate, 0.5), 2.5);
@@ -212,6 +218,19 @@ export class IosVoicePlayer {
     if (this.activeVoice) {
       this.currentUtterance.voice = this.activeVoice;
     }
+
+    // GWT 20.1: Millisecond-accurate audio-visual synchronization (onstart trigger)
+    let hasTriggeredStart = false;
+    const triggerStart = () => {
+      if (hasTriggeredStart || this.isProactiveEvade || !this.isPlaying) return;
+      hasTriggeredStart = true;
+      this.notifySentenceChange();
+      this.updateMediaSessionMetadata();
+    };
+
+    this.currentUtterance.onstart = triggerStart;
+    // Fallback in case onstart is delayed on punctuation-only sentences
+    setTimeout(triggerStart, 250);
 
     this.currentUtterance.onend = () => {
       if (this.isProactiveEvade || !this.isPlaying) return;
@@ -231,6 +250,7 @@ export class IosVoicePlayer {
 
   pause() {
     this.isPlaying = false;
+    this.isPausedByUser = true;
     if (this.synth.speaking) {
       // Use pause instead of cancel so lock screen / earphone resume works (GWT 5.2)
       this.synth.pause();
@@ -242,6 +262,7 @@ export class IosVoicePlayer {
 
   stop(forceDestroy = false) {
     this.isPlaying = false;
+    this.isPausedByUser = false;
     this.isProactiveEvade = true;
     this.synth.cancel();
     setTimeout(() => { this.isProactiveEvade = false; }, 80);
@@ -254,6 +275,7 @@ export class IosVoicePlayer {
   seekSentence(sentenceIndex) {
     const wasPlaying = this.isPlaying;
     this.isProactiveEvade = true;
+    this.isPausedByUser = false; // GWT 20.2: Reset paused flag so it never resumes empty queue!
     this.synth.cancel();
 
     this.currentIndex = Math.max(0, Math.min(sentenceIndex, this.flatSentences.length - 1));
@@ -270,6 +292,7 @@ export class IosVoicePlayer {
   setRate(rate) {
     const wasPlaying = this.isPlaying;
     this.isProactiveEvade = true;
+    this.isPausedByUser = false;
     this.synth.cancel();
     this.rate = rate;
 
