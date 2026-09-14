@@ -1,0 +1,114 @@
+/* ============================================================
+   new_Xreader - Crawler & Ingestion Styles (Story 1, 8)
+   ============================================================ */
+
+.ingest-subtabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1.5rem;
+}
+
+.ingest-tab-btn {
+  background: transparent;
+  border: none;
+  padding: 10px 18px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.ingest-tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.ingest-tab-btn.active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+}
+
+.ingest-panel {
+  display: none;
+}
+
+.ingest-panel.active {
+  display: block;
+}
+
+/* File Dropzone */
+.file-dropzone {
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 3rem 1.5rem;
+  text-align: center;
+  background-color: var(--bg-surface);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.file-dropzone:hover, .file-dropzone.dragover {
+  border-color: var(--accent-primary);
+  background-color: var(--bg-elevated);
+}
+
+.file-dropzone-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--accent-primary);
+}
+
+/* Crawler Progress & Terminal Log */
+.crawler-progress-box {
+  background-color: #0b0d10;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+  display: none;
+}
+
+.progress-track {
+  width: 100%;
+  height: 10px;
+  background-color: #1e242d;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-orange));
+  border-radius: var(--radius-full);
+  transition: width 0.2s ease;
+}
+
+.crawler-status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.crawler-log-box {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: #a0aec0;
+  background-color: #141820;
+  border: 1px solid #232936;
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  height: 150px;
+  overflow-y: auto;
+  line-height: 1.6;
+}
