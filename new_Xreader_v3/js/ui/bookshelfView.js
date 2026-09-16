@@ -6,6 +6,7 @@
 import { storage } from '../core/storage.js';
 import { eventBus } from '../eventBus.js';
 import { TextSegmenter } from '../core/segmenter.js';
+import { TxtParser } from '../core/txtParser.js';
 
 export class BookshelfView {
   constructor() {
@@ -117,38 +118,7 @@ export class BookshelfView {
             const text = await file.text();
             const bookTitle = file.name.replace(/\.[^/.]+$/, '');
             const bookId = `book_txt_${Date.now()}`;
-            const chapterPattern = /(第[0-9一二三四五六七八九十百千]+[章回節卷部話][^\r\n]*)/g;
-            const parts = text.split(chapterPattern);
-            const chapters = [];
-            if (parts.length > 1) {
-              let cIdx = 0;
-              for (let i = 1; i < parts.length; i += 2) {
-                const chapTitle = parts[i].trim();
-                const chapBody = (parts[i + 1] || '').trim();
-                const { paragraphs, flatSentences } = TextSegmenter.segment(chapBody);
-                chapters.push({
-                  id: `${bookId}_${cIdx}`,
-                  bookId,
-                  index: cIdx,
-                  title: chapTitle,
-                  content: chapBody,
-                  paragraphs,
-                  sentencesCount: flatSentences.length
-                });
-                cIdx++;
-              }
-            } else {
-              const { paragraphs, flatSentences } = TextSegmenter.segment(text);
-              chapters.push({
-                id: `${bookId}_0`,
-                bookId,
-                index: 0,
-                title: '全文',
-                content: text,
-                paragraphs,
-                sentencesCount: flatSentences.length
-              });
-            }
+            const chapters = TxtParser.parse(text, bookId);
             const book = {
               id: bookId,
               title: bookTitle,
