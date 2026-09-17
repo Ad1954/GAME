@@ -6,12 +6,15 @@
 import { storage } from './core/storage.js';
 import { player } from './audio/playerFactory.js';
 import { eventBus } from './eventBus.js';
+import { logger } from './core/logger.js';
 
 import { CrawlerView } from './ui/crawlerView.js';
 import { BookshelfView } from './ui/bookshelfView.js';
 import { ReaderView } from './ui/readerView.js';
 import { PlayerBarView } from './ui/playerBarView.js';
 import { SettingsView } from './ui/settingsView.js';
+import { ChapterManagerView } from './ui/chapterManagerView.js';
+import { ContentEditModal } from './ui/contentEditModal.js';
 
 class App {
   constructor() {
@@ -20,6 +23,8 @@ class App {
     this.readerView = new ReaderView();
     this.playerBarView = new PlayerBarView();
     this.settingsView = new SettingsView();
+    this.chapterManagerView = new ChapterManagerView();
+    this.contentEditModal = new ContentEditModal();
     this.storage = storage;
     this.player = player;
 
@@ -30,6 +35,9 @@ class App {
 
   async init() {
     console.log('[App] Initializing new_Xreader...');
+
+    // 0. Initialize Logger
+    logger.init();
 
     // 1. Initialize DB
     await storage.init();
@@ -43,6 +51,8 @@ class App {
     this.readerView.init();
     this.playerBarView.init();
     this.settingsView.init();
+    this.chapterManagerView.init();
+    this.contentEditModal.init();
 
     // 4. Setup Navigation & Toasts
     this.bindNavigation();
@@ -79,9 +89,13 @@ class App {
       }
     });
 
-    // If switching to crawler tab, clear URL input per Story 1, GWT 1.1
+    // If switching to crawler tab, clear URL input per Story 1, GWT 1.1 and refresh options
     if (tabId === 'tab-crawler') {
       this.crawlerView.clearUrlInput();
+      this.crawlerView.renderCategoryOptions();
+      this.crawlerView.renderCrawlerRecords();
+    } else if (tabId === 'tab-bookshelf') {
+      this.bookshelfView.loadBooks();
     }
   }
 

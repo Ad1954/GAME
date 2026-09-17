@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>new_Xreader - 現代化小說朗讀與爬蟲工具</title>
   
-  <link rel="stylesheet" href="css/main.css">
-  <link rel="stylesheet" href="css/tabs.css">
-  <link rel="stylesheet" href="css/crawler.css">
-  <link rel="stylesheet" href="css/bookshelf.css">
-  <link rel="stylesheet" href="css/reader.css">
-  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="css/main.css?v=7.3">
+  <link rel="stylesheet" href="css/tabs.css?v=7.3">
+  <link rel="stylesheet" href="css/crawler.css?v=7.3">
+  <link rel="stylesheet" href="css/bookshelf.css?v=7.3">
+  <link rel="stylesheet" href="css/reader.css?v=7.3">
+  <link rel="stylesheet" href="css/modal.css?v=7.3">
 </head>
 <body>
 
@@ -22,15 +22,15 @@
       <span class="brand-badge">v3.0 模組化</span>
     </div>
 
-    <!-- Contextual TAG Navigation (Story 1) -->
+    <!-- Contextual TAG Navigation (Story 1, Story 24, GWT 24.3) -->
     <nav class="nav-tabs-container">
-      <button class="nav-tab active" data-tab="tab-crawler">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-        網頁爬蟲與資料導入
-      </button>
-      <button class="nav-tab" data-tab="tab-bookshelf">
+      <button class="nav-tab active" data-tab="tab-bookshelf">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
         書櫃與閱讀
+      </button>
+      <button class="nav-tab" data-tab="tab-crawler">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        網頁爬蟲與資料導入
       </button>
       <button class="nav-tab" data-tab="tab-settings">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -43,13 +43,97 @@
   <main class="app-main">
 
     <!-- ========================================================
-         TAG 1: 網頁爬蟲與資料導入 (Crawler & Ingestion)
+         TAG 1: 書櫃與閱讀 (Bookshelf & Reader) (Story 24, GWT 24.3)
          ======================================================== -->
-    <section id="tab-crawler" class="tab-panel active">
+    <section id="tab-bookshelf" class="tab-panel active">
+      <!-- Bookshelf Grid Area -->
+      <div id="bookshelf-wrapper">
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <h3 class="card-title" style="margin-bottom: 0;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
+                本機書籍清單 (NewXreaderDB)
+              </h3>
+              <span id="bookshelf-total-count-badge" style="font-size: 0.8rem; background: var(--bg-elevated); color: var(--accent-primary); padding: 3px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-weight: 600;">總藏書: 0 本</span>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button id="btn-add-category" class="btn btn-primary btn-sm" title="新增自訂書櫃分類 (順號自動命名：分類1、分類2...)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                新增分類
+              </button>
+              <button id="btn-bookshelf-import" class="btn btn-secondary btn-sm" title="直接匯入備份檔 (.json) 或純文字小說 (.txt)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                匯入書籍 (JSON / TXT)
+              </button>
+              <input type="file" id="bookshelf-file-input" accept=".txt,.json" style="display: none;">
+            </div>
+          </div>
+          <div id="bookshelf-categories-container" class="bookshelf-categories-container"></div>
+          <div id="bookshelf-empty" class="bookshelf-empty-box" style="display: none;">
+            <svg class="bookshelf-empty-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
+            <p>書櫃目前沒有任何書籍</p>
+            <button class="btn btn-secondary btn-sm" style="margin-top: 12px;" onclick="document.querySelector('[data-tab=tab-crawler]').click()">
+              前往導入書籍
+            </button>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Reader Embedded Container -->
+      <div id="reader-container" class="reader-container" style="display: none;">
+        <div class="reader-header-card">
+          <div class="reader-nav-header">
+            <div class="reader-header-left">
+              <button id="btn-back-to-shelf" class="btn btn-secondary btn-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                返回書櫃
+              </button>
+              <h3 id="reader-book-title" class="reader-book-title">書籍標題</h3>
+            </div>
+
+            <div class="reader-header-right">
+              <!-- Chapter Navigation Controls -->
+              <div class="reader-chapter-controls">
+                <button id="btn-prev-chap" class="btn btn-secondary btn-sm" title="上一章">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <select id="reader-chapter-select" class="form-select" style="width: auto; min-width: 140px; padding: 4px 8px; font-size: 0.85rem;"></select>
+                <button id="btn-next-chap" class="btn btn-secondary btn-sm" title="下一章">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+
+              <!-- Reader Content Edit Controls (Story 21) -->
+              <div class="reader-edit-controls">
+                <button id="btn-reader-edit-chapter" class="btn btn-secondary btn-sm" title="編輯本章標題與內文 (自動暫停播放)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                  編輯本章
+                </button>
+                <button id="btn-reader-batch-replace" class="btn btn-secondary btn-sm" title="圈選文字全書/單章批量搜尋與清除 (自動暫停播放)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  批量修改
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reader Text Surface -->
+        <article id="reader-body" class="reader-surface"></article>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         TAG 2: 網頁爬蟲與資料導入 (Crawler & Ingestion)
+         ======================================================== -->
+    <section id="tab-crawler" class="tab-panel">
       <div class="card">
         <!-- Sub-tabs -->
         <div class="ingest-subtabs">
           <button class="ingest-tab-btn active" data-panel="sub-panel-web">線上網頁抓取</button>
+          <button class="ingest-tab-btn" data-panel="sub-panel-baha">巴哈小屋創作</button>
           <button class="ingest-tab-btn" data-panel="sub-panel-file">本地檔案匯入</button>
           <button class="ingest-tab-btn" data-panel="sub-panel-paste">手動貼上文字</button>
         </div>
@@ -86,6 +170,14 @@
             </div>
           </div>
 
+          <div class="form-group">
+            <label class="form-label" for="crawler-target-category">目標書櫃分類 (預設「未分類」)</label>
+            <div style="display: flex; gap: 8px;">
+              <select id="crawler-target-category" class="form-select"></select>
+              <button type="button" id="btn-crawler-add-cat" class="btn btn-secondary btn-sm" title="快速新增書櫃分類">➕ 新增分類</button>
+            </div>
+          </div>
+
           <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
             <button id="btn-start-crawl" class="btn btn-primary">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 0 1 9-9"/></svg>
@@ -93,16 +185,67 @@
             </button>
             <button id="btn-cancel-crawl" class="btn btn-danger" style="display: none;">取消下載</button>
           </div>
+        </div>
 
-          <!-- Crawler Progress & Terminal -->
-          <div id="crawler-progress-box" class="crawler-progress-box">
-            <div class="crawler-status-header">
-              <span id="crawler-status-text">初始化下載佇列...</span>
+        <!-- Sub-panel: Bahamut Gamer Home Crawler -->
+        <div id="sub-panel-baha" class="ingest-panel">
+          <div class="form-group">
+            <label class="form-label" for="baha-url">巴哈小屋創作網址 或 屋主帳號 (自動解析)</label>
+            <input type="url" id="baha-url" class="form-input" placeholder="https://home.gamer.com.tw/profile/index_creation.php?owner=play21210&kind1=2" autocomplete="off">
+            <small style="color: var(--text-muted); font-size: 0.78rem; display: block; margin-top: 4px;">
+              💡 支援貼上小屋創作分類網址（含 owner 與 kind1）、作品專頁或直接輸入帳號（例如 play21210）。
+            </small>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label" for="baha-book-title">自訂書籍標題 (選填)</label>
+              <input type="text" id="baha-book-title" class="form-input" placeholder="留空則自動探測書名或使用作者名">
             </div>
-            <div class="progress-track">
-              <div id="crawler-progress-fill" class="progress-fill"></div>
+
+            <div class="form-group">
+              <label class="form-label" for="baha-sort-order">章節排序方式</label>
+              <select id="baha-sort-order" class="form-select">
+                <option value="asc" selected>正序：由舊到新 (推薦，適合連載小說/長篇)</option>
+                <option value="desc">倒序：由新到舊 (最新發表置頂，適合短文動態)</option>
+              </select>
             </div>
-            <div id="crawler-log" class="crawler-log-box"></div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label" for="baha-page-mode">跨頁抓取範圍</label>
+              <select id="baha-page-mode" class="form-select">
+                <option value="all" selected>全部頁面 (自動探測總頁數)</option>
+                <option value="range">自訂頁數範圍 (指定起訖頁數)</option>
+              </select>
+            </div>
+
+            <div class="form-group" id="baha-custom-pages-group" style="display: none;">
+              <label class="form-label">頁數區間 (從 ~ 到)</label>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <input type="number" id="baha-start-page" class="form-input" value="1" min="1" style="width: 80px;">
+                <span>至</span>
+                <input type="number" id="baha-end-page" class="form-input" value="2" min="1" style="width: 80px;">
+                <span>頁</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="baha-target-category">目標書櫃分類 (預設「未分類」)</label>
+            <div style="display: flex; gap: 8px;">
+              <select id="baha-target-category" class="form-select"></select>
+              <button type="button" id="btn-baha-add-cat" class="btn btn-secondary btn-sm" title="快速新增書櫃分類">➕ 新增分類</button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+            <button id="btn-start-baha-crawl" class="btn btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 0 1 9-9"/></svg>
+              解析巴哈小屋並開始抓取
+            </button>
+            <button id="btn-cancel-baha-crawl" class="btn btn-danger" style="display: none;">取消抓取</button>
           </div>
         </div>
 
@@ -132,69 +275,42 @@
             匯入文字開始朗讀
           </button>
         </div>
-      </div>
-    </section>
 
-    <!-- ========================================================
-         TAG 2: 書櫃與閱讀 (Bookshelf & Reader)
-         ======================================================== -->
-    <section id="tab-bookshelf" class="tab-panel">
-      <!-- Bookshelf Grid Area -->
-      <div id="bookshelf-wrapper">
-        <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">
+        <!-- Shared Crawler Progress & Terminal (Stories 1, 8 & Bahamut) -->
+        <div id="crawler-progress-box" class="crawler-progress-box">
+          <div class="crawler-status-header">
+            <span id="crawler-status-text">初始化下載佇列...</span>
+          </div>
+          <div class="progress-track">
+            <div id="crawler-progress-fill" class="progress-fill"></div>
+          </div>
+          <div id="crawler-log" class="crawler-log-box"></div>
+        </div>
+      </div>
+
+      <!-- Crawler History Records & Incremental Update Panel (Story 27) -->
+      <div class="card" style="margin-top: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
             <h3 class="card-title" style="margin-bottom: 0;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
-              本機書籍清單 (NewXreaderDB)
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              歷史爬蟲紀錄與追更
             </h3>
-            <div style="display: flex; gap: 8px;">
-              <button id="btn-bookshelf-import" class="btn btn-secondary btn-sm" title="直接匯入備份檔 (.json) 或純文字小說 (.txt)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                匯入書籍 (JSON / TXT)
-              </button>
-              <input type="file" id="bookshelf-file-input" accept=".txt,.json" style="display: none;">
-            </div>
+            <span id="crawler-records-count-badge" style="font-size: 0.78rem; background: var(--bg-elevated); color: var(--accent-primary); padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-weight: 600;">0 筆紀錄</span>
           </div>
-          <div id="bookshelf-grid" class="bookshelf-grid"></div>
-          <div id="bookshelf-empty" class="bookshelf-empty-box" style="display: none;">
-            <svg class="bookshelf-empty-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
-            <p>書櫃目前沒有任何書籍</p>
-            <button class="btn btn-secondary btn-sm" style="margin-top: 12px;" onclick="document.querySelector('[data-tab=tab-crawler]').click()">
-              前往導入書籍
-            </button>
-          </div>
+          <button id="btn-refresh-crawler-records" class="btn btn-secondary btn-sm" title="重新整理紀錄清單">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            重新整理
+          </button>
         </div>
-      </div>
-
-      <!-- Reader Embedded Container -->
-      <div id="reader-container" class="reader-container" style="display: none;">
-        <div class="card" style="padding: 1rem 1.5rem; margin-bottom: 1rem;">
-          <div class="reader-nav-header">
-            <div class="reader-header-left">
-              <button id="btn-back-to-shelf" class="btn btn-secondary btn-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                返回書櫃
-              </button>
-              <h3 id="reader-book-title" class="reader-book-title">書籍標題</h3>
-            </div>
-
-            <!-- Chapter Navigation Controls -->
-            <div class="reader-chapter-controls">
-              <button id="btn-prev-chap" class="btn btn-secondary btn-sm" title="上一章">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              <select id="reader-chapter-select" class="form-select" style="width: auto; min-width: 140px; padding: 4px 8px; font-size: 0.85rem;"></select>
-              <button id="btn-next-chap" class="btn btn-secondary btn-sm" title="下一章">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-            </div>
-          </div>
+        <div id="crawler-records-list" class="crawler-records-list"></div>
+        <div id="crawler-records-empty" class="crawler-records-empty" style="text-align: center; color: var(--text-muted); padding: 2rem 1rem; font-size: 0.88rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px; opacity: 0.5;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div>尚無爬蟲紀錄。使用上方爬蟲完成抓取後，系統將自動儲存來源網址與對應書籍，讓您隨時一鍵追更！</div>
         </div>
-
-        <!-- Reader Text Surface -->
-        <article id="reader-body" class="reader-surface"></article>
       </div>
     </section>
+
 
     <!-- ========================================================
          TAG 3: 系統設定 (Settings)
@@ -253,6 +369,18 @@
             <button class="btn btn-secondary theme-btn" data-theme="light">明亮簡約 (Light)</button>
             <button class="btn btn-secondary theme-btn" data-theme="sepia">護眼羊皮紙 (Sepia)</button>
           </div>
+        </div>
+
+        <!-- System Debug & Operation Logs (Story 24, GWT 24.4 - 方案 A) -->
+        <div class="form-group" style="border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+          <label class="form-label">系統除錯與運行紀錄 (iOS / PC)</label>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+            即時追蹤背景保活音訊、鎖屏控制面板 (MediaSession) 指令、螢幕亮滅切換與跨章朗讀日誌。遇到問題時可直接匯出 TXT 或複製給 AI 分析。
+          </p>
+          <button id="btn-open-log-modal" class="btn btn-secondary" style="display: flex; align-items: center; gap: 8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            📋 檢視系統操作日誌 (<span id="settings-log-count-badge">0</span> 條)
+          </button>
         </div>
       </div>
     </section>
@@ -344,10 +472,370 @@
     </div>
   </div>
 
+  <!-- ========================================================
+       Chapter Manager Modal (Story 21, GWT 21.5, GWT 21.6)
+       ======================================================== -->
+  <div id="chapter-manager-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 800px; width: 95%; max-height: 90vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <div>
+          <h3 id="chapter-manager-title" class="modal-title">📚 章節管理</h3>
+          <span id="chapter-manager-subtitle" style="font-size: 0.82rem; color: var(--text-muted);">共 0 章</span>
+        </div>
+        <button id="btn-close-chapter-manager" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 1rem 1.5rem; flex: 1;">
+        <!-- Filter & Batch Action Toolbar -->
+        <div style="display: flex; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+          <div style="display: flex; gap: 8px; align-items: center; flex: 1; min-width: 240px;">
+            <input type="text" id="chapter-filter-input" class="form-input" placeholder="🔍 快速篩選篇章 (如: 排行榜、感言)..." style="padding: 6px 10px; font-size: 0.88rem;">
+            <button id="btn-clear-chapter-filter" class="btn btn-secondary btn-sm" style="display: none;">清除</button>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button id="btn-batch-select-all" class="btn btn-secondary btn-sm">全選</button>
+            <button id="btn-batch-deselect-all" class="btn btn-secondary btn-sm">取消全選</button>
+            <button id="btn-delete-selected-chapters" class="btn btn-danger btn-sm" disabled>🗑️ 刪除勾選 (<span id="selected-chapters-count">0</span>)</button>
+          </div>
+        </div>
+
+        <!-- Batch Move & Action Toolbar (Story 22, GWT 22.4) -->
+        <div id="chapter-batch-actions-bar" style="display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 12px; background-color: var(--bg-elevated); border-radius: var(--radius-md); border: 1px solid var(--border-color); flex-wrap: wrap;">
+          <div style="display: flex; gap: 8px; align-items: center; font-size: 0.88rem; font-weight: 600;">
+            <span>⚡ 勾選項目批次操作：已選 <span id="batch-selected-count" style="color: var(--accent-primary);">0</span> 章</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <button id="btn-batch-move-end" class="btn btn-secondary btn-sm" disabled title="將勾選的所有篇章保持原順序移至全書末尾">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/></svg>
+              ⏩ 批次移至末尾
+            </button>
+            <div style="display: flex; gap: 4px; align-items: center;">
+              <span style="font-size: 0.82rem; color: var(--text-muted);">移至序號:</span>
+              <input type="number" id="batch-move-target-input" min="1" class="chapter-order-input" style="width: 55px; padding: 2px 4px;" placeholder="序號" disabled>
+              <button id="btn-batch-move-target" class="btn btn-secondary btn-sm" disabled title="將勾選篇章整批插隊至指定序號">
+                執行位移
+              </button>
+            </div>
+            <button id="btn-batch-split-book" class="btn btn-primary btn-sm" disabled title="將勾選的篇章提取分割成一本獨立的新書籍 (Story 25)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+              📦 分割至新書籍
+            </button>
+          </div>
+        </div>
+
+        <!-- Chapter List Scrollable Container -->
+        <div id="chapter-manager-list" class="chapter-manager-list" style="flex: 1; overflow-y: auto; max-height: 52vh; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-card); padding: 4px;">
+          <!-- Dynamically populated rows -->
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: var(--text-muted); padding-top: 4px;">
+          <span>💡 提示：在序號框直接輸入目標數字即可調整順序（重疊時自動位移）；或點擊「移至末尾」。</span>
+          <span id="chapter-manager-reorder-hint" style="color: var(--accent-primary); font-weight: 600; display: none;">⚠️ 排序已更動，請點擊右下角「儲存排序」</span>
+        </div>
+        <div id="chapter-manager-multi-notice" style="display: none; padding: 6px 12px; margin-top: 6px; background-color: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: var(--radius-sm); font-size: 0.82rem; color: #f59e0b; font-weight: 600;">
+          🔒 已勾選多個篇章：單一欄位調整已暫時停用，請使用上方批次工具列執行整批位移或刪除。
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button id="btn-reset-chapter-order" class="btn btn-secondary btn-sm" style="display: none;">復原變更</button>
+        <div style="display: flex; gap: 10px; margin-left: auto;">
+          <button id="btn-cancel-chapter-manager" class="btn btn-secondary">關閉</button>
+          <button id="btn-save-chapter-reorder" class="btn btn-primary" disabled>儲存排序變更</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       Edit Chapter Modal (Story 21, GWT 21.3)
+       ======================================================== -->
+  <div id="edit-chapter-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 640px; width: 95%;">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ 編輯當前章節</h3>
+        <button id="btn-close-edit-chapter" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label" for="edit-chapter-title-input">章節標題</label>
+          <input type="text" id="edit-chapter-title-input" class="form-input" placeholder="請輸入章節標題">
+        </div>
+        <div class="form-group" style="margin-bottom: 0.5rem;">
+          <label class="form-label" for="edit-chapter-content-textarea">章節內文</label>
+          <textarea id="edit-chapter-content-textarea" class="form-textarea" style="min-height: 260px; font-size: 0.95rem; line-height: 1.6;" placeholder="章節內文內容..."></textarea>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0;">提示：儲存後系統將自動重新分段與分句，並即時更新閱讀器與朗讀排程。</p>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-edit-chapter" class="btn btn-secondary">取消</button>
+        <button id="btn-save-edit-chapter" class="btn btn-primary">儲存並套用</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       Batch Replace Modal (Story 21, GWT 21.4)
+       ======================================================== -->
+  <div id="batch-replace-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 540px; width: 95%;">
+      <div class="modal-header">
+        <h3 class="modal-title">🔍 批量搜尋與替換 / 清除</h3>
+        <button id="btn-close-batch-replace" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label" for="batch-find-input">尋找內容 (將被取代或清除的文字，支援多行)</label>
+          <textarea id="batch-find-input" class="form-textarea" rows="3" style="min-height: 80px; font-size: 0.9rem; line-height: 1.5;" placeholder="可圈選內文自動填入或手動輸入 (支援多行廣告)..."></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label" for="batch-replace-input">取代為 (留空代表直接清除)</label>
+          <textarea id="batch-replace-input" class="form-textarea" rows="2" style="min-height: 54px; font-size: 0.9rem; line-height: 1.5;" placeholder="留空則直接刪除該文字"></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label">搜尋與套用範圍</label>
+          <div style="display: flex; gap: 16px; align-items: center; margin-top: 4px;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9rem;">
+              <input type="radio" name="batch-replace-scope" value="current" checked>
+              僅當前章節
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9rem;">
+              <input type="radio" name="batch-replace-scope" value="all">
+              全書所有章節
+            </label>
+          </div>
+        </div>
+        <div id="batch-replace-preview-box" style="padding: 10px 14px; background-color: var(--bg-elevated); border-radius: var(--radius-sm); border: 1px dashed var(--border-color); font-size: 0.85rem; color: var(--text-secondary); min-height: 38px; display: flex; align-items: center; justify-content: space-between;">
+          <span id="batch-replace-preview-text">請輸入要尋找的文字並點擊「預覽統計」</span>
+          <button id="btn-batch-preview" class="btn btn-secondary btn-sm" style="flex-shrink: 0;">預覽統計</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-batch-replace" class="btn btn-secondary">取消</button>
+        <button id="btn-confirm-batch-replace" class="btn btn-primary" disabled>確認執行替換</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       Split / Transfer Book Modal (Story 25, 26, GWT 25.1-25.3, 26.1-26.3)
+       ======================================================== -->
+  <div id="split-book-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 540px; width: 95%;">
+      <div class="modal-header">
+        <h3 class="modal-title">📦 分割/移轉章節至書籍</h3>
+        <button id="btn-close-split-book" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.9rem; color: var(--text-primary); margin-bottom: 1rem;">
+          即將把勾選的 <strong id="split-selected-count" style="color: var(--accent-primary); font-size: 1.05rem;">0</strong> 個篇章移轉/分割至書籍。
+        </p>
+
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label">目標書籍模式</label>
+          <div style="display: flex; gap: 18px; margin-bottom: 4px;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9rem;">
+              <input type="radio" name="split-target-type" id="split-type-new" value="new" checked style="accent-color: var(--accent-primary);">
+              <strong>建立全新書籍</strong>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9rem;">
+              <input type="radio" name="split-target-type" id="split-type-existing" value="existing" style="accent-color: var(--accent-primary);">
+              <strong>加入既有書籍</strong>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Section A: Create New Book -->
+        <div id="split-new-book-section" class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" for="split-new-book-title">新書籍名稱</label>
+          <input type="text" id="split-new-book-title" class="form-input" placeholder="例如: 真的魔法">
+          <small style="color: var(--text-muted); font-size: 0.78rem; display: block; margin-top: 4px;">
+            💡 系統已為您自動依據選取章節或過濾關鍵字預填書名，您可自由修改。
+          </small>
+        </div>
+
+        <!-- Section B: Add to Existing Book (Story 26) -->
+        <div id="split-existing-book-section" style="display: none; margin-bottom: 1rem;">
+          <div class="form-group" style="margin-bottom: 0.75rem;">
+            <label class="form-label" for="split-existing-book-select">選擇目標書籍</label>
+            <select id="split-existing-book-select" class="form-select"></select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">插入位置</label>
+            <div style="display: flex; gap: 18px;">
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.88rem;">
+                <input type="radio" name="split-insert-position" value="end" checked style="accent-color: var(--accent-primary);">
+                <span>加入至全書最後 (末尾)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.88rem;">
+                <input type="radio" name="split-insert-position" value="start" style="accent-color: var(--accent-primary);">
+                <span>插入至全書最前 (開頭)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.5rem;">
+          <label class="form-label">移轉模式</label>
+          <div style="display: flex; flex-direction: column; gap: 8px; background: var(--bg-surface); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.88rem; cursor: pointer;">
+              <input type="radio" name="split-mode" value="move" checked style="margin-top: 3px; accent-color: var(--accent-primary);">
+              <div>
+                <strong>剪下移轉（推薦）</strong>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">自原書中移除這些已移轉章節，原書剩餘章節將自動平滑重編序號 (0, 1, 2...)。</div>
+              </div>
+            </label>
+            <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.88rem; cursor: pointer;">
+              <input type="radio" name="split-mode" value="copy" style="margin-top: 3px; accent-color: var(--accent-primary);">
+              <div>
+                <strong>複製留存</strong>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">原書完全保留這些章節不變，僅在目標書籍建立副本。</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-split-book" class="btn btn-secondary">取消</button>
+        <button id="btn-confirm-split-book" class="btn btn-primary">確認執行移轉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       System Operation Logs Modal (Story 24, GWT 24.4 - 方案 A)
+       ======================================================== -->
+  <div id="system-log-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 820px; width: 95%; max-height: 88vh; display: flex; flex-direction: column;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h3 class="modal-title" style="margin-bottom: 0;">📋 系統除錯與操作日誌</h3>
+          <span id="log-modal-count-badge" style="font-size: 0.75rem; background-color: var(--bg-elevated); color: var(--accent-primary); padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">0 條</span>
+        </div>
+        <button id="btn-close-log-modal" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="flex: 1; display: flex; flex-direction: column; gap: 8px; overflow: hidden; padding: 0.75rem 1rem;">
+        <!-- Log Action Buttons Toolbar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button id="btn-export-log-txt" class="btn btn-primary btn-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              📥 匯出日誌 TXT
+            </button>
+            <button id="btn-copy-log" class="btn btn-secondary btn-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              📋 複製全部日誌
+            </button>
+            <button id="btn-clear-log" class="btn btn-secondary btn-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              🗑️ 清空日誌
+            </button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-muted);">
+            <input type="checkbox" id="chk-auto-scroll-log" checked style="accent-color: var(--accent-primary); cursor: pointer;">
+            <label for="chk-auto-scroll-log" style="cursor: pointer;">自動滾動至最新</label>
+          </div>
+        </div>
+
+        <!-- Terminal Console Viewer -->
+        <div id="log-console-container" style="flex: 1; min-height: 280px; max-height: 52vh; overflow-y: auto; background-color: #0d1117; color: #c9d1d9; font-family: var(--font-mono, monospace); font-size: 0.8rem; line-height: 1.5; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); white-space: pre-wrap; word-break: break-all;">
+        </div>
+
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0;">
+          💡 提示：在手機端關閉螢幕或操作鎖屏控制面板若遇跨章異常，直接在此點擊「匯出日誌 TXT」或「複製全部日誌」即可提供給 AI 進行分析。
+        </p>
+      </div>
+      <div class="modal-footer" style="padding: 0.75rem 1rem;">
+        <button id="btn-footer-close-log-modal" class="btn btn-secondary" style="margin-left: auto;">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       Category Rename Modal (Story 28)
+       ======================================================== -->
+  <div id="category-rename-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 420px; width: 92%;">
+      <div class="modal-header">
+        <h3 class="modal-title">重新命名書櫃分類</h3>
+        <button id="btn-close-cat-rename" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="cat-rename-input">分類名稱</label>
+          <input type="text" id="cat-rename-input" class="form-input" placeholder="請輸入新分類名稱">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-cat-rename" class="btn btn-secondary">取消</button>
+        <button id="btn-confirm-cat-rename" class="btn btn-primary">儲存名稱</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       Move Book Category Modal (Story 28)
+       ======================================================== -->
+  <div id="move-book-category-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 440px; width: 92%;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="move-book-modal-title">移至書櫃分類</h3>
+        <button id="btn-close-move-book" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="move-book-cat-select">選擇目標分類</label>
+          <select id="move-book-cat-select" class="form-select"></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-move-book" class="btn btn-secondary">取消</button>
+        <button id="btn-confirm-move-book" class="btn btn-primary">確認移動</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       Crawler Incremental Update Preview Modal (Story 27)
+       ======================================================== -->
+  <div id="crawler-update-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 720px; width: 95%; max-height: 85vh; display: flex; flex-direction: column;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 class="modal-title" id="crawler-update-modal-title" style="margin-bottom: 2px;">發現新發布章節 - 追更確認</h3>
+          <span id="crawler-update-book-title" style="font-size: 0.8rem; color: var(--accent-primary);">《書籍》</span>
+        </div>
+        <button id="btn-close-crawler-update" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="chk-update-select-all" checked style="accent-color: var(--accent-primary); cursor: pointer;">
+            <label for="chk-update-select-all" style="cursor: pointer; font-size: 0.88rem; font-weight: 600;">全選 / 取消全選 (<span id="crawler-update-selected-count">0</span> / <span id="crawler-update-total-count">0</span> 篇)</label>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button id="btn-update-sort-toggle" class="btn btn-secondary btn-sm" title="切換正序/倒序排列">
+              🔄 順序: 正序 (由舊到新)
+            </button>
+          </div>
+        </div>
+        <div id="crawler-update-chapters-list" style="flex: 1; min-height: 220px; max-height: 48vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px; background: var(--bg-surface);">
+        </div>
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0;">
+          💡 提示：系統已依唯一碼過濾已存在與歷史刪除篇章，並自動依章節回數拓撲排序。確認後將依序附加至全書尾端。
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-crawler-update" class="btn btn-secondary">取消</button>
+        <button id="btn-confirm-crawler-update" class="btn btn-primary">確認下載並併入書籍</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Main ES Module Bootstrap -->
-  <script type="module" src="js/app.js?v=6.2"></script>
+  <script type="module" src="js/app.js?v=7.8"></script>
 </body>
 </html>
+

@@ -89,3 +89,122 @@
   margin-bottom: 1rem;
   opacity: 0.4;
 }
+
+/* ============================================================
+   Category Accordion Styles (Story 28)
+   ============================================================ */
+.bookshelf-categories-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.category-section {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: var(--bg-elevated);
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.15s ease;
+}
+
+.category-header:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.category-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.category-toggle-icon {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+  color: var(--text-secondary);
+}
+
+.category-section.collapsed .category-toggle-icon {
+  transform: rotate(-90deg);
+}
+
+.category-section.collapsed .category-header {
+  border-bottom: none;
+}
+
+.category-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.category-count-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface);
+  color: var(--accent-primary);
+  border: 1px solid var(--border-color);
+}
+
+.category-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-cat-action {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.btn-cat-action:hover:not(:disabled) {
+  color: var(--text-primary);
+  background-color: var(--bg-surface);
+  border-color: var(--border-color);
+}
+
+.btn-cat-action:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.category-body {
+  padding: 1.25rem;
+  transition: max-height 0.2s ease;
+}
+
+.category-section.collapsed .category-body {
+  display: none;
+}
+
+.category-empty-hint {
+  text-align: center;
+  padding: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-sm);
+}

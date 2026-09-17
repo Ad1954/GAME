@@ -5,6 +5,7 @@
 
 import { player, currentPlatform } from '../audio/playerFactory.js';
 import { eventBus } from '../eventBus.js';
+import { logger } from '../core/logger.js';
 
 export class SettingsView {
   constructor() {
@@ -16,6 +17,19 @@ export class SettingsView {
     this.pitchSlider = document.getElementById('settings-pitch');
     this.pitchVal = document.getElementById('settings-pitch-val');
     this.themeBtns = document.querySelectorAll('.theme-btn');
+
+    // System Log Elements (Story 24, GWT 24.4 - 方案 A)
+    this.btnOpenLogModal = document.getElementById('btn-open-log-modal');
+    this.logCountBadge = document.getElementById('settings-log-count-badge');
+    this.logModal = document.getElementById('system-log-modal');
+    this.modalLogCountBadge = document.getElementById('log-modal-count-badge');
+    this.btnCloseLogModal = document.getElementById('btn-close-log-modal');
+    this.btnFooterCloseLogModal = document.getElementById('btn-footer-close-log-modal');
+    this.btnExportLogTxt = document.getElementById('btn-export-log-txt');
+    this.btnCopyLog = document.getElementById('btn-copy-log');
+    this.btnClearLog = document.getElementById('btn-clear-log');
+    this.chkAutoScrollLog = document.getElementById('chk-auto-scroll-log');
+    this.logConsoleContainer = document.getElementById('log-console-container');
   }
 
   init() {
@@ -23,7 +37,15 @@ export class SettingsView {
     this.loadVoiceSettings();
     this.loadRateSettings();
     this.loadThemeSettings();
+    this.updateLogCountBadge();
     this.bindEvents();
+
+    eventBus.on('logger:newEntry', () => {
+      this.updateLogCountBadge();
+      if (this.logModal && this.logModal.classList.contains('active')) {
+        this.renderLogs();
+      }
+    });
   }
 
   displayPlatformInfo() {
@@ -186,5 +208,91 @@ export class SettingsView {
         localStorage.setItem('appTheme', theme);
       });
     });
+
+    // System Log Modal Events (Story 24, GWT 24.4 - 方案 A)
+    if (this.btnOpenLogModal) {
+      this.btnOpenLogModal.addEventListener('click', () => {
+        this.renderLogs();
+        if (this.logModal) this.logModal.classList.add('active');
+      });
+    }
+
+    if (this.btnCloseLogModal) {
+      this.btnCloseLogModal.addEventListener('click', () => {
+        if (this.logModal) this.logModal.classList.remove('active');
+      });
+    }
+
+    if (this.btnFooterCloseLogModal) {
+      this.btnFooterCloseLogModal.addEventListener('click', () => {
+        if (this.logModal) this.logModal.classList.remove('active');
+      });
+    }
+
+    if (this.btnExportLogTxt) {
+      this.btnExportLogTxt.addEventListener('click', () => {
+        const filename = logger.exportTxt();
+        eventBus.emit('toast', { message: `日誌已匯出下載: ${filename}` });
+      });
+    }
+
+    if (this.btnCopyLog) {
+      this.btnCopyLog.addEventListener('click', async () => {
+        const ok = await logger.copyToClipboard();
+        if (ok) {
+          eventBus.emit('toast', { message: '已成功複製全部日誌至剪貼簿！' });
+        } else {
+          eventBus.emit('toast', { message: '複製失敗，請手動圈選文字複製' });
+        }
+      });
+    }
+
+    if (this.btnClearLog) {
+      this.btnClearLog.addEventListener('click', () => {
+        if (confirm('確定要清空目前所有系統操作日誌嗎？')) {
+          logger.clear();
+          this.renderLogs();
+          eventBus.emit('toast', { message: '已清空系統日誌' });
+        }
+      });
+    }
+  }
+
+  updateLogCountBadge() {
+    const count = logger.getLogs().length;
+    if (this.logCountBadge) this.logCountBadge.textContent = count;
+    if (this.modalLogCountBadge) this.modalLogCountBadge.textContent = `${count} 條`;
+  }
+
+  renderLogs() {
+    if (!this.logConsoleContainer) return;
+    const logs = logger.getLogs();
+    this.updateLogCountBadge();
+
+    if (logs.length === 0) {
+      this.logConsoleContainer.innerHTML = '<span style="color: #6e7681;">(暫無任何日誌記錄)</span>';
+      return;
+    }
+
+    const html = logs.map(l => {
+      let color = '#58a6ff'; // INFO
+      if (l.level === 'WARN') color = '#d29922'; // WARN
+      if (l.level === 'ERROR') color = '#f85149'; // ERROR
+
+      return `<div style="margin-bottom: 2px;"><span style="color: #8b949e;">[${l.timeStr}]</span> <span style="color: ${color}; font-weight: bold;">[${l.level}]</span> <span style="color: #7ee787;">[${l.tag}]</span> ${this.escapeHtml(l.message)}</div>`;
+    }).join('');
+
+    this.logConsoleContainer.innerHTML = html;
+
+    if (this.chkAutoScrollLog && this.chkAutoScrollLog.checked) {
+      this.logConsoleContainer.scrollTop = this.logConsoleContainer.scrollHeight;
+    }
+  }
+
+  escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   }
 }

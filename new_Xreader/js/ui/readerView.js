@@ -7,6 +7,7 @@ import { storage } from '../core/storage.js';
 import { eventBus } from '../eventBus.js';
 import { player } from '../audio/playerFactory.js';
 import { TextSegmenter } from '../core/segmenter.js';
+import { logger } from '../core/logger.js';
 
 export class ReaderView {
   constructor() {
@@ -17,6 +18,10 @@ export class ReaderView {
     this.btnNextChap = document.getElementById('btn-next-chap');
     this.bodyEl = document.getElementById('reader-body');
     this.btnBackToShelf = document.getElementById('btn-back-to-shelf');
+
+    // Reader Content Edit Controls (Story 21, GWT 21.2)
+    this.btnEditChapter = document.getElementById('btn-reader-edit-chapter');
+    this.btnBatchReplace = document.getElementById('btn-reader-batch-replace');
 
     this.currentBook = null;
     this.currentChapters = [];
@@ -37,6 +42,14 @@ export class ReaderView {
     eventBus.on('audio:chapterEnd', () => this.handleNextChapter(true));
     eventBus.on('audio:requestNextChapter', () => this.handleNextChapter());
     eventBus.on('audio:requestPrevChapter', () => this.handlePrevChapter());
+
+    // Story 21, 22: Chapter content updated / reordered live sync
+    eventBus.on('reader:chapterContentUpdated', (updated) => this.reloadCurrentChapter(updated));
+    eventBus.on('reader:chapterReordered', (data) => {
+      if (this.currentBook && data && data.bookId === this.currentBook.id) {
+        this.refreshBookChapters();
+      }
+    });
   }
 
   bindEvents() {
@@ -44,6 +57,33 @@ export class ReaderView {
       this.btnBackToShelf.addEventListener('click', () => {
         this.hideReader();
         eventBus.emit('nav:switchTab', 'tab-bookshelf');
+      });
+    }
+
+    // Story 21, GWT 21.2: Auto-pause player when opening Edit / Batch Replace
+    if (this.btnEditChapter) {
+      this.btnEditChapter.addEventListener('click', () => {
+        player.pause();
+        if (this.currentBook && this.currentChapter) {
+          eventBus.emit('contentEdit:openChapter', {
+            bookId: this.currentBook.id,
+            chapter: this.currentChapter
+          });
+        }
+      });
+    }
+
+    if (this.btnBatchReplace) {
+      this.btnBatchReplace.addEventListener('click', () => {
+        player.pause();
+        const sel = window.getSelection ? window.getSelection().toString().trim() : '';
+        if (this.currentBook) {
+          eventBus.emit('contentEdit:openBatchReplace', {
+            bookId: this.currentBook.id,
+            chapterIndex: this.currentChapter ? this.currentChapter.index : 0,
+            selectedText: sel
+          });
+        }
       });
     }
 
@@ -302,4 +342,85 @@ export class ReaderView {
     const shelf = document.getElementById('bookshelf-wrapper');
     if (shelf) shelf.style.display = 'block';
   }
+
+  /**
+   * 重新載入當前章節 (Story 21, GWT 21.3, GWT 21.4, GWT 22.2, Story 24, GWT 24.1)
+   * 於編輯章節或批次取代後自動調用
+   */
+  async reloadCurrentChapter(payload = null) {
+    if (!this.currentBook || !this.currentChapter) return;
+    try {
+      const isRefreshAll = (payload && payload.refreshAll) || (!payload) || (payload && !payload.id && !payload.content);
+      let updatedChapter = (payload && payload.id && payload.content) ? payload : null;
+
+      if (isRefreshAll) {
+        // GWT 24.1: 全書章節快取即時更新，解決切換下一章依然殘留舊內容問題
+        const freshChapters = await storage.getChaptersByBook(this.currentBook.id);
+        freshChapters.sort((a, b) => (a.index !== undefined ? a.index : 0) - (b.index !== undefined ? b.index : 0));
+        this.currentChapters = freshChapters;
+
+        const currentIdx = this.currentChapter.index;
+        const freshCurrent = freshChapters.find(c => c.index === currentIdx) || freshChapters[currentIdx];
+        if (freshCurrent) {
+          updatedChapter = freshCurrent;
+        }
+        logger.info('Reader', `全書快取即時刷新完成 (共 ${freshChapters.length} 章)`);
+      }
+
+      let freshChap = updatedChapter;
+      if (!freshChap) {
+        freshChap = await storage.getChapter(this.currentBook.id, this.currentChapter.index);
+      }
+      if (freshChap) {
+        this.currentChapter = freshChap;
+        if (this.currentChapters && this.currentChapters.length > 0) {
+          const idx = this.currentChapters.findIndex(c => c.id === freshChap.id);
+          if (idx !== -1) {
+            this.currentChapters[idx] = freshChap;
+          }
+        }
+        if (this.chapterSelect) {
+          const opt = this.chapterSelect.querySelector(`option[value="${this.currentChapter.index}"]`);
+          if (opt) {
+            opt.textContent = freshChap.title || `第 ${this.currentChapter.index + 1} 章`;
+          }
+        }
+        this.renderChapterText(freshChap);
+        player.loadChapter(freshChap, 0, this.currentBook.title);
+        logger.info('Reader', `當前章節 [${freshChap.title || '第 ' + (freshChap.index + 1) + ' 章'}] 重新繪製完成`);
+      }
+    } catch (err) {
+      console.warn('Reload chapter error:', err);
+      logger.error('Reader', 'Reload chapter error: ' + err.message);
+    }
+  }
+
+  /**
+   * 重新整理書籍章節清單與選單 (Story 21, GWT 21.5, GWT 21.6)
+   */
+  async refreshBookChapters() {
+    if (!this.currentBook) return;
+    try {
+      const chaps = await storage.getChaptersByBook(this.currentBook.id);
+      chaps.sort((a, b) => (a.index !== undefined ? a.index : 0) - (b.index !== undefined ? b.index : 0));
+      this.currentChapters = chaps;
+
+      if (this.chapterSelect) {
+        this.chapterSelect.innerHTML = '';
+        chaps.forEach((chap, idx) => {
+          const cIdx = (chap.index !== undefined) ? chap.index : idx;
+          const opt = document.createElement('option');
+          opt.value = cIdx;
+          opt.textContent = chap.title || `第 ${cIdx + 1} 章`;
+          this.chapterSelect.appendChild(opt);
+        });
+        if (this.currentChapter) {
+          this.chapterSelect.value = this.currentChapter.index;
+        }
+      }
+    } catch (err) {
+      console.warn('Refresh book chapters error:', err);
+    }
+  }
 }
+

@@ -6,6 +6,7 @@
 
 import { eventBus } from '../../eventBus.js';
 import { SILENT_15S_WAV_BASE64 } from '../silentAudioData.js';
+import { logger } from '../../core/logger.js';
 
 export class IosVoicePlayer {
   constructor() {
@@ -62,8 +63,10 @@ export class IosVoicePlayer {
       if (this.silentAudio.paused) {
         this.silentAudio.play().then(() => {
           this.isAudioSessionActive = true;
+          logger.info('iOS KeepAlive', '15s 靜音音訊播放成功 (AudioSession 已活化)');
         }).catch(err => {
           console.warn('[iOS Player] Silent audio play blocked (requires user gesture):', err);
+          logger.warn('iOS KeepAlive', '靜音音訊遭 WebKit 攔截 (需使用者互動授權): ' + err);
         });
       } else {
         this.isAudioSessionActive = true;
@@ -78,6 +81,7 @@ export class IosVoicePlayer {
         this.silentAudio.currentTime = 0;
         this.isAudioSessionActive = false;
       }
+      logger.info('iOS KeepAlive', `靜音音訊已暫停 (forceDestroy: ${forceDestroy})`);
     }
   }
 
@@ -97,22 +101,26 @@ export class IosVoicePlayer {
     // GWT 5.2: Remote controls for Lock Screen & Bluetooth
     navigator.mediaSession.setActionHandler('play', () => {
       console.log('[MediaSession] Play remote action received');
+      logger.info('MediaSession', '鎖屏面板 [Play 播放] 遠端觸發');
       this.play();
     });
 
     navigator.mediaSession.setActionHandler('pause', () => {
       console.log('[MediaSession] Pause remote action received');
+      logger.info('MediaSession', '鎖屏面板 [Pause 暫停] 遠端觸發');
       this.pause();
     });
 
     // GWT 5.3: Chapter skipping
     navigator.mediaSession.setActionHandler('nexttrack', () => {
       console.log('[MediaSession] Next chapter remote action received');
+      logger.info('MediaSession', '鎖屏面板 [NextTrack 下一章] 遠端觸發');
       eventBus.emit('audio:requestNextChapter');
     });
 
     navigator.mediaSession.setActionHandler('previoustrack', () => {
       console.log('[MediaSession] Prev chapter remote action received');
+      logger.info('MediaSession', '鎖屏面板 [PrevTrack 上一章] 遠端觸發');
       eventBus.emit('audio:requestPrevChapter');
     });
   }
@@ -172,7 +180,10 @@ export class IosVoicePlayer {
   }
 
   play() {
-    if (!this.currentChapter || this.flatSentences.length === 0) return;
+    if (!this.currentChapter || this.flatSentences.length === 0) {
+      logger.warn('iOS Player', 'play() 略過: 無章節或句子長度為 0');
+      return;
+    }
 
     this.startKeepAlive();
     this.isPlaying = true;
@@ -181,6 +192,7 @@ export class IosVoicePlayer {
     if (this.isPausedByUser && this.synth.speaking && this.synth.paused) {
       this.isPausedByUser = false;
       this.synth.resume();
+      logger.info('iOS Player', 'synth.resume() 恢復播放');
       this.notifyStateChange();
       this.updateMediaSessionMetadata();
     } else {
@@ -189,6 +201,7 @@ export class IosVoicePlayer {
       if (this.synth.paused) {
         try { this.synth.cancel(); } catch(e) {}
       }
+      logger.info('iOS Player', `開始朗讀 (第 ${this.currentIndex + 1}/${this.flatSentences.length} 句)`);
       this.notifyStateChange();
       this.updateMediaSessionMetadata();
       this.speakCurrentSentence();
@@ -199,6 +212,7 @@ export class IosVoicePlayer {
     if (!this.isPlaying || this.currentIndex >= this.flatSentences.length) {
       if (this.currentIndex >= this.flatSentences.length && this.isPlaying) {
         this.isPlaying = false;
+        logger.info('iOS Player', `本章全數朗讀完成 (共 ${this.flatSentences.length} 句)，排程 150ms 觸發 audio:chapterEnd`);
         this.notifyStateChange();
         this.updateMediaSessionMetadata();
         // 150ms buffer before triggering next chapter (Story 6, GWT 6.1)
@@ -241,6 +255,7 @@ export class IosVoicePlayer {
     this.currentUtterance.onerror = (e) => {
       if (this.isProactiveEvade || !this.isPlaying || e.error === 'interrupted' || e.error === 'canceled') return;
       console.warn('[iOS Player] Utterance error, advancing:', e.error);
+      logger.error('iOS Player', `Utterance 朗讀錯誤: ${e.error} (停於第 ${this.currentIndex + 1} 句)`);
       this.currentIndex++;
       this.speakCurrentSentence();
     };
@@ -251,6 +266,7 @@ export class IosVoicePlayer {
   pause() {
     this.isPlaying = false;
     this.isPausedByUser = true;
+    logger.info('iOS Player', `使用者暫停 (停於第 ${this.currentIndex + 1} 句)`);
     if (this.synth.speaking) {
       // Use pause instead of cancel so lock screen / earphone resume works (GWT 5.2)
       this.synth.pause();

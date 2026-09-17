@@ -1,9 +1,10 @@
 /**
- * new_Xreader - CrawlerView (Story 1, Story 8, GWT 1.1, 8.1, 8.2)
- * Handles Web sequential crawler, file ingestion, and paste text.
+ * new_Xreader - CrawlerView (Story 1, Story 8, Story 27, Story 28)
+ * Handles Web sequential crawler, file ingestion, paste text, crawler history records, and incremental updates.
  */
 
-import { crawler, DEFAULT_PROXIES } from '../core/crawler.js';
+import { crawler, DEFAULT_PROXIES, diffOnlineChapters } from '../core/crawler.js';
+import { bahaCrawler } from '../core/bahaCrawler.js';
 import { storage } from '../core/storage.js';
 import { TextSegmenter } from '../core/segmenter.js';
 import { eventBus } from '../eventBus.js';
@@ -24,6 +25,44 @@ export class CrawlerView {
     this.statusText = document.getElementById('crawler-status-text');
     this.logBox = document.getElementById('crawler-log');
 
+    // Category Selectors (Story 28)
+    this.crawlerCategorySelect = document.getElementById('crawler-target-category');
+    this.btnCrawlerAddCat = document.getElementById('btn-crawler-add-cat');
+    this.bahaCategorySelect = document.getElementById('baha-target-category');
+    this.btnBahaAddCat = document.getElementById('btn-baha-add-cat');
+
+    // Bahamut Gamer Home Elements
+    this.bahaUrlInput = document.getElementById('baha-url');
+    this.bahaTitleInput = document.getElementById('baha-book-title');
+    this.bahaSortOrder = document.getElementById('baha-sort-order');
+    this.bahaPageMode = document.getElementById('baha-page-mode');
+    this.bahaPagesGroup = document.getElementById('baha-custom-pages-group');
+    this.bahaStartPage = document.getElementById('baha-start-page');
+    this.bahaEndPage = document.getElementById('baha-end-page');
+    this.btnStartBaha = document.getElementById('btn-start-baha-crawl');
+    this.btnCancelBaha = document.getElementById('btn-cancel-baha-crawl');
+
+    // Crawler History Records (Story 27)
+    this.recordsList = document.getElementById('crawler-records-list');
+    this.recordsEmpty = document.getElementById('crawler-records-empty');
+    this.recordsCountBadge = document.getElementById('crawler-records-count-badge');
+    this.btnRefreshRecords = document.getElementById('btn-refresh-crawler-records');
+
+    // Incremental Update Modal Elements (Story 27)
+    this.updateModal = document.getElementById('crawler-update-modal');
+    this.updateModalTitle = document.getElementById('crawler-update-modal-title');
+    this.updateBookTitle = document.getElementById('crawler-update-book-title');
+    this.updateChaptersList = document.getElementById('crawler-update-chapters-list');
+    this.chkUpdateSelectAll = document.getElementById('chk-update-select-all');
+    this.btnUpdateSortToggle = document.getElementById('btn-update-sort-toggle');
+    this.updateSelectedCount = document.getElementById('crawler-update-selected-count');
+    this.updateTotalCount = document.getElementById('crawler-update-total-count');
+    this.btnConfirmUpdate = document.getElementById('btn-confirm-crawler-update');
+    this.btnCancelUpdate = document.getElementById('btn-cancel-crawler-update');
+    this.btnCloseUpdate = document.getElementById('btn-close-crawler-update');
+
+    this.pendingUpdate = null;
+
     // File Ingestion Elements
     this.fileInput = document.getElementById('file-upload-input');
     this.dropzone = document.getElementById('file-dropzone');
@@ -42,13 +81,27 @@ export class CrawlerView {
   init() {
     this.clearUrlInput(); // Mandatory auto-clear on launch (Story 1, GWT 1.1)
     this.initProxySettings();
+    this.renderCategoryOptions();
+    this.renderCrawlerRecords();
     this.bindEvents();
+
+    eventBus.on('bookshelf:refresh', () => {
+      this.renderCategoryOptions();
+      this.renderCrawlerRecords();
+    });
+    eventBus.on('category:changed', () => {
+      this.renderCategoryOptions();
+    });
   }
 
   clearUrlInput() {
     if (this.urlInput) {
       this.urlInput.value = '';
       this.urlInput.setAttribute('autocomplete', 'off');
+    }
+    if (this.bahaUrlInput) {
+      this.bahaUrlInput.value = '';
+      this.bahaUrlInput.setAttribute('autocomplete', 'off');
     }
   }
 
@@ -120,6 +173,86 @@ export class CrawlerView {
       });
     }
 
+    // Bahamut Gamer Home Crawl Action
+    if (this.bahaPageMode && this.bahaPagesGroup) {
+      this.bahaPageMode.addEventListener('change', (e) => {
+        this.bahaPagesGroup.style.display = (e.target.value === 'range') ? 'block' : 'none';
+      });
+    }
+
+    if (this.btnStartBaha) {
+      this.btnStartBaha.addEventListener('click', () => this.handleStartBahaCrawl());
+    }
+
+    if (this.btnCancelBaha) {
+      this.btnCancelBaha.addEventListener('click', () => {
+        bahaCrawler.cancel();
+        this.appendLog('🛑 使用者已按下取消巴哈抓取。');
+      });
+    }
+
+    // Category Quick Add Buttons
+    const handleQuickAddCat = () => {
+      const newCat = storage.createCategory();
+      this.renderCategoryOptions();
+      if (this.crawlerCategorySelect) this.crawlerCategorySelect.value = newCat.id;
+      if (this.bahaCategorySelect) this.bahaCategorySelect.value = newCat.id;
+      eventBus.emit('category:changed');
+      eventBus.emit('bookshelf:refresh');
+      eventBus.emit('toast', { message: `已建立書櫃分類「${newCat.name}」！` });
+    };
+
+    if (this.btnCrawlerAddCat) this.btnCrawlerAddCat.addEventListener('click', handleQuickAddCat);
+    if (this.btnBahaAddCat) this.btnBahaAddCat.addEventListener('click', handleQuickAddCat);
+
+    // Auto reload categories on select focus/click
+    if (this.crawlerCategorySelect) {
+      this.crawlerCategorySelect.addEventListener('focus', () => this.renderCategoryOptions());
+      this.crawlerCategorySelect.addEventListener('mousedown', () => this.renderCategoryOptions());
+    }
+    if (this.bahaCategorySelect) {
+      this.bahaCategorySelect.addEventListener('focus', () => this.renderCategoryOptions());
+      this.bahaCategorySelect.addEventListener('mousedown', () => this.renderCategoryOptions());
+    }
+
+    // Refresh Crawler Records
+    if (this.btnRefreshRecords) {
+      this.btnRefreshRecords.addEventListener('click', () => {
+        this.renderCrawlerRecords();
+        eventBus.emit('toast', { message: '爬蟲紀錄清單已重新整理' });
+      });
+    }
+
+    // Incremental Update Modal Events
+    if (this.chkUpdateSelectAll) {
+      this.chkUpdateSelectAll.addEventListener('change', (e) => {
+        const checked = e.target.checked;
+        const checkboxes = this.updateChaptersList?.querySelectorAll('input[type="checkbox"]');
+        checkboxes?.forEach(cb => cb.checked = checked);
+        this.updateSelectedCountBadge();
+      });
+    }
+
+    if (this.btnUpdateSortToggle) {
+      this.btnUpdateSortToggle.addEventListener('click', () => {
+        if (!this.pendingUpdate) return;
+        this.pendingUpdate.sortAsc = !this.pendingUpdate.sortAsc;
+        this.pendingUpdate.newChapters.reverse();
+        this.btnUpdateSortToggle.textContent = this.pendingUpdate.sortAsc ? '🔄 順序: 正序 (由舊到新)' : '🔄 順序: 倒序 (由新到舊)';
+        this.renderUpdateChaptersList();
+      });
+    }
+
+    if (this.btnCancelUpdate) {
+      this.btnCancelUpdate.addEventListener('click', () => this.closeUpdateModal());
+    }
+    if (this.btnCloseUpdate) {
+      this.btnCloseUpdate.addEventListener('click', () => this.closeUpdateModal());
+    }
+    if (this.btnConfirmUpdate) {
+      this.btnConfirmUpdate.addEventListener('click', () => this.executeIncrementalUpdate());
+    }
+
     // File Dropzone
     this.bindFileEvents();
 
@@ -129,11 +262,132 @@ export class CrawlerView {
     }
   }
 
+  async handleStartBahaCrawl() {
+    const rawInput = (this.bahaUrlInput ? this.bahaUrlInput.value : '').trim();
+    if (!rawInput) {
+      alert('請先輸入巴哈小屋創作網址或屋主帳號！');
+      return;
+    }
+
+    // 檢查是否已存在巴哈爬蟲紀錄 (防重複抓取提示與追更導流)
+    const records = storage.getCrawlerRecords();
+    let inputParsed = null;
+    try {
+      inputParsed = bahaCrawler.parseInput(rawInput);
+    } catch (_) {}
+
+    const existingBahaRec = records.find(r => {
+      if (r.sourceType !== 'bahamut') return false;
+      if (r.sourceUrl === rawInput) return true;
+      if (inputParsed && inputParsed.owner) {
+        try {
+          const recParsed = bahaCrawler.parseInput(r.sourceUrl);
+          if (recParsed.owner && recParsed.owner.toLowerCase() === inputParsed.owner.toLowerCase()) {
+            return true;
+          }
+        } catch (_) {}
+      }
+      return false;
+    });
+
+    if (existingBahaRec) {
+      const confirmUpdate = confirm(
+        `偵測到本機已存在《${existingBahaRec.bookTitle}》的巴哈爬蟲紀錄！\n\n【確定】：改為「檢查更新 (追更)」僅抓取新發布章節\n【取消】：重新抓取整部小說（可能建立重複書籍）`
+      );
+      if (confirmUpdate) {
+        this.handleCheckUpdate(existingBahaRec);
+        return;
+      }
+    }
+
+    // Validate custom proxy if selected
+    if (this.proxySelect && this.proxySelect.value === 'custom') {
+      const customUrl = this.customProxyInput ? this.customProxyInput.value.trim() : '';
+      if (!customUrl || !customUrl.includes('{url}')) {
+        alert('自訂代理 URL 必須包含 {url} 變數佔位符！');
+        return;
+      }
+    }
+
+    if (this.progressContainer) this.progressContainer.style.display = 'block';
+    if (this.btnStartBaha) this.btnStartBaha.disabled = true;
+    if (this.btnCancelBaha) this.btnCancelBaha.style.display = 'inline-block';
+    if (this.logBox) this.logBox.innerHTML = '';
+    if (this.progressFill) this.progressFill.style.width = '0%';
+    if (this.statusText) this.statusText.textContent = '連線巴哈姆特 API 中...';
+
+    const delay = parseFloat(this.delaySlider ? this.delaySlider.value : 1.5);
+    const customTitle = (this.bahaTitleInput ? this.bahaTitleInput.value : '').trim();
+    const sortOrder = (this.bahaSortOrder ? this.bahaSortOrder.value : 'asc');
+    const isRange = (this.bahaPageMode && this.bahaPageMode.value === 'range');
+    const startPage = isRange && this.bahaStartPage ? parseInt(this.bahaStartPage.value, 10) || 1 : 1;
+    const endPage = isRange && this.bahaEndPage ? parseInt(this.bahaEndPage.value, 10) || null : null;
+    const targetCategory = this.bahaCategorySelect ? this.bahaCategorySelect.value : 'uncategorized';
+
+    try {
+      const book = await bahaCrawler.crawlBaha(rawInput, {
+        delay,
+        customTitle,
+        sortOrder,
+        startPage,
+        endPage,
+        categoryId: targetCategory,
+        onProgress: (info) => {
+          if (info.status === 'fetching_catalog') {
+            if (this.statusText) this.statusText.textContent = info.message;
+            this.appendLog(info.message);
+          } else if (info.status === 'downloading') {
+            if (this.progressFill) this.progressFill.style.width = `${info.percent}%`;
+            if (this.statusText) this.statusText.textContent = `[${info.percent}%] ${info.message}`;
+            if (info.title) this.appendLog(`✔ 已下載: ${info.title}`);
+          } else if (info.status === 'completed') {
+            if (this.progressFill) this.progressFill.style.width = '100%';
+            if (this.statusText) this.statusText.textContent = info.message;
+            this.appendLog(`🎉 ${info.message}`);
+            eventBus.emit('bookshelf:refresh');
+            this.renderCrawlerRecords();
+            const bTitle = (info && info.book && info.book.title) ? info.book.title : '巴哈創作集';
+            eventBus.emit('toast', {
+              message: `《${bTitle}》下載完畢！`,
+              actionLabel: '前往書櫃閱讀',
+              onAction: () => eventBus.emit('nav:switchTab', 'tab-bookshelf')
+            });
+          } else if (info.status === 'cancelled') {
+            if (this.statusText) this.statusText.textContent = info.message;
+            this.appendLog(`🛑 ${info.message}`);
+          }
+        }
+      });
+    } catch (err) {
+      console.error('Baha Crawler Error:', err);
+      if (this.statusText) this.statusText.textContent = `錯誤: ${err.message}`;
+      this.appendLog(`❌ 失敗: ${err.message}`);
+      alert(`巴哈小屋抓取失敗: ${err.message}`);
+    } finally {
+      if (this.btnStartBaha) this.btnStartBaha.disabled = false;
+      if (this.btnCancelBaha) this.btnCancelBaha.style.display = 'none';
+    }
+  }
+
   async handleStartCrawl() {
     const url = this.urlInput.value.trim();
     if (!url) {
       alert('請先輸入小說目錄網址！');
       return;
+    }
+
+    // 檢查是否已存在通用爬蟲紀錄 (防重複抓取提示與追更導流)
+    const records = storage.getCrawlerRecords();
+    const normalizeUrl = (u) => (u || '').trim().replace(/\/+$/, '').toLowerCase();
+    const existingRec = records.find(r => r.sourceType !== 'bahamut' && normalizeUrl(r.sourceUrl) === normalizeUrl(url));
+    if (existingRec) {
+      const confirmUpdate = confirm(
+        `偵測到本機已存在《${existingRec.bookTitle}》的爬蟲紀錄！\n\n【確定】：改為「檢查更新 (追更)」僅抓取新發布章節\n【取消】：重新抓取整部小說（可能建立重複書籍）`
+      );
+      if (confirmUpdate) {
+        this.handleCheckUpdate(existingRec);
+        return;
+      }
     }
 
     // Validate custom proxy if selected
@@ -152,10 +406,12 @@ export class CrawlerView {
     this.progressFill.style.width = '0%';
 
     const delay = parseFloat(this.delaySlider ? this.delaySlider.value : 2.0);
+    const targetCategory = this.crawlerCategorySelect ? this.crawlerCategorySelect.value : 'uncategorized';
 
     try {
       const book = await crawler.crawlBook(url, {
         delay,
+        categoryId: targetCategory,
         onProgress: (info) => {
           if (info.status === 'parsing_catalog') {
             this.statusText.textContent = info.message;
@@ -169,6 +425,7 @@ export class CrawlerView {
             this.statusText.textContent = info.message;
             this.appendLog(`🎉 ${info.message}`);
             eventBus.emit('bookshelf:refresh');
+            this.renderCrawlerRecords();
             const bookTitle = (info && info.book && info.book.title) ? info.book.title : '小說';
             eventBus.emit('toast', {
               message: `《${bookTitle}》下載完畢！`,
@@ -395,4 +652,316 @@ export class CrawlerView {
     this.logBox.appendChild(p);
     this.logBox.scrollTop = this.logBox.scrollHeight;
   }
+
+  // ==========================================================
+  // 目標分類下拉選單管理 (Story 28)
+  // ==========================================================
+  renderCategoryOptions() {
+    const categories = storage.getCategories();
+    const updateSelect = (selectEl) => {
+      if (!selectEl) return;
+      const currentVal = selectEl.value;
+      selectEl.innerHTML = '';
+      categories.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name + (c.isDefault ? ' (預設)' : '');
+        selectEl.appendChild(opt);
+      });
+      if (currentVal && categories.some(c => c.id === currentVal)) {
+        selectEl.value = currentVal;
+      }
+    };
+
+    updateSelect(this.crawlerCategorySelect);
+    updateSelect(this.bahaCategorySelect);
+  }
+
+  // ==========================================================
+  // 爬蟲歷史紀錄與追更管理 (Story 27)
+  // ==========================================================
+  renderCrawlerRecords() {
+    if (!this.recordsList) return;
+    const records = storage.getCrawlerRecords();
+    const categories = storage.getCategories();
+    const catMap = new Map(categories.map(c => [c.id, c.name]));
+
+    if (this.recordsCountBadge) {
+      this.recordsCountBadge.textContent = `${records.length} 筆紀錄`;
+    }
+
+    if (records.length === 0) {
+      this.recordsList.innerHTML = '';
+      if (this.recordsEmpty) this.recordsEmpty.style.display = 'block';
+      return;
+    }
+
+    if (this.recordsEmpty) this.recordsEmpty.style.display = 'none';
+    this.recordsList.innerHTML = '';
+
+    records.forEach(rec => {
+      const card = document.createElement('div');
+      card.className = 'crawler-record-card';
+
+      const typeLabel = rec.sourceType === 'bahamut' ? '巴哈創作' : '線上網頁';
+      const catName = catMap.get(rec.targetCategoryId) || '未分類';
+      const dateStr = rec.lastCrawlTime ? new Date(rec.lastCrawlTime).toLocaleString('zh-TW', { hour12: false }) : '未知';
+
+      card.innerHTML = `
+        <div class="crawler-record-info">
+          <div class="crawler-record-title-row">
+            <h4 class="crawler-record-title">${rec.bookTitle || '未命名書籍'}</h4>
+            <span class="book-card-badge">${typeLabel}</span>
+            <span class="book-card-badge" style="background-color: var(--bg-surface); color: var(--text-muted);">${catName}</span>
+          </div>
+          <div class="crawler-record-url" title="${rec.sourceUrl || ''}">
+            來源: ${rec.sourceUrl || '無網址'}
+          </div>
+          <div class="crawler-record-meta">
+            <span>📚 總章節: ${rec.totalChaptersCrawled || 0} 章</span>
+            <span>🕒 最後更新: ${dateStr}</span>
+          </div>
+        </div>
+        <div class="crawler-record-actions">
+          <button class="btn btn-primary btn-sm btn-check-update" title="檢查線上目錄是否有新發布章節">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            檢查更新
+          </button>
+          <button class="btn btn-danger btn-sm btn-delete-record" title="刪除此筆爬蟲紀錄">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            刪除
+          </button>
+        </div>
+      `;
+
+      card.querySelector('.btn-check-update').addEventListener('click', () => {
+        this.handleCheckUpdate(rec);
+      });
+
+      card.querySelector('.btn-delete-record').addEventListener('click', () => {
+        this.handleDeleteRecord(rec);
+      });
+
+      this.recordsList.appendChild(card);
+    });
+  }
+
+  async handleDeleteRecord(rec) {
+    const choice = confirm(`確定要刪除爬蟲紀錄《${rec.bookTitle}》嗎？\n\n【確定】：連同刪除已建立之本機書籍與所有章節內容\n【取消】：進入下一選項（可選擇僅刪除紀錄、保留書籍）`);
+    if (choice) {
+      await storage.deleteCrawlerRecord(rec.id, true);
+      this.renderCrawlerRecords();
+      eventBus.emit('bookshelf:refresh');
+      eventBus.emit('toast', { message: `已刪除紀錄與書籍《${rec.bookTitle}》` });
+    } else {
+      if (confirm(`是否「僅刪除爬蟲紀錄」，而保留本機書籍《${rec.bookTitle}》？`)) {
+        await storage.deleteCrawlerRecord(rec.id, false);
+        this.renderCrawlerRecords();
+        eventBus.emit('toast', { message: `已移除爬蟲紀錄（書籍已保留）` });
+      }
+    }
+  }
+
+  async handleCheckUpdate(rec) {
+    if (this.progressContainer) this.progressContainer.style.display = 'block';
+    if (this.statusText) this.statusText.textContent = `正在連線探測《${rec.bookTitle}》線上最新目錄...`;
+    if (this.logBox) this.logBox.innerHTML = '';
+    this.appendLog(`🔍 開始探測來源: ${rec.sourceUrl}`);
+
+    try {
+      let onlineChapters = [];
+      let totalOnline = 0;
+
+      if (rec.sourceType === 'bahamut') {
+        const catalog = await bahaCrawler.fetchCatalog(rec.sourceUrl, {
+          sortOrder: 'asc',
+          onProgress: (info) => {
+            if (this.statusText) this.statusText.textContent = info.message;
+            this.appendLog(info.message);
+          }
+        });
+        onlineChapters = catalog.articles || [];
+        totalOnline = catalog.totalArticles || onlineChapters.length;
+      } else {
+        const catalog = await crawler.parseCatalog(rec.sourceUrl);
+        onlineChapters = catalog.chapters || [];
+        totalOnline = onlineChapters.length;
+      }
+
+      // 取得現有書籍章節
+      const existingChaps = await storage.getChaptersByBook(rec.bookId);
+
+      // 套用四級規則智慧過濾與拓撲排序 (Story 27)
+      const diffResult = diffOnlineChapters(onlineChapters, existingChaps, rec.historicalKeys || []);
+      const newChapters = diffResult.newChapters;
+
+      if (newChapters.length === 0) {
+        if (this.statusText) this.statusText.textContent = `《${rec.bookTitle}》已是最新狀態！`;
+        this.appendLog(`✅ 線上目錄共 ${totalOnline} 篇，目前已全數收錄，無新發布章節。`);
+        eventBus.emit('toast', {
+          message: `🎉《${rec.bookTitle}》目前已是最新狀態，無新發布內容！`
+        });
+        return;
+      }
+
+      this.appendLog(`✨ 偵測到 ${newChapters.length} 篇全新章節！開啟確認彈窗...`);
+      this.openUpdateModal(rec, newChapters, totalOnline);
+    } catch (err) {
+      console.error('Check update failed:', err);
+      if (this.statusText) this.statusText.textContent = `檢查更新失敗: ${err.message}`;
+      this.appendLog(`❌ 錯誤: ${err.message}`);
+      alert(`檢查更新失敗: ${err.message}`);
+    }
+  }
+
+  openUpdateModal(record, newChapters, totalOnline) {
+    this.pendingUpdate = {
+      record,
+      newChapters: [...newChapters],
+      sortAsc: true
+    };
+
+    if (this.updateBookTitle) {
+      this.updateBookTitle.textContent = `《${record.bookTitle}》 (線上最新總數: ${totalOnline} 篇，發現 ${newChapters.length} 篇新內容)`;
+    }
+
+    if (this.btnUpdateSortToggle) {
+      this.btnUpdateSortToggle.textContent = '🔄 順序: 正序 (由舊到新)';
+    }
+
+    if (this.chkUpdateSelectAll) {
+      this.chkUpdateSelectAll.checked = true;
+    }
+
+    this.renderUpdateChaptersList();
+
+    if (this.updateModal) {
+      this.updateModal.classList.add('active');
+    }
+  }
+
+  closeUpdateModal() {
+    this.pendingUpdate = null;
+    if (this.updateModal) {
+      this.updateModal.classList.remove('active');
+    }
+  }
+
+  renderUpdateChaptersList() {
+    if (!this.updateChaptersList || !this.pendingUpdate) return;
+    this.updateChaptersList.innerHTML = '';
+
+    const chapters = this.pendingUpdate.newChapters;
+
+    chapters.forEach((ch, idx) => {
+      const item = document.createElement('div');
+      item.className = 'crawler-update-item';
+
+      const numBadge = ch.parsedNumber !== null && ch.parsedNumber !== undefined
+        ? `<span class="crawler-update-badge">#${ch.parsedNumber}</span>`
+        : '';
+
+      item.innerHTML = `
+        <input type="checkbox" id="up-ch-${idx}" data-idx="${idx}" checked style="cursor: pointer;">
+        <label for="up-ch-${idx}" style="cursor: pointer; flex: 1; display: flex; align-items: center; gap: 6px;">
+          ${numBadge}
+          <span>${ch.title}</span>
+        </label>
+      `;
+
+      item.querySelector('input[type="checkbox"]').addEventListener('change', () => {
+        this.updateSelectedCountBadge();
+      });
+
+      this.updateChaptersList.appendChild(item);
+    });
+
+    this.updateSelectedCountBadge();
+  }
+
+  updateSelectedCountBadge() {
+    if (!this.updateChaptersList) return;
+    const all = this.updateChaptersList.querySelectorAll('input[type="checkbox"]');
+    const checked = this.updateChaptersList.querySelectorAll('input[type="checkbox"]:checked');
+
+    if (this.updateSelectedCount) this.updateSelectedCount.textContent = checked.length;
+    if (this.updateTotalCount) this.updateTotalCount.textContent = all.length;
+
+    if (this.btnConfirmUpdate) {
+      this.btnConfirmUpdate.disabled = (checked.length === 0);
+    }
+  }
+
+  async executeIncrementalUpdate() {
+    if (!this.pendingUpdate) return;
+    const { record, newChapters } = this.pendingUpdate;
+
+    // 收集所有勾選的章節 (保持目前畫面上展示之順序)
+    const checkedBoxes = this.updateChaptersList.querySelectorAll('input[type="checkbox"]:checked');
+    const selectedChapters = [];
+    checkedBoxes.forEach(cb => {
+      const idx = parseInt(cb.dataset.idx, 10);
+      if (!isNaN(idx) && newChapters[idx]) {
+        selectedChapters.push(newChapters[idx]);
+      }
+    });
+
+    if (selectedChapters.length === 0) {
+      alert('請至少勾選一篇欲追更下載的章節！');
+      return;
+    }
+
+    this.closeUpdateModal();
+
+    // 啟動進度面板
+    if (this.progressContainer) this.progressContainer.style.display = 'block';
+    if (this.logBox) this.logBox.innerHTML = '';
+    if (this.progressFill) this.progressFill.style.width = '0%';
+    if (this.statusText) this.statusText.textContent = `準備追更下載 ${selectedChapters.length} 篇新章節...`;
+    this.appendLog(`🚀 開始增量追更《${record.bookTitle}》共 ${selectedChapters.length} 篇...`);
+
+    const delay = parseFloat(this.delaySlider ? this.delaySlider.value : 1.5);
+
+    try {
+      const progressCb = (info) => {
+        if (info.status === 'downloading') {
+          if (this.progressFill) this.progressFill.style.width = `${info.percent}%`;
+          if (this.statusText) this.statusText.textContent = `[${info.percent}%] ${info.message}`;
+          if (info.title) this.appendLog(`✔ 已追加: ${info.title}`);
+        } else if (info.status === 'completed') {
+          if (this.progressFill) this.progressFill.style.width = '100%';
+          if (this.statusText) this.statusText.textContent = info.message;
+          this.appendLog(`🎉 ${info.message}`);
+          eventBus.emit('bookshelf:refresh');
+          this.renderCrawlerRecords();
+          eventBus.emit('toast', {
+            message: `《${record.bookTitle}》追更完成（新增 ${info.appendedCount} 篇）！`,
+            actionLabel: '前往閱讀',
+            onAction: () => eventBus.emit('reader:openBook', record.bookId)
+          });
+        } else if (info.status === 'cancelled') {
+          if (this.statusText) this.statusText.textContent = info.message;
+          this.appendLog(`🛑 ${info.message}`);
+        }
+      };
+
+      if (record.sourceType === 'bahamut') {
+        await bahaCrawler.crawlBahaIncremental(record.id, selectedChapters, {
+          delay,
+          onProgress: progressCb
+        });
+      } else {
+        await crawler.crawlIncremental(record.id, selectedChapters, {
+          delay,
+          onProgress: progressCb
+        });
+      }
+    } catch (err) {
+      console.error('Incremental crawl error:', err);
+      if (this.statusText) this.statusText.textContent = `追更失敗: ${err.message}`;
+      this.appendLog(`❌ 失敗: ${err.message}`);
+      alert(`追更失敗: ${err.message}`);
+    }
+  }
 }
+
