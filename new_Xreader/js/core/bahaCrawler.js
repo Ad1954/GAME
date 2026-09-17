@@ -5,7 +5,7 @@
 
 import { storage } from './storage.js';
 import { TextSegmenter } from './segmenter.js';
-import { DEFAULT_PROXIES } from './crawler.js';
+import { DEFAULT_PROXIES, isLocalEnvironment } from './crawler.js';
 
 export class BahaCrawlerService {
   constructor() {
@@ -17,14 +17,22 @@ export class BahaCrawlerService {
   }
 
   getActiveProxyTemplate() {
-    const custom = localStorage.getItem('customProxyTemplate');
-    const proxyMode = localStorage.getItem('activeProxyMode') || 'local';
+    const isLocal = isLocalEnvironment();
+    let proxyMode = localStorage.getItem('activeProxyMode');
 
+    // 本機預設 local，雲端預設 dedicated；若雲端殘留 local 則自動安全回退
+    if (!proxyMode) {
+      proxyMode = isLocal ? 'local' : 'dedicated';
+    } else if (!isLocal && proxyMode === 'local') {
+      proxyMode = 'dedicated';
+    }
+
+    const custom = localStorage.getItem('customProxyTemplate');
     if (proxyMode === 'custom' && custom && custom.includes('{url}')) {
       return custom;
     }
     const found = DEFAULT_PROXIES.find(p => p.id === proxyMode);
-    return found ? found.template : DEFAULT_PROXIES[0].template;
+    return found ? found.template : DEFAULT_PROXIES[1].template;
   }
 
   /**
@@ -41,7 +49,12 @@ export class BahaCrawlerService {
     });
 
     if (!resp.ok) {
-      throw new Error(`代理請求失敗: HTTP ${resp.status}`);
+      const isLocal = isLocalEnvironment();
+      let hint = '';
+      if (resp.status === 404 && !isLocal) {
+        hint = '（雲端環境無法使用本機 /proxy，請確認跳板已切換至「專屬 Cloudflare 代理」）';
+      }
+      throw new Error(`代理請求失敗: HTTP ${resp.status} ${hint}`.trim());
     }
     return await resp.text();
   }

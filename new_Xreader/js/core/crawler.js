@@ -12,20 +12,37 @@ export const DEFAULT_PROXIES = [
   { id: 'allorigins', name: 'AllOrigins (公開備用節點)', template: 'https://api.allorigins.win/raw?url={url}' }
 ];
 
+/**
+ * 智慧環境檢測：判定當前是否為本地伺服器環境 (如透過 .bat 啟動訪問 localhost 或 127.0.0.1)
+ */
+export function isLocalEnvironment() {
+  if (typeof window === 'undefined' || !window.location) return true;
+  const host = window.location.hostname || '';
+  return host === 'localhost' || host === '127.0.0.1' || host === '';
+}
+
 export class CrawlerService {
   constructor() {
     this.isCancelled = false;
   }
 
   getActiveProxyTemplate() {
-    const custom = localStorage.getItem('customProxyTemplate');
-    const proxyMode = localStorage.getItem('activeProxyMode') || 'local';
+    const isLocal = isLocalEnvironment();
+    let proxyMode = localStorage.getItem('activeProxyMode');
 
+    // 本機預設 local，雲端預設 dedicated；若雲端殘留 local 則自動安全回退
+    if (!proxyMode) {
+      proxyMode = isLocal ? 'local' : 'dedicated';
+    } else if (!isLocal && proxyMode === 'local') {
+      proxyMode = 'dedicated';
+    }
+
+    const custom = localStorage.getItem('customProxyTemplate');
     if (proxyMode === 'custom' && custom && custom.includes('{url}')) {
       return custom;
     }
     const found = DEFAULT_PROXIES.find(p => p.id === proxyMode);
-    return found ? found.template : DEFAULT_PROXIES[0].template;
+    return found ? found.template : DEFAULT_PROXIES[1].template;
   }
 
   async fetchHTML(url) {
@@ -39,7 +56,12 @@ export class CrawlerService {
     });
 
     if (!resp.ok) {
-      throw new Error(`代理連線錯誤: HTTP ${resp.status}`);
+      const isLocal = isLocalEnvironment();
+      let hint = '';
+      if (resp.status === 404 && !isLocal) {
+        hint = '（雲端環境無法使用本機 /proxy，請確認跳板選擇「專屬 Cloudflare 代理」）';
+      }
+      throw new Error(`代理連線錯誤: HTTP ${resp.status} ${hint}`.trim());
     }
     return await resp.text();
   }

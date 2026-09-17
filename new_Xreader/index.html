@@ -233,6 +233,16 @@
           </div>
 
           <div class="form-group">
+            <label class="form-label" for="baha-proxy">CORS 跨域代理設定 (跳板)</label>
+            <select id="baha-proxy" class="form-select"></select>
+          </div>
+
+          <div class="form-group" id="baha-custom-proxy-group" style="display: none;">
+            <label class="form-label" for="baha-custom-proxy">自訂代理 URL 範本 (必須包含 {url})</label>
+            <input type="text" id="baha-custom-proxy" class="form-input" placeholder="https://your-worker.workers.dev/?url={url}">
+          </div>
+
+          <div class="form-group">
             <label class="form-label" for="baha-target-category">目標書櫃分類 (預設「未分類」)</label>
             <div style="display: flex; gap: 8px;">
               <select id="baha-target-category" class="form-select"></select>
@@ -835,7 +845,7 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Main ES Module Bootstrap -->
-  <script type="module" src="js/app.js?v=7.8"></script>
+  <script type="module" src="js/app.js?v=7.9"></script>
 </body>
 </html>
 

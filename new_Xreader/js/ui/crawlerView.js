@@ -3,7 +3,7 @@
  * Handles Web sequential crawler, file ingestion, paste text, crawler history records, and incremental updates.
  */
 
-import { crawler, DEFAULT_PROXIES, diffOnlineChapters } from '../core/crawler.js';
+import { crawler, DEFAULT_PROXIES, diffOnlineChapters, isLocalEnvironment } from '../core/crawler.js';
 import { bahaCrawler } from '../core/bahaCrawler.js';
 import { storage } from '../core/storage.js';
 import { TextSegmenter } from '../core/segmenter.js';
@@ -39,6 +39,9 @@ export class CrawlerView {
     this.bahaPagesGroup = document.getElementById('baha-custom-pages-group');
     this.bahaStartPage = document.getElementById('baha-start-page');
     this.bahaEndPage = document.getElementById('baha-end-page');
+    this.bahaProxySelect = document.getElementById('baha-proxy');
+    this.bahaCustomProxyGroup = document.getElementById('baha-custom-proxy-group');
+    this.bahaCustomProxyInput = document.getElementById('baha-custom-proxy');
     this.btnStartBaha = document.getElementById('btn-start-baha-crawl');
     this.btnCancelBaha = document.getElementById('btn-cancel-baha-crawl');
 
@@ -106,15 +109,50 @@ export class CrawlerView {
   }
 
   initProxySettings() {
-    const savedMode = localStorage.getItem('activeProxyMode') || 'local';
+    const isLocal = isLocalEnvironment();
+    let savedMode = localStorage.getItem('activeProxyMode');
+
+    // 本機環境（.bat 啟動）預設 local，雲端環境（GitHub Pages/手機）預設 dedicated
+    if (!savedMode) {
+      savedMode = isLocal ? 'local' : 'dedicated';
+    } else if (!isLocal && savedMode === 'local') {
+      // 雲端環境若先前殘留 local，自動校正切換為 dedicated 避免 404
+      savedMode = 'dedicated';
+    }
+    localStorage.setItem('activeProxyMode', savedMode);
+
     const savedCustom = localStorage.getItem('customProxyTemplate') || '';
 
-    if (this.proxySelect) {
-      this.proxySelect.value = savedMode;
-    }
-    if (this.customProxyInput) {
-      this.customProxyInput.value = savedCustom;
-    }
+    // 動態填入代理選項
+    const renderProxyOptions = (selectEl) => {
+      if (!selectEl) return;
+      selectEl.innerHTML = '';
+
+      if (isLocal) {
+        // 本機模式 (.bat 啟動)
+        selectEl.innerHTML = `
+          <option value="local">本地伺服器直通代理 (住宅 IP/免 403 封鎖/推薦)</option>
+          <option value="dedicated">專屬 Cloudflare 代理 (遠端/機房 IP: flat-dust-dbde)</option>
+          <option value="allorigins">AllOrigins (公開備用節點)</option>
+          <option value="custom">自訂代理 URL (持久記憶)</option>
+        `;
+      } else {
+        // 雲端託管模式 (GitHub Pages / 手機等)
+        selectEl.innerHTML = `
+          <option value="dedicated">專屬 Cloudflare 代理 (雲端預設/推薦/免設定)</option>
+          <option value="allorigins">AllOrigins (公開備用節點)</option>
+          <option value="custom">自訂代理 URL (持久記憶)</option>
+          <option value="local" disabled>本地伺服器直通代理 (⚠️ 僅限本機 bat 啟動)</option>
+        `;
+      }
+      selectEl.value = savedMode;
+    };
+
+    renderProxyOptions(this.proxySelect);
+    renderProxyOptions(this.bahaProxySelect);
+
+    if (this.customProxyInput) this.customProxyInput.value = savedCustom;
+    if (this.bahaCustomProxyInput) this.bahaCustomProxyInput.value = savedCustom;
 
     this.toggleCustomProxyUI(savedMode === 'custom');
   }
@@ -122,6 +160,9 @@ export class CrawlerView {
   toggleCustomProxyUI(show) {
     if (this.customProxyGroup) {
       this.customProxyGroup.style.display = show ? 'block' : 'none';
+    }
+    if (this.bahaCustomProxyGroup) {
+      this.bahaCustomProxyGroup.style.display = show ? 'block' : 'none';
     }
   }
 
@@ -138,20 +179,37 @@ export class CrawlerView {
       });
     });
 
-    // Proxy change
+    // 代理切換雙向連動 (Story 30)
+    const handleProxyChange = (mode) => {
+      localStorage.setItem('activeProxyMode', mode);
+      if (this.proxySelect) this.proxySelect.value = mode;
+      if (this.bahaProxySelect) this.bahaProxySelect.value = mode;
+      this.toggleCustomProxyUI(mode === 'custom');
+    };
+
     if (this.proxySelect) {
-      this.proxySelect.addEventListener('change', (e) => {
-        const mode = e.target.value;
-        localStorage.setItem('activeProxyMode', mode);
-        this.toggleCustomProxyUI(mode === 'custom');
-      });
+      this.proxySelect.addEventListener('change', (e) => handleProxyChange(e.target.value));
+    }
+    if (this.bahaProxySelect) {
+      this.bahaProxySelect.addEventListener('change', (e) => handleProxyChange(e.target.value));
     }
 
+    // 自訂代理輸入雙向連動 (Story 30)
+    const handleCustomProxyInput = (val) => {
+      localStorage.setItem('customProxyTemplate', val);
+      if (this.customProxyInput && this.customProxyInput.value !== val) {
+        this.customProxyInput.value = val;
+      }
+      if (this.bahaCustomProxyInput && this.bahaCustomProxyInput.value !== val) {
+        this.bahaCustomProxyInput.value = val;
+      }
+    };
+
     if (this.customProxyInput) {
-      this.customProxyInput.addEventListener('input', (e) => {
-        const val = e.target.value.trim();
-        localStorage.setItem('customProxyTemplate', val);
-      });
+      this.customProxyInput.addEventListener('input', (e) => handleCustomProxyInput(e.target.value.trim()));
+    }
+    if (this.bahaCustomProxyInput) {
+      this.bahaCustomProxyInput.addEventListener('input', (e) => handleCustomProxyInput(e.target.value.trim()));
     }
 
     // Delay slider
@@ -301,8 +359,9 @@ export class CrawlerView {
     }
 
     // Validate custom proxy if selected
-    if (this.proxySelect && this.proxySelect.value === 'custom') {
-      const customUrl = this.customProxyInput ? this.customProxyInput.value.trim() : '';
+    const activeMode = localStorage.getItem('activeProxyMode') || (isLocalEnvironment() ? 'local' : 'dedicated');
+    if (activeMode === 'custom') {
+      const customUrl = (this.customProxyInput?.value || this.bahaCustomProxyInput?.value || '').trim();
       if (!customUrl || !customUrl.includes('{url}')) {
         alert('自訂代理 URL 必須包含 {url} 變數佔位符！');
         return;
@@ -391,8 +450,9 @@ export class CrawlerView {
     }
 
     // Validate custom proxy if selected
-    if (this.proxySelect.value === 'custom') {
-      const customUrl = this.customProxyInput.value.trim();
+    const activeMode = localStorage.getItem('activeProxyMode') || (isLocalEnvironment() ? 'local' : 'dedicated');
+    if (activeMode === 'custom') {
+      const customUrl = (this.customProxyInput?.value || this.bahaCustomProxyInput?.value || '').trim();
       if (!customUrl || !customUrl.includes('{url}')) {
         alert('自訂代理 URL 必須包含 {url} 變數佔位符！');
         return;
