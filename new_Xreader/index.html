@@ -115,9 +115,18 @@
                   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                   批量修改
                 </button>
+                <button id="btn-reader-split-chapter" class="btn btn-secondary btn-sm" title="以選取文字或指定句子為起點，分割出新章節 (Story 34)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+                  分割章節
+                </button>
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Floating Quick Split Button (Story 34, 方案 A) -->
+        <div id="reader-floating-split-btn" class="reader-floating-split-btn" style="display: none;">
+          ✂️ 以此分割新章
         </div>
 
         <!-- Reader Text Surface -->
@@ -184,6 +193,17 @@
               解析目錄並開始下載
             </button>
             <button id="btn-cancel-crawl" class="btn btn-danger" style="display: none;">取消下載</button>
+          </div>
+
+          <!-- Web Crawler Progress & Terminal (Story 38) -->
+          <div id="crawler-progress-box" class="crawler-progress-box" style="display: none; margin-top: 1.5rem;">
+            <div class="crawler-status-header">
+              <span id="crawler-status-text">初始化下載佇列...</span>
+            </div>
+            <div class="progress-track">
+              <div id="crawler-progress-fill" class="progress-fill"></div>
+            </div>
+            <div id="crawler-log" class="crawler-log-box"></div>
           </div>
         </div>
 
@@ -257,6 +277,17 @@
             </button>
             <button id="btn-cancel-baha-crawl" class="btn btn-danger" style="display: none;">取消抓取</button>
           </div>
+
+          <!-- Bahamut Crawler Progress & Terminal (Story 38) -->
+          <div id="baha-progress-box" class="crawler-progress-box" style="display: none; margin-top: 1.5rem;">
+            <div class="crawler-status-header">
+              <span id="baha-status-text">初始化巴哈抓取...</span>
+            </div>
+            <div class="progress-track">
+              <div id="baha-progress-fill" class="progress-fill"></div>
+            </div>
+            <div id="baha-log" class="crawler-log-box"></div>
+          </div>
         </div>
 
         <!-- Sub-panel: File Upload -->
@@ -272,9 +303,15 @@
 
         <!-- Sub-panel: Manual Paste -->
         <div id="sub-panel-paste" class="ingest-panel">
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.88rem; user-select: none;">
+              <input type="checkbox" id="paste-inbox-mode" checked style="accent-color: var(--accent-primary); width: 16px; height: 16px; cursor: pointer;">
+              <span style="font-weight: 500;">存入「📋 臨時剪貼簿」（集中收納，自動跳至最新章節朗讀）</span>
+            </label>
+          </div>
           <div class="form-group">
-            <label class="form-label" for="paste-book-title">書籍標題</label>
-            <input type="text" id="paste-book-title" class="form-input" placeholder="貼上文字朗讀" value="自訂文字朗讀">
+            <label class="form-label" for="paste-book-title">章節或書籍標題 (選填，留空自動擷取前段摘要)</label>
+            <input type="text" id="paste-book-title" class="form-input" placeholder="留空則自動提取內文前段摘要...">
           </div>
           <div class="form-group">
             <label class="form-label" for="paste-book-content">欲朗讀的文字內容</label>
@@ -284,17 +321,6 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
             匯入文字開始朗讀
           </button>
-        </div>
-
-        <!-- Shared Crawler Progress & Terminal (Stories 1, 8 & Bahamut) -->
-        <div id="crawler-progress-box" class="crawler-progress-box">
-          <div class="crawler-status-header">
-            <span id="crawler-status-text">初始化下載佇列...</span>
-          </div>
-          <div class="progress-track">
-            <div id="crawler-progress-fill" class="progress-fill"></div>
-          </div>
-          <div id="crawler-log" class="crawler-log-box"></div>
         </div>
       </div>
 
@@ -841,11 +867,87 @@
     </div>
   </div>
 
+  <!-- ========================================================
+       Split Chapter at Sentence Modal (Story 34, 方案 A)
+       ======================================================== -->
+  <div id="split-chapter-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 520px; width: 92%;">
+      <div class="modal-header">
+        <h3 class="modal-title">✂️ 手動分割章節確認</h3>
+        <button id="btn-close-split-modal" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px; padding: 1.25rem;">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">
+          即將在此句處將當前章節拆分為兩個獨立章節。前半段保留於原章節，該句（含）之後將切為全新章節。
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="split-modal-new-title">新章節標題</label>
+          <input type="text" id="split-modal-new-title" class="form-input" placeholder="請輸入新章節名稱...">
+        </div>
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px; font-size: 0.85rem;">
+          <div style="margin-bottom: 6px; color: var(--text-muted); font-size: 0.78rem;">📌 分割點起始句預覽：</div>
+          <div id="split-modal-sentence-preview" style="font-weight: 600; color: var(--accent-primary); line-height: 1.5; max-height: 80px; overflow-y: auto;">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-split-chapter" class="btn btn-secondary">取消</button>
+        <button id="btn-confirm-split-chapter" class="btn btn-primary">確認分割</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       Crawler Re-download Modal (Story 37)
+       ======================================================== -->
+  <div id="crawler-redownload-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 520px; width: 92%;">
+      <div class="modal-header">
+        <h3 class="modal-title">🔄 重新下載書籍確認</h3>
+        <button id="btn-close-redownload-modal" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px; padding: 1.25rem;">
+        <div style="font-size: 0.88rem;">
+          準備重新下載：<strong id="redownload-book-title" style="color: var(--accent-primary);">《書籍名稱》</strong>
+        </div>
+        <div style="font-size: 0.82rem; color: var(--text-muted);">
+          請選擇您期望的重新下載處理模式：
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <label style="display: flex; gap: 10px; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer; background: var(--bg-surface);">
+            <input type="radio" name="redownload-mode" value="overwrite" checked style="margin-top: 3px; accent-color: var(--accent-primary);">
+            <div>
+              <div style="font-weight: 600; font-size: 0.9rem;">【模式 A】覆蓋並重整原書（推薦）</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 3px;">
+                保留原書位置、分類與 ID，清空原有章節後自第 1 章重新抓取。適合修復缺漏或格式錯亂，不產生重複書籍。
+              </div>
+            </div>
+          </label>
+
+          <label style="display: flex; gap: 10px; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer; background: var(--bg-surface);">
+            <input type="radio" name="redownload-mode" value="new_book" style="margin-top: 3px; accent-color: var(--accent-primary);">
+            <div>
+              <div style="font-weight: 600; font-size: 0.9rem;">【模式 B】另存為新書（移轉追更）</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 3px;">
+                原書保留在書櫃；系統建立新書並下載，爬蟲追更目標移轉至新書。
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-redownload" class="btn btn-secondary">取消</button>
+        <button id="btn-confirm-redownload" class="btn btn-primary">開始重新下載</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Main ES Module Bootstrap -->
-  <script type="module" src="js/app.js?v=7.9"></script>
+  <script type="module" src="js/app.js?v=8.2"></script>
 </body>
 </html>
 

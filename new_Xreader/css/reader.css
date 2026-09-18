@@ -246,3 +246,29 @@
     font-size: 1.05rem;
   }
 }
+
+/* Floating Quick Action for Chapter Splitting (Story 34) */
+.reader-floating-split-btn {
+  position: fixed;
+  z-index: 1000;
+  background: var(--accent-primary);
+  color: #ffffff;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 20px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  user-select: none;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+.reader-floating-split-btn:hover {
+  transform: scale(1.05);
+}
+.reader-floating-split-btn:active {
+  transform: scale(0.95);
+}

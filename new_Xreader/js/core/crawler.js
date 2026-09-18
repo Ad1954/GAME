@@ -187,25 +187,44 @@ export class CrawlerService {
    * Sequentially crawl whole book with atomic incremental saves and checkpointing (ADR 0003)
    */
   async crawlBook(catalogUrl, options = {}) {
-    const { delay = 2.0, categoryId = 'uncategorized', onProgress = () => {} } = options;
+    const {
+      delay = 2.0,
+      categoryId = 'uncategorized',
+      targetBookId = null,
+      recordId = null,
+      customTitle = '',
+      onProgress = () => {}
+    } = options;
     this.isCancelled = false;
 
     onProgress({ status: 'parsing_catalog', message: '正在連線專屬代理解析全書目錄...' });
     const catalog = await this.parseCatalog(catalogUrl);
 
-    const bookId = `book_web_${Date.now()}`;
-    const book = {
-      id: bookId,
-      title: catalog.title,
-      author: catalog.author,
-      sourceType: 'web',
-      sourceUrl: catalogUrl,
-      categoryId: categoryId || 'uncategorized',
-      totalChapters: catalog.chapters.length,
-      downloadedChaptersCount: 0,
-      lastChapterIndex: 0,
-      lastSentenceIndex: 0
-    };
+    let bookId = targetBookId;
+    let book = null;
+    if (bookId) {
+      book = await storage.getBook(bookId);
+    }
+
+    if (!book) {
+      bookId = `book_web_${Date.now()}`;
+      book = {
+        id: bookId,
+        title: customTitle.trim() || catalog.title,
+        author: catalog.author,
+        sourceType: 'web',
+        sourceUrl: catalogUrl,
+        categoryId: categoryId || 'uncategorized',
+        totalChapters: catalog.chapters.length,
+        downloadedChaptersCount: 0,
+        lastChapterIndex: 0,
+        lastSentenceIndex: 0
+      };
+    } else {
+      book.totalChapters = catalog.chapters.length;
+      book.downloadedChaptersCount = 0;
+      book.updatedAt = Date.now();
+    }
 
     // Save initial book record
     await storage.saveBook(book);
@@ -281,6 +300,7 @@ export class CrawlerService {
     const allUrls = catalog.chapters.map(c => c.url).filter(Boolean);
     const lastUrl = allUrls.length > 0 ? allUrls[allUrls.length - 1] : '';
     storage.saveCrawlerRecord({
+      id: recordId || undefined,
       bookId: book.id,
       bookTitle: book.title,
       sourceUrl: catalogUrl,
@@ -432,34 +452,74 @@ export function chineseToNumber(cnStr) {
 }
 
 /**
- * 智慧萃取章節標題中之回數/章節數
+ * 智慧萃取章節標題中之回數/章節數 (支援主回數與子篇章語意權重，如 35(上) -> 35.1, 35(下) -> 35.3)
  */
 export function parseChapterNumber(title) {
   if (!title) return null;
   const t = title.trim();
 
+  let mainNum = null;
+
   // 1. 阿拉伯數字: 第105章, 第 105 回, 105., Episode 105
   const m1 = t.match(/第\s*(\d+)\s*[章回節卷部話]/i);
-  if (m1) return parseInt(m1[1], 10);
-
-  const m2 = t.match(/(?:ch|episode|ep|chapter)\s*(\d+)/i);
-  if (m2) return parseInt(m2[1], 10);
-
-  const m3 = t.match(/^(\d+)[.、\s]/);
-  if (m3) return parseInt(m3[1], 10);
-
-  // 2. 中文大寫數字: 第一百零五章, 第廿回, 第十五章
-  const mCn = t.match(/第\s*([零〇一二兩三四五六七八九十拾廿百佰千仟萬]+)\s*[章回節卷部話]/);
-  if (mCn) {
-    const num = chineseToNumber(mCn[1]);
-    if (num !== null) return num;
+  if (m1) {
+    mainNum = parseInt(m1[1], 10);
+  } else {
+    const m2 = t.match(/(?:ch|episode|ep|chapter)\s*(\d+)/i);
+    if (m2) {
+      mainNum = parseInt(m2[1], 10);
+    } else {
+      const m3 = t.match(/^(\d+)[.、\s]/);
+      if (m3) {
+        mainNum = parseInt(m3[1], 10);
+      } else {
+        // 2. 中文大寫數字: 第一百零五章, 第廿回, 第十五章
+        const mCn = t.match(/第\s*([零〇一二兩三四五六七八九十拾廿百佰千仟萬]+)\s*[章回節卷部話]/);
+        if (mCn) {
+          mainNum = chineseToNumber(mCn[1]);
+        }
+      }
+    }
   }
 
-  return null;
+  if (mainNum === null) return null;
+
+  // 3. 探測子篇章語意標記 (上/中/下、前篇/後篇、其之一、(1)/(2) 等)
+  // 必須被括號包裹，或位於標題末尾且前面有空白/分隔符號，避免誤判一般標題中的字（如「前夕」、「天下」、「結果」）
+  let subOffset = 0.0;
+  const isPart1 = /[（\(【\[]\s*(?:上|上篇|前篇|前|其之一|其一|Part\s*1)\s*[）\)】\]]/i.test(t) ||
+                  /(?:[\s\-_:：/]+)(?:上|上篇|前篇|其之一|其一|Part\s*1)\s*$/i.test(t);
+
+  const isPart2 = /[（\(【\[]\s*(?:中|中篇|其之二|其二|Part\s*2)\s*[）\)】\]]/i.test(t) ||
+                  /(?:[\s\-_:：/]+)(?:中|中篇|其之二|其二|Part\s*2)\s*$/i.test(t);
+
+  const isPart3 = /[（\(【\[]\s*(?:下|下篇|後篇|後|其之三|其三|Part\s*3)\s*[）\)】\]]/i.test(t) ||
+                  /(?:[\s\-_:：/]+)(?:下|下篇|後篇|其之三|其三|Part\s*3)\s*$/i.test(t);
+
+  const isPart4 = /[（\(【\[]\s*(?:完|終|其之四|其四|Part\s*4|完結篇)\s*[）\)】\]]/i.test(t) ||
+                  /(?:[\s\-_:：/]+)(?:完|終|其之四|其四|Part\s*4|完結篇)\s*$/i.test(t);
+
+  if (isPart1 && !isPart3) {
+    subOffset = 0.1;
+  } else if (isPart2) {
+    subOffset = 0.2;
+  } else if (isPart3) {
+    subOffset = 0.3;
+  } else if (isPart4) {
+    subOffset = 0.4;
+  } else {
+    // 括號數字子章節, 如: (1), (2), [3] (出現在章號之後)
+    const mSubNum = t.match(/[（\(【\[]\s*(\d+)\s*[）\)】\]]/);
+    if (mSubNum && parseInt(mSubNum[1], 10) !== mainNum) {
+      subOffset = Math.min(0.9, parseInt(mSubNum[1], 10) * 0.01);
+    }
+  }
+
+  return Math.round((mainNum + subOffset) * 100) / 100;
 }
 
 /**
- * 增量章節比對與自然拓撲排序核心演算法 (四級優先級)
+ * 增量章節比對與自然拓撲排序核心演算法 (四級優先級 + 子篇章排序)
  * @param {Array<Object>} onlineChapters - [{ title, url, csn }]
  * @param {Array<Object>} existingBookChapters - 書籍中現存章節 [{ title, url, csn }]
  * @param {Array<string>} historicalKeys - 爬蟲歷史已抓取池 (含手動刪除/分割過的章節防幽靈回溯)
@@ -478,23 +538,35 @@ export function diffOnlineChapters(onlineChapters = [], existingBookChapters = [
     }
   }
 
-  // 2. 排除現存於書籍與歷史庫存池之章節 (幽靈章節雙重防護)
-  const existingSet = new Set(
-    existingBookChapters
-      .map(c => c.url || (c.csn ? String(c.csn) : null))
-      .filter(Boolean)
-  );
+  // 2. 排除現存於書籍與歷史庫存池之章節 (全維度排重: CSN + URL + 完整標準化標題)
+  const existingSet = new Set();
+  const existingTitles = new Set();
+
+  existingBookChapters.forEach(c => {
+    if (c.url) existingSet.add(c.url);
+    if (c.csn) existingSet.add(String(c.csn));
+    if (c.title) existingTitles.add(c.title.trim().toLowerCase());
+  });
+
   const historySet = new Set((historicalKeys || []).map(String));
 
   const candidates = uniqueList.filter(ch => {
     const urlKey = ch.url;
     const csnKey = ch.csn ? String(ch.csn) : null;
-    const inBook = (urlKey && existingSet.has(urlKey)) || (csnKey && existingSet.has(csnKey));
-    const inHistory = (urlKey && historySet.has(urlKey)) || (csnKey && historySet.has(csnKey));
+    const titleKey = (ch.title || '').trim().toLowerCase();
+
+    const inBook = (urlKey && existingSet.has(urlKey)) ||
+                   (csnKey && existingSet.has(csnKey)) ||
+                   (titleKey && existingTitles.has(titleKey));
+
+    const inHistory = (urlKey && historySet.has(urlKey)) ||
+                      (csnKey && historySet.has(csnKey)) ||
+                      (titleKey && historySet.has(titleKey));
+
     return !inBook && !inHistory;
   });
 
-  // 3. 自然數值拓撲排序 (解決最新 10 章置頂倒序排列問題)
+  // 3. 自然數值拓撲排序 (支援主回數與子篇章語意權重正序排列)
   let parsedCount = 0;
   const withNumbers = candidates.map(ch => {
     const num = parseChapterNumber(ch.title);
@@ -503,7 +575,7 @@ export function diffOnlineChapters(onlineChapters = [], existingBookChapters = [
   });
 
   if (parsedCount >= Math.max(2, candidates.length * 0.4)) {
-    // 依章節回數正序排列
+    // 依章節回數與子篇章正序排列
     withNumbers.sort((a, b) => {
       if (a.parsedNumber !== null && b.parsedNumber !== null) {
         return a.parsedNumber - b.parsedNumber;

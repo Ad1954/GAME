@@ -112,6 +112,7 @@ export class BookshelfView {
           await storage.updateBookCategory(this.currentMoveBookId, targetCatId);
           this.closeMoveBookModal();
           this.loadBooks();
+          eventBus.emit('bookshelf:refresh'); // Story 36: 通知爬蟲面板與其他檢視即時重新整理紀錄
           eventBus.emit('toast', { message: '書籍分類已成功變更！' });
         } catch (e) {
           alert(`移動失敗: ${e.message}`);
@@ -201,7 +202,7 @@ export class BookshelfView {
             eventBus.emit('reader:openBook', book.id);
           } else if (file.name.endsWith('.txt')) {
             showProgress(`正在解析純文字小說: 《${file.name}》...`);
-            const text = await file.text();
+            const text = await TxtParser.readTextFileWithEncoding(file);
             const bookTitle = file.name.replace(/\.[^/.]+$/, '');
             const bookId = `book_txt_${Date.now()}`;
             const chapters = TxtParser.parse(text, bookId);

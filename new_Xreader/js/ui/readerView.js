@@ -22,6 +22,18 @@ export class ReaderView {
     // Reader Content Edit Controls (Story 21, GWT 21.2)
     this.btnEditChapter = document.getElementById('btn-reader-edit-chapter');
     this.btnBatchReplace = document.getElementById('btn-reader-batch-replace');
+    this.btnSplitChapter = document.getElementById('btn-reader-split-chapter');
+
+    // Split Chapter Controls & Floating Button (Story 34, 方案 A)
+    this.floatingSplitBtn = document.getElementById('reader-floating-split-btn');
+    this.splitModal = document.getElementById('split-chapter-modal');
+    this.splitModalTitleInput = document.getElementById('split-modal-new-title');
+    this.splitModalPreview = document.getElementById('split-modal-sentence-preview');
+    this.btnCloseSplitModal = document.getElementById('btn-close-split-modal');
+    this.btnCancelSplitModal = document.getElementById('btn-cancel-split-chapter');
+    this.btnConfirmSplitModal = document.getElementById('btn-confirm-split-chapter');
+
+    this.pendingSplit = null;
 
     this.currentBook = null;
     this.currentChapters = [];
@@ -85,6 +97,70 @@ export class ReaderView {
           });
         }
       });
+    }
+
+    // Story 34 (方案 A): Split Chapter Event Listeners
+    if (this.btnSplitChapter) {
+      this.btnSplitChapter.addEventListener('click', () => this.openSplitModal());
+    }
+
+    if (this.floatingSplitBtn) {
+      this.floatingSplitBtn.addEventListener('mousedown', (e) => {
+        // Prevent selection from clearing when clicking floating button
+        e.preventDefault();
+      });
+      this.floatingSplitBtn.addEventListener('click', () => this.openSplitModal());
+    }
+
+    if (this.btnCloseSplitModal) {
+      this.btnCloseSplitModal.addEventListener('click', () => this.closeSplitModal());
+    }
+    if (this.btnCancelSplitModal) {
+      this.btnCancelSplitModal.addEventListener('click', () => this.closeSplitModal());
+    }
+    if (this.btnConfirmSplitModal) {
+      this.btnConfirmSplitModal.addEventListener('click', () => this.confirmSplitChapter());
+    }
+
+    // Floating button position tracker on text selection
+    const handleSelection = () => {
+      if (!this.floatingSplitBtn || !this.panel || this.panel.style.display === 'none') return;
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.rangeCount) {
+        this.floatingSplitBtn.style.display = 'none';
+        return;
+      }
+      const range = sel.getRangeAt(0);
+      if (!this.bodyEl || !this.bodyEl.contains(range.commonAncestorContainer)) {
+        this.floatingSplitBtn.style.display = 'none';
+        return;
+      }
+      const text = sel.toString().trim();
+      if (text.length === 0) {
+        this.floatingSplitBtn.style.display = 'none';
+        return;
+      }
+
+      let startNode = range.startContainer;
+      if (startNode.nodeType === Node.TEXT_NODE) startNode = startNode.parentElement;
+      const sentenceEl = startNode ? startNode.closest('.sentence') : null;
+      if (!sentenceEl || sentenceEl.dataset.idx === undefined) {
+        this.floatingSplitBtn.style.display = 'none';
+        return;
+      }
+
+      const rect = range.getBoundingClientRect();
+      const topPos = Math.max(10, rect.top - 44);
+      const leftPos = Math.max(10, Math.min(window.innerWidth - 180, rect.left + rect.width / 2 - 60));
+      this.floatingSplitBtn.style.top = `${topPos}px`;
+      this.floatingSplitBtn.style.left = `${leftPos}px`;
+      this.floatingSplitBtn.style.display = 'flex';
+    };
+
+    document.addEventListener('selectionchange', handleSelection);
+    if (this.bodyEl) {
+      this.bodyEl.addEventListener('mouseup', handleSelection);
+      this.bodyEl.addEventListener('touchend', () => setTimeout(handleSelection, 100));
     }
 
     if (this.chapterSelect) {
@@ -338,6 +414,7 @@ export class ReaderView {
   }
 
   hideReader() {
+    if (this.floatingSplitBtn) this.floatingSplitBtn.style.display = 'none';
     if (this.panel) this.panel.style.display = 'none';
     const shelf = document.getElementById('bookshelf-wrapper');
     if (shelf) shelf.style.display = 'block';
@@ -420,6 +497,116 @@ export class ReaderView {
       }
     } catch (err) {
       console.warn('Refresh book chapters error:', err);
+    }
+  }
+
+  /**
+   * 開啟手動分割章節確認彈窗 (Story 34, GWT 34.1, 34.3)
+   */
+  openSplitModal() {
+    player.pause();
+    if (!this.currentBook || !this.currentChapter) {
+      alert('目前無開啟的書籍或章節！');
+      return;
+    }
+
+    let targetSentenceIdx = -1;
+    let suggestedTitle = '';
+    let previewText = '';
+
+    // 1. 優先檢查反白選取文字 (Selection)
+    const sel = window.getSelection ? window.getSelection() : null;
+    if (sel && !sel.isCollapsed && sel.rangeCount) {
+      const range = sel.getRangeAt(0);
+      if (this.bodyEl && this.bodyEl.contains(range.commonAncestorContainer)) {
+        let startNode = range.startContainer;
+        if (startNode.nodeType === Node.TEXT_NODE) startNode = startNode.parentElement;
+        const sentenceEl = startNode ? startNode.closest('.sentence') : null;
+        if (sentenceEl && sentenceEl.dataset.idx !== undefined) {
+          targetSentenceIdx = parseInt(sentenceEl.dataset.idx, 10);
+          suggestedTitle = sel.toString().trim().slice(0, 40);
+          previewText = sentenceEl.textContent || '';
+        }
+      }
+    }
+
+    // 2. 次要回退：使用目前閱讀游標/播放中句子
+    if (targetSentenceIdx === -1) {
+      if (typeof player.currentSentenceIndex === 'number' && player.currentSentenceIndex > 0) {
+        targetSentenceIdx = player.currentSentenceIndex;
+        const sentenceEl = this.bodyEl ? this.bodyEl.querySelector(`.sentence[data-idx="${targetSentenceIdx}"]`) : null;
+        if (sentenceEl) {
+          previewText = sentenceEl.textContent || '';
+          suggestedTitle = previewText.slice(0, 40);
+        }
+      }
+    }
+
+    if (targetSentenceIdx === -1) {
+      alert('請先在內文反白選取（或點擊選定）欲作為新章節開頭的文字！');
+      return;
+    }
+
+    const totalSentences = this.currentChapter.sentencesCount || 1;
+    if (targetSentenceIdx <= 0) {
+      alert('無法在章節最前端（第 1 句）進行分割，避免產生空白章節！');
+      return;
+    }
+    if (targetSentenceIdx >= totalSentences) {
+      alert('無法在章節最末尾進行分割，避免產生空白章節！');
+      return;
+    }
+
+    this.pendingSplit = {
+      bookId: this.currentBook.id,
+      chapterIndex: this.currentChapter.index,
+      sentenceIndex: targetSentenceIdx
+    };
+
+    if (this.splitModalTitleInput) {
+      this.splitModalTitleInput.value = suggestedTitle;
+    }
+    if (this.splitModalPreview) {
+      this.splitModalPreview.textContent = `第 ${targetSentenceIdx + 1} 句：「${previewText}」`;
+    }
+
+    if (this.floatingSplitBtn) {
+      this.floatingSplitBtn.style.display = 'none';
+    }
+    if (this.splitModal) {
+      this.splitModal.classList.add('active');
+    }
+  }
+
+  closeSplitModal() {
+    if (this.splitModal) {
+      this.splitModal.classList.remove('active');
+    }
+    this.pendingSplit = null;
+  }
+
+  async confirmSplitChapter() {
+    if (!this.pendingSplit) return;
+    const { bookId, chapterIndex, sentenceIndex } = this.pendingSplit;
+    const newTitle = (this.splitModalTitleInput ? this.splitModalTitleInput.value : '').trim();
+
+    try {
+      const res = await storage.splitChapterAtSentence(bookId, chapterIndex, sentenceIndex, newTitle);
+      this.closeSplitModal();
+
+      // 重新整理書籍章節清單與選單
+      await this.refreshBookChapters();
+
+      // 自動跳轉至新切出的章節
+      await this.loadChapterByIndex(res.newChapterIndex, 0, false);
+
+      eventBus.emit('bookshelf:refresh');
+      eventBus.emit('toast', {
+        message: `章節已成功拆分！已開啟新章節《${res.newChapter.title}》`
+      });
+    } catch (err) {
+      console.error('Split chapter error:', err);
+      alert(`分割失敗: ${err.message}`);
     }
   }
 }

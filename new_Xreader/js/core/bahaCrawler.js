@@ -341,6 +341,8 @@ export class BahaCrawlerService {
       endPage = null,
       sortOrder = 'asc',
       categoryId = 'uncategorized',
+      targetBookId = null,
+      recordId = null,
       onProgress = () => {}
     } = options;
 
@@ -354,20 +356,32 @@ export class BahaCrawlerService {
       onProgress
     });
 
-    const bookTitle = customTitle.trim() || catalog.title;
-    const bookId = `book_baha_${Date.now()}`;
-    const book = {
-      id: bookId,
-      title: bookTitle,
-      author: catalog.author,
-      sourceType: 'bahamut',
-      sourceUrl: typeof input === 'string' ? input : `https://home.gamer.com.tw/profile/index_creation.php?owner=${catalog.owner}`,
-      categoryId: categoryId || 'uncategorized',
-      totalChapters: catalog.articles.length,
-      downloadedChaptersCount: 0,
-      lastChapterIndex: 0,
-      lastSentenceIndex: 0
-    };
+    let bookId = targetBookId;
+    let book = null;
+    if (bookId) {
+      book = await storage.getBook(bookId);
+    }
+
+    if (!book) {
+      const bookTitle = customTitle.trim() || catalog.title;
+      bookId = `book_baha_${Date.now()}`;
+      book = {
+        id: bookId,
+        title: bookTitle,
+        author: catalog.author,
+        sourceType: 'bahamut',
+        sourceUrl: typeof input === 'string' ? input : `https://home.gamer.com.tw/profile/index_creation.php?owner=${catalog.owner}`,
+        categoryId: categoryId || 'uncategorized',
+        totalChapters: catalog.articles.length,
+        downloadedChaptersCount: 0,
+        lastChapterIndex: 0,
+        lastSentenceIndex: 0
+      };
+    } else {
+      book.totalChapters = catalog.articles.length;
+      book.downloadedChaptersCount = 0;
+      book.updatedAt = Date.now();
+    }
 
     // Save initial book record
     await storage.saveBook(book);
@@ -432,6 +446,7 @@ export class BahaCrawlerService {
     const allUrls = catalog.articles.map(a => a.url).filter(Boolean);
     const lastArticle = catalog.articles[catalog.articles.length - 1];
     storage.saveCrawlerRecord({
+      id: recordId || undefined,
       bookId: book.id,
       bookTitle: book.title,
       sourceUrl: book.sourceUrl,

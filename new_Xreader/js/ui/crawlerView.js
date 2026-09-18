@@ -7,6 +7,7 @@ import { crawler, DEFAULT_PROXIES, diffOnlineChapters, isLocalEnvironment } from
 import { bahaCrawler } from '../core/bahaCrawler.js';
 import { storage } from '../core/storage.js';
 import { TextSegmenter } from '../core/segmenter.js';
+import { TxtParser } from '../core/txtParser.js';
 import { eventBus } from '../eventBus.js';
 
 export class CrawlerView {
@@ -45,11 +46,27 @@ export class CrawlerView {
     this.btnStartBaha = document.getElementById('btn-start-baha-crawl');
     this.btnCancelBaha = document.getElementById('btn-cancel-baha-crawl');
 
+    // Bahamut Progress Elements (Story 38)
+    this.bahaProgressContainer = document.getElementById('baha-progress-box');
+    this.bahaProgressFill = document.getElementById('baha-progress-fill');
+    this.bahaStatusText = document.getElementById('baha-status-text');
+    this.bahaLogBox = document.getElementById('baha-log');
+
     // Crawler History Records (Story 27)
     this.recordsList = document.getElementById('crawler-records-list');
     this.recordsEmpty = document.getElementById('crawler-records-empty');
     this.recordsCountBadge = document.getElementById('crawler-records-count-badge');
     this.btnRefreshRecords = document.getElementById('btn-refresh-crawler-records');
+    this.crawlerRecordsCard = this.recordsList ? this.recordsList.closest('.card') : null;
+    this.currentSubTab = 'sub-panel-web'; // Story 38: 追蹤當前子分頁
+
+    // Crawler Re-download Modal (Story 37)
+    this.redownloadModal = document.getElementById('crawler-redownload-modal');
+    this.redownloadBookTitle = document.getElementById('redownload-book-title');
+    this.btnCancelRedownload = document.getElementById('btn-cancel-redownload');
+    this.btnCloseRedownload = document.getElementById('btn-close-redownload-modal');
+    this.btnConfirmRedownload = document.getElementById('btn-confirm-redownload');
+    this.pendingRedownload = null;
 
     // Incremental Update Modal Elements (Story 27)
     this.updateModal = document.getElementById('crawler-update-modal');
@@ -72,6 +89,7 @@ export class CrawlerView {
     this.fileStatus = document.getElementById('file-upload-status');
 
     // Paste Text Elements
+    this.pasteInboxMode = document.getElementById('paste-inbox-mode');
     this.pasteTitle = document.getElementById('paste-book-title');
     this.pasteContent = document.getElementById('paste-book-content');
     this.btnLoadPaste = document.getElementById('btn-load-paste');
@@ -176,6 +194,10 @@ export class CrawlerView {
         btn.classList.add('active');
         const p = document.getElementById(target);
         if (p) p.classList.add('active');
+
+        // Story 38: 紀錄當前子分頁並即時依分頁過濾歷史紀錄
+        this.currentSubTab = target;
+        this.renderCrawlerRecords();
       });
     });
 
@@ -245,7 +267,7 @@ export class CrawlerView {
     if (this.btnCancelBaha) {
       this.btnCancelBaha.addEventListener('click', () => {
         bahaCrawler.cancel();
-        this.appendLog('🛑 使用者已按下取消巴哈抓取。');
+        this.appendBahaLog('🛑 使用者已按下取消巴哈抓取。');
       });
     }
 
@@ -253,8 +275,14 @@ export class CrawlerView {
     const handleQuickAddCat = () => {
       const newCat = storage.createCategory();
       this.renderCategoryOptions();
-      if (this.crawlerCategorySelect) this.crawlerCategorySelect.value = newCat.id;
-      if (this.bahaCategorySelect) this.bahaCategorySelect.value = newCat.id;
+      if (this.crawlerCategorySelect) {
+        this.crawlerCategorySelect.value = newCat.id;
+        localStorage.setItem('xreader_last_crawler_cat', newCat.id);
+      }
+      if (this.bahaCategorySelect) {
+        this.bahaCategorySelect.value = newCat.id;
+        localStorage.setItem('xreader_last_baha_cat', newCat.id);
+      }
       eventBus.emit('category:changed');
       eventBus.emit('bookshelf:refresh');
       eventBus.emit('toast', { message: `已建立書櫃分類「${newCat.name}」！` });
@@ -263,14 +291,20 @@ export class CrawlerView {
     if (this.btnCrawlerAddCat) this.btnCrawlerAddCat.addEventListener('click', handleQuickAddCat);
     if (this.btnBahaAddCat) this.btnBahaAddCat.addEventListener('click', handleQuickAddCat);
 
-    // Auto reload categories on select focus/click
+    // Auto reload categories on select focus/click & persist selection (Story 36)
     if (this.crawlerCategorySelect) {
       this.crawlerCategorySelect.addEventListener('focus', () => this.renderCategoryOptions());
       this.crawlerCategorySelect.addEventListener('mousedown', () => this.renderCategoryOptions());
+      this.crawlerCategorySelect.addEventListener('change', (e) => {
+        localStorage.setItem('xreader_last_crawler_cat', e.target.value);
+      });
     }
     if (this.bahaCategorySelect) {
       this.bahaCategorySelect.addEventListener('focus', () => this.renderCategoryOptions());
       this.bahaCategorySelect.addEventListener('mousedown', () => this.renderCategoryOptions());
+      this.bahaCategorySelect.addEventListener('change', (e) => {
+        localStorage.setItem('xreader_last_baha_cat', e.target.value);
+      });
     }
 
     // Refresh Crawler Records
@@ -309,6 +343,17 @@ export class CrawlerView {
     }
     if (this.btnConfirmUpdate) {
       this.btnConfirmUpdate.addEventListener('click', () => this.executeIncrementalUpdate());
+    }
+
+    // Re-download Modal Events (Story 37)
+    if (this.btnCancelRedownload) {
+      this.btnCancelRedownload.addEventListener('click', () => this.closeRedownloadModal());
+    }
+    if (this.btnCloseRedownload) {
+      this.btnCloseRedownload.addEventListener('click', () => this.closeRedownloadModal());
+    }
+    if (this.btnConfirmRedownload) {
+      this.btnConfirmRedownload.addEventListener('click', () => this.executeRedownload());
     }
 
     // File Dropzone
@@ -368,12 +413,12 @@ export class CrawlerView {
       }
     }
 
-    if (this.progressContainer) this.progressContainer.style.display = 'block';
+    if (this.bahaProgressContainer) this.bahaProgressContainer.style.display = 'block';
     if (this.btnStartBaha) this.btnStartBaha.disabled = true;
     if (this.btnCancelBaha) this.btnCancelBaha.style.display = 'inline-block';
-    if (this.logBox) this.logBox.innerHTML = '';
-    if (this.progressFill) this.progressFill.style.width = '0%';
-    if (this.statusText) this.statusText.textContent = '連線巴哈姆特 API 中...';
+    if (this.bahaLogBox) this.bahaLogBox.innerHTML = '';
+    if (this.bahaProgressFill) this.bahaProgressFill.style.width = '0%';
+    if (this.bahaStatusText) this.bahaStatusText.textContent = '連線巴哈姆特 API 中...';
 
     const delay = parseFloat(this.delaySlider ? this.delaySlider.value : 1.5);
     const customTitle = (this.bahaTitleInput ? this.bahaTitleInput.value : '').trim();
@@ -393,16 +438,16 @@ export class CrawlerView {
         categoryId: targetCategory,
         onProgress: (info) => {
           if (info.status === 'fetching_catalog') {
-            if (this.statusText) this.statusText.textContent = info.message;
-            this.appendLog(info.message);
+            if (this.bahaStatusText) this.bahaStatusText.textContent = info.message;
+            this.appendBahaLog(info.message);
           } else if (info.status === 'downloading') {
-            if (this.progressFill) this.progressFill.style.width = `${info.percent}%`;
-            if (this.statusText) this.statusText.textContent = `[${info.percent}%] ${info.message}`;
-            if (info.title) this.appendLog(`✔ 已下載: ${info.title}`);
+            if (this.bahaProgressFill) this.bahaProgressFill.style.width = `${info.percent}%`;
+            if (this.bahaStatusText) this.bahaStatusText.textContent = `[${info.percent}%] ${info.message}`;
+            if (info.title) this.appendBahaLog(`✔ 已下載: ${info.title}`);
           } else if (info.status === 'completed') {
-            if (this.progressFill) this.progressFill.style.width = '100%';
-            if (this.statusText) this.statusText.textContent = info.message;
-            this.appendLog(`🎉 ${info.message}`);
+            if (this.bahaProgressFill) this.bahaProgressFill.style.width = '100%';
+            if (this.bahaStatusText) this.bahaStatusText.textContent = info.message;
+            this.appendBahaLog(`🎉 ${info.message}`);
             eventBus.emit('bookshelf:refresh');
             this.renderCrawlerRecords();
             const bTitle = (info && info.book && info.book.title) ? info.book.title : '巴哈創作集';
@@ -412,15 +457,15 @@ export class CrawlerView {
               onAction: () => eventBus.emit('nav:switchTab', 'tab-bookshelf')
             });
           } else if (info.status === 'cancelled') {
-            if (this.statusText) this.statusText.textContent = info.message;
-            this.appendLog(`🛑 ${info.message}`);
+            if (this.bahaStatusText) this.bahaStatusText.textContent = info.message;
+            this.appendBahaLog(`🛑 ${info.message}`);
           }
         }
       });
     } catch (err) {
       console.error('Baha Crawler Error:', err);
-      if (this.statusText) this.statusText.textContent = `錯誤: ${err.message}`;
-      this.appendLog(`❌ 失敗: ${err.message}`);
+      if (this.bahaStatusText) this.bahaStatusText.textContent = `錯誤: ${err.message}`;
+      this.appendBahaLog(`❌ 失敗: ${err.message}`);
       alert(`巴哈小屋抓取失敗: ${err.message}`);
     } finally {
       if (this.btnStartBaha) this.btnStartBaha.disabled = false;
@@ -583,46 +628,12 @@ export class CrawlerView {
         });
         eventBus.emit('reader:openBook', book.id);
       } else if (file.name.endsWith('.txt')) {
-        // Plain text file
-        const text = await file.text();
+        // Plain text file with smart encoding detection & strategy parsing
+        showProgress(`正在解析純文字小說: 《${file.name}》...`);
+        const text = await TxtParser.readTextFileWithEncoding(file);
         const bookTitle = file.name.replace(/\.[^/.]+$/, '');
         const bookId = `book_txt_${Date.now()}`;
-
-        // Auto split chapters by standard headings (第...章)
-        const chapterPattern = /(第[0-9一二三四五六七八九十百千]+[章回節卷部話][^\r\n]*)/g;
-        const parts = text.split(chapterPattern);
-
-        const chapters = [];
-        if (parts.length > 1) {
-          let cIdx = 0;
-          for (let i = 1; i < parts.length; i += 2) {
-            const chapTitle = parts[i].trim();
-            const chapBody = (parts[i + 1] || '').trim();
-            const { paragraphs, flatSentences } = TextSegmenter.segment(chapBody);
-            chapters.push({
-              id: `${bookId}_${cIdx}`,
-              bookId,
-              index: cIdx,
-              title: chapTitle,
-              content: chapBody,
-              paragraphs,
-              sentencesCount: flatSentences.length
-            });
-            cIdx++;
-          }
-        } else {
-          // Whole text as single chapter
-          const { paragraphs, flatSentences } = TextSegmenter.segment(text);
-          chapters.push({
-            id: `${bookId}_0`,
-            bookId,
-            index: 0,
-            title: '全文',
-            content: text,
-            paragraphs,
-            sentencesCount: flatSentences.length
-          });
-        }
+        const chapters = TxtParser.parse(text, bookId);
 
         const book = {
           id: bookId,
@@ -661,48 +672,116 @@ export class CrawlerView {
   }
 
   async handlePasteImport() {
-    const title = this.pasteTitle.value.trim() || '自訂文字朗讀';
-    const content = this.pasteContent.value.trim();
-
+    const content = (this.pasteContent ? this.pasteContent.value : '').trim();
     if (!content) {
       alert('請先貼入文章內容！');
       return;
     }
 
-    const bookId = `book_paste_${Date.now()}`;
-    const { paragraphs, flatSentences } = TextSegmenter.segment(content);
+    const rawTitle = (this.pasteTitle ? this.pasteTitle.value : '').trim();
+    const isInbox = this.pasteInboxMode ? this.pasteInboxMode.checked : true;
 
-    const chapter = {
-      id: `${bookId}_0`,
-      bookId,
-      index: 0,
-      title: '全文',
-      content,
-      paragraphs,
-      sentencesCount: flatSentences.length
-    };
+    if (isInbox) {
+      // 集中存入常駐「📋 臨時剪貼簿」
+      const INBOX_BOOK_ID = 'book_inbox_clipboard';
+      let inboxBook = await storage.getBook(INBOX_BOOK_ID);
+      if (!inboxBook) {
+        inboxBook = {
+          id: INBOX_BOOK_ID,
+          title: '📋 臨時剪貼簿',
+          author: '手動收集箱',
+          sourceType: 'paste',
+          categoryId: 'uncategorized',
+          totalChapters: 0,
+          downloadedChaptersCount: 0,
+          lastChapterIndex: 0,
+          lastSentenceIndex: 0,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        };
+        await storage.saveBook(inboxBook);
+      }
 
-    const book = {
-      id: bookId,
-      title,
-      author: '手動貼上',
-      sourceType: 'paste',
-      totalChapters: 1,
-      downloadedChaptersCount: 1,
-      lastChapterIndex: 0,
-      lastSentenceIndex: 0
-    };
+      // 章節標題自動摘要 (若未填寫或維持預設則自動擷取內文前 20 字)
+      let chapTitle = rawTitle;
+      if (!chapTitle || chapTitle === '自訂文字朗讀' || chapTitle === '貼上文字朗讀') {
+        const cleanSnippet = content.replace(/\s+/g, ' ').trim().slice(0, 20);
+        chapTitle = cleanSnippet.length > 0 ? `${cleanSnippet}...` : `篇章 ${inboxBook.totalChapters + 1}`;
+      }
 
-    await storage.saveBook(book);
-    await storage.saveChapter(chapter);
+      const { paragraphs, flatSentences } = TextSegmenter.segment(content);
+      const newChapterData = {
+        title: chapTitle,
+        content,
+        paragraphs,
+        sentencesCount: flatSentences.length
+      };
 
-    this.pasteContent.value = '';
-    eventBus.emit('bookshelf:refresh');
-    eventBus.emit('toast', {
-      message: `已新增貼上文本《${title}》！`,
-      actionLabel: '前往書櫃閱讀',
-      onAction: () => eventBus.emit('nav:switchTab', 'tab-bookshelf')
-    });
+      const appendRes = await storage.appendChaptersToBook(INBOX_BOOK_ID, [newChapterData]);
+      const targetBook = appendRes.book;
+      const newChapIndex = Math.max(0, targetBook.totalChapters - 1);
+
+      // 更新進度鎖定於最新章節起點，並保存
+      targetBook.lastChapterIndex = newChapIndex;
+      targetBook.lastSentenceIndex = 0;
+      await storage.saveBook(targetBook);
+
+      this.pasteContent.value = '';
+      if (this.pasteTitle) this.pasteTitle.value = '';
+
+      eventBus.emit('bookshelf:refresh');
+      eventBus.emit('toast', {
+        message: `已存入《📋 臨時剪貼簿》第 ${targetBook.totalChapters} 篇（${chapTitle}）！`,
+        actionLabel: '前往閱讀',
+        onAction: () => eventBus.emit('reader:openBook', INBOX_BOOK_ID)
+      });
+
+      // 直接跳轉至閱讀器並開啟該最新篇章朗讀
+      eventBus.emit('reader:openBook', INBOX_BOOK_ID);
+    } else {
+      // 獨立建立新書
+      const title = rawTitle || '自訂文字朗讀';
+      const bookId = `book_paste_${Date.now()}`;
+      const { paragraphs, flatSentences } = TextSegmenter.segment(content);
+
+      const chapter = {
+        id: `${bookId}_0`,
+        bookId,
+        index: 0,
+        title: '全文',
+        content,
+        paragraphs,
+        sentencesCount: flatSentences.length
+      };
+
+      const book = {
+        id: bookId,
+        title,
+        author: '手動貼上',
+        sourceType: 'paste',
+        categoryId: 'uncategorized',
+        totalChapters: 1,
+        downloadedChaptersCount: 1,
+        lastChapterIndex: 0,
+        lastSentenceIndex: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+
+      await storage.saveBook(book);
+      await storage.saveChapter(chapter);
+
+      this.pasteContent.value = '';
+      if (this.pasteTitle) this.pasteTitle.value = '';
+
+      eventBus.emit('bookshelf:refresh');
+      eventBus.emit('toast', {
+        message: `已新增獨立文本《${title}》！`,
+        actionLabel: '前往閱讀',
+        onAction: () => eventBus.emit('reader:openBook', book.id)
+      });
+      eventBus.emit('reader:openBook', book.id);
+    }
   }
 
   appendLog(msg) {
@@ -713,14 +792,23 @@ export class CrawlerView {
     this.logBox.scrollTop = this.logBox.scrollHeight;
   }
 
+  appendBahaLog(msg) {
+    if (!this.bahaLogBox) return;
+    const p = document.createElement('div');
+    p.textContent = msg;
+    this.bahaLogBox.appendChild(p);
+    this.bahaLogBox.scrollTop = this.bahaLogBox.scrollHeight;
+  }
+
   // ==========================================================
-  // 目標分類下拉選單管理 (Story 28)
+  // 目標分類下拉選單管理 (Story 28 & Story 36)
   // ==========================================================
   renderCategoryOptions() {
     const categories = storage.getCategories();
-    const updateSelect = (selectEl) => {
+    const updateSelect = (selectEl, storageKey) => {
       if (!selectEl) return;
       const currentVal = selectEl.value;
+      const savedVal = localStorage.getItem(storageKey);
       selectEl.innerHTML = '';
       categories.forEach(c => {
         const opt = document.createElement('option');
@@ -730,41 +818,82 @@ export class CrawlerView {
       });
       if (currentVal && categories.some(c => c.id === currentVal)) {
         selectEl.value = currentVal;
+      } else if (savedVal && categories.some(c => c.id === savedVal)) {
+        selectEl.value = savedVal;
       }
     };
 
-    updateSelect(this.crawlerCategorySelect);
-    updateSelect(this.bahaCategorySelect);
+    updateSelect(this.crawlerCategorySelect, 'xreader_last_crawler_cat');
+    updateSelect(this.bahaCategorySelect, 'xreader_last_baha_cat');
   }
 
   // ==========================================================
-  // 爬蟲歷史紀錄與追更管理 (Story 27)
+  // 爬蟲歷史紀錄與追更管理 (Story 27, 36, 37, 38)
   // ==========================================================
-  renderCrawlerRecords() {
+  async renderCrawlerRecords() {
     if (!this.recordsList) return;
     const records = storage.getCrawlerRecords();
     const categories = storage.getCategories();
     const catMap = new Map(categories.map(c => [c.id, c.name]));
 
-    if (this.recordsCountBadge) {
-      this.recordsCountBadge.textContent = `${records.length} 筆紀錄`;
+    // Pre-fetch all books to resolve live category (Story 36)
+    const allBooks = await storage.getAllBooks();
+    const bookMap = new Map(allBooks.map(b => [b.id, b]));
+
+    // Story 38: 依子分頁過濾爬蟲紀錄
+    let filteredRecords = records;
+    let badgeSuffix = '筆紀錄';
+    let emptyMsg = '尚無爬蟲紀錄。使用上方爬蟲完成抓取後，系統將自動儲存來源網址與對應書籍，讓您隨時一鍵追更！';
+
+    if (this.currentSubTab === 'sub-panel-web') {
+      if (this.crawlerRecordsCard) this.crawlerRecordsCard.style.display = 'block';
+      filteredRecords = records.filter(r => r.sourceType !== 'bahamut');
+      badgeSuffix = '筆網頁紀錄';
+      emptyMsg = '尚無網頁爬蟲紀錄。使用上方小說目錄網址完成抓取後，系統將自動儲存紀錄！';
+    } else if (this.currentSubTab === 'sub-panel-baha') {
+      if (this.crawlerRecordsCard) this.crawlerRecordsCard.style.display = 'block';
+      filteredRecords = records.filter(r => r.sourceType === 'bahamut');
+      badgeSuffix = '筆巴哈紀錄';
+      emptyMsg = '尚無巴哈爬蟲紀錄。使用上方巴哈小屋創作網址完成抓取後，系統將自動儲存紀錄！';
+    } else {
+      // 本地檔案匯入或手動貼上文字分頁時隱藏爬蟲歷史
+      if (this.crawlerRecordsCard) this.crawlerRecordsCard.style.display = 'none';
+      return;
     }
 
-    if (records.length === 0) {
+    if (this.recordsCountBadge) {
+      this.recordsCountBadge.textContent = `${filteredRecords.length} ${badgeSuffix}`;
+    }
+
+    if (filteredRecords.length === 0) {
       this.recordsList.innerHTML = '';
-      if (this.recordsEmpty) this.recordsEmpty.style.display = 'block';
+      if (this.recordsEmpty) {
+        this.recordsEmpty.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px; opacity: 0.5;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div>${emptyMsg}</div>
+        `;
+        this.recordsEmpty.style.display = 'block';
+      }
       return;
     }
 
     if (this.recordsEmpty) this.recordsEmpty.style.display = 'none';
     this.recordsList.innerHTML = '';
 
-    records.forEach(rec => {
+    filteredRecords.forEach(rec => {
       const card = document.createElement('div');
       card.className = 'crawler-record-card';
 
       const typeLabel = rec.sourceType === 'bahamut' ? '巴哈創作' : '線上網頁';
-      const catName = catMap.get(rec.targetCategoryId) || '未分類';
+
+      // Story 36: Live category resolution from bookshelf
+      const liveBook = rec.bookId ? bookMap.get(rec.bookId) : null;
+      const effectiveCatId = liveBook ? (liveBook.categoryId || 'uncategorized') : (rec.targetCategoryId || 'uncategorized');
+      const catName = catMap.get(effectiveCatId) || '未分類';
+      if (liveBook && rec.targetCategoryId !== effectiveCatId) {
+        storage.updateCrawlerRecordCategory(rec.bookId, effectiveCatId);
+      }
+
       const dateStr = rec.lastCrawlTime ? new Date(rec.lastCrawlTime).toLocaleString('zh-TW', { hour12: false }) : '未知';
 
       card.innerHTML = `
@@ -772,7 +901,7 @@ export class CrawlerView {
           <div class="crawler-record-title-row">
             <h4 class="crawler-record-title">${rec.bookTitle || '未命名書籍'}</h4>
             <span class="book-card-badge">${typeLabel}</span>
-            <span class="book-card-badge" style="background-color: var(--bg-surface); color: var(--text-muted);">${catName}</span>
+            <span class="book-card-badge" style="background-color: var(--bg-surface); color: var(--accent-primary); border: 1px solid var(--border-color);">${catName}</span>
           </div>
           <div class="crawler-record-url" title="${rec.sourceUrl || ''}">
             來源: ${rec.sourceUrl || '無網址'}
@@ -787,6 +916,10 @@ export class CrawlerView {
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             檢查更新
           </button>
+          <button class="btn btn-secondary btn-sm btn-redownload-record" title="重新下載整部書籍 (支援覆蓋原書或另存新書)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            重新下載
+          </button>
           <button class="btn btn-danger btn-sm btn-delete-record" title="刪除此筆爬蟲紀錄">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             刪除
@@ -796,6 +929,10 @@ export class CrawlerView {
 
       card.querySelector('.btn-check-update').addEventListener('click', () => {
         this.handleCheckUpdate(rec);
+      });
+
+      card.querySelector('.btn-redownload-record').addEventListener('click', () => {
+        this.openRedownloadModal(rec);
       });
 
       card.querySelector('.btn-delete-record').addEventListener('click', () => {
@@ -822,22 +959,175 @@ export class CrawlerView {
     }
   }
 
+  // ==========================================================
+  // 重新下載管理 (Story 37)
+  // ==========================================================
+  openRedownloadModal(record) {
+    this.pendingRedownload = record;
+    if (this.redownloadBookTitle) {
+      this.redownloadBookTitle.textContent = `《${record.bookTitle}》`;
+    }
+    const defaultRadio = this.redownloadModal?.querySelector('input[name="redownload-mode"][value="overwrite"]');
+    if (defaultRadio) defaultRadio.checked = true;
+
+    if (this.redownloadModal) {
+      this.redownloadModal.classList.add('active');
+    }
+  }
+
+  closeRedownloadModal() {
+    this.pendingRedownload = null;
+    if (this.redownloadModal) {
+      this.redownloadModal.classList.remove('active');
+    }
+  }
+
+  async executeRedownload() {
+    if (!this.pendingRedownload) return;
+    const rec = this.pendingRedownload;
+    const selectedRadio = this.redownloadModal?.querySelector('input[name="redownload-mode"]:checked');
+    const mode = selectedRadio ? selectedRadio.value : 'overwrite';
+    this.closeRedownloadModal();
+
+    const isBaha = (rec.sourceType === 'bahamut');
+    const pContainer = isBaha ? this.bahaProgressContainer : this.progressContainer;
+    const pFill = isBaha ? this.bahaProgressFill : this.progressFill;
+    const pStatus = isBaha ? this.bahaStatusText : this.statusText;
+    const pLog = isBaha ? this.bahaLogBox : this.logBox;
+    const logFn = isBaha ? (m) => this.appendBahaLog(m) : (m) => this.appendLog(m);
+
+    // 切換至對應分頁以展示進度 (Story 38)
+    const targetSubTab = isBaha ? 'sub-panel-baha' : 'sub-panel-web';
+    const tabBtn = Array.from(this.subTabs).find(b => b.dataset.panel === targetSubTab);
+    if (tabBtn) tabBtn.click();
+
+    if (pContainer) pContainer.style.display = 'block';
+    if (pFill) pFill.style.width = '0%';
+    if (pLog) pLog.innerHTML = '';
+    if (pStatus) pStatus.textContent = `準備重新下載《${rec.bookTitle}》...`;
+    logFn(`🔄 啟動【${mode === 'overwrite' ? '模式 A：覆蓋並重整原書' : '模式 B：另存為新書'}】...`);
+
+    const delay = parseFloat(this.delaySlider ? this.delaySlider.value : (isBaha ? 1.5 : 2.0));
+
+    try {
+      if (mode === 'overwrite') {
+        // 模式 A：清空原有章節，從第 1 章重新下載進原書
+        logFn(`🧹 正在清空原書現有章節以重整排版...`);
+        await storage.clearBookChapters(rec.bookId);
+
+        const progressCb = (info) => {
+          if (info.status === 'downloading') {
+            if (pFill) pFill.style.width = `${info.percent}%`;
+            if (pStatus) pStatus.textContent = `[${info.percent}%] ${info.message}`;
+            if (info.title) logFn(`✔ 已下載: ${info.title}`);
+          } else if (info.status === 'completed') {
+            if (pFill) pFill.style.width = '100%';
+            if (pStatus) pStatus.textContent = info.message;
+            logFn(`🎉 ${info.message}`);
+            eventBus.emit('bookshelf:refresh');
+            this.renderCrawlerRecords();
+            eventBus.emit('toast', {
+              message: `《${rec.bookTitle}》已成功重整並重新下載完成！`,
+              actionLabel: '前往閱讀',
+              onAction: () => eventBus.emit('reader:openBook', rec.bookId)
+            });
+          } else if (info.status === 'cancelled') {
+            if (pStatus) pStatus.textContent = info.message;
+            logFn(`🛑 ${info.message}`);
+          }
+        };
+
+        if (isBaha) {
+          await bahaCrawler.crawlBaha(rec.sourceUrl, {
+            delay,
+            targetBookId: rec.bookId,
+            recordId: rec.id,
+            onProgress: progressCb
+          });
+        } else {
+          await crawler.crawlBook(rec.sourceUrl, {
+            delay,
+            targetBookId: rec.bookId,
+            recordId: rec.id,
+            onProgress: progressCb
+          });
+        }
+      } else {
+        // 模式 B：另存為新書，爬蟲紀錄追更移轉至新書
+        const newTitle = `${rec.bookTitle} (重新下載)`;
+        logFn(`📚 正在建立新書《${newTitle}》...`);
+
+        const progressCb = (info) => {
+          if (info.status === 'downloading') {
+            if (pFill) pFill.style.width = `${info.percent}%`;
+            if (pStatus) pStatus.textContent = `[${info.percent}%] ${info.message}`;
+            if (info.title) logFn(`✔ 已下載: ${info.title}`);
+          } else if (info.status === 'completed') {
+            if (pFill) pFill.style.width = '100%';
+            if (pStatus) pStatus.textContent = info.message;
+            logFn(`🎉 ${info.message}`);
+            eventBus.emit('bookshelf:refresh');
+            this.renderCrawlerRecords();
+            const newBookId = info.book ? info.book.id : rec.bookId;
+            eventBus.emit('toast', {
+              message: `新書《${newTitle}》已建立並完成下載！追更已移轉至新書。`,
+              actionLabel: '前往閱讀',
+              onAction: () => eventBus.emit('reader:openBook', newBookId)
+            });
+          } else if (info.status === 'cancelled') {
+            if (pStatus) pStatus.textContent = info.message;
+            logFn(`🛑 ${info.message}`);
+          }
+        };
+
+        if (isBaha) {
+          await bahaCrawler.crawlBaha(rec.sourceUrl, {
+            delay,
+            customTitle: newTitle,
+            recordId: rec.id,
+            categoryId: rec.targetCategoryId || 'uncategorized',
+            onProgress: progressCb
+          });
+        } else {
+          await crawler.crawlBook(rec.sourceUrl, {
+            delay,
+            customTitle: newTitle,
+            recordId: rec.id,
+            categoryId: rec.targetCategoryId || 'uncategorized',
+            onProgress: progressCb
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Redownload failed:', err);
+      if (pStatus) pStatus.textContent = `重新下載失敗: ${err.message}`;
+      logFn(`❌ 失敗: ${err.message}`);
+      alert(`重新下載失敗: ${err.message}`);
+    }
+  }
+
   async handleCheckUpdate(rec) {
-    if (this.progressContainer) this.progressContainer.style.display = 'block';
-    if (this.statusText) this.statusText.textContent = `正在連線探測《${rec.bookTitle}》線上最新目錄...`;
-    if (this.logBox) this.logBox.innerHTML = '';
-    this.appendLog(`🔍 開始探測來源: ${rec.sourceUrl}`);
+    const isBaha = (rec.sourceType === 'bahamut');
+    const pContainer = isBaha ? this.bahaProgressContainer : this.progressContainer;
+    const pStatus = isBaha ? this.bahaStatusText : this.statusText;
+    const pLog = isBaha ? this.bahaLogBox : this.logBox;
+    const logFn = isBaha ? (m) => this.appendBahaLog(m) : (m) => this.appendLog(m);
+
+    if (pContainer) pContainer.style.display = 'block';
+    if (pStatus) pStatus.textContent = `正在連線探測《${rec.bookTitle}》線上最新目錄...`;
+    if (pLog) pLog.innerHTML = '';
+    logFn(`🔍 開始探測來源: ${rec.sourceUrl}`);
 
     try {
       let onlineChapters = [];
       let totalOnline = 0;
 
-      if (rec.sourceType === 'bahamut') {
+      if (isBaha) {
         const catalog = await bahaCrawler.fetchCatalog(rec.sourceUrl, {
           sortOrder: 'asc',
           onProgress: (info) => {
-            if (this.statusText) this.statusText.textContent = info.message;
-            this.appendLog(info.message);
+            if (pStatus) pStatus.textContent = info.message;
+            logFn(info.message);
           }
         });
         onlineChapters = catalog.articles || [];
@@ -856,20 +1146,20 @@ export class CrawlerView {
       const newChapters = diffResult.newChapters;
 
       if (newChapters.length === 0) {
-        if (this.statusText) this.statusText.textContent = `《${rec.bookTitle}》已是最新狀態！`;
-        this.appendLog(`✅ 線上目錄共 ${totalOnline} 篇，目前已全數收錄，無新發布章節。`);
+        if (pStatus) pStatus.textContent = `《${rec.bookTitle}》已是最新狀態！`;
+        logFn(`✅ 線上目錄共 ${totalOnline} 篇，目前已全數收錄，無新發布章節。`);
         eventBus.emit('toast', {
           message: `🎉《${rec.bookTitle}》目前已是最新狀態，無新發布內容！`
         });
         return;
       }
 
-      this.appendLog(`✨ 偵測到 ${newChapters.length} 篇全新章節！開啟確認彈窗...`);
+      logFn(`✨ 偵測到 ${newChapters.length} 篇全新章節！開啟確認彈窗...`);
       this.openUpdateModal(rec, newChapters, totalOnline);
     } catch (err) {
       console.error('Check update failed:', err);
-      if (this.statusText) this.statusText.textContent = `檢查更新失敗: ${err.message}`;
-      this.appendLog(`❌ 錯誤: ${err.message}`);
+      if (pStatus) pStatus.textContent = `檢查更新失敗: ${err.message}`;
+      logFn(`❌ 錯誤: ${err.message}`);
       alert(`檢查更新失敗: ${err.message}`);
     }
   }
@@ -973,25 +1263,37 @@ export class CrawlerView {
 
     this.closeUpdateModal();
 
+    const isBaha = (record.sourceType === 'bahamut');
+    const pContainer = isBaha ? this.bahaProgressContainer : this.progressContainer;
+    const pFill = isBaha ? this.bahaProgressFill : this.progressFill;
+    const pStatus = isBaha ? this.bahaStatusText : this.statusText;
+    const pLog = isBaha ? this.bahaLogBox : this.logBox;
+    const logFn = isBaha ? (m) => this.appendBahaLog(m) : (m) => this.appendLog(m);
+
+    // 切換至對應分頁以展示進度 (Story 38)
+    const targetSubTab = isBaha ? 'sub-panel-baha' : 'sub-panel-web';
+    const tabBtn = Array.from(this.subTabs).find(b => b.dataset.panel === targetSubTab);
+    if (tabBtn) tabBtn.click();
+
     // 啟動進度面板
-    if (this.progressContainer) this.progressContainer.style.display = 'block';
-    if (this.logBox) this.logBox.innerHTML = '';
-    if (this.progressFill) this.progressFill.style.width = '0%';
-    if (this.statusText) this.statusText.textContent = `準備追更下載 ${selectedChapters.length} 篇新章節...`;
-    this.appendLog(`🚀 開始增量追更《${record.bookTitle}》共 ${selectedChapters.length} 篇...`);
+    if (pContainer) pContainer.style.display = 'block';
+    if (pLog) pLog.innerHTML = '';
+    if (pFill) pFill.style.width = '0%';
+    if (pStatus) pStatus.textContent = `準備追更下載 ${selectedChapters.length} 篇新章節...`;
+    logFn(`🚀 開始增量追更《${record.bookTitle}》共 ${selectedChapters.length} 篇...`);
 
     const delay = parseFloat(this.delaySlider ? this.delaySlider.value : 1.5);
 
     try {
       const progressCb = (info) => {
         if (info.status === 'downloading') {
-          if (this.progressFill) this.progressFill.style.width = `${info.percent}%`;
-          if (this.statusText) this.statusText.textContent = `[${info.percent}%] ${info.message}`;
-          if (info.title) this.appendLog(`✔ 已追加: ${info.title}`);
+          if (pFill) pFill.style.width = `${info.percent}%`;
+          if (pStatus) pStatus.textContent = `[${info.percent}%] ${info.message}`;
+          if (info.title) logFn(`✔ 已追加: ${info.title}`);
         } else if (info.status === 'completed') {
-          if (this.progressFill) this.progressFill.style.width = '100%';
-          if (this.statusText) this.statusText.textContent = info.message;
-          this.appendLog(`🎉 ${info.message}`);
+          if (pFill) pFill.style.width = '100%';
+          if (pStatus) pStatus.textContent = info.message;
+          logFn(`🎉 ${info.message}`);
           eventBus.emit('bookshelf:refresh');
           this.renderCrawlerRecords();
           eventBus.emit('toast', {
@@ -1000,8 +1302,8 @@ export class CrawlerView {
             onAction: () => eventBus.emit('reader:openBook', record.bookId)
           });
         } else if (info.status === 'cancelled') {
-          if (this.statusText) this.statusText.textContent = info.message;
-          this.appendLog(`🛑 ${info.message}`);
+          if (pStatus) pStatus.textContent = info.message;
+          logFn(`🛑 ${info.message}`);
         }
       };
 
@@ -1018,8 +1320,8 @@ export class CrawlerView {
       }
     } catch (err) {
       console.error('Incremental crawl error:', err);
-      if (this.statusText) this.statusText.textContent = `追更失敗: ${err.message}`;
-      this.appendLog(`❌ 失敗: ${err.message}`);
+      if (pStatus) pStatus.textContent = `追更失敗: ${err.message}`;
+      logFn(`❌ 失敗: ${err.message}`);
       alert(`追更失敗: ${err.message}`);
     }
   }
