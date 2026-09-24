@@ -165,9 +165,12 @@ export class ReaderView {
 
     if (this.chapterSelect) {
       this.chapterSelect.addEventListener('change', (e) => {
-        const idx = parseInt(e.target.value, 10);
-        const wasPlaying = player.isPlaying;
-        this.loadChapterByIndex(idx, 0, wasPlaying);
+        const chapId = e.target.value;
+        const arrayIdx = this.currentChapters.findIndex(c => c.id === chapId);
+        if (arrayIdx !== -1) {
+          const wasPlaying = player.isPlaying;
+          this.loadChapterByIndex(arrayIdx, 0, wasPlaying);
+        }
       });
     }
 
@@ -254,10 +257,9 @@ export class ReaderView {
     if (this.chapterSelect) {
       this.chapterSelect.innerHTML = '';
       this.currentChapters.forEach((chap, idx) => {
-        const cIdx = (chap.index !== undefined) ? chap.index : idx;
         const opt = document.createElement('option');
-        opt.value = cIdx;
-        opt.textContent = chap.title || `第 ${cIdx + 1} 章`;
+        opt.value = chap.id;
+        opt.textContent = chap.title || `第 ${idx + 1} 章`;
         this.chapterSelect.appendChild(opt);
       });
     }
@@ -301,7 +303,7 @@ export class ReaderView {
     this.currentChapter = chapter;
 
     if (this.chapterSelect) {
-      this.chapterSelect.value = boundedIdx;
+      this.chapterSelect.value = chapter.id;
     }
 
     // Double-guard: ensure chapter has paragraphs (Story 10, 11)
@@ -387,8 +389,9 @@ export class ReaderView {
   }
 
   handleNextChapter(forceAutoPlay = null) {
-    if (!this.currentChapter || !this.currentChapters) return;
-    const nextIdx = this.currentChapter.index + 1;
+    if (!this.currentChapter || !this.currentChapters || this.currentChapters.length === 0) return;
+    const currentArrayIdx = this.currentChapters.findIndex(c => c.id === this.currentChapter.id);
+    const nextIdx = (currentArrayIdx !== -1) ? currentArrayIdx + 1 : 0;
     const shouldPlay = (typeof forceAutoPlay === 'boolean') ? forceAutoPlay : player.isPlaying;
     if (nextIdx < this.currentChapters.length) {
       this.loadChapterByIndex(nextIdx, 0, shouldPlay);
@@ -399,8 +402,9 @@ export class ReaderView {
   }
 
   handlePrevChapter(forceAutoPlay = null) {
-    if (!this.currentChapter || !this.currentChapters) return;
-    const prevIdx = this.currentChapter.index - 1;
+    if (!this.currentChapter || !this.currentChapters || this.currentChapters.length === 0) return;
+    const currentArrayIdx = this.currentChapters.findIndex(c => c.id === this.currentChapter.id);
+    const prevIdx = (currentArrayIdx !== -1) ? currentArrayIdx - 1 : -1;
     const shouldPlay = (typeof forceAutoPlay === 'boolean') ? forceAutoPlay : player.isPlaying;
     if (prevIdx >= 0) {
       this.loadChapterByIndex(prevIdx, 0, shouldPlay);
@@ -457,10 +461,11 @@ export class ReaderView {
           }
         }
         if (this.chapterSelect) {
-          const opt = this.chapterSelect.querySelector(`option[value="${this.currentChapter.index}"]`);
+          const opt = this.chapterSelect.querySelector(`option[value="${this.currentChapter.id}"]`);
           if (opt) {
             opt.textContent = freshChap.title || `第 ${this.currentChapter.index + 1} 章`;
           }
+          this.chapterSelect.value = this.currentChapter.id;
         }
         this.renderChapterText(freshChap);
         player.loadChapter(freshChap, 0, this.currentBook.title);
@@ -473,7 +478,7 @@ export class ReaderView {
   }
 
   /**
-   * 重新整理書籍章節清單與選單 (Story 21, GWT 21.5, GWT 21.6)
+   * 重新整理書籍章節清單與選單 (Story 21, GWT 21.5, GWT 21.6, Story 41)
    */
   async refreshBookChapters() {
     if (!this.currentBook) return;
@@ -485,14 +490,13 @@ export class ReaderView {
       if (this.chapterSelect) {
         this.chapterSelect.innerHTML = '';
         chaps.forEach((chap, idx) => {
-          const cIdx = (chap.index !== undefined) ? chap.index : idx;
           const opt = document.createElement('option');
-          opt.value = cIdx;
-          opt.textContent = chap.title || `第 ${cIdx + 1} 章`;
+          opt.value = chap.id;
+          opt.textContent = chap.title || `第 ${idx + 1} 章`;
           this.chapterSelect.appendChild(opt);
         });
         if (this.currentChapter) {
-          this.chapterSelect.value = this.currentChapter.index;
+          this.chapterSelect.value = this.currentChapter.id;
         }
       }
     } catch (err) {

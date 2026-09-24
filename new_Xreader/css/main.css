@@ -279,3 +279,50 @@ input[type="range"] {
   accent-color: var(--accent-primary);
   cursor: pointer;
 }
+
+/* ============================================================
+   Mobile Responsive Adjustments (Story 39)
+   ============================================================ */
+@media (max-width: 680px) {
+  :root {
+    --header-height: 92px;
+  }
+
+  .app-header {
+    height: var(--header-height);
+    min-height: 88px;
+    padding: 8px 12px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .brand {
+    justify-content: center;
+    height: 30px;
+  }
+
+  .brand-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 0.95rem;
+  }
+
+  .brand-name {
+    font-size: 1.15rem;
+  }
+
+  .app-main {
+    padding-top: 0.75rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-badge {
+    display: none;
+  }
+}
+

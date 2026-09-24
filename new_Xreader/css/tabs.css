@@ -39,6 +39,15 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* Tab Labels (Story 39 Responsive Support) */
+.tab-label-short {
+  display: none;
+}
+
+.tab-label-full {
+  display: inline;
+}
+
 /* Tab Panels Switching */
 .tab-panel {
   display: none;
@@ -55,17 +64,39 @@
 }
 
 @media (max-width: 680px) {
-  .nav-tabs-container {
-    overflow-x: auto;
-    width: 100%;
-    scrollbar-width: none;
-  }
-  .nav-tabs-container::-webkit-scrollbar {
+  .tab-label-full {
     display: none;
   }
+  .tab-label-short {
+    display: inline;
+  }
+  .nav-tabs-container {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 3px;
+    overflow-x: visible;
+  }
   .nav-tab {
-    padding: 6px 12px;
-    font-size: 0.82rem;
+    flex: 1;
+    justify-content: center;
+    padding: 7px 4px;
+    font-size: 0.85rem;
+    min-height: 38px;
     white-space: nowrap;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 360px) {
+  .nav-tab {
+    font-size: 0.8rem;
+    padding: 6px 2px;
+    gap: 4px;
+  }
+  .nav-tab svg {
+    width: 14px;
+    height: 14px;
   }
 }

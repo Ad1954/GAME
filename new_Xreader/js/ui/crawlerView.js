@@ -12,6 +12,7 @@ import { eventBus } from '../eventBus.js';
 
 export class CrawlerView {
   constructor() {
+    this.crawler = crawler;
     this.container = document.getElementById('crawler-container');
     this.urlInput = document.getElementById('crawler-url');
     this.proxySelect = document.getElementById('crawler-proxy');
@@ -67,6 +68,30 @@ export class CrawlerView {
     this.btnCloseRedownload = document.getElementById('btn-close-redownload-modal');
     this.btnConfirmRedownload = document.getElementById('btn-confirm-redownload');
     this.pendingRedownload = null;
+
+    // Catalog Preview & Selective Download Modal (Story 42)
+    this.catalogModal = document.getElementById('crawler-catalog-modal');
+    this.previewBookTitle = document.getElementById('preview-book-title');
+    this.previewBookAuthor = document.getElementById('preview-book-author');
+    this.previewTotalBadge = document.getElementById('preview-total-badge');
+    this.previewChaptersContainer = document.getElementById('preview-chapters-container');
+    this.previewSearchInput = document.getElementById('preview-search-input');
+    this.previewSelectedCount = document.getElementById('preview-selected-count');
+    this.previewListCount = document.getElementById('preview-list-count');
+    this.btnPreviewSelectAll = document.getElementById('btn-preview-select-all');
+    this.btnPreviewDeselectAll = document.getElementById('btn-preview-deselect-all');
+    this.btnPreviewSmartSelect = document.getElementById('btn-preview-smart-select');
+    this.chkPreviewTrim = document.getElementById('chk-preview-trim-head-tail');
+    this.previewTrimTip = document.getElementById('preview-trim-tip');
+    this.previewRangeStart = document.getElementById('preview-range-start');
+    this.previewRangeEnd = document.getElementById('preview-range-end');
+    this.btnPreviewApplyRange = document.getElementById('btn-preview-apply-range');
+    this.btnCloseCatalogPreview = document.getElementById('btn-close-catalog-preview');
+    this.btnCancelCatalogPreview = document.getElementById('btn-cancel-catalog-preview');
+    this.btnConfirmCatalogDownload = document.getElementById('btn-confirm-catalog-download');
+
+    this.pendingCatalog = null;
+    this.previewSelections = new Set();
 
     // Incremental Update Modal Elements (Story 27)
     this.updateModal = document.getElementById('crawler-update-modal');
@@ -356,6 +381,35 @@ export class CrawlerView {
       this.btnConfirmRedownload.addEventListener('click', () => this.executeRedownload());
     }
 
+    // Catalog Preview Modal Events (Story 42)
+    if (this.btnCloseCatalogPreview) {
+      this.btnCloseCatalogPreview.addEventListener('click', () => this.closeCatalogPreview());
+    }
+    if (this.btnCancelCatalogPreview) {
+      this.btnCancelCatalogPreview.addEventListener('click', () => this.closeCatalogPreview());
+    }
+    if (this.btnConfirmCatalogDownload) {
+      this.btnConfirmCatalogDownload.addEventListener('click', () => this.handleConfirmCatalogDownload());
+    }
+    if (this.btnPreviewSelectAll) {
+      this.btnPreviewSelectAll.addEventListener('click', () => this.handlePreviewSelectAll());
+    }
+    if (this.btnPreviewDeselectAll) {
+      this.btnPreviewDeselectAll.addEventListener('click', () => this.handlePreviewDeselectAll());
+    }
+    if (this.btnPreviewSmartSelect) {
+      this.btnPreviewSmartSelect.addEventListener('click', () => this.handlePreviewSmartSelect());
+    }
+    if (this.chkPreviewTrim) {
+      this.chkPreviewTrim.addEventListener('change', (e) => this.handleToggleTrim(e.target.checked));
+    }
+    if (this.btnPreviewApplyRange) {
+      this.btnPreviewApplyRange.addEventListener('click', () => this.handlePreviewApplyRange());
+    }
+    if (this.previewSearchInput) {
+      this.previewSearchInput.addEventListener('input', () => this.renderPreviewChaptersList());
+    }
+
     // File Dropzone
     this.bindFileEvents();
 
@@ -504,6 +558,325 @@ export class CrawlerView {
       }
     }
 
+    const origBtnHtml = this.btnStart ? this.btnStart.innerHTML : '';
+    if (this.btnStart) {
+      this.btnStart.disabled = true;
+      this.btnStart.textContent = '連線代理解析目錄中...';
+    }
+
+    try {
+      // 1. 先解析全書目錄 (Story 42, GWT 42.1)
+      const catalog = await crawler.parseCatalog(url);
+      // 2. 開啟目錄預覽與自訂勾選下載視窗
+      this.openCatalogPreview(url, catalog);
+    } catch (err) {
+      console.error('Parse Catalog Error:', err);
+      alert(`解析小說目錄失敗: ${err.message}`);
+    } finally {
+      if (this.btnStart) {
+        this.btnStart.disabled = false;
+        this.btnStart.innerHTML = origBtnHtml;
+      }
+    }
+  }
+
+  /**
+   * 開啟章節清單預覽與自訂下載視窗 (Story 42, Story 44)
+   */
+  openCatalogPreview(url, catalog, options = {}) {
+    this.pendingCatalog = {
+      url,
+      catalog,
+      isRedownload: !!options.isRedownload,
+      redownloadRecord: options.redownloadRecord || null,
+      redownloadMode: options.redownloadMode || 'overwrite'
+    };
+    this.previewSelections.clear();
+
+    const bookTitleText = catalog.title || options.redownloadRecord?.bookTitle || '未命名小說';
+    if (this.previewBookTitle) {
+      if (options.isRedownload) {
+        const modeLabel = options.redownloadMode === 'overwrite' ? '覆蓋重整原書' : '另存為新書';
+        this.previewBookTitle.textContent = `《${bookTitleText}》（重新下載 - ${modeLabel}）`;
+      } else {
+        this.previewBookTitle.textContent = `《${bookTitleText}》`;
+      }
+    }
+    if (this.previewBookAuthor) this.previewBookAuthor.textContent = catalog.author || options.redownloadRecord?.bookAuthor || '未知';
+    if (this.previewTotalBadge) this.previewTotalBadge.textContent = `共解析出 ${catalog.chapters.length} 篇`;
+
+    // 預設智慧推薦：自動勾選符合正文章節特徵者 (GWT 42.2, 43.2)
+    catalog.chapters.forEach((chap, idx) => {
+      if (chap.isLikelyChapter !== false) {
+        this.previewSelections.add(idx);
+      }
+    });
+
+    if (this.chkPreviewTrim) this.chkPreviewTrim.checked = true;
+    if (this.previewTrimTip) this.previewTrimTip.textContent = '';
+
+    if (this.previewRangeStart) this.previewRangeStart.value = '1';
+    if (this.previewRangeEnd) this.previewRangeEnd.value = String(catalog.chapters.length);
+    if (this.previewSearchInput) this.previewSearchInput.value = '';
+
+    // 若預設勾選去除首尾雜項，自動過濾首尾非正文特徵 (Story 45, GWT 45.2)
+    if (this.chkPreviewTrim && this.chkPreviewTrim.checked) {
+      this.applyTrimFilter(true, false);
+    } else {
+      this.renderPreviewChaptersList();
+      this.updatePreviewStats();
+    }
+
+    if (this.catalogModal) {
+      this.catalogModal.classList.add('active');
+    }
+  }
+
+  closeCatalogPreview() {
+    if (this.catalogModal) {
+      this.catalogModal.classList.remove('active');
+    }
+    this.pendingCatalog = null;
+    this.previewSelections.clear();
+  }
+
+  renderPreviewChaptersList() {
+    if (!this.previewChaptersContainer || !this.pendingCatalog) return;
+    this.previewChaptersContainer.innerHTML = '';
+
+    const chapters = this.pendingCatalog.catalog.chapters;
+    const filter = (this.previewSearchInput ? this.previewSearchInput.value : '').trim().toLowerCase();
+    const fragment = document.createDocumentFragment();
+
+    chapters.forEach((chap, idx) => {
+      const title = chap.title || `第 ${idx + 1} 章`;
+      if (filter && !title.toLowerCase().includes(filter)) return;
+
+      const isChecked = this.previewSelections.has(idx);
+      const isLikely = chap.isLikelyChapter !== false;
+
+      const row = document.createElement('label');
+      row.className = `preview-chapter-row ${isLikely ? '' : 'is-non-chapter'}`;
+
+      const chk = document.createElement('input');
+      chk.type = 'checkbox';
+      chk.checked = isChecked;
+      chk.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          this.previewSelections.add(idx);
+        } else {
+          this.previewSelections.delete(idx);
+        }
+        this.updatePreviewStats();
+      });
+
+      const idxSpan = document.createElement('span');
+      idxSpan.className = 'preview-chapter-idx';
+      idxSpan.textContent = `#${idx + 1}`;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'preview-chapter-name';
+      nameSpan.textContent = title;
+      nameSpan.title = title;
+
+      row.appendChild(chk);
+      row.appendChild(idxSpan);
+      row.appendChild(nameSpan);
+
+      if (!isLikely) {
+        const tag = document.createElement('span');
+        tag.className = 'preview-chapter-tag tag-warning';
+        tag.textContent = '非正文特徵';
+        row.appendChild(tag);
+      }
+
+      fragment.appendChild(row);
+    });
+
+    if (!fragment.hasChildNodes()) {
+      const emptyHint = document.createElement('div');
+      emptyHint.style.cssText = 'text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.85rem;';
+      emptyHint.textContent = '無符合關鍵字的章節項目';
+      fragment.appendChild(emptyHint);
+    }
+
+    this.previewChaptersContainer.appendChild(fragment);
+  }
+
+  updatePreviewStats() {
+    if (!this.pendingCatalog) return;
+    const total = this.pendingCatalog.catalog.chapters.length;
+    const selected = this.previewSelections.size;
+
+    if (this.previewSelectedCount) this.previewSelectedCount.textContent = String(selected);
+    if (this.previewListCount) this.previewListCount.textContent = String(total);
+    if (this.btnConfirmCatalogDownload) {
+      const isRedownload = this.pendingCatalog?.isRedownload;
+      const actionWord = isRedownload ? '開始重新下載選取章節' : '開始下載選取章節';
+      this.btnConfirmCatalogDownload.textContent = `${actionWord} (共 ${selected} 章)`;
+      this.btnConfirmCatalogDownload.disabled = (selected === 0);
+    }
+  }
+
+  handlePreviewSelectAll() {
+    if (!this.pendingCatalog) return;
+    const total = this.pendingCatalog.catalog.chapters.length;
+    for (let i = 0; i < total; i++) {
+      this.previewSelections.add(i);
+    }
+    if (this.chkPreviewTrim) this.chkPreviewTrim.checked = false;
+    this.renderPreviewChaptersList();
+    this.updatePreviewStats();
+    this.showTrimTip('✔ 已全選所有篇章');
+  }
+
+  handlePreviewDeselectAll() {
+    this.previewSelections.clear();
+    this.renderPreviewChaptersList();
+    this.updatePreviewStats();
+    this.showTrimTip('✔ 已取消所有勾選');
+  }
+
+  handlePreviewSmartSelect() {
+    if (!this.pendingCatalog) return;
+    this.previewSelections.clear();
+    this.pendingCatalog.catalog.chapters.forEach((chap, idx) => {
+      if (chap.isLikelyChapter !== false) {
+        this.previewSelections.add(idx);
+      }
+    });
+    if (this.chkPreviewTrim && this.chkPreviewTrim.checked) {
+      this.applyTrimFilter(true, true);
+    } else {
+      this.renderPreviewChaptersList();
+      this.updatePreviewStats();
+      this.showTrimTip('✔ 已套用智慧推薦');
+    }
+  }
+
+  handleToggleTrim(isChecked) {
+    if (!this.pendingCatalog) return;
+    this.applyTrimFilter(isChecked, true);
+  }
+
+  applyTrimFilter(shouldTrim, showTip = true) {
+    if (!this.pendingCatalog) return;
+    const chapters = this.pendingCatalog.catalog.chapters;
+    let modifiedCount = 0;
+
+    if (shouldTrim) {
+      // 排除首段與後段的非正文特徵項目 (Story 45, GWT 45.2, 45.3)
+      for (let i = 0; i < Math.min(30, chapters.length); i++) {
+        if (this.isHeadTailExtra(chapters[i])) {
+          if (this.previewSelections.has(i)) {
+            this.previewSelections.delete(i);
+            modifiedCount++;
+          }
+        }
+      }
+      for (let i = Math.max(0, chapters.length - 10); i < chapters.length; i++) {
+        if (this.isHeadTailExtra(chapters[i])) {
+          if (this.previewSelections.has(i)) {
+            this.previewSelections.delete(i);
+            modifiedCount++;
+          }
+        }
+      }
+      this.renderPreviewChaptersList();
+      this.updatePreviewStats();
+      if (showTip) {
+        if (modifiedCount > 0) {
+          this.showTrimTip(`✔ 已去除 ${modifiedCount} 項首尾雜項`);
+        } else {
+          this.showTrimTip('💡 首尾無雜項需要剔除');
+        }
+      }
+    } else {
+      // 關閉去除：恢復首段與後段的非正文項目
+      for (let i = 0; i < Math.min(30, chapters.length); i++) {
+        if (this.isHeadTailExtra(chapters[i])) {
+          if (!this.previewSelections.has(i)) {
+            this.previewSelections.add(i);
+            modifiedCount++;
+          }
+        }
+      }
+      for (let i = Math.max(0, chapters.length - 10); i < chapters.length; i++) {
+        if (this.isHeadTailExtra(chapters[i])) {
+          if (!this.previewSelections.has(i)) {
+            this.previewSelections.add(i);
+            modifiedCount++;
+          }
+        }
+      }
+      this.renderPreviewChaptersList();
+      this.updatePreviewStats();
+      if (showTip) {
+        if (modifiedCount > 0) {
+          this.showTrimTip(`✔ 已納入 ${modifiedCount} 項首尾項目`);
+        } else {
+          this.showTrimTip('💡 首尾無特殊雜項');
+        }
+      }
+    }
+  }
+
+  isHeadTailExtra(chap) {
+    if (!chap) return false;
+    if (chap.isLikelyChapter === false) return true;
+    const t = (chap.title || '').trim();
+    return /^(版權|聲明|條款|隱私|防詐|公告|感言|預告|廣告|贊助|說明|常見問題)$/i.test(t);
+  }
+
+  showTrimTip(msg) {
+    if (!this.previewTrimTip) return;
+    this.previewTrimTip.textContent = msg;
+    clearTimeout(this._trimTipTimer);
+    this._trimTipTimer = setTimeout(() => {
+      if (this.previewTrimTip) this.previewTrimTip.textContent = '';
+    }, 2500);
+  }
+
+  handlePreviewApplyRange() {
+    if (!this.pendingCatalog) return;
+    const start = parseInt(this.previewRangeStart ? this.previewRangeStart.value : '', 10);
+    const end = parseInt(this.previewRangeEnd ? this.previewRangeEnd.value : '', 10);
+    const total = this.pendingCatalog.catalog.chapters.length;
+
+    if (isNaN(start) || isNaN(end) || start < 1 || end < start) {
+      alert(`請輸入有效的起訖章節號（1 ~ ${total}）！`);
+      return;
+    }
+
+    this.previewSelections.clear();
+    const sIdx = Math.max(0, start - 1);
+    const eIdx = Math.min(total - 1, end - 1);
+    for (let i = sIdx; i <= eIdx; i++) {
+      this.previewSelections.add(i);
+    }
+    this.renderPreviewChaptersList();
+    this.updatePreviewStats();
+  }
+
+  handleConfirmCatalogDownload() {
+    if (!this.pendingCatalog) return;
+    const selectedChapters = this.pendingCatalog.catalog.chapters.filter((_, idx) => this.previewSelections.has(idx));
+    if (selectedChapters.length === 0) {
+      alert('請至少選取一個欲下載的章節！');
+      return;
+    }
+
+    const { url, catalog, isRedownload, redownloadRecord, redownloadMode } = this.pendingCatalog;
+    this.closeCatalogPreview();
+
+    if (isRedownload && redownloadRecord) {
+      this.executeRedownloadWithChapters(redownloadRecord, redownloadMode, selectedChapters);
+    } else {
+      this.executeCrawl(url, catalog, selectedChapters);
+    }
+  }
+
+  async executeCrawl(url, catalog, selectedChapters) {
     this.progressContainer.style.display = 'block';
     this.btnStart.disabled = true;
     this.btnCancel.style.display = 'inline-block';
@@ -517,28 +890,27 @@ export class CrawlerView {
       const book = await crawler.crawlBook(url, {
         delay,
         categoryId: targetCategory,
+        selectedChapters, // Story 42
         onProgress: (info) => {
-          if (info.status === 'parsing_catalog') {
-            this.statusText.textContent = info.message;
-            this.appendLog(info.message);
-          } else if (info.status === 'downloading') {
+          if (info.status === 'downloading') {
             this.progressFill.style.width = `${info.percent}%`;
             this.statusText.textContent = `[${info.percent}%] ${info.message}`;
-            this.appendLog(`✔ 已儲存: ${info.title}`);
+            if (info.title) this.appendLog(`✔ 已儲存: ${info.title}`);
           } else if (info.status === 'completed') {
             this.progressFill.style.width = '100%';
             this.statusText.textContent = info.message;
             this.appendLog(`🎉 ${info.message}`);
             eventBus.emit('bookshelf:refresh');
             this.renderCrawlerRecords();
-            const bookTitle = (info && info.book && info.book.title) ? info.book.title : '小說';
+            const bookTitle = (info && info.book && info.book.title) ? info.book.title : (catalog.title || '小說');
             eventBus.emit('toast', {
-              message: `《${bookTitle}》下載完畢！`,
+              message: `《${bookTitle}》下載完畢 (共 ${selectedChapters.length} 章)！`,
               actionLabel: '前往書櫃閱讀',
               onAction: () => eventBus.emit('nav:switchTab', 'tab-bookshelf')
             });
           } else if (info.status === 'cancelled') {
             this.statusText.textContent = info.message;
+            this.appendLog(`🛑 ${info.message}`);
           }
         }
       });
@@ -990,6 +1362,42 @@ export class CrawlerView {
     this.closeRedownloadModal();
 
     const isBaha = (rec.sourceType === 'bahamut');
+
+    // For Web crawler: parse catalog first and pop up chapter preview checklist (Story 44)
+    if (!isBaha) {
+      const targetSubTab = 'sub-panel-web';
+      const tabBtn = Array.from(this.subTabs).find(b => b.dataset.panel === targetSubTab);
+      if (tabBtn) tabBtn.click();
+
+      if (this.progressContainer) this.progressContainer.style.display = 'block';
+      if (this.progressFill) this.progressFill.style.width = '0%';
+      if (this.logBox) this.logBox.innerHTML = '';
+      if (this.statusText) this.statusText.textContent = `連線解析《${rec.bookTitle}》全書目錄中...`;
+      this.appendLog(`📡 正在連線專屬代理解析《${rec.bookTitle}》最新全書目錄...`);
+
+      try {
+        const catalog = await crawler.parseCatalog(rec.sourceUrl);
+        if (this.progressContainer) this.progressContainer.style.display = 'none';
+        this.openCatalogPreview(rec.sourceUrl, catalog, {
+          isRedownload: true,
+          redownloadRecord: rec,
+          redownloadMode: mode
+        });
+      } catch (err) {
+        console.error('Redownload parse catalog failed:', err);
+        if (this.statusText) this.statusText.textContent = `目錄解析失敗: ${err.message}`;
+        this.appendLog(`❌ 目錄解析失敗: ${err.message}`);
+        alert(`解析《${rec.bookTitle}》目錄失敗: ${err.message}`);
+      }
+      return;
+    }
+
+    // For Bahamut: proceed with direct execution
+    this.executeRedownloadWithChapters(rec, mode, null);
+  }
+
+  async executeRedownloadWithChapters(rec, mode, selectedChapters) {
+    const isBaha = (rec.sourceType === 'bahamut');
     const pContainer = isBaha ? this.bahaProgressContainer : this.progressContainer;
     const pFill = isBaha ? this.bahaProgressFill : this.progressFill;
     const pStatus = isBaha ? this.bahaStatusText : this.statusText;
@@ -1004,8 +1412,9 @@ export class CrawlerView {
     if (pContainer) pContainer.style.display = 'block';
     if (pFill) pFill.style.width = '0%';
     if (pLog) pLog.innerHTML = '';
-    if (pStatus) pStatus.textContent = `準備重新下載《${rec.bookTitle}》...`;
-    logFn(`🔄 啟動【${mode === 'overwrite' ? '模式 A：覆蓋並重整原書' : '模式 B：另存為新書'}】...`);
+    const chapCountStr = selectedChapters ? ` (已自訂選取 ${selectedChapters.length} 章)` : '';
+    if (pStatus) pStatus.textContent = `準備重新下載《${rec.bookTitle}》${chapCountStr}...`;
+    logFn(`🔄 啟動【${mode === 'overwrite' ? '模式 A：覆蓋並重整原書' : '模式 B：另存為新書'}】${chapCountStr}...`);
 
     const delay = parseFloat(this.delaySlider ? this.delaySlider.value : (isBaha ? 1.5 : 2.0));
 
@@ -1049,6 +1458,7 @@ export class CrawlerView {
             delay,
             targetBookId: rec.bookId,
             recordId: rec.id,
+            selectedChapters,
             onProgress: progressCb
           });
         }
@@ -1094,6 +1504,7 @@ export class CrawlerView {
             customTitle: newTitle,
             recordId: rec.id,
             categoryId: rec.targetCategoryId || 'uncategorized',
+            selectedChapters,
             onProgress: progressCb
           });
         }

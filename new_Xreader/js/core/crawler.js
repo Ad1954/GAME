@@ -74,14 +74,23 @@ export class CrawlerService {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
 
-    // 1. Extract Book Title
+    // 1. Extract Book Title (Story 43)
     let title = '';
-    const h1 = doc.querySelector('h1');
+    const h1 = doc.querySelector('h1, .novel-title, .book-title, .info h1');
     if (h1 && h1.textContent.trim()) {
       title = h1.textContent.trim();
     } else {
       const titleTag = doc.querySelector('title');
-      title = titleTag ? titleTag.textContent.replace(/目錄|最新章節|小說/g, '').trim() : '未命名小說';
+      if (titleTag) {
+        const bookMatch = titleTag.textContent.match(/《([^》]+)》/);
+        if (bookMatch) {
+          title = bookMatch[1].trim();
+        } else {
+          title = titleTag.textContent.replace(/目錄|最新章節|小說|線上看|全文閱讀/g, '').trim();
+        }
+      } else {
+        title = '未命名小說';
+      }
     }
 
     // 2. Extract Author
@@ -91,35 +100,74 @@ export class CrawlerService {
       author = authorEl.textContent.replace(/作者[：:]/g, '').trim();
     }
 
-    // 3. Extract Chapter Links
+    // 3. Extract Chapter Links with Dedicated Container Targeting (Story 40, Story 42, Story 43)
+    // First, search for dedicated chapter containers BEFORE modifying the DOM
+    const containerSelectors = [
+      '#chapter-list', '.chapter-list', '#chapterlist', '#chapters', '.chapters',
+      '#list', '.list-group', '.catalog', '#catalog',
+      'ul[class*="chapter"]', 'div[class*="chapter"]',
+      '#defualtlist', '#alllist'
+    ];
+
+    let containerEl = null;
+    for (const sel of containerSelectors) {
+      const el = doc.querySelector(sel);
+      if (el && el.querySelectorAll('a[href]').length >= 3) {
+        containerEl = el;
+        break;
+      }
+    }
+
+    if (!containerEl) {
+      // Only remove header/footer/nav if dedicated container was not found,
+      // and protect any element containing 5+ links to prevent deleting mislabeled chapter lists
+      doc.querySelectorAll('header, footer, nav, .header, .footer, .nav, .menu, #header, #footer').forEach(el => {
+        if (el.querySelectorAll('a[href]').length >= 5) return;
+        el.remove();
+      });
+    }
+
+    const searchRoot = containerEl || doc.body;
+    const linkElements = searchRoot.querySelectorAll('a[href]');
     const chapterLinks = [];
-    const linkElements = doc.querySelectorAll('a[href]');
     const seenUrls = new Set();
+
+    const nonChapterTextRegex = /^(登入|註冊|常見問題|問題解答|投稿|排行榜|人氣榜|收藏榜|完本榜|精選排行|作者專欄|狂人原創|修改|隱私權政策|防詐騙宣導|首頁|上一頁|下一頁|目錄|分享|回報錯誤|書架|書籤|加入書籤|免責聲明|客戶服務|聯絡我們|繁體中文版|簡體中文版|移動版|手機版|下載app)$/i;
+    const nonChapterUrlRegex = /(login|register|booklist|history|comment|search|editor|qa|privacy|anti-scam|category|creator|faq|channel|download)/i;
+    const chapterPatternRegex = /第.+[章回節卷部話]|序言|前言|後記|尾聲|番外|chapter|prologue|epilogue/i;
 
     linkElements.forEach(a => {
       const href = a.getAttribute('href');
       const text = a.textContent.trim();
-      if (!href || text.length < 2) return;
+      if (!href || text.length < 1) return;
 
-      // Filter likely chapter links (e.g. Chapter, 第...章, etc.)
-      const isChapterText = /第.+[章回節卷部話]|序言|前言|尾聲|番外|chapter/i.test(text);
-      if (isChapterText || text.length >= 2) {
-        try {
-          const absoluteUrl = new URL(href, catalogUrl).href;
-          // Avoid homepage/catalog self loops
-          if (absoluteUrl !== catalogUrl && !seenUrls.has(absoluteUrl)) {
-            // Check for common non-chapter keywords
-            if (!/login|register|booklist|history|comment|search/i.test(absoluteUrl)) {
-              seenUrls.add(absoluteUrl);
-              chapterLinks.push({
-                title: text,
-                url: absoluteUrl
-              });
-            }
-          }
-        } catch (e) {
-          // invalid URL
+      try {
+        const absoluteUrl = new URL(href, catalogUrl).href;
+        if (absoluteUrl === catalogUrl || seenUrls.has(absoluteUrl)) return;
+
+        // URL filter
+        if (nonChapterUrlRegex.test(absoluteUrl) || href.startsWith('javascript:')) return;
+
+        seenUrls.add(absoluteUrl);
+
+        // Smart classification: is this likely a real novel chapter?
+        const isBlacklisted = nonChapterTextRegex.test(text);
+        const hasChapterWord = chapterPatternRegex.test(text);
+
+        let isLikelyChapter = true;
+        if (isBlacklisted) {
+          isLikelyChapter = false;
+        } else if (!containerEl && !hasChapterWord && text.length < 2) {
+          isLikelyChapter = false;
         }
+
+        chapterLinks.push({
+          title: text,
+          url: absoluteUrl,
+          isLikelyChapter
+        });
+      } catch (e) {
+        // invalid URL
       }
     });
 
@@ -146,10 +194,11 @@ export class CrawlerService {
     // Remove scripts, styles, comments, ad containers
     doc.querySelectorAll('script, style, noscript, iframe, .ad, .ads, header, footer, nav').forEach(el => el.remove());
 
-    // Target content selectors common in novel sites
+    // Target content selectors common in novel sites (Story 40)
     const contentSelectors = [
       '#content', '.content', '#chaptercontent', '#htmlContent',
-      'article', '.read-content', '#TextContent', 'div[id*="content"]'
+      'article', '.read-content', '#TextContent', 'div[id*="content"]',
+      'div[style*="font-size: 20px"]', 'div[style*="word-wrap: break-word"]'
     ];
 
     let contentEl = null;
@@ -169,8 +218,25 @@ export class CrawlerService {
       cloned.querySelectorAll('p').forEach(p => p.append('\n'));
       text = cloned.textContent || '';
     } else {
-      // Fallback to body text filtering
-      text = doc.body.textContent || '';
+      // Fallback: search div/td with highest paragraph and text density
+      let bestEl = null;
+      let maxLen = 0;
+      doc.querySelectorAll('div, td, section, article').forEach(el => {
+        const len = el.textContent.trim().length;
+        const pCount = el.querySelectorAll('p, br').length;
+        if (len > 150 && pCount >= 3 && len > maxLen) {
+          maxLen = len;
+          bestEl = el;
+        }
+      });
+      if (bestEl) {
+        const cloned = bestEl.cloneNode(true);
+        cloned.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+        cloned.querySelectorAll('p').forEach(p => p.append('\n'));
+        text = cloned.textContent || '';
+      } else {
+        text = doc.body.textContent || '';
+      }
     }
 
     // Clean whitespace
@@ -180,11 +246,20 @@ export class CrawlerService {
       .filter(line => line.length > 0)
       .join('\n');
 
+    // Anti-bot and challenge validation (Story 40, GWT 40.1, 40.2)
+    const lowerText = cleanText.toLowerCase();
+    if (
+      /you browse can't suppport javascript|your browser can't support javascript|please enable javascript|人機驗證|cloudflare/i.test(lowerText) ||
+      (cleanText.length < 80 && /javascript|forbidden|waf|captcha/i.test(lowerText))
+    ) {
+      throw new Error('來源網頁回傳防爬蟲驗證挑戰 (JavaScript/WAF)');
+    }
+
     return cleanText;
   }
 
   /**
-   * Sequentially crawl whole book with atomic incremental saves and checkpointing (ADR 0003)
+   * Sequentially crawl whole book with atomic incremental saves and checkpointing (ADR 0003, Story 40, Story 42)
    */
   async crawlBook(catalogUrl, options = {}) {
     const {
@@ -193,12 +268,18 @@ export class CrawlerService {
       targetBookId = null,
       recordId = null,
       customTitle = '',
+      selectedChapters = null, // Story 42
       onProgress = () => {}
     } = options;
     this.isCancelled = false;
 
-    onProgress({ status: 'parsing_catalog', message: '正在連線專屬代理解析全書目錄...' });
-    const catalog = await this.parseCatalog(catalogUrl);
+    let targetChapters = selectedChapters;
+    let catalog = null;
+    if (!targetChapters || targetChapters.length === 0) {
+      onProgress({ status: 'parsing_catalog', message: '正在連線專屬代理解析全書目錄...' });
+      catalog = await this.parseCatalog(catalogUrl);
+      targetChapters = catalog.chapters;
+    }
 
     let bookId = targetBookId;
     let book = null;
@@ -206,22 +287,25 @@ export class CrawlerService {
       book = await storage.getBook(bookId);
     }
 
+    const bookTitle = customTitle.trim() || (book ? book.title : (catalog ? catalog.title : '未命名小說'));
+    const bookAuthor = (book ? book.author : (catalog ? catalog.author : '未知'));
+
     if (!book) {
       bookId = `book_web_${Date.now()}`;
       book = {
         id: bookId,
-        title: customTitle.trim() || catalog.title,
-        author: catalog.author,
+        title: bookTitle,
+        author: bookAuthor,
         sourceType: 'web',
         sourceUrl: catalogUrl,
         categoryId: categoryId || 'uncategorized',
-        totalChapters: catalog.chapters.length,
+        totalChapters: targetChapters.length,
         downloadedChaptersCount: 0,
         lastChapterIndex: 0,
         lastSentenceIndex: 0
       };
     } else {
-      book.totalChapters = catalog.chapters.length;
+      book.totalChapters = targetChapters.length;
       book.downloadedChaptersCount = 0;
       book.updatedAt = Date.now();
     }
@@ -233,7 +317,7 @@ export class CrawlerService {
     const existingChapters = await storage.getChaptersByBook(bookId);
     const existingMap = new Map(existingChapters.map(c => [c.index, c]));
 
-    const total = catalog.chapters.length;
+    const total = targetChapters.length;
 
     for (let i = 0; i < total; i++) {
       if (this.isCancelled) {
@@ -241,19 +325,22 @@ export class CrawlerService {
         break;
       }
 
-      const chapMeta = catalog.chapters[i];
+      const chapMeta = targetChapters[i];
 
-      // Checkpoint check
-      if (existingMap.has(i) && existingMap.get(i).content.length > 50) {
-        onProgress({
-          status: 'downloading',
-          current: i + 1,
-          total,
-          percent: Math.round(((i + 1) / total) * 100),
-          title: chapMeta.title,
-          message: `[已略過快取] 第 ${i + 1} / ${total} 章: ${chapMeta.title}`
-        });
-        continue;
+      // Checkpoint check - skip if already validly downloaded and not an error placeholder
+      if (existingMap.has(i)) {
+        const existChap = existingMap.get(i);
+        if (existChap.content && existChap.content.length > 50 && !existChap.content.includes('[本章下載受阻')) {
+          onProgress({
+            status: 'downloading',
+            current: i + 1,
+            total,
+            percent: Math.round(((i + 1) / total) * 100),
+            title: chapMeta.title,
+            message: `[已略過快取] 第 ${i + 1} / ${total} 章: ${chapMeta.title}`
+          });
+          continue;
+        }
       }
 
       onProgress({
@@ -265,30 +352,58 @@ export class CrawlerService {
         message: `正在下載 (${i + 1}/${total}): ${chapMeta.title}`
       });
 
-      try {
-        const rawContent = await this.fetchChapterContent(chapMeta.url);
-        const { paragraphs, flatSentences } = TextSegmenter.segment(rawContent);
+      // Story 40: Auto-retry up to 2 times with 2.5s delay
+      const MAX_RETRIES = 2;
+      let rawContent = '';
+      let downloadError = null;
 
-        const chapter = {
-          id: `${bookId}_${i}`,
-          bookId,
-          index: i,
-          title: chapMeta.title,
-          url: chapMeta.url,
-          content: rawContent,
-          paragraphs,
-          sentencesCount: flatSentences.length
-        };
-
-        // Atomic commit to IndexedDB per chapter (ADR 0003)
-        await storage.saveChapter(chapter);
-
-        // Update downloaded count on book
-        book.downloadedChaptersCount = i + 1;
-        await storage.saveBook(book);
-      } catch (err) {
-        console.warn(`第 ${i + 1} 章下載失敗，將繼續下一章:`, err);
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        if (this.isCancelled) break;
+        try {
+          rawContent = await this.fetchChapterContent(chapMeta.url);
+          downloadError = null;
+          break;
+        } catch (err) {
+          downloadError = err;
+          if (attempt < MAX_RETRIES && !this.isCancelled) {
+            onProgress({
+              status: 'downloading',
+              current: i + 1,
+              total,
+              percent: Math.round(((i + 1) / total) * 100),
+              title: chapMeta.title,
+              message: `⚠️ 第 ${i + 1} 章受阻 (${err.message})，2.5秒後自動重試 (${attempt + 1}/${MAX_RETRIES})...`
+            });
+            await new Promise(r => setTimeout(r, 2500));
+          }
+        }
       }
+
+      if (downloadError) {
+        // GWT 40.2, 40.3: 保留章節佔位（不缺號）
+        rawContent = `${chapMeta.title}\n\n[本章下載受阻：來源網頁回傳防爬蟲驗證或連線異常（${downloadError.message}），章節已保留以維持全書序號連貫。點擊右上角「編輯本章」可手動貼上內容，來源網址：${chapMeta.url}]`;
+        console.warn(`第 ${i + 1} 章下載受阻，已建立佔位章節維持序號:`, downloadError.message);
+      }
+
+      const { paragraphs, flatSentences } = TextSegmenter.segment(rawContent);
+
+      const chapter = {
+        id: `${bookId}_${i}`,
+        bookId,
+        index: i,
+        title: chapMeta.title,
+        url: chapMeta.url,
+        content: rawContent,
+        paragraphs,
+        sentencesCount: flatSentences.length
+      };
+
+      // Atomic commit to IndexedDB per chapter (ADR 0003)
+      await storage.saveChapter(chapter);
+
+      // Update downloaded count on book
+      book.downloadedChaptersCount = i + 1;
+      await storage.saveBook(book);
 
       // Respectful delay to avoid WAF IP blocking
       if (i < total - 1 && delay > 0) {
@@ -297,7 +412,7 @@ export class CrawlerService {
     }
 
     // 自動保存爬蟲歷史紀錄 (Story 27)
-    const allUrls = catalog.chapters.map(c => c.url).filter(Boolean);
+    const allUrls = (catalog ? catalog.chapters : targetChapters).map(c => c.url).filter(Boolean);
     const lastUrl = allUrls.length > 0 ? allUrls[allUrls.length - 1] : '';
     storage.saveCrawlerRecord({
       id: recordId || undefined,
@@ -319,7 +434,7 @@ export class CrawlerService {
   }
 
   /**
-   * 增量下載新發布章節並附加至既有書籍末端 (Story 27)
+   * 增量下載新發布章節並附加至既有書籍末端 (Story 27, Story 40)
    */
   async crawlIncremental(recordId, newChapters, options = {}) {
     const { delay = 2.0, onProgress = () => {} } = options;
@@ -357,20 +472,48 @@ export class CrawlerService {
         message: `正在下載新章節 (${i + 1}/${total}): ${chapMeta.title}`
       });
 
-      try {
-        const rawContent = await this.fetchChapterContent(chapMeta.url);
-        const { paragraphs, flatSentences } = TextSegmenter.segment(rawContent);
+      // Story 40: Auto-retry up to 2 times with 2.5s delay
+      const MAX_RETRIES = 2;
+      let rawContent = '';
+      let downloadError = null;
 
-        downloadedList.push({
-          title: chapMeta.title,
-          url: chapMeta.url,
-          content: rawContent,
-          paragraphs,
-          sentencesCount: flatSentences.length
-        });
-      } catch (err) {
-        console.warn(`新章節 ${chapMeta.title} 下載失敗:`, err);
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        if (this.isCancelled) break;
+        try {
+          rawContent = await this.fetchChapterContent(chapMeta.url);
+          downloadError = null;
+          break;
+        } catch (err) {
+          downloadError = err;
+          if (attempt < MAX_RETRIES && !this.isCancelled) {
+            onProgress({
+              status: 'downloading',
+              current: i + 1,
+              total,
+              percent: Math.round(((i + 1) / total) * 100),
+              title: chapMeta.title,
+              message: `⚠️ 新章節受阻 (${err.message})，2.5秒後自動重試 (${attempt + 1}/${MAX_RETRIES})...`
+            });
+            await new Promise(r => setTimeout(r, 2500));
+          }
+        }
       }
+
+      if (downloadError) {
+        // GWT 40.2, 40.3: 保留章節佔位（不缺號）
+        rawContent = `${chapMeta.title}\n\n[本章追更受阻：來源網頁回傳防爬蟲驗證或連線異常（${downloadError.message}），章節已保留以維持全書序號連貫。點擊右上角「編輯本章」可手動貼上內容，來源網址：${chapMeta.url}]`;
+        console.warn(`新章節 ${chapMeta.title} 下載受阻，已建立佔位章節:`, downloadError.message);
+      }
+
+      const { paragraphs, flatSentences } = TextSegmenter.segment(rawContent);
+
+      downloadedList.push({
+        title: chapMeta.title,
+        url: chapMeta.url,
+        content: rawContent,
+        paragraphs,
+        sentencesCount: flatSentences.length
+      });
 
       if (i < total - 1 && delay > 0) {
         await new Promise(r => setTimeout(r, delay * 1000));
