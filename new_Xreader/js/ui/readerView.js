@@ -62,6 +62,13 @@ export class ReaderView {
         this.refreshBookChapters();
       }
     });
+
+    // Story 60: 監聽導覽列切換分頁，若切換至其他分頁自動釋放閱讀器滾動鎖定
+    eventBus.on('nav:switchTab', (tabId) => {
+      if (tabId !== 'tab-bookshelf') {
+        this.hideReader();
+      }
+    });
   }
 
   bindEvents() {
@@ -378,7 +385,7 @@ export class ReaderView {
       const currentEl = this.bodyEl.querySelector(`.sentence[data-idx="${data.sentenceIndex}"]`);
       if (currentEl) {
         currentEl.classList.add('active-sentence');
-        currentEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        this.scrollToSentence(currentEl);
       }
     }
 
@@ -386,6 +393,28 @@ export class ReaderView {
     if (this.currentBook && this.currentChapter) {
       storage.updateProgress(this.currentBook.id, this.currentChapter.index, data.sentenceIndex);
     }
+  }
+
+  /**
+   * Story 60 (GWT 60.1): 局限於閱讀器容器內部滾動，徹底杜絕外層視窗被捲動夾住標題 (iPad Pro 與全平台)
+   * 絕不調用會穿透並滾動 window 的原生 scrollIntoView()
+   */
+  scrollToSentence(targetEl) {
+    if (!this.bodyEl || !targetEl) return;
+    const bodyRect = this.bodyEl.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+    if (bodyRect.height === 0) return;
+
+    // 計算目標句子相對於閱讀滾動容器 (bodyEl) 的頂部偏移
+    const relativeTop = targetRect.top - bodyRect.top;
+
+    // 計算滾動量：目標句子的垂直中心對齊 bodyEl 的垂直中心
+    const targetScrollTop = this.bodyEl.scrollTop + relativeTop - (bodyRect.height / 2) + (targetRect.height / 2);
+
+    this.bodyEl.scrollTo({
+      top: Math.max(0, targetScrollTop),
+      behavior: 'smooth'
+    });
   }
 
   handleNextChapter(forceAutoPlay = null) {
@@ -412,12 +441,17 @@ export class ReaderView {
   }
 
   showReader() {
+    window.scrollTo(0, 0);
+    document.documentElement.classList.add('reader-active');
+    document.body.classList.add('reader-active');
     if (this.panel) this.panel.style.display = 'flex';
     const shelf = document.getElementById('bookshelf-wrapper');
     if (shelf) shelf.style.display = 'none';
   }
 
   hideReader() {
+    document.documentElement.classList.remove('reader-active');
+    document.body.classList.remove('reader-active');
     if (this.floatingSplitBtn) this.floatingSplitBtn.style.display = 'none';
     if (this.panel) this.panel.style.display = 'none';
     const shelf = document.getElementById('bookshelf-wrapper');

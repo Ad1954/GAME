@@ -101,6 +101,13 @@ html, body {
   overflow-x: clip;
 }
 
+/* Story 60: Reader View Window Lock (iPad Pro & Multi-platform) */
+html.reader-active,
+body.reader-active {
+  overflow: hidden !important;
+  height: 100% !important;
+}
+
 /* Header & Brand (Story 59: Fixed Header 硬性釘選防脫落) */
 .app-header {
   height: var(--header-height);
