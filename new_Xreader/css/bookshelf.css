@@ -71,9 +71,30 @@
 .book-card-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   border-top: 1px solid var(--border-color);
   padding-top: 10px;
+}
+
+.book-card-actions .btn {
+  flex: 1 1 auto;
+  min-width: 56px;
+  justify-content: center;
+  padding: 5px 8px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.book-card-actions .btn-open-book {
+  flex: 2 1 100%;
+  margin-bottom: 2px;
+}
+
+.book-card-actions .btn-delete-book {
+  flex: 0 0 auto;
+  min-width: 36px;
+  padding: 5px 8px;
 }
 
 /* Empty State */
@@ -208,3 +229,25 @@
   border: 1px dashed var(--border-color);
   border-radius: var(--radius-sm);
 }
+
+@media (max-width: 480px) {
+  .bookshelf-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .book-card {
+    padding: 1rem;
+  }
+  .book-card-actions {
+    gap: 6px;
+  }
+  .book-card-actions .btn {
+    font-size: 0.8rem;
+    padding: 5px 6px;
+    min-width: 48px;
+  }
+  .book-card-title {
+    font-size: 1rem;
+  }
+}
+

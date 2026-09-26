@@ -9,6 +9,7 @@ import { storage } from '../core/storage.js';
 import { TextSegmenter } from '../core/segmenter.js';
 import { TxtParser } from '../core/txtParser.js';
 import { eventBus } from '../eventBus.js';
+import { downloadQueue } from '../core/downloadQueue.js';
 
 export class CrawlerView {
   constructor() {
@@ -52,6 +53,14 @@ export class CrawlerView {
     this.bahaProgressFill = document.getElementById('baha-progress-fill');
     this.bahaStatusText = document.getElementById('baha-status-text');
     this.bahaLogBox = document.getElementById('baha-log');
+
+    // Download Queue Elements (Story 54)
+    this.queueContainer = document.getElementById('crawler-queue-container');
+    this.queueBadgeCount = document.getElementById('queue-badge-count');
+    this.queueActiveSection = document.getElementById('queue-active-section');
+    this.queuePendingList = document.getElementById('queue-pending-list');
+    this.btnQueuePauseAll = document.getElementById('btn-queue-pause-all');
+    this.btnQueueClear = document.getElementById('btn-queue-clear');
 
     // Crawler History Records (Story 27)
     this.recordsList = document.getElementById('crawler-records-list');
@@ -99,6 +108,9 @@ export class CrawlerView {
     this.updateBookTitle = document.getElementById('crawler-update-book-title');
     this.updateChaptersList = document.getElementById('crawler-update-chapters-list');
     this.chkUpdateSelectAll = document.getElementById('chk-update-select-all');
+    this.btnUpdateSelectNew = document.getElementById('btn-update-select-new');
+    this.btnUpdateSelectBackfill = document.getElementById('btn-update-select-backfill');
+    this.btnUpdateDeselectAll = document.getElementById('btn-update-deselect-all');
     this.btnUpdateSortToggle = document.getElementById('btn-update-sort-toggle');
     this.updateSelectedCount = document.getElementById('crawler-update-selected-count');
     this.updateTotalCount = document.getElementById('crawler-update-total-count');
@@ -130,6 +142,12 @@ export class CrawlerView {
     this.renderCategoryOptions();
     this.renderCrawlerRecords();
     this.bindEvents();
+    this.bindQueueEvents();
+    this.renderQueueUI();
+
+    eventBus.on('queue:updated', () => this.renderQueueUI());
+    eventBus.on('queue:started', (data) => this.handleQueueStarted(data));
+    eventBus.on('queue:progress', (data) => this.handleQueueProgress(data));
 
     eventBus.on('bookshelf:refresh', () => {
       this.renderCategoryOptions();
@@ -273,7 +291,12 @@ export class CrawlerView {
 
     if (this.btnCancel) {
       this.btnCancel.addEventListener('click', () => {
-        crawler.cancel();
+        const active = downloadQueue.getActiveTask();
+        if (active) {
+          downloadQueue.cancelTask(active.id);
+        } else {
+          crawler.cancel();
+        }
         this.appendLog('🛑 使用者已按下取消。');
       });
     }
@@ -340,12 +363,47 @@ export class CrawlerView {
       });
     }
 
-    // Incremental Update Modal Events
+    // Incremental Update Modal Events (Story 51)
     if (this.chkUpdateSelectAll) {
       this.chkUpdateSelectAll.addEventListener('change', (e) => {
         const checked = e.target.checked;
         const checkboxes = this.updateChaptersList?.querySelectorAll('input[type="checkbox"]');
         checkboxes?.forEach(cb => cb.checked = checked);
+        this.updateSelectedCountBadge();
+      });
+    }
+
+    if (this.btnUpdateSelectNew) {
+      this.btnUpdateSelectNew.addEventListener('click', () => {
+        if (!this.pendingUpdate) return;
+        const checkboxes = this.updateChaptersList?.querySelectorAll('input[type="checkbox"]');
+        checkboxes?.forEach(cb => {
+          const idx = parseInt(cb.dataset.idx, 10);
+          const ch = this.pendingUpdate.newChapters[idx];
+          cb.checked = ch ? !!ch.isNewRelease : false;
+        });
+        this.updateSelectedCountBadge();
+      });
+    }
+
+    if (this.btnUpdateSelectBackfill) {
+      this.btnUpdateSelectBackfill.addEventListener('click', () => {
+        if (!this.pendingUpdate) return;
+        const checkboxes = this.updateChaptersList?.querySelectorAll('input[type="checkbox"]');
+        checkboxes?.forEach(cb => {
+          const idx = parseInt(cb.dataset.idx, 10);
+          const ch = this.pendingUpdate.newChapters[idx];
+          cb.checked = ch ? !!ch.isBackfill : false;
+        });
+        this.updateSelectedCountBadge();
+      });
+    }
+
+    if (this.btnUpdateDeselectAll) {
+      this.btnUpdateDeselectAll.addEventListener('click', () => {
+        const checkboxes = this.updateChaptersList?.querySelectorAll('input[type="checkbox"]');
+        checkboxes?.forEach(cb => cb.checked = false);
+        if (this.chkUpdateSelectAll) this.chkUpdateSelectAll.checked = false;
         this.updateSelectedCountBadge();
       });
     }
@@ -712,7 +770,11 @@ export class CrawlerView {
     if (this.previewListCount) this.previewListCount.textContent = String(total);
     if (this.btnConfirmCatalogDownload) {
       const isRedownload = this.pendingCatalog?.isRedownload;
-      const actionWord = isRedownload ? '開始重新下載選取章節' : '開始下載選取章節';
+      const hasActive = !!downloadQueue.getActiveTask();
+      let actionWord = isRedownload ? '開始重新下載選取章節' : '開始下載選取章節';
+      if (hasActive) {
+        actionWord = '📥 加入下載排程';
+      }
       this.btnConfirmCatalogDownload.textContent = `${actionWord} (共 ${selected} 章)`;
       this.btnConfirmCatalogDownload.disabled = (selected === 0);
     }
@@ -872,7 +934,25 @@ export class CrawlerView {
     if (isRedownload && redownloadRecord) {
       this.executeRedownloadWithChapters(redownloadRecord, redownloadMode, selectedChapters);
     } else {
-      this.executeCrawl(url, catalog, selectedChapters);
+      const delay = parseFloat(this.delaySlider ? this.delaySlider.value : 2.0);
+      const targetCategory = this.crawlerCategorySelect ? this.crawlerCategorySelect.value : 'uncategorized';
+
+      downloadQueue.enqueue({
+        bookTitle: catalog?.title || '未命名小說',
+        author: catalog?.author || '未知',
+        catalogUrl: url,
+        sourceType: 'web',
+        categoryId: targetCategory,
+        selectedChapters,
+        delay,
+        customTitle: catalog?.title || ''
+      });
+
+      this.clearUrlInput();
+
+      eventBus.emit('toast', {
+        message: `📥 已將《${catalog?.title || '小說'}》加入下載佇列（共 ${selectedChapters.length} 章）`
+      });
     }
   }
 
@@ -890,6 +970,8 @@ export class CrawlerView {
       const book = await crawler.crawlBook(url, {
         delay,
         categoryId: targetCategory,
+        customTitle: catalog?.title || '',
+        author: catalog?.author || '',
         selectedChapters, // Story 42
         onProgress: (info) => {
           if (info.status === 'downloading') {
@@ -902,7 +984,7 @@ export class CrawlerView {
             this.appendLog(`🎉 ${info.message}`);
             eventBus.emit('bookshelf:refresh');
             this.renderCrawlerRecords();
-            const bookTitle = (info && info.book && info.book.title) ? info.book.title : (catalog.title || '小說');
+            const bookTitle = (info && info.book && info.book.title) ? info.book.title : (catalog?.title || '小說');
             eventBus.emit('toast', {
               message: `《${bookTitle}》下載完畢 (共 ${selectedChapters.length} 章)！`,
               actionLabel: '前往書櫃閱讀',
@@ -1003,15 +1085,18 @@ export class CrawlerView {
         // Plain text file with smart encoding detection & strategy parsing
         showProgress(`正在解析純文字小說: 《${file.name}》...`);
         const text = await TxtParser.readTextFileWithEncoding(file);
-        const bookTitle = file.name.replace(/\.[^/.]+$/, '');
+        const meta = TxtParser.parseMetadata(text);
+        const bookTitle = meta.title || file.name.replace(/\.[^/.]+$/, '');
+        const bookAuthor = meta.author || '本地匯入';
         const bookId = `book_txt_${Date.now()}`;
         const chapters = TxtParser.parse(text, bookId);
 
         const book = {
           id: bookId,
           title: bookTitle,
-          author: '本地匯入',
+          author: bookAuthor,
           sourceType: 'file',
+          sourceUrl: meta.sourceUrl || '',
           totalChapters: chapters.length,
           downloadedChaptersCount: chapters.length,
           lastChapterIndex: 0,
@@ -1396,125 +1481,31 @@ export class CrawlerView {
     this.executeRedownloadWithChapters(rec, mode, null);
   }
 
-  async executeRedownloadWithChapters(rec, mode, selectedChapters) {
+  executeRedownloadWithChapters(rec, mode, selectedChapters) {
     const isBaha = (rec.sourceType === 'bahamut');
-    const pContainer = isBaha ? this.bahaProgressContainer : this.progressContainer;
-    const pFill = isBaha ? this.bahaProgressFill : this.progressFill;
-    const pStatus = isBaha ? this.bahaStatusText : this.statusText;
-    const pLog = isBaha ? this.bahaLogBox : this.logBox;
-    const logFn = isBaha ? (m) => this.appendBahaLog(m) : (m) => this.appendLog(m);
-
-    // 切換至對應分頁以展示進度 (Story 38)
     const targetSubTab = isBaha ? 'sub-panel-baha' : 'sub-panel-web';
     const tabBtn = Array.from(this.subTabs).find(b => b.dataset.panel === targetSubTab);
     if (tabBtn) tabBtn.click();
 
-    if (pContainer) pContainer.style.display = 'block';
-    if (pFill) pFill.style.width = '0%';
-    if (pLog) pLog.innerHTML = '';
-    const chapCountStr = selectedChapters ? ` (已自訂選取 ${selectedChapters.length} 章)` : '';
-    if (pStatus) pStatus.textContent = `準備重新下載《${rec.bookTitle}》${chapCountStr}...`;
-    logFn(`🔄 啟動【${mode === 'overwrite' ? '模式 A：覆蓋並重整原書' : '模式 B：另存為新書'}】${chapCountStr}...`);
-
     const delay = parseFloat(this.delaySlider ? this.delaySlider.value : (isBaha ? 1.5 : 2.0));
 
-    try {
-      if (mode === 'overwrite') {
-        // 模式 A：清空原有章節，從第 1 章重新下載進原書
-        logFn(`🧹 正在清空原書現有章節以重整排版...`);
-        await storage.clearBookChapters(rec.bookId);
+    // Story 55: 重新下載統一排入佇列
+    downloadQueue.enqueue({
+      taskType: 'redownload',
+      bookTitle: rec.bookTitle,
+      author: rec.bookAuthor || '未知',
+      catalogUrl: rec.sourceUrl,
+      sourceType: rec.sourceType || 'web',
+      targetBookId: mode === 'overwrite' ? rec.bookId : null,
+      recordId: rec.id,
+      selectedChapters,
+      delay,
+      redownloadMode: mode
+    });
 
-        const progressCb = (info) => {
-          if (info.status === 'downloading') {
-            if (pFill) pFill.style.width = `${info.percent}%`;
-            if (pStatus) pStatus.textContent = `[${info.percent}%] ${info.message}`;
-            if (info.title) logFn(`✔ 已下載: ${info.title}`);
-          } else if (info.status === 'completed') {
-            if (pFill) pFill.style.width = '100%';
-            if (pStatus) pStatus.textContent = info.message;
-            logFn(`🎉 ${info.message}`);
-            eventBus.emit('bookshelf:refresh');
-            this.renderCrawlerRecords();
-            eventBus.emit('toast', {
-              message: `《${rec.bookTitle}》已成功重整並重新下載完成！`,
-              actionLabel: '前往閱讀',
-              onAction: () => eventBus.emit('reader:openBook', rec.bookId)
-            });
-          } else if (info.status === 'cancelled') {
-            if (pStatus) pStatus.textContent = info.message;
-            logFn(`🛑 ${info.message}`);
-          }
-        };
-
-        if (isBaha) {
-          await bahaCrawler.crawlBaha(rec.sourceUrl, {
-            delay,
-            targetBookId: rec.bookId,
-            recordId: rec.id,
-            onProgress: progressCb
-          });
-        } else {
-          await crawler.crawlBook(rec.sourceUrl, {
-            delay,
-            targetBookId: rec.bookId,
-            recordId: rec.id,
-            selectedChapters,
-            onProgress: progressCb
-          });
-        }
-      } else {
-        // 模式 B：另存為新書，爬蟲紀錄追更移轉至新書
-        const newTitle = `${rec.bookTitle} (重新下載)`;
-        logFn(`📚 正在建立新書《${newTitle}》...`);
-
-        const progressCb = (info) => {
-          if (info.status === 'downloading') {
-            if (pFill) pFill.style.width = `${info.percent}%`;
-            if (pStatus) pStatus.textContent = `[${info.percent}%] ${info.message}`;
-            if (info.title) logFn(`✔ 已下載: ${info.title}`);
-          } else if (info.status === 'completed') {
-            if (pFill) pFill.style.width = '100%';
-            if (pStatus) pStatus.textContent = info.message;
-            logFn(`🎉 ${info.message}`);
-            eventBus.emit('bookshelf:refresh');
-            this.renderCrawlerRecords();
-            const newBookId = info.book ? info.book.id : rec.bookId;
-            eventBus.emit('toast', {
-              message: `新書《${newTitle}》已建立並完成下載！追更已移轉至新書。`,
-              actionLabel: '前往閱讀',
-              onAction: () => eventBus.emit('reader:openBook', newBookId)
-            });
-          } else if (info.status === 'cancelled') {
-            if (pStatus) pStatus.textContent = info.message;
-            logFn(`🛑 ${info.message}`);
-          }
-        };
-
-        if (isBaha) {
-          await bahaCrawler.crawlBaha(rec.sourceUrl, {
-            delay,
-            customTitle: newTitle,
-            recordId: rec.id,
-            categoryId: rec.targetCategoryId || 'uncategorized',
-            onProgress: progressCb
-          });
-        } else {
-          await crawler.crawlBook(rec.sourceUrl, {
-            delay,
-            customTitle: newTitle,
-            recordId: rec.id,
-            categoryId: rec.targetCategoryId || 'uncategorized',
-            selectedChapters,
-            onProgress: progressCb
-          });
-        }
-      }
-    } catch (err) {
-      console.error('Redownload failed:', err);
-      if (pStatus) pStatus.textContent = `重新下載失敗: ${err.message}`;
-      logFn(`❌ 失敗: ${err.message}`);
-      alert(`重新下載失敗: ${err.message}`);
-    }
+    eventBus.emit('toast', {
+      message: `📥 已將《${rec.bookTitle}》重新下載任務加入排程佇列`
+    });
   }
 
   async handleCheckUpdate(rec) {
@@ -1565,8 +1556,8 @@ export class CrawlerView {
         return;
       }
 
-      logFn(`✨ 偵測到 ${newChapters.length} 篇全新章節！開啟確認彈窗...`);
-      this.openUpdateModal(rec, newChapters, totalOnline);
+      logFn(`✨ 偵測到 ${diffResult.newReleases.length} 篇最新連載、${diffResult.backfillChapters.length} 篇先前未下載章節！開啟確認彈窗...`);
+      this.openUpdateModal(rec, newChapters, totalOnline, diffResult, onlineChapters);
     } catch (err) {
       console.error('Check update failed:', err);
       if (pStatus) pStatus.textContent = `檢查更新失敗: ${err.message}`;
@@ -1575,15 +1566,21 @@ export class CrawlerView {
     }
   }
 
-  openUpdateModal(record, newChapters, totalOnline) {
+  openUpdateModal(record, newChapters, totalOnline, diffResult = null, allOnlineChapters = []) {
+    const newReleases = diffResult?.newReleases || newChapters.filter(c => c.isNewRelease);
+    const backfillChapters = diffResult?.backfillChapters || newChapters.filter(c => c.isBackfill);
+
     this.pendingUpdate = {
       record,
       newChapters: [...newChapters],
+      newReleases,
+      backfillChapters,
+      allOnlineChapters,
       sortAsc: true
     };
 
     if (this.updateBookTitle) {
-      this.updateBookTitle.textContent = `《${record.bookTitle}》 (線上最新總數: ${totalOnline} 篇，發現 ${newChapters.length} 篇新內容)`;
+      this.updateBookTitle.innerHTML = `《${record.bookTitle}》 (線上共 ${totalOnline} 篇 | <span style="color: #3b82f6; font-weight: 600;">✨ 最新連載: ${newReleases.length} 篇</span> | <span style="color: #f59e0b; font-weight: 600;">⏭️ 補抓: ${backfillChapters.length} 篇</span>)`;
     }
 
     if (this.btnUpdateSortToggle) {
@@ -1591,7 +1588,7 @@ export class CrawlerView {
     }
 
     if (this.chkUpdateSelectAll) {
-      this.chkUpdateSelectAll.checked = true;
+      this.chkUpdateSelectAll.checked = (newReleases.length > 0);
     }
 
     this.renderUpdateChaptersList();
@@ -1622,9 +1619,17 @@ export class CrawlerView {
         ? `<span class="crawler-update-badge">#${ch.parsedNumber}</span>`
         : '';
 
+      const typeBadge = ch.isBackfill
+        ? `<span class="crawler-type-badge backfill" style="font-size:0.75rem; padding: 2px 6px; border-radius: 4px; background: rgba(245, 158, 11, 0.18); color: #f59e0b; font-weight: 600; white-space: nowrap;">⏭️ 先前未下載</span>`
+        : `<span class="crawler-type-badge new-release" style="font-size:0.75rem; padding: 2px 6px; border-radius: 4px; background: rgba(59, 130, 246, 0.18); color: #3b82f6; font-weight: 600; white-space: nowrap;">✨ 最新連載</span>`;
+
+      // Story 51: 最新連載預設選取，先前未下載補抓章節預設不選取 (GWT 51.1)
+      const defaultChecked = ch.isNewRelease ? 'checked' : '';
+
       item.innerHTML = `
-        <input type="checkbox" id="up-ch-${idx}" data-idx="${idx}" checked style="cursor: pointer;">
-        <label for="up-ch-${idx}" style="cursor: pointer; flex: 1; display: flex; align-items: center; gap: 6px;">
+        <input type="checkbox" id="up-ch-${idx}" data-idx="${idx}" data-is-backfill="${ch.isBackfill ? 'true' : 'false'}" ${defaultChecked} style="cursor: pointer;">
+        <label for="up-ch-${idx}" style="cursor: pointer; flex: 1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          ${typeBadge}
           ${numBadge}
           <span>${ch.title}</span>
         </label>
@@ -1653,9 +1658,9 @@ export class CrawlerView {
     }
   }
 
-  async executeIncrementalUpdate() {
+  executeIncrementalUpdate() {
     if (!this.pendingUpdate) return;
-    const { record, newChapters } = this.pendingUpdate;
+    const { record, newChapters, allOnlineChapters } = this.pendingUpdate;
 
     // 收集所有勾選的章節 (保持目前畫面上展示之順序)
     const checkedBoxes = this.updateChaptersList.querySelectorAll('input[type="checkbox"]:checked');
@@ -1672,69 +1677,286 @@ export class CrawlerView {
       return;
     }
 
+    // 建立線上章節網址到目錄索引的 Map，提供補抓章節自動重排歸位使用 (GWT 51.3)
+    const onlineIndexMap = new Map();
+    if (Array.isArray(allOnlineChapters)) {
+      allOnlineChapters.forEach((c, idx) => {
+        if (c.url) onlineIndexMap.set(c.url, idx);
+      });
+    }
+
     this.closeUpdateModal();
 
     const isBaha = (record.sourceType === 'bahamut');
-    const pContainer = isBaha ? this.bahaProgressContainer : this.progressContainer;
-    const pFill = isBaha ? this.bahaProgressFill : this.progressFill;
-    const pStatus = isBaha ? this.bahaStatusText : this.statusText;
-    const pLog = isBaha ? this.bahaLogBox : this.logBox;
-    const logFn = isBaha ? (m) => this.appendBahaLog(m) : (m) => this.appendLog(m);
-
-    // 切換至對應分頁以展示進度 (Story 38)
     const targetSubTab = isBaha ? 'sub-panel-baha' : 'sub-panel-web';
     const tabBtn = Array.from(this.subTabs).find(b => b.dataset.panel === targetSubTab);
     if (tabBtn) tabBtn.click();
 
-    // 啟動進度面板
-    if (pContainer) pContainer.style.display = 'block';
-    if (pLog) pLog.innerHTML = '';
-    if (pFill) pFill.style.width = '0%';
-    if (pStatus) pStatus.textContent = `準備追更下載 ${selectedChapters.length} 篇新章節...`;
-    logFn(`🚀 開始增量追更《${record.bookTitle}》共 ${selectedChapters.length} 篇...`);
+    const delay = parseFloat(this.delaySlider ? this.delaySlider.value : (isBaha ? 1.5 : 2.0));
+    const reorder = selectedChapters.some(c => c.isBackfill);
 
-    const delay = parseFloat(this.delaySlider ? this.delaySlider.value : 1.5);
+    // Story 55: 統一排入下載排程佇列，杜絕多本小說同時並發下載與日誌交錯穿插 (GWT 55.1, 55.2)
+    downloadQueue.enqueue({
+      taskType: 'incremental',
+      bookTitle: record.bookTitle,
+      author: record.bookAuthor || '未知',
+      catalogUrl: record.sourceUrl,
+      sourceType: record.sourceType || 'web',
+      targetBookId: record.bookId,
+      recordId: record.id,
+      selectedChapters,
+      onlineIndexMap,
+      reorder,
+      delay
+    });
 
-    try {
-      const progressCb = (info) => {
-        if (info.status === 'downloading') {
-          if (pFill) pFill.style.width = `${info.percent}%`;
-          if (pStatus) pStatus.textContent = `[${info.percent}%] ${info.message}`;
-          if (info.title) logFn(`✔ 已追加: ${info.title}`);
-        } else if (info.status === 'completed') {
-          if (pFill) pFill.style.width = '100%';
-          if (pStatus) pStatus.textContent = info.message;
-          logFn(`🎉 ${info.message}`);
-          eventBus.emit('bookshelf:refresh');
-          this.renderCrawlerRecords();
-          eventBus.emit('toast', {
-            message: `《${record.bookTitle}》追更完成（新增 ${info.appendedCount} 篇）！`,
-            actionLabel: '前往閱讀',
-            onAction: () => eventBus.emit('reader:openBook', record.bookId)
-          });
-        } else if (info.status === 'cancelled') {
-          if (pStatus) pStatus.textContent = info.message;
-          logFn(`🛑 ${info.message}`);
+    eventBus.emit('toast', {
+      message: `📥 已將《${record.bookTitle}》追更任務加入排程佇列（共 ${selectedChapters.length} 篇）`
+    });
+  }
+
+  // ==========================================================
+  // 下載排程佇列管理 (Story 54)
+  // ==========================================================
+  bindQueueEvents() {
+    if (this.btnQueuePauseAll) {
+      this.btnQueuePauseAll.addEventListener('click', () => {
+        const active = downloadQueue.getActiveTask();
+        if (active) {
+          downloadQueue.pauseActive();
+          eventBus.emit('toast', { message: `已暫停《${active.bookTitle}》下載（進度已保存）` });
+        } else {
+          const pending = downloadQueue.getPendingTasks();
+          const paused = pending.find(t => t.status === 'paused');
+          if (paused) {
+            downloadQueue.resumeTask(paused.id);
+            eventBus.emit('toast', { message: `恢復《${paused.bookTitle}》下載` });
+          } else {
+            eventBus.emit('toast', { message: '目前無正在進行中的下載任務' });
+          }
         }
-      };
-
-      if (record.sourceType === 'bahamut') {
-        await bahaCrawler.crawlBahaIncremental(record.id, selectedChapters, {
-          delay,
-          onProgress: progressCb
-        });
-      } else {
-        await crawler.crawlIncremental(record.id, selectedChapters, {
-          delay,
-          onProgress: progressCb
-        });
-      }
-    } catch (err) {
-      console.error('Incremental crawl error:', err);
-      if (pStatus) pStatus.textContent = `追更失敗: ${err.message}`;
-      logFn(`❌ 失敗: ${err.message}`);
-      alert(`追更失敗: ${err.message}`);
+      });
     }
+
+    if (this.btnQueueClear) {
+      this.btnQueueClear.addEventListener('click', () => {
+        const pending = downloadQueue.getPendingTasks();
+        if (pending.length === 0) {
+          eventBus.emit('toast', { message: '等待佇列中目前沒有任何任務' });
+          return;
+        }
+        if (confirm(`確定要清空等待佇列中的 ${pending.length} 部小說嗎？（當前正在下載的小說不受影響）`)) {
+          downloadQueue.clearPending();
+          eventBus.emit('toast', { message: '已清空所有等待中的排程小說' });
+        }
+      });
+    }
+
+    // 事件委派處理所有佇列按鈕點擊 (⚡ 插隊, ⬆️ 上移, ⬇️ 下移, ❌ 取消/放棄, ⏸️ 暫停, ▶️ 繼續)
+    if (this.queueContainer) {
+      this.queueContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const taskId = btn.dataset.taskId;
+        if (!taskId) return;
+
+        if (btn.classList.contains('btn-queue-prioritize')) {
+          downloadQueue.prioritize(taskId);
+          const task = downloadQueue.getAllTasks().find(t => t.id === taskId);
+          eventBus.emit('toast', { message: `⚡ 已將《${task ? task.bookTitle : '小說'}》優先插隊！` });
+        } else if (btn.classList.contains('btn-queue-up')) {
+          downloadQueue.moveUp(taskId);
+        } else if (btn.classList.contains('btn-queue-down')) {
+          downloadQueue.moveDown(taskId);
+        } else if (btn.classList.contains('btn-queue-cancel') || btn.classList.contains('btn-queue-cancel-task')) {
+          const task = downloadQueue.getAllTasks().find(t => t.id === taskId);
+          const taskName = task ? task.bookTitle : '小說';
+          if (confirm(`確定要放棄/取消《${taskName}》的下載嗎？`)) {
+            downloadQueue.cancelTask(taskId);
+            eventBus.emit('toast', { message: `已取消《${taskName}》下載` });
+          }
+        } else if (btn.classList.contains('btn-queue-pause-task')) {
+          downloadQueue.pauseActive();
+        } else if (btn.classList.contains('btn-queue-resume')) {
+          downloadQueue.resumeTask(taskId);
+        }
+      });
+    }
+  }
+
+  renderQueueUI() {
+    if (!this.queueContainer) return;
+
+    const activeTask = downloadQueue.getActiveTask();
+    const pendingTasks = downloadQueue.getPendingTasks();
+
+    const hasVisibleTasks = !!activeTask || pendingTasks.length > 0;
+
+    if (!hasVisibleTasks) {
+      this.queueContainer.style.display = 'none';
+      if (this.queueBadgeCount) this.queueBadgeCount.textContent = '0';
+      if (this.btnCancel) this.btnCancel.style.display = 'none';
+      return;
+    }
+
+    this.queueContainer.style.display = 'block';
+    const totalInFlight = (activeTask ? 1 : 0) + pendingTasks.length;
+    if (this.queueBadgeCount) this.queueBadgeCount.textContent = String(totalInFlight);
+
+    // 1. 渲染當前活躍任務
+    if (this.queueActiveSection) {
+      if (activeTask) {
+        this.queueActiveSection.style.display = 'block';
+        const pct = activeTask.progress ? activeTask.progress.percent : 0;
+        const msg = activeTask.progress ? activeTask.progress.message : '下載中...';
+        const totalCh = activeTask.selectedChapters ? activeTask.selectedChapters.length : (activeTask.progress?.total || 0);
+
+        let typeBadgeText = '⚡ 正在下載';
+        if (activeTask.taskType === 'incremental') {
+          typeBadgeText = '🔄 增量追更中';
+        } else if (activeTask.taskType === 'redownload') {
+          typeBadgeText = '🔄 重新下載中';
+        }
+
+        this.queueActiveSection.innerHTML = `
+          <div class="queue-active-card">
+            <div class="queue-active-header">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span class="queue-pulsing-dot" title="下載中"></span>
+                <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">《${this.escapeStr(activeTask.bookTitle)}》</span>
+                <span style="color: var(--text-muted); font-size: 0.8rem;">作者: ${this.escapeStr(activeTask.author || '未知')}</span>
+                <span class="queue-order-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">${typeBadgeText} (共 ${totalCh} 章)</span>
+              </div>
+              <div class="queue-item-actions">
+                <button type="button" class="btn btn-secondary btn-sm btn-queue-pause-task" data-task-id="${activeTask.id}" title="暫停此小說（保留進度至斷點）">⏸️ 暫停</button>
+                <button type="button" class="btn btn-danger btn-sm btn-queue-cancel-task" data-task-id="${activeTask.id}" title="中斷並取消此小說">❌ 取消</button>
+              </div>
+            </div>
+            <div style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+              <span id="queue-active-status-msg">${this.escapeStr(msg)}</span>
+              <span id="queue-active-pct-text">${pct}%</span>
+            </div>
+            <div class="progress-track" style="margin-top: 4px; height: 6px;">
+              <div id="queue-active-progress-fill" class="progress-fill" style="width: ${pct}%;"></div>
+            </div>
+          </div>
+        `;
+      } else {
+        this.queueActiveSection.style.display = 'none';
+        this.queueActiveSection.innerHTML = '';
+      }
+    }
+
+    // 2. 渲染等待與排程中的任務清單
+    if (this.queuePendingList) {
+      if (pendingTasks.length === 0) {
+        this.queuePendingList.innerHTML = activeTask
+          ? '<div style="font-size: 0.82rem; color: var(--text-muted); text-align: center; padding: 0.6rem 0;">佇列中無其他等待下載的小說</div>'
+          : '<div style="font-size: 0.82rem; color: var(--text-muted); text-align: center; padding: 0.6rem 0;">下載佇列目前為空</div>';
+      } else {
+        let listHtml = '';
+        pendingTasks.forEach((task, idx) => {
+          const isPaused = (task.status === 'paused');
+          const totalCh = task.selectedChapters ? task.selectedChapters.length : (task.progress?.total || 0);
+          const statusTag = isPaused
+            ? '<span class="queue-status-tag paused">⏸️ 暫停中</span>'
+            : '<span class="queue-status-tag pending">⏳ 等待中</span>';
+
+          let typeTag = '';
+          if (task.taskType === 'incremental') {
+            typeTag = '<span class="queue-status-tag" style="background: rgba(59, 130, 246, 0.18); color: #3b82f6;">🔄 追更</span>';
+          } else if (task.taskType === 'redownload') {
+            typeTag = '<span class="queue-status-tag" style="background: rgba(168, 85, 247, 0.18); color: #a855f7;">🔄 重載</span>';
+          } else {
+            typeTag = '<span class="queue-status-tag" style="background: rgba(16, 185, 129, 0.18); color: #10b981;">📥 全書</span>';
+          }
+
+          listHtml += `
+            <div class="queue-item" data-task-id="${task.id}">
+              <div class="queue-item-info">
+                <div class="queue-item-title-row">
+                  <span class="queue-order-badge">#${idx + 1}</span>
+                  ${typeTag}
+                  ${statusTag}
+                  <span class="queue-item-title">《${this.escapeStr(task.bookTitle)}》</span>
+                  <span class="queue-item-author">作者: ${this.escapeStr(task.author || '未知')}</span>
+                </div>
+                <div class="queue-item-sub">
+                  <span>章節數: ${totalCh} 章</span>
+                  <span>狀態: ${this.escapeStr(task.progress?.message || '等待下載')}</span>
+                </div>
+              </div>
+              <div class="queue-item-actions">
+                ${isPaused ? `<button type="button" class="btn btn-secondary btn-sm btn-queue-resume" data-task-id="${task.id}" title="繼續此小說下載">▶️ 繼續</button>` : ''}
+                <button type="button" class="btn-queue-prioritize" data-task-id="${task.id}" title="立即暫停當前小說，優先插隊下載此書">⚡ 插隊</button>
+                <button type="button" class="btn btn-secondary btn-sm btn-queue-up" data-task-id="${task.id}" title="上移排序" ${idx === 0 ? 'disabled' : ''}>⬆️</button>
+                <button type="button" class="btn btn-secondary btn-sm btn-queue-down" data-task-id="${task.id}" title="下移排序" ${idx === pendingTasks.length - 1 ? 'disabled' : ''}>⬇️</button>
+                <button type="button" class="btn btn-danger btn-sm btn-queue-cancel" data-task-id="${task.id}" title="放棄並移出佇列">❌</button>
+              </div>
+            </div>
+          `;
+        });
+        this.queuePendingList.innerHTML = listHtml;
+      }
+    }
+  }
+
+  handleQueueStarted(data) {
+    if (!data || !data.task) return;
+    const task = data.task;
+
+    if (this.progressContainer) {
+      this.progressContainer.style.display = 'block';
+    }
+    if (this.progressFill) {
+      this.progressFill.style.width = '0%';
+    }
+    const actionLabel = task.taskType === 'incremental' ? '追更' : '下載';
+    if (this.statusText) {
+      this.statusText.textContent = `[0%] 準備開始${actionLabel}《${task.bookTitle}》...`;
+    }
+    this.appendLog(`📥 開始執行佇列任務：《${task.bookTitle}》（${actionLabel}共 ${task.selectedChapters ? task.selectedChapters.length : 0} 章）`);
+    if (this.btnCancel) {
+      this.btnCancel.style.display = 'inline-block';
+    }
+  }
+
+  handleQueueProgress(data) {
+    if (!data || !data.task || !data.info) return;
+    const { task, info } = data;
+
+    if (info.status === 'downloading') {
+      if (this.progressFill) this.progressFill.style.width = `${info.percent}%`;
+      if (this.statusText) this.statusText.textContent = `[${info.percent}%] ${info.message} (${task.bookTitle})`;
+      const logVerb = task.taskType === 'incremental' ? '已追加' : '已儲存';
+      if (info.title) this.appendLog(`✔ [${task.bookTitle}] ${logVerb}: ${info.title}`);
+
+      const activeMsg = document.getElementById('queue-active-status-msg');
+      if (activeMsg) activeMsg.textContent = info.message;
+      const activePct = document.getElementById('queue-active-pct-text');
+      if (activePct) activePct.textContent = `${info.percent}%`;
+      const activeFill = document.getElementById('queue-active-progress-fill');
+      if (activeFill) activeFill.style.width = `${info.percent}%`;
+    } else if (info.status === 'completed') {
+      if (this.progressFill) this.progressFill.style.width = '100%';
+      if (this.statusText) this.statusText.textContent = info.message;
+      this.appendLog(`🎉 [${task.bookTitle}] ${info.message}`);
+    } else if (info.status === 'paused') {
+      if (this.statusText) this.statusText.textContent = info.message;
+      this.appendLog(`⏸️ [${task.bookTitle}] ${info.message}`);
+    } else if (info.status === 'cancelled') {
+      if (this.statusText) this.statusText.textContent = info.message;
+      this.appendLog(`🛑 [${task.bookTitle}] ${info.message}`);
+    }
+  }
+
+  escapeStr(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 }
 

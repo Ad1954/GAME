@@ -10,10 +10,15 @@ import { DEFAULT_PROXIES, isLocalEnvironment } from './crawler.js';
 export class BahaCrawlerService {
   constructor() {
     this.isCancelled = false;
+    this.isPaused = false;
   }
 
   cancel() {
     this.isCancelled = true;
+  }
+
+  pause() {
+    this.isPaused = true;
   }
 
   getActiveProxyTemplate() {
@@ -347,6 +352,7 @@ export class BahaCrawlerService {
     } = options;
 
     this.isCancelled = false;
+    this.isPaused = false;
 
     // 1. Fetch cross-page catalog
     const catalog = await this.fetchCatalog(input, {
@@ -398,6 +404,10 @@ export class BahaCrawlerService {
     for (let i = 0; i < total; i++) {
       if (this.isCancelled) {
         onProgress({ status: 'cancelled', message: '巴哈創作下載已取消' });
+        break;
+      }
+      if (this.isPaused) {
+        onProgress({ status: 'paused', book, message: '巴哈創作下載已暫停（進度已保存）' });
         break;
       }
 
@@ -458,7 +468,7 @@ export class BahaCrawlerService {
       historicalKeys: [...allCsns, ...allUrls]
     });
 
-    if (!this.isCancelled) {
+    if (!this.isCancelled && !this.isPaused) {
       onProgress({
         status: 'completed',
         message: `《${book.title}》下載完成！共收錄 ${book.downloadedChaptersCount} 篇創作。`,
@@ -475,37 +485,71 @@ export class BahaCrawlerService {
   async crawlBahaIncremental(recordId, newArticles, options = {}) {
     const { delay = 1.5, onProgress = () => {} } = options;
     this.isCancelled = false;
+    this.isPaused = false;
 
     const record = storage.getCrawlerRecord(recordId);
     if (!record) throw new Error(`找不到巴哈爬蟲紀錄 ${recordId}`);
     const book = await storage.getBook(record.bookId);
     if (!book) throw new Error(`找不到對應書籍 ${record.bookId}`);
 
+    // 先取得書本中現存篇章 csn/url，避免續傳時重複追加
+    const existingChapters = await storage.getChaptersByBook(book.id);
+    const existingKeySet = new Set();
+    existingChapters.forEach(c => {
+      if (c.csn) existingKeySet.add(String(c.csn));
+      if (c.url) existingKeySet.add(c.url);
+    });
+    const pendingArticles = newArticles.filter(a => {
+      const csnKey = a.csn ? String(a.csn) : null;
+      return (!csnKey || !existingKeySet.has(csnKey)) && (!a.url || !existingKeySet.has(a.url));
+    });
+
     const total = newArticles.length;
     const downloadedList = [];
+    const alreadyDoneCount = total - pendingArticles.length;
 
     onProgress({
       status: 'downloading',
-      current: 0,
+      current: alreadyDoneCount,
       total,
-      percent: 0,
-      message: `開始增量下載 ${total} 篇全新巴哈創作...`
+      percent: Math.round((alreadyDoneCount / total) * 100),
+      message: alreadyDoneCount > 0 ? `接關續傳巴哈創作 (${alreadyDoneCount}/${total} 篇)...` : `開始增量下載 ${total} 篇全新巴哈創作...`
     });
 
-    for (let i = 0; i < total; i++) {
+    for (let i = 0; i < pendingArticles.length; i++) {
       if (this.isCancelled) {
+        if (downloadedList.length > 0) {
+          await storage.appendChaptersToBook(book.id, downloadedList, recordId);
+        }
         onProgress({ status: 'cancelled', message: '增量下載已取消' });
         break;
       }
 
-      const art = newArticles[i];
+      if (this.isPaused) {
+        if (downloadedList.length > 0) {
+          await storage.appendChaptersToBook(book.id, downloadedList, recordId);
+        }
+        const currentDone = alreadyDoneCount + downloadedList.length;
+        onProgress({
+          status: 'paused',
+          current: currentDone,
+          total,
+          percent: Math.round((currentDone / total) * 100),
+          message: `巴哈追更已安全暫停（已保存至第 ${currentDone} 篇，剩餘篇章可接關續傳）`,
+          book
+        });
+        return book;
+      }
+
+      const art = pendingArticles[i];
+      const curIndex = alreadyDoneCount + i + 1;
       onProgress({
         status: 'downloading',
-        current: i + 1,
+        current: curIndex,
         total,
-        percent: Math.round(((i + 1) / total) * 100),
+        percent: Math.round((curIndex / total) * 100),
         title: art.title,
-        message: `正在下載 (${i + 1}/${total}): ${art.title}`
+        message: `正在下載 (${curIndex}/${total}): ${art.title}`
       });
 
       try {
@@ -524,7 +568,7 @@ export class BahaCrawlerService {
         console.warn(`文章 [${art.title}] 下載失敗:`, err);
       }
 
-      if (i < total - 1 && delay > 0) {
+      if (i < pendingArticles.length - 1 && delay > 0) {
         await new Promise(r => setTimeout(r, delay * 1000));
       }
     }

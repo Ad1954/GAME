@@ -24,6 +24,7 @@ export function isLocalEnvironment() {
 export class CrawlerService {
   constructor() {
     this.isCancelled = false;
+    this.isPaused = false;
   }
 
   getActiveProxyTemplate() {
@@ -74,30 +75,40 @@ export class CrawlerService {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
 
-    // 1. Extract Book Title (Story 43)
+    // 1. Extract Book Title (Story 43, Story 53)
     let title = '';
-    const h1 = doc.querySelector('h1, .novel-title, .book-title, .info h1');
-    if (h1 && h1.textContent.trim()) {
-      title = h1.textContent.trim();
+    const titleEl = doc.querySelector('h1, .novel-title, .book-title, .info h1, .info .title, .novel-info .title, .info-wrap .title, [itemprop="name"]');
+    if (titleEl && titleEl.textContent.trim()) {
+      let t = titleEl.textContent.trim();
+      const m = t.match(/《([^》]+)》/);
+      title = m ? m[1].trim() : t;
     } else {
+      const metaTitle = doc.querySelector('meta[property="og:title"], meta[name="title"]')?.content;
       const titleTag = doc.querySelector('title');
-      if (titleTag) {
-        const bookMatch = titleTag.textContent.match(/《([^》]+)》/);
+      const candidateStr = metaTitle || titleTag?.textContent || '';
+      if (candidateStr) {
+        const bookMatch = candidateStr.match(/《([^》]+)》/);
         if (bookMatch) {
           title = bookMatch[1].trim();
         } else {
-          title = titleTag.textContent.replace(/目錄|最新章節|小說|線上看|全文閱讀/g, '').trim();
+          title = candidateStr.replace(/【[^】]+】/g, '').replace(/目錄|最新章節|小說|線上看|全文閱讀|小说|最新章节|全文阅读/g, '').split(/[|\-_]/)[0].trim();
         }
-      } else {
-        title = '未命名小說';
       }
     }
+    if (!title) {
+      title = '未命名小說';
+    }
 
-    // 2. Extract Author
+    // 2. Extract Author (Story 43, Story 53)
     let author = '未知';
-    const authorEl = doc.querySelector('.author, [itemprop="author"], #info p');
-    if (authorEl) {
+    const authorEl = doc.querySelector('.author, [itemprop="author"], #info p, .info .author, .novel-info .author, [itemprop="creator"]');
+    if (authorEl && authorEl.textContent.trim()) {
       author = authorEl.textContent.replace(/作者[：:]/g, '').trim();
+    } else {
+      const metaAuthor = doc.querySelector('meta[property="og:novel:author"], meta[name="author"]')?.content;
+      if (metaAuthor && metaAuthor.trim()) {
+        author = metaAuthor.trim();
+      }
     }
 
     // 3. Extract Chapter Links with Dedicated Container Targeting (Story 40, Story 42, Story 43)
@@ -268,10 +279,12 @@ export class CrawlerService {
       targetBookId = null,
       recordId = null,
       customTitle = '',
+      author = '',
       selectedChapters = null, // Story 42
       onProgress = () => {}
     } = options;
     this.isCancelled = false;
+    this.isPaused = false;
 
     let targetChapters = selectedChapters;
     let catalog = null;
@@ -287,8 +300,17 @@ export class CrawlerService {
       book = await storage.getBook(bookId);
     }
 
+    // Story 53: 若傳入自訂章節且未指定書名/作者，且為新書，回退解析一次目錄以取得標準書名與作者
+    if (!customTitle.trim() && !book && (!catalog || !catalog.title)) {
+      try {
+        catalog = await this.parseCatalog(catalogUrl);
+      } catch (e) {
+        console.warn('Fallback parseCatalog for title/author failed:', e);
+      }
+    }
+
     const bookTitle = customTitle.trim() || (book ? book.title : (catalog ? catalog.title : '未命名小說'));
-    const bookAuthor = (book ? book.author : (catalog ? catalog.author : '未知'));
+    const bookAuthor = author.trim() || (book ? book.author : (catalog ? catalog.author : '未知'));
 
     if (!book) {
       bookId = `book_web_${Date.now()}`;
@@ -322,6 +344,10 @@ export class CrawlerService {
     for (let i = 0; i < total; i++) {
       if (this.isCancelled) {
         onProgress({ status: 'cancelled', message: '下載已手動取消' });
+        break;
+      }
+      if (this.isPaused) {
+        onProgress({ status: 'paused', book, bookId, message: '下載已安全暫停（進度已保存）' });
         break;
       }
 
@@ -358,14 +384,14 @@ export class CrawlerService {
       let downloadError = null;
 
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-        if (this.isCancelled) break;
+        if (this.isCancelled || this.isPaused) break;
         try {
           rawContent = await this.fetchChapterContent(chapMeta.url);
           downloadError = null;
           break;
         } catch (err) {
           downloadError = err;
-          if (attempt < MAX_RETRIES && !this.isCancelled) {
+          if (attempt < MAX_RETRIES && !this.isCancelled && !this.isPaused) {
             onProgress({
               status: 'downloading',
               current: i + 1,
@@ -406,13 +432,13 @@ export class CrawlerService {
       await storage.saveBook(book);
 
       // Respectful delay to avoid WAF IP blocking
-      if (i < total - 1 && delay > 0) {
+      if (i < total - 1 && delay > 0 && !this.isCancelled && !this.isPaused) {
         await new Promise(r => setTimeout(r, delay * 1000));
       }
     }
 
-    // 自動保存爬蟲歷史紀錄 (Story 27)
-    const allUrls = (catalog ? catalog.chapters : targetChapters).map(c => c.url).filter(Boolean);
+    // 自動保存爬蟲歷史紀錄 (Story 27, Story 51: 僅記錄實際下載之章節，避免未選取章節被永久判定已處理)
+    const allUrls = targetChapters.map(c => c.url).filter(Boolean);
     const lastUrl = allUrls.length > 0 ? allUrls[allUrls.length - 1] : '';
     storage.saveCrawlerRecord({
       id: recordId || undefined,
@@ -426,7 +452,7 @@ export class CrawlerService {
       historicalKeys: allUrls
     });
 
-    if (!this.isCancelled) {
+    if (!this.isCancelled && !this.isPaused) {
       onProgress({ status: 'completed', book, bookId, message: `全書 ${total} 章下載完成並已全數入庫！` });
     }
 
@@ -439,37 +465,64 @@ export class CrawlerService {
   async crawlIncremental(recordId, newChapters, options = {}) {
     const { delay = 2.0, onProgress = () => {} } = options;
     this.isCancelled = false;
+    this.isPaused = false;
 
     const record = storage.getCrawlerRecord(recordId);
     if (!record) throw new Error(`找不到爬蟲紀錄 ${recordId}`);
     const book = await storage.getBook(record.bookId);
     if (!book) throw new Error(`找不到對應書籍 ${record.bookId}`);
 
+    // 先取得書本中現存章節 URL，避免續傳時重複抓取已追加的章節
+    const existingChapters = await storage.getChaptersByBook(book.id);
+    const existingUrlSet = new Set(existingChapters.map(c => c.url).filter(Boolean));
+    const pendingChapters = newChapters.filter(c => !existingUrlSet.has(c.url));
+
     const total = newChapters.length;
     const downloadedList = [];
+    const alreadyDoneCount = total - pendingChapters.length;
 
     onProgress({
       status: 'downloading',
-      current: 0,
+      current: alreadyDoneCount,
       total,
-      percent: 0,
-      message: `開始增量下載 ${total} 篇全新章節...`
+      percent: Math.round((alreadyDoneCount / total) * 100),
+      message: alreadyDoneCount > 0 ? `接關續傳追更 (${alreadyDoneCount}/${total} 篇)...` : `開始增量下載 ${total} 篇全新章節...`
     });
 
-    for (let i = 0; i < total; i++) {
+    for (let i = 0; i < pendingChapters.length; i++) {
       if (this.isCancelled) {
+        if (downloadedList.length > 0) {
+          await storage.appendChaptersToBook(book.id, downloadedList, recordId, options);
+        }
         onProgress({ status: 'cancelled', message: '增量下載已取消' });
         break;
       }
 
-      const chapMeta = newChapters[i];
+      if (this.isPaused) {
+        if (downloadedList.length > 0) {
+          await storage.appendChaptersToBook(book.id, downloadedList, recordId, options);
+        }
+        const currentDone = alreadyDoneCount + downloadedList.length;
+        onProgress({
+          status: 'paused',
+          current: currentDone,
+          total,
+          percent: Math.round((currentDone / total) * 100),
+          message: `追更已安全暫停（已保存至第 ${currentDone} 篇，剩餘章節可接關續傳）`,
+          book
+        });
+        return book;
+      }
+
+      const chapMeta = pendingChapters[i];
+      const curIndex = alreadyDoneCount + i + 1;
       onProgress({
         status: 'downloading',
-        current: i + 1,
+        current: curIndex,
         total,
-        percent: Math.round(((i + 1) / total) * 100),
+        percent: Math.round((curIndex / total) * 100),
         title: chapMeta.title,
-        message: `正在下載新章節 (${i + 1}/${total}): ${chapMeta.title}`
+        message: `正在下載新章節 (${curIndex}/${total}): ${chapMeta.title}`
       });
 
       // Story 40: Auto-retry up to 2 times with 2.5s delay
@@ -478,19 +531,19 @@ export class CrawlerService {
       let downloadError = null;
 
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-        if (this.isCancelled) break;
+        if (this.isCancelled || this.isPaused) break;
         try {
           rawContent = await this.fetchChapterContent(chapMeta.url);
           downloadError = null;
           break;
         } catch (err) {
           downloadError = err;
-          if (attempt < MAX_RETRIES && !this.isCancelled) {
+          if (attempt < MAX_RETRIES && !this.isCancelled && !this.isPaused) {
             onProgress({
               status: 'downloading',
-              current: i + 1,
+              current: curIndex,
               total,
-              percent: Math.round(((i + 1) / total) * 100),
+              percent: Math.round((curIndex / total) * 100),
               title: chapMeta.title,
               message: `⚠️ 新章節受阻 (${err.message})，2.5秒後自動重試 (${attempt + 1}/${MAX_RETRIES})...`
             });
@@ -510,19 +563,21 @@ export class CrawlerService {
       downloadedList.push({
         title: chapMeta.title,
         url: chapMeta.url,
+        isBackfill: !!chapMeta.isBackfill,
+        onlineIndex: chapMeta.onlineIndex !== undefined ? chapMeta.onlineIndex : null,
         content: rawContent,
         paragraphs,
         sentencesCount: flatSentences.length
       });
 
-      if (i < total - 1 && delay > 0) {
+      if (i < pendingChapters.length - 1 && delay > 0) {
         await new Promise(r => setTimeout(r, delay * 1000));
       }
     }
 
     if (downloadedList.length > 0) {
-      // 附加至原書
-      await storage.appendChaptersToBook(book.id, downloadedList, recordId);
+      // 附加至原書 (支援補抓章節自動重整順序)
+      await storage.appendChaptersToBook(book.id, downloadedList, recordId, options);
       onProgress({
         status: 'completed',
         book,
@@ -537,6 +592,10 @@ export class CrawlerService {
 
   cancel() {
     this.isCancelled = true;
+  }
+
+  pause() {
+    this.isPaused = true;
   }
 }
 
@@ -662,26 +721,30 @@ export function parseChapterNumber(title) {
 }
 
 /**
- * 增量章節比對與自然拓撲排序核心演算法 (四級優先級 + 子篇章排序)
+ * 增量章節比對與自然拓撲排序核心演算法 (Story 51: 支援區分最新連載與先前未下載補抓)
  * @param {Array<Object>} onlineChapters - [{ title, url, csn }]
  * @param {Array<Object>} existingBookChapters - 書籍中現存章節 [{ title, url, csn }]
- * @param {Array<string>} historicalKeys - 爬蟲歷史已抓取池 (含手動刪除/分割過的章節防幽靈回溯)
- * @returns {{ newChapters: Array<Object>, totalOnline: number }}
+ * @param {Array<string>} historicalKeys - 爬蟲歷史已抓取池
+ * @returns {{ newChapters: Array<Object>, newReleases: Array<Object>, backfillChapters: Array<Object>, totalOnline: number, maxExistingOnlineIndex: number }}
  */
 export function diffOnlineChapters(onlineChapters = [], existingBookChapters = [], historicalKeys = []) {
-  // 1. URL/CSN 唯一碼去重 (解決小說網頁頂部置頂最新 10 章與底部目錄重複)
+  // 1. URL/CSN 唯一碼去重並記錄線上自然順序
   const uniqueList = [];
   const seenUrls = new Set();
 
-  for (const ch of onlineChapters) {
+  for (let i = 0; i < onlineChapters.length; i++) {
+    const ch = onlineChapters[i];
     const key = ch.url || (ch.csn ? `csn_${ch.csn}` : null);
     if (key && !seenUrls.has(key)) {
       seenUrls.add(key);
-      uniqueList.push(ch);
+      uniqueList.push({
+        ...ch,
+        onlineIndex: uniqueList.length
+      });
     }
   }
 
-  // 2. 排除現存於書籍與歷史庫存池之章節 (全維度排重: CSN + URL + 完整標準化標題)
+  // 2. 建立現存章節集合與最大已存在之線上目錄位置
   const existingSet = new Set();
   const existingTitles = new Set();
 
@@ -691,9 +754,8 @@ export function diffOnlineChapters(onlineChapters = [], existingBookChapters = [
     if (c.title) existingTitles.add(c.title.trim().toLowerCase());
   });
 
-  const historySet = new Set((historicalKeys || []).map(String));
-
-  const candidates = uniqueList.filter(ch => {
+  let maxExistingOnlineIndex = -1;
+  uniqueList.forEach(ch => {
     const urlKey = ch.url;
     const csnKey = ch.csn ? String(ch.csn) : null;
     const titleKey = (ch.title || '').trim().toLowerCase();
@@ -702,34 +764,53 @@ export function diffOnlineChapters(onlineChapters = [], existingBookChapters = [
                    (csnKey && existingSet.has(csnKey)) ||
                    (titleKey && existingTitles.has(titleKey));
 
-    const inHistory = (urlKey && historySet.has(urlKey)) ||
-                      (csnKey && historySet.has(csnKey)) ||
-                      (titleKey && historySet.has(titleKey));
-
-    return !inBook && !inHistory;
+    if (inBook && ch.onlineIndex > maxExistingOnlineIndex) {
+      maxExistingOnlineIndex = ch.onlineIndex;
+    }
   });
 
-  // 3. 自然數值拓撲排序 (支援主回數與子篇章語意權重正序排列)
-  let parsedCount = 0;
+  // 3. 篩選缺漏章節並區分「最新連載」與「先前未下載 (補抓)」(Story 51, GWT 51.1)
+  const candidates = [];
+  uniqueList.forEach(ch => {
+    const urlKey = ch.url;
+    const csnKey = ch.csn ? String(ch.csn) : null;
+    const titleKey = (ch.title || '').trim().toLowerCase();
+
+    const inBook = (urlKey && existingSet.has(urlKey)) ||
+                   (csnKey && existingSet.has(csnKey)) ||
+                   (titleKey && existingTitles.has(titleKey));
+
+    if (!inBook) {
+      // 若章節在線上目錄中的位置小於等於目前書庫擁有的最大目錄序號，代表為先前跳過/未下載之章節 (補抓)
+      const isBackfill = (maxExistingOnlineIndex >= 0 && ch.onlineIndex <= maxExistingOnlineIndex);
+      const isNewRelease = !isBackfill;
+
+      candidates.push({
+        ...ch,
+        isBackfill,
+        isNewRelease
+      });
+    }
+  });
+
+  // 4. 自然目錄拓撲排序 (Story 53: 嚴格以線上目錄發布順序 onlineIndex 為基準主排序，避免跨卷 VIP 重新編號穿插錯亂)
   const withNumbers = candidates.map(ch => {
     const num = parseChapterNumber(ch.title);
-    if (num !== null) parsedCount++;
     return { ...ch, parsedNumber: num };
   });
 
-  if (parsedCount >= Math.max(2, candidates.length * 0.4)) {
-    // 依章節回數與子篇章正序排列
-    withNumbers.sort((a, b) => {
-      if (a.parsedNumber !== null && b.parsedNumber !== null) {
-        return a.parsedNumber - b.parsedNumber;
-      }
-      return 0;
-    });
-  }
+  // 線上目錄索引已忠實反映作者與網站發布之自然順序，依 onlineIndex 穩定排序
+  withNumbers.sort((a, b) => (a.onlineIndex || 0) - (b.onlineIndex || 0));
+
+  const newReleases = withNumbers.filter(c => c.isNewRelease);
+  const backfillChapters = withNumbers.filter(c => c.isBackfill);
 
   return {
     newChapters: withNumbers,
-    totalOnline: uniqueList.length
+    newReleases,
+    backfillChapters,
+    totalOnline: uniqueList.length,
+    maxExistingOnlineIndex
   };
 }
 

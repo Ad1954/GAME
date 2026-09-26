@@ -35,6 +35,14 @@ export class BookshelfView {
     this.btnCloseCatRename = document.getElementById('btn-close-cat-rename');
     this.currentRenameCatId = null;
 
+    // Book Rename Modal (Story 46)
+    this.bookRenameModal = document.getElementById('book-rename-modal');
+    this.bookRenameInput = document.getElementById('book-rename-input');
+    this.btnConfirmBookRename = document.getElementById('btn-confirm-book-rename');
+    this.btnCancelBookRename = document.getElementById('btn-cancel-book-rename');
+    this.btnCloseBookRename = document.getElementById('btn-close-book-rename');
+    this.currentRenameBookId = null;
+
     // Move Book Category Modal
     this.moveBookModal = document.getElementById('move-book-category-modal');
     this.moveBookTitle = document.getElementById('move-book-modal-title');
@@ -94,6 +102,22 @@ export class BookshelfView {
         } catch (e) {
           alert(e.message);
         }
+      });
+    }
+
+    // Book Rename Modal Events (Story 46)
+    if (this.btnCancelBookRename) {
+      this.btnCancelBookRename.addEventListener('click', () => this.closeBookRenameModal());
+    }
+    if (this.btnCloseBookRename) {
+      this.btnCloseBookRename.addEventListener('click', () => this.closeBookRenameModal());
+    }
+    if (this.btnConfirmBookRename) {
+      this.btnConfirmBookRename.addEventListener('click', () => this.handleConfirmBookRename());
+    }
+    if (this.bookRenameInput) {
+      this.bookRenameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') this.handleConfirmBookRename();
       });
     }
 
@@ -203,14 +227,17 @@ export class BookshelfView {
           } else if (file.name.endsWith('.txt')) {
             showProgress(`正在解析純文字小說: 《${file.name}》...`);
             const text = await TxtParser.readTextFileWithEncoding(file);
-            const bookTitle = file.name.replace(/\.[^/.]+$/, '');
+            const meta = TxtParser.parseMetadata(text);
+            const bookTitle = meta.title || file.name.replace(/\.[^/.]+$/, '');
+            const bookAuthor = meta.author || '本地匯入';
             const bookId = `book_txt_${Date.now()}`;
             const chapters = TxtParser.parse(text, bookId);
             const book = {
               id: bookId,
               title: bookTitle,
-              author: '本地匯入',
+              author: bookAuthor,
               sourceType: 'file',
+              sourceUrl: meta.sourceUrl || '',
               categoryId: 'uncategorized',
               totalChapters: chapters.length,
               downloadedChaptersCount: chapters.length,
@@ -433,6 +460,50 @@ export class BookshelfView {
     }
   }
 
+  openBookRenameModal(bookOrId, maybeTitle = '') {
+    const bookId = (bookOrId && typeof bookOrId === 'object') ? bookOrId.id : bookOrId;
+    const title = (bookOrId && typeof bookOrId === 'object') ? bookOrId.title : maybeTitle;
+    this.currentRenameBookId = bookId;
+    if (this.bookRenameInput) {
+      this.bookRenameInput.value = title || '';
+    }
+    if (this.bookRenameModal) {
+      this.bookRenameModal.classList.add('active');
+      setTimeout(() => {
+        if (this.bookRenameInput) {
+          this.bookRenameInput.focus();
+          this.bookRenameInput.select();
+        }
+      }, 50);
+    }
+  }
+
+  closeBookRenameModal() {
+    this.currentRenameBookId = null;
+    if (this.bookRenameModal) {
+      this.bookRenameModal.classList.remove('active');
+    }
+  }
+
+  async handleConfirmBookRename() {
+    if (!this.currentRenameBookId) return;
+    const newTitle = (this.bookRenameInput ? this.bookRenameInput.value : '').trim();
+    if (!newTitle) {
+      alert('書名不得為空！');
+      return;
+    }
+    try {
+      await storage.updateBookTitle(this.currentRenameBookId, newTitle);
+      this.closeBookRenameModal();
+      await this.loadBooks();
+      eventBus.emit('bookshelf:refresh');
+      eventBus.emit('toast', { message: `書籍名稱已變更為《${newTitle}》（原始下載連結已永續保持關聯）` });
+    } catch (err) {
+      console.error('Rename book error:', err);
+      alert(`更名失敗: ${err.message}`);
+    }
+  }
+
   openMoveBookModal(book) {
     this.currentMoveBookId = book.id;
     if (this.moveBookTitle) {
@@ -476,7 +547,10 @@ export class BookshelfView {
 
     card.innerHTML = `
       <div class="book-card-header">
-        <h4 class="book-card-title" title="${book.title}">${book.title}</h4>
+        <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;">
+          <h4 class="book-card-title" title="${book.title}">${book.title}</h4>
+          <button class="btn-rename-book" title="重新命名書籍 (保持下載連結)" style="background: transparent; border: none; cursor: pointer; color: var(--text-muted); padding: 2px 4px; border-radius: var(--radius-sm); display: inline-flex; align-items: center; font-size: 0.85rem; flex-shrink: 0;">✏️</button>
+        </div>
         <span class="book-card-badge">${book.sourceType || '本地'}</span>
       </div>
       <div class="book-card-author">作者: ${book.author || '未知'}</div>
@@ -505,6 +579,14 @@ export class BookshelfView {
     `;
 
     // Bind card actions
+    const btnRename = card.querySelector('.btn-rename-book');
+    if (btnRename) {
+      btnRename.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.openBookRenameModal(book);
+      });
+    }
+
     card.querySelector('.btn-open-book').addEventListener('click', () => {
       eventBus.emit('reader:openBook', book.id);
     });

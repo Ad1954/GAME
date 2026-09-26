@@ -5,6 +5,7 @@
 
 import { storage } from './core/storage.js';
 import { player } from './audio/playerFactory.js';
+import { crawler, diffOnlineChapters } from './core/crawler.js';
 import { eventBus } from './eventBus.js';
 import { logger } from './core/logger.js';
 
@@ -27,6 +28,8 @@ class App {
     this.contentEditModal = new ContentEditModal();
     this.storage = storage;
     this.player = player;
+    this.crawler = crawler;
+    this.diffOnlineChapters = diffOnlineChapters;
 
     this.navTabs = document.querySelectorAll('.nav-tab');
     this.tabPanels = document.querySelectorAll('.tab-panel');
@@ -34,31 +37,54 @@ class App {
   }
 
   async init() {
+    const t0 = performance.now();
     console.log('[App] Initializing new_Xreader...');
 
     // 0. Initialize Logger
     logger.init();
 
-    // 1. Initialize DB
-    await storage.init();
-
-    // 2. Initialize Audio Engine
-    await player.init();
-
-    // 3. Initialize Views
-    this.crawlerView.init();
-    this.bookshelfView.init();
-    this.readerView.init();
-    this.playerBarView.init();
-    this.settingsView.init();
-    this.chapterManagerView.init();
-    this.contentEditModal.init();
-
-    // 4. Setup Navigation & Toasts
+    // 1. MUST bind navigation and toasts immediately (0ms) so UI is fully responsive!
     this.bindNavigation();
     this.bindToast();
+    logger.info('Navigation', `頂部導航已即時綁定 (${(performance.now() - t0).toFixed(1)}ms)`);
 
-    console.log('[App] new_Xreader ready!');
+    // 2. Initialize Views (DOM structure & UI listeners) with safe isolation
+    const safeInit = (name, view) => {
+      try {
+        if (view && typeof view.init === 'function') view.init();
+      } catch (e) {
+        console.error(`[App] Error in ${name}.init:`, e);
+        logger.error('App', `視圖 ${name} 初始化異常: ${e.message}`);
+      }
+    };
+
+    safeInit('crawlerView', this.crawlerView);
+    safeInit('bookshelfView', this.bookshelfView);
+    safeInit('readerView', this.readerView);
+    safeInit('playerBarView', this.playerBarView);
+    safeInit('settingsView', this.settingsView);
+    safeInit('chapterManagerView', this.chapterManagerView);
+    safeInit('contentEditModal', this.contentEditModal);
+
+    // 3. Connect to IndexedDB and Audio asynchronously without blocking UI interaction
+    storage.init().then(() => {
+      const elapsed = (performance.now() - t0).toFixed(1);
+      logger.info('Storage', `IndexedDB 資料庫就緒 (${elapsed}ms)`);
+      if (this.bookshelfView) this.bookshelfView.loadBooks();
+      if (this.crawlerView) this.crawlerView.renderCrawlerRecords();
+    }).catch(err => {
+      console.error('[App] Storage initialization error:', err);
+      logger.error('Storage', `IndexedDB 初始化失敗: ${err.message}`);
+    });
+
+    player.init().then(() => {
+      const elapsed = (performance.now() - t0).toFixed(1);
+      logger.info('Audio', `語音引擎就緒 (${elapsed}ms)`);
+    }).catch(err => {
+      console.error('[App] Player initialization error:', err);
+    });
+
+    console.log(`[App] new_Xreader ready in ${(performance.now() - t0).toFixed(1)}ms!`);
   }
 
   bindNavigation() {
@@ -89,13 +115,19 @@ class App {
       }
     });
 
+    logger.info('Navigation', `切換分頁至: ${tabId}`);
+
     // If switching to crawler tab, clear URL input per Story 1, GWT 1.1 and refresh options
-    if (tabId === 'tab-crawler') {
-      this.crawlerView.clearUrlInput();
-      this.crawlerView.renderCategoryOptions();
-      this.crawlerView.renderCrawlerRecords();
-    } else if (tabId === 'tab-bookshelf') {
-      this.bookshelfView.loadBooks();
+    try {
+      if (tabId === 'tab-crawler' && this.crawlerView) {
+        this.crawlerView.clearUrlInput();
+        this.crawlerView.renderCategoryOptions();
+        this.crawlerView.renderCrawlerRecords();
+      } else if (tabId === 'tab-bookshelf' && this.bookshelfView) {
+        this.bookshelfView.loadBooks();
+      }
+    } catch (err) {
+      console.error(`[App] Error in switchTab hooks for ${tabId}:`, err);
     }
   }
 
@@ -131,11 +163,17 @@ class App {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function startApp() {
   const app = new App();
   window.app = app;
   window.eventBus = eventBus;
   app.init().catch(err => {
     console.error('[App] Fatal initialization error:', err);
   });
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
+  startApp();
+}

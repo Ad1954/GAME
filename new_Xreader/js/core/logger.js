@@ -110,6 +110,17 @@ class SystemLogger {
       console.log(consoleMsg);
     }
 
+    // Remote terminal logger for local Python server (Story 52)
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      try {
+        fetch('/api/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ level, tag, message: entry.message })
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
     eventBus.emit('logger:newEntry', entry);
   }
 

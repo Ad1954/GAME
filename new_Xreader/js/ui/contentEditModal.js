@@ -29,10 +29,25 @@ export class ContentEditModal {
     this.btnCancelBatch = document.getElementById('btn-cancel-batch-replace');
     this.btnConfirmBatch = document.getElementById('btn-confirm-batch-replace');
 
+    // Story 47: 單次還原備份按鈕
+    this.btnRestoreBatch = document.getElementById('btn-restore-batch-replace');
+    this.restoreTimeText = document.getElementById('restore-replace-time');
+
+    // Story 48: 批量替換二次自訂確認彈窗
+    this.confirmModal = document.getElementById('batch-replace-confirm-modal');
+    this.confirmScopeText = document.getElementById('batch-confirm-scope');
+    this.confirmFindText = document.getElementById('batch-confirm-find');
+    this.confirmReplaceText = document.getElementById('batch-confirm-replace');
+    this.confirmStatsText = document.getElementById('batch-confirm-stats');
+    this.btnProceedConfirm = document.getElementById('btn-proceed-batch-confirm');
+    this.btnCancelConfirm = document.getElementById('btn-cancel-batch-confirm');
+    this.btnCloseConfirm = document.getElementById('btn-close-batch-confirm');
+
     // Context tracking
     this.currentBookId = null;
     this.currentChapter = null;
     this.currentChapterIndex = 0;
+    this.lastPreviewStats = null;
   }
 
   init() {
@@ -72,9 +87,22 @@ export class ContentEditModal {
     if (this.btnConfirmBatch) {
       this.btnConfirmBatch.addEventListener('click', () => this.executeBatchReplace());
     }
+    if (this.btnRestoreBatch) {
+      this.btnRestoreBatch.addEventListener('click', () => this.handleRestoreBatchReplace());
+    }
+    if (this.btnProceedConfirm) {
+      this.btnProceedConfirm.addEventListener('click', () => this.proceedBatchReplace());
+    }
+    if (this.btnCancelConfirm) {
+      this.btnCancelConfirm.addEventListener('click', () => this.closeConfirmModal());
+    }
+    if (this.btnCloseConfirm) {
+      this.btnCloseConfirm.addEventListener('click', () => this.closeConfirmModal());
+    }
     if (this.batchFindInput) {
       this.batchFindInput.addEventListener('input', () => {
         if (this.btnConfirmBatch) this.btnConfirmBatch.disabled = true;
+        this.lastPreviewStats = null;
         if (this.batchPreviewText) {
           this.batchPreviewText.textContent = '文字已更動，請點擊「預覽統計」';
         }
@@ -203,6 +231,9 @@ export class ContentEditModal {
       this.batchModal.classList.add('active');
     }
 
+    // Story 47: 檢查該書是否有單次可還原備份快照
+    this.checkRestoreBackupAvailability();
+
     // If text was selected, auto trigger preview
     if (textToFind) {
       this.previewBatchReplace();
@@ -218,6 +249,52 @@ export class ContentEditModal {
   getScope() {
     const checkedRadio = document.querySelector('input[name="batch-replace-scope"]:checked');
     return checkedRadio ? checkedRadio.value : 'current';
+  }
+
+  /**
+   * 檢查是否有單次批量替換備份可供還原 (Story 47)
+   */
+  async checkRestoreBackupAvailability() {
+    if (!this.btnRestoreBatch) return;
+    try {
+      const backup = await storage.getBatchReplaceBackup(this.currentBookId);
+      if (backup && Array.isArray(backup.originalChapters) && backup.originalChapters.length > 0) {
+        this.btnRestoreBatch.style.display = 'inline-flex';
+        const d = new Date(backup.timestamp);
+        const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        if (this.restoreTimeText) {
+          const sample = backup.findText.length > 6 ? backup.findText.slice(0, 6) + '..' : backup.findText;
+          this.restoreTimeText.textContent = `${backup.originalChapters.length}章「${sample}」${timeStr}`;
+        }
+      } else {
+        this.btnRestoreBatch.style.display = 'none';
+      }
+    } catch (e) {
+      this.btnRestoreBatch.style.display = 'none';
+    }
+  }
+
+  /**
+   * 執行一鍵還原上次批量替換快照 (Story 47)
+   */
+  async handleRestoreBatchReplace() {
+    const backup = await storage.getBatchReplaceBackup(this.currentBookId);
+    if (!backup) return;
+
+    if (!confirm(`確定要還原上次替換「${backup.findText}」時的備份嗎？\n將恢復 ${backup.originalChapters.length} 個章節的原始內容。`)) {
+      return;
+    }
+
+    try {
+      const res = await storage.restoreBatchReplaceBackup(this.currentBookId);
+      eventBus.emit('reader:chapterContentUpdated', { refreshAll: true });
+      eventBus.emit('toast', { message: `已成功將 ${res.restoredCount} 個章節還原為替換前狀態！` });
+      if (this.btnRestoreBatch) this.btnRestoreBatch.style.display = 'none';
+      this.closeBatchReplace();
+    } catch (err) {
+      console.error('Restore batch replace error:', err);
+      alert(`還原失敗: ${err.message}`);
+    }
   }
 
   /**
@@ -256,6 +333,12 @@ export class ContentEditModal {
       }
     });
 
+    this.lastPreviewStats = {
+      totalMatches,
+      chaptersWithMatch,
+      scope
+    };
+
     if (this.batchPreviewText) {
       const scopeLabel = (scope === 'current') ? '當前章節' : `全書 ${chapters.length} 章`;
       if (totalMatches > 0) {
@@ -269,25 +352,65 @@ export class ContentEditModal {
   }
 
   /**
-   * 執行批量替換/清除 (GWT 21.4, GWT 22.3)
+   * 彈出批量替換自訂危險警語確認視窗 (Story 48, GWT 48.1)
    */
-  async executeBatchReplace() {
+  executeBatchReplace() {
     const rawFind = (this.batchFindInput ? this.batchFindInput.value : '').trim();
     const rawReplace = this.batchReplaceInput ? this.batchReplaceInput.value : '';
     if (!rawFind) return;
 
     const findText = rawFind.replace(/\r\n/g, '\n');
     const replaceText = rawReplace.replace(/\r\n/g, '\n');
-
     const scope = this.getScope();
     const isDelete = (replaceText === '');
-    const displayFind = findText.length > 25 ? findText.slice(0, 25) + '...' : findText;
-    const actionDesc = isDelete ? '徹底清除' : `替換為「${replaceText}」`;
-    const scopeDesc = (scope === 'current') ? '當前章節' : '全書所有章節';
 
-    if (!confirm(`確定要在【${scopeDesc}】中將「${findText}」${actionDesc}嗎？\n此操作將直接寫入資料庫並重新分段。`)) {
-      return;
+    if (this.confirmModal) {
+      if (this.confirmScopeText) {
+        this.confirmScopeText.textContent = (scope === 'current') ? '當前章節' : '全書所有章節';
+      }
+      if (this.confirmFindText) {
+        this.confirmFindText.textContent = findText.length > 50 ? findText.slice(0, 50) + '...' : findText;
+      }
+      if (this.confirmReplaceText) {
+        this.confirmReplaceText.textContent = isDelete ? '（徹底清除該文字）' : (replaceText.length > 50 ? replaceText.slice(0, 50) + '...' : replaceText);
+        this.confirmReplaceText.style.color = isDelete ? 'var(--accent-danger)' : 'var(--accent-success)';
+      }
+      if (this.confirmStatsText) {
+        if (this.lastPreviewStats && this.lastPreviewStats.totalMatches > 0) {
+          this.confirmStatsText.innerHTML = `預估共 <strong style="color: var(--accent-primary);">${this.lastPreviewStats.totalMatches}</strong> 處符合（涵蓋 ${this.lastPreviewStats.chaptersWithMatch} 個章節）`;
+        } else {
+          this.confirmStatsText.textContent = '即將掃描並處理符合內容';
+        }
+      }
+      this.confirmModal.classList.add('active');
+    } else {
+      // 降級防護
+      if (confirm(`確定要在【${(scope === 'current') ? '當前章節' : '全書所有章節'}】中將「${findText}」${isDelete ? '徹底清除' : `替換為「${replaceText}」`}嗎？`)) {
+        this.proceedBatchReplace();
+      }
     }
+  }
+
+  closeConfirmModal() {
+    if (this.confirmModal) {
+      this.confirmModal.classList.remove('active');
+    }
+  }
+
+  /**
+   * 正式執行批量替換與寫入資料庫 (Story 47, Story 48)
+   */
+  async proceedBatchReplace() {
+    this.closeConfirmModal();
+
+    const rawFind = (this.batchFindInput ? this.batchFindInput.value : '').trim();
+    const rawReplace = this.batchReplaceInput ? this.batchReplaceInput.value : '';
+    if (!rawFind) return;
+
+    const findText = rawFind.replace(/\r\n/g, '\n');
+    const replaceText = rawReplace.replace(/\r\n/g, '\n');
+    const scope = this.getScope();
+    const isDelete = (replaceText === '');
 
     try {
       const targetChapterIndex = (scope === 'current') ? this.currentChapterIndex : null;
@@ -304,8 +427,8 @@ export class ContentEditModal {
       eventBus.emit('reader:chapterContentUpdated', { refreshAll: true });
 
       const doneMsg = isDelete
-        ? `已從 ${result.modifiedCount} 個章節中清除共 ${result.matchedCount} 處文字！`
-        : `已在 ${result.modifiedCount} 個章節中替換共 ${result.matchedCount} 處文字！`;
+        ? `已從 ${result.modifiedCount} 個章節中清除共 ${result.matchedCount} 處文字！（已建立單次備份）`
+        : `已在 ${result.modifiedCount} 個章節中替換共 ${result.matchedCount} 處文字！（已建立單次備份）`;
 
       eventBus.emit('toast', { message: doneMsg });
     } catch (err) {

@@ -2,15 +2,15 @@
 <html lang="zh-Hant" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>new_Xreader - 現代化小說朗讀與爬蟲工具</title>
   
-  <link rel="stylesheet" href="css/main.css?v=8.6">
-  <link rel="stylesheet" href="css/tabs.css?v=8.6">
-  <link rel="stylesheet" href="css/crawler.css?v=8.6">
-  <link rel="stylesheet" href="css/bookshelf.css?v=8.6">
-  <link rel="stylesheet" href="css/reader.css?v=8.6">
-  <link rel="stylesheet" href="css/modal.css?v=8.6">
+  <link rel="stylesheet" href="css/main.css?v=9.4">
+  <link rel="stylesheet" href="css/tabs.css?v=9.4">
+  <link rel="stylesheet" href="css/crawler.css?v=9.4">
+  <link rel="stylesheet" href="css/bookshelf.css?v=9.4">
+  <link rel="stylesheet" href="css/reader.css?v=9.4">
+  <link rel="stylesheet" href="css/modal.css?v=9.4">
 </head>
 <body>
 
@@ -196,6 +196,27 @@
               解析目錄並開始下載
             </button>
             <button id="btn-cancel-crawl" class="btn btn-danger" style="display: none;">取消下載</button>
+          </div>
+
+          <!-- Download Queue Manager Panel (Story 54) -->
+          <div id="crawler-queue-container" class="crawler-queue-card" style="display: none; margin-top: 1.5rem;">
+            <div class="crawler-queue-header">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="queue-icon" style="font-size: 1.1rem;">📥</span>
+                <span style="font-weight: 700; font-size: 0.95rem;">下載排程佇列</span>
+                <span id="queue-badge-count" class="queue-badge">0</span>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button id="btn-queue-pause-all" type="button" class="btn btn-secondary btn-sm" title="暫停目前正在進行的下載任務">⏸️ 暫停當前</button>
+                <button id="btn-queue-clear" type="button" class="btn btn-secondary btn-sm" title="清空所有等待中的排程">🗑️ 清空等待佇列</button>
+              </div>
+            </div>
+
+            <!-- Active Task Section -->
+            <div id="queue-active-section" class="queue-active-section" style="display: none;"></div>
+
+            <!-- Pending Tasks List -->
+            <div id="queue-pending-list" class="queue-pending-list"></div>
           </div>
 
           <!-- Web Crawler Progress & Terminal (Story 38) -->
@@ -647,9 +668,43 @@
           <button id="btn-batch-preview" class="btn btn-secondary btn-sm" style="flex-shrink: 0;">預覽統計</button>
         </div>
       </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <button id="btn-restore-batch-replace" type="button" class="btn btn-secondary btn-sm" style="display: none; color: var(--accent-orange, #f97316); border-color: rgba(249, 115, 22, 0.4);" title="還原上次批次替換前之內容">
+          ↩️ 還原上次替換 (<span id="restore-replace-time"></span>)
+        </button>
+        <div style="display: flex; gap: 8px; margin-left: auto;">
+          <button id="btn-cancel-batch-replace" class="btn btn-secondary">取消</button>
+          <button id="btn-confirm-batch-replace" class="btn btn-primary" disabled>確認執行替換</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       Batch Replace Confirmation Modal (Story 48)
+       ======================================================== -->
+  <div id="batch-replace-confirm-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 480px; width: 92%;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color: var(--accent-orange, #f97316); display: flex; align-items: center; gap: 8px;">
+          ⚠️ 批量替換二次確認
+        </h3>
+        <button id="btn-close-batch-confirm" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6; padding: 1.25rem;">
+        <p style="margin-bottom: 0.75rem;">您即將在 <strong id="batch-confirm-scope" style="color: var(--accent-primary);">全書所有章節</strong> 中執行替換作業：</p>
+        <div style="background: var(--bg-surface); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 0.85rem; font-size: 0.86rem;">
+          <div style="margin-bottom: 6px;">🔍 <strong>尋找：</strong><span id="batch-confirm-find" style="color: var(--accent-danger); font-family: var(--font-mono);"></span></div>
+          <div style="margin-bottom: 6px;">🔄 <strong>替換為：</strong><span id="batch-confirm-replace" style="color: var(--accent-success); font-family: var(--font-mono);"></span></div>
+          <div>📊 <strong>影響統計：</strong><span id="batch-confirm-stats" style="color: var(--text-primary); font-weight: 600;"></span></div>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--accent-success); margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+          🛡️ <strong>安全保障：</strong>系統將自動儲存受影響章節之單次純文字快照，若不滿意可隨時一鍵還原。
+        </p>
+      </div>
       <div class="modal-footer">
-        <button id="btn-cancel-batch-replace" class="btn btn-secondary">取消</button>
-        <button id="btn-confirm-batch-replace" class="btn btn-primary" disabled>確認執行替換</button>
+        <button id="btn-cancel-batch-confirm" class="btn btn-secondary">返回檢查</button>
+        <button id="btn-proceed-batch-confirm" class="btn btn-danger" style="font-weight: 700;">確定執行替換</button>
       </div>
     </div>
   </div>
@@ -812,6 +867,31 @@
   </div>
 
   <!-- ========================================================
+       Book Rename Modal (Story 46)
+       ======================================================== -->
+  <div id="book-rename-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 440px; width: 92%;">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ 重新命名書籍</h3>
+        <button id="btn-close-book-rename" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="book-rename-input">書籍名稱</label>
+          <input type="text" id="book-rename-input" class="form-input" placeholder="請輸入新書籍名稱">
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0;">
+          💡 提示：更名後，與原始下載網址及爬蟲歷史之關聯依然永續保存，追更不會受影響。
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-book-rename" class="btn btn-secondary">取消</button>
+        <button id="btn-confirm-book-rename" class="btn btn-primary">儲存名稱</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
        Move Book Category Modal (Story 28)
        ======================================================== -->
   <div id="move-book-category-modal" class="modal-backdrop">
@@ -847,9 +927,12 @@
       </div>
       <div class="modal-body" style="flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 1rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <input type="checkbox" id="chk-update-select-all" checked style="accent-color: var(--accent-primary); cursor: pointer;">
-            <label for="chk-update-select-all" style="cursor: pointer; font-size: 0.88rem; font-weight: 600;">全選 / 取消全選 (<span id="crawler-update-selected-count">0</span> / <span id="crawler-update-total-count">0</span> 篇)</label>
+            <label for="chk-update-select-all" style="cursor: pointer; font-size: 0.88rem; font-weight: 600;">全選 (<span id="crawler-update-selected-count">0</span> / <span id="crawler-update-total-count">0</span> 篇)</label>
+            <button type="button" id="btn-update-select-new" class="btn btn-secondary btn-sm" title="只選取最新連載章節">✨ 勾選最新</button>
+            <button type="button" id="btn-update-select-backfill" class="btn btn-secondary btn-sm" title="選取先前未下載之補抓章節">⏭️ 勾選補抓</button>
+            <button type="button" id="btn-update-deselect-all" class="btn btn-secondary btn-sm" title="取消全部勾選">全不選</button>
           </div>
           <div style="display: flex; gap: 6px;">
             <button id="btn-update-sort-toggle" class="btn btn-secondary btn-sm" title="切換正序/倒序排列">
@@ -860,7 +943,7 @@
         <div id="crawler-update-chapters-list" style="flex: 1; min-height: 220px; max-height: 48vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px; background: var(--bg-surface);">
         </div>
         <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0;">
-          💡 提示：系統已依唯一碼過濾已存在與歷史刪除篇章，並自動依章節回數拓撲排序。確認後將依序附加至全書尾端。
+          💡 提示：系統已區分「✨ 最新連載」（預設勾選）與「⏭️ 先前未下載」（預設不選），勾選之補抓章節將自動依目錄正確順序歸位入庫。
         </p>
       </div>
       <div class="modal-footer">
@@ -1020,7 +1103,7 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Main ES Module Bootstrap -->
-  <script type="module" src="js/app.js?v=8.6"></script>
+  <script type="module" src="js/app.js?v=9.4"></script>
 </body>
 </html>
 

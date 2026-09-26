@@ -268,4 +268,177 @@
   color: var(--accent-danger);
 }
 
+/* ============================================================
+   Story 54: Download Queue Manager Panel Styles
+   ============================================================ */
+.crawler-queue-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.crawler-queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.queue-badge {
+  font-size: 0.76rem;
+  background: var(--accent-primary);
+  color: #fff;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.queue-active-card {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.queue-active-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.queue-pulsing-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: queuePulse 1.6s infinite;
+}
+
+@keyframes queuePulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.queue-pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.queue-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+
+.queue-item:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.queue-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.queue-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.queue-order-badge {
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.queue-status-tag {
+  font-size: 0.7rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.queue-status-tag.pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.queue-status-tag.paused {
+  background: rgba(147, 51, 234, 0.15);
+  color: #a855f7;
+}
+
+.queue-item-title {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-item-author {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.queue-item-sub {
+  display: flex;
+  gap: 8px;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.queue-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.btn-queue-prioritize {
+  background: rgba(234, 179, 8, 0.18);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  font-weight: 600;
+  font-size: 0.76rem;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.btn-queue-prioritize:hover {
+  background: rgba(234, 179, 8, 0.35);
+  color: #facc15;
+}
+
 
