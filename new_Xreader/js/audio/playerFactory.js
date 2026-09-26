@@ -14,7 +14,10 @@ class PlayerFactory {
     }
 
     const ua = navigator.userAgent;
-    if (/iPhone|iPad|iPod|iOS/i.test(ua)) {
+    const isIPadOS = (typeof navigator !== 'undefined') &&
+      ((navigator.platform === 'MacIntel' || /Macintosh/i.test(ua)) && (navigator.maxTouchPoints > 1));
+
+    if (/iPhone|iPad|iPod|iOS/i.test(ua) || isIPadOS) {
       return 'iOS';
     } else if (/Android/i.test(ua)) {
       return 'Android';

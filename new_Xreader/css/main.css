@@ -36,8 +36,13 @@
   --shadow-lg: 0 10px 25px rgba(0,0,0,0.5);
 
   --header-height: 58px;
-  --safe-area-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  --safe-area-bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 12px));
   --player-bar-height: calc(72px + var(--safe-area-bottom));
+}
+
+html.platform-ios,
+body.platform-ios {
+  --safe-area-bottom: max(32px, calc(env(safe-area-inset-bottom, 0px) + 16px));
 }
 
 [data-theme="light"] {
@@ -96,7 +101,7 @@ html, body {
   overflow-x: clip;
 }
 
-/* Header & Brand (Story 58: 常駐置頂與捲動防遮蓋) */
+/* Header & Brand (Story 59: Fixed Header 硬性釘選防脫落) */
 .app-header {
   height: var(--header-height);
   background-color: var(--bg-surface);
@@ -105,8 +110,10 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: 0 1.5rem;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
@@ -149,8 +156,8 @@ html, body {
 .app-main {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 1.5rem 1rem calc(var(--player-bar-height) + 2rem) 1rem;
-  min-height: calc(100vh - var(--header-height));
+  padding: calc(var(--header-height) + 1.25rem) 1rem calc(var(--player-bar-height) + 2rem) 1rem;
+  min-height: 100vh;
 }
 
 /* Base Card */
@@ -288,6 +295,7 @@ input[type="range"] {
 @media (max-width: 680px) {
   :root {
     --header-height: 92px;
+    --player-bar-height: calc(96px + var(--safe-area-bottom));
   }
 
   .app-header {
@@ -316,9 +324,10 @@ input[type="range"] {
   }
 
   .app-main {
-    padding-top: 0.75rem;
+    padding-top: calc(var(--header-height) + 0.75rem);
     padding-left: 0.75rem;
     padding-right: 0.75rem;
+    padding-bottom: calc(var(--player-bar-height) + 1.5rem);
   }
 }
 

@@ -107,7 +107,7 @@
   box-shadow: 0 0 8px rgba(249, 115, 22, 0.25);
 }
 
-/* Fixed Bottom Player Bar (Story 50: Elevated for iOS safe-area) */
+/* Fixed Bottom Player Bar (Story 59: 強制墊高與 iPad/iOS 適配) */
 .player-bar {
   position: fixed;
   bottom: 0;
@@ -119,7 +119,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 1.5rem max(16px, env(safe-area-inset-bottom, 0px));
+  padding: 8px 1.5rem var(--safe-area-bottom);
   box-shadow: var(--shadow-lg);
   z-index: 60;
   box-sizing: border-box;
@@ -219,31 +219,106 @@
   display: none;
 }
 
-@media (max-width: 768px) {
+/* Story 59: 手機板型雙層自適應佈局 (Row 1 全寬進度軸，Row 2 控制按鈕與設定) */
+@media (max-width: 680px) {
+  .player-bar {
+    height: var(--player-bar-height);
+    padding: 8px 12px var(--safe-area-bottom);
+    align-items: center;
+  }
+
   .player-bar-inner {
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 8px;
+    width: 100%;
+    padding: 0;
+  }
+
+  /* Row 1: Full-width progress area */
+  .player-progress-area {
+    order: 1;
+    width: 100%;
+    max-width: 100%;
+    flex: 1 1 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .player-progress-slider {
+    flex: 1;
+    min-width: 0;
+    height: 6px;
+  }
+
+  .player-progress-lbl {
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  /* Row 2: Media Buttons (Left) */
+  .player-controls-left {
+    order: 2;
+    flex-shrink: 0;
     gap: 6px;
-    padding: 0 0.5rem;
   }
+
+  .btn-play-round {
+    width: 38px;
+    height: 38px;
+  }
+
+  .player-controls-left .btn-sm {
+    padding: 4px 8px;
+  }
+
+  /* Row 2: Speed + Sleep (Right) */
+  .player-controls-right {
+    order: 3;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+  }
+
   .player-speed-box {
-    min-width: 88px;
+    display: flex;
+    align-items: center;
     gap: 4px;
+    flex: 1;
+    min-width: 65px;
+    max-width: 125px;
   }
+
   #player-speed-slider {
-    min-width: 50px;
+    flex: 1;
+    min-width: 35px;
   }
+
   #player-speed-val {
     font-size: 0.75rem;
-    min-width: 32px;
+    min-width: 30px;
+    text-align: right;
   }
+
   #player-sleep-select {
+    flex-shrink: 0;
     font-size: 0.75rem;
-    padding: 2px 4px;
+    padding: 4px 6px;
+    max-width: 105px;
   }
+
   .reader-container {
-    height: calc(100vh - var(--header-height) - var(--player-bar-height) - 1.5rem);
+    height: calc(100vh - var(--header-height) - var(--player-bar-height) - 1.25rem);
   }
+
   .reader-surface {
-    padding: 1.25rem 1rem 3.5rem 1rem;
+    padding: 1rem 0.75rem calc(var(--player-bar-height) + 1rem) 0.75rem;
     font-size: 1.05rem;
   }
 }

@@ -63,12 +63,23 @@ class StorageModule {
           db.createObjectStore('batch_backups', { keyPath: 'bookId' });
         }
       };
-
+ 
+      let blockedTimer = null;
       request.onblocked = (event) => {
         console.warn('[Storage] Database upgrade blocked by another open connection. Waiting for unblock...');
+        sendServerLog('Storage', 'Database upgrade blocked by another open connection', 'warn');
+        if (!blockedTimer && typeof window !== 'undefined') {
+          blockedTimer = setTimeout(() => {
+            alert('⚠️ 檢測到其他瀏覽器分頁正在佔用舊版資料庫連線，導致資料庫無法完成載入！\n\n請關閉其他 Xreader 相關分頁，然後重新整理本頁面即可恢復正常。');
+          }, 3000);
+        }
       };
 
       request.onsuccess = (event) => {
+        if (blockedTimer) {
+          clearTimeout(blockedTimer);
+          blockedTimer = null;
+        }
         this.db = event.target.result;
         this.db.onversionchange = () => {
           console.warn('[Storage] DB version changed elsewhere, closing connection immediately.');
@@ -83,6 +94,10 @@ class StorageModule {
       };
 
       request.onerror = (event) => {
+        if (blockedTimer) {
+          clearTimeout(blockedTimer);
+          blockedTimer = null;
+        }
         console.error('[Storage] IndexedDB initialization failed:', event.target.error);
         this.initPromise = null;
         reject(event.target.error);

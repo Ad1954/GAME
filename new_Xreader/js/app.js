@@ -4,7 +4,7 @@
  */
 
 import { storage } from './core/storage.js';
-import { player } from './audio/playerFactory.js';
+import { player, currentPlatform } from './audio/playerFactory.js';
 import { crawler, diffOnlineChapters } from './core/crawler.js';
 import { eventBus } from './eventBus.js';
 import { logger } from './core/logger.js';
@@ -40,8 +40,13 @@ class App {
     const t0 = performance.now();
     console.log('[App] Initializing new_Xreader...');
 
-    // 0. Initialize Logger
+    // 0. Initialize Logger & Platform Class
     logger.init();
+    const platClass = `platform-${currentPlatform.toLowerCase()}`;
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.add(platClass);
+      document.body.classList.add(platClass);
+    }
 
     // 1. MUST bind navigation and toasts immediately (0ms) so UI is fully responsive!
     this.bindNavigation();
