@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>2048 RPG：王國遠征 (Commercial Edition)</title>
+  <link rel="stylesheet" href="style.css?v=1.0">
+</head>
+<body>
+
+  <!-- ================= MOBILE APP PORTRAIT FRAME ================= -->
+  <div class="app-container">
+
+    <!-- ================= COVER / TITLE SPLASH SCREEN (C-STORY-008) ================= -->
+    <div class="title-screen" id="view-title-screen">
+      <div class="title-content">
+        <div class="title-badge-pill">👑 2048 RPG 王國遠征</div>
+        <h1 class="title-logo">2048 RPG</h1>
+        <div class="title-sub">COMMERCIAL EDITION</div>
+        <div class="title-hero-avatar">⚔️🛡️👑</div>
+        <div class="title-feature-tags">
+          <span class="feat-tag">🗺️ 350 關史詩遠征</span>
+          <span class="feat-tag">🏛️ 24 階軍備科技</span>
+          <span class="feat-tag">🪙 合成金幣經濟</span>
+        </div>
+        <p class="title-prompt">滑動合體 · 突破重圍 · 擊潰魔物</p>
+        <button class="btn-start-game" id="btn-start-game">
+          <span class="btn-start-icon">⚔️</span>
+          <span class="btn-start-text">開始遊戲</span>
+        </button>
+        <div class="title-version">v1.2.0 · 350 Stages Commercial Version</div>
+      </div>
+    </div>
+
+    <!-- TOP PERMANENT HEADER (Clash Royale Style) -->
+    <header class="top-bar">
+      <div class="top-left">
+        <div class="stamina-pill" id="top-stamina-pill" title="體力值：勝利不扣，戰敗扣1 (每20分鐘恢復1點)">
+          <span class="stamina-icon">⚡</span>
+          <span class="stamina-val" id="top-stamina-val">5/5</span>
+        </div>
+        <div class="gold-pill">
+          <span class="gold-icon">🪙</span>
+          <span class="gold-val" id="top-gold-val">300</span>
+        </div>
+      </div>
+      <div class="top-center">
+        <span class="app-logo">2048 RPG</span>
+      </div>
+      <div class="top-right">
+        <!-- Persistent Settings Button Top-Right -->
+        <button class="btn-top-icon" id="btn-open-settings" title="遊戲設定">⚙️</button>
+      </div>
+    </header>
+
+    <!-- MAIN VIEWPORT (Tab views switch here) -->
+    <main class="main-content" id="main-content">
+
+      <!-- ================= TAB 1: STAGES (MAIN BATTLE) ================= -->
+      <section class="tab-view active" id="view-stages">
+        <!-- Chapter Switcher Tabs (Supports 8 Chapters) -->
+        <div class="chapter-tabs" id="chapter-tabs">
+          <!-- Dynamically populated or initialized via JS -->
+        </div>
+
+        <div class="chapter-banner" id="chapter-banner">
+          <div class="chapter-title" id="chapter-title">第 I 章：微風之境</div>
+          <div class="chapter-desc" id="chapter-desc">勇者初出茅廬，討伐邊境散落的魔物！</div>
+        </div>
+
+        <div class="stages-scroll-list" id="stages-list">
+          <!-- Dynamically generated Stage Cards -->
+        </div>
+
+        <!-- Secondary Test Trigger for Phase 1 Validation -->
+        <div style="text-align: center; margin: 16px 0 8px 0;">
+          <button class="btn-test-trigger" id="btn-run-gwt">🧪 運行 Phase 1 GWT 驗收測試</button>
+        </div>
+      </section>
+
+      <!-- ================= TAB 2: ARMORY / HERO (C-STORY-005) ================= -->
+      <section class="tab-view" id="view-armory">
+        <!-- 1. Hero Loadout Banner -->
+        <div class="hero-loadout-card">
+          <div class="loadout-avatar-area">
+            <div class="loadout-avatar" id="loadout-hero-avatar">🗡️</div>
+            <div class="loadout-avatar-info">
+              <h4 class="loadout-hero-name">冒險勇者</h4>
+              <div class="loadout-power-badge">開局戰力: <b id="loadout-power-val">2</b></div>
+            </div>
+          </div>
+          <div class="loadout-slot-area">
+            <div class="slot-title">出戰裝備</div>
+            <div class="equip-slot-box" id="equip-slot-box">
+              <span class="empty-slot-text">未佩戴裝備<br>(預設戰力: 2)</span>
+            </div>
+            <button class="btn-slot-action" id="btn-unequip-item" style="display: none;">卸下裝備</button>
+          </div>
+        </div>
+
+        <!-- 2. Inventory Controls & Auto Merge Bar -->
+        <div class="inventory-control-bar">
+          <div class="inventory-capacity">
+            <span>裝備背包: </span>
+            <b id="inventory-capacity-val">0 / 24</b>
+          </div>
+          <button class="btn-batch-merge" id="btn-batch-merge">
+            <span class="btn-sparkle">✨</span> 一鍵全部合成
+          </button>
+        </div>
+
+        <!-- 3. 4x6 Inventory Grid -->
+        <div class="inventory-grid" id="inventory-grid">
+          <!-- 24 inventory item slots -->
+        </div>
+      </section>
+
+      <!-- ================= TAB 3: CAMP (Gold Sinks & Kingdom Workshop) (C-STORY-023 & C-STORY-025) ================= -->
+      <section class="tab-view" id="view-camp">
+        <div class="camp-banner">
+          <div class="camp-banner-title">⛺ 王國先鋒營地</div>
+          <div class="camp-banner-desc">軍備轉蛋、工坊科技研發與倉庫物資調度！</div>
+        </div>
+
+        <!-- 1. Equipment Gacha Machine -->
+        <div class="camp-card gacha-machine-card" id="camp-gacha-card">
+          <div class="camp-card-header">
+            <h3 class="camp-card-title">🎰 皇家軍備扭蛋機</h3>
+            <span class="camp-card-badge" id="gacha-level-badge">Lv.1 初階轉蛋機</span>
+          </div>
+
+          <div class="gacha-exp-area">
+            <div class="gacha-exp-label">
+              <span>升級進度</span>
+              <span id="gacha-exp-text">0 / 30 抽</span>
+            </div>
+            <div class="gacha-progress-track">
+              <div class="gacha-progress-bar" id="gacha-progress-bar" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <div class="gacha-preview-rates">
+            <div class="rates-label">當前掉落機率：</div>
+            <div class="rates-chips" id="gacha-rates-chips">
+              <!-- Dynamically populated chips -->
+            </div>
+          </div>
+
+          <div class="gacha-actions">
+            <button class="btn-gacha-pull" id="btn-gacha-single">
+              <span class="pull-title">單抽</span>
+              <span class="pull-cost">🪙 100</span>
+            </button>
+            <button class="btn-gacha-pull btn-gacha-ten" id="btn-gacha-ten">
+              <span class="pull-badge">推薦十連</span>
+              <span class="pull-title">十連抽</span>
+              <span class="pull-cost">🪙 1,000</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Kingdom Base Tech Tier Upgrade Card (Moved above Warehouse) (C-STORY-025) -->
+        <div class="camp-card tech-tier-card" id="tech-tier-card">
+          <div class="camp-card-header">
+            <h3 class="camp-card-title">🏛️ 王國軍備科技</h3>
+            <div class="camp-badge-group">
+              <span class="camp-card-badge" id="tech-tier-badge">Tier 1 · 初階民兵</span>
+              <span class="tech-cycle-tag" id="tech-cycle-tag">小升階 1/6</span>
+            </div>
+          </div>
+          <div class="tech-tier-body">
+            <div class="tech-tier-stat">
+              <span class="stat-name">局內基礎掉落：</span>
+              <b class="stat-val" id="tech-drop-range">[2, 4, 8]</b>
+            </div>
+            <div class="camp-card-desc" id="tech-tier-desc">提升盤面掉落裝備的高階權重與數值階級。</div>
+            <div class="tech-tier-gate-msg" id="tech-tier-gate-msg" style="display: none;"></div>
+          </div>
+          <button class="btn-camp-action btn-upgrade-tech" id="btn-upgrade-tech">
+            <span class="upgrade-name">科技研發升階</span>
+            <span class="upgrade-cost" id="tech-upgrade-cost">🪙 200 金幣</span>
+          </button>
+        </div>
+
+        <!-- 3. Warehouse Capacity Expansion Card (Moved below Tech) (C-STORY-025) -->
+        <div class="camp-card warehouse-card" id="shop-warehouse-card">
+          <div class="camp-card-header">
+            <h3 class="camp-card-title">📦 裝備倉庫擴展 (+4格)</h3>
+            <span class="camp-card-badge" id="warehouse-level-badge">擴充 Lv.0</span>
+          </div>
+          <div class="warehouse-body">
+            <div class="camp-card-desc" id="warehouse-desc">擴充裝備背包上限，由 24 格擴增至 28 格！</div>
+            <div class="warehouse-capacity-preview">
+              <span>背包容量：</span>
+              <b id="warehouse-current-cap-text">24 格</b>
+              <span class="cap-arrow">➔</span>
+              <b id="warehouse-next-cap-text">28 格</b>
+            </div>
+          </div>
+          <button class="btn-camp-action btn-warehouse-buy" id="btn-upgrade-warehouse">
+            <span class="buy-action">購買擴充 (+4格)</span>
+            <span class="buy-price" id="warehouse-cost-text">🪙 2,000</span>
+          </button>
+        </div>
+
+        <!-- 4. Debug & Test Materials Area -->
+        <div class="camp-debug-section">
+          <div class="camp-debug-title">🛠️ 測試調試物資專區</div>
+
+          <div class="camp-card test-gold-card">
+            <div class="camp-card-header">
+              <h3 class="camp-card-title">💰 測試金幣包 (10,000G)</h3>
+              <span class="camp-card-badge test-badge">🛠️ 測試專用</span>
+            </div>
+            <div class="camp-card-desc">免費無限次領取，用於大規模轉蛋與數值壓力測試！</div>
+            <button class="btn-camp-action btn-test-claim" id="btn-claim-test-gold">
+              <span class="buy-action">立即領取</span>
+              <span class="buy-price">0 金幣</span>
+            </button>
+          </div>
+
+          <div class="camp-card test-items-card">
+            <div class="camp-card-header">
+              <h3 class="camp-card-title">🧰 測試救急道具箱</h3>
+              <span class="camp-card-badge test-badge">🛠️ 測試專用</span>
+            </div>
+            <div class="camp-card-desc">免費無限次領取！獲得沙漏、戰槌、重弩各 5 個！</div>
+            <button class="btn-camp-action btn-test-claim" id="btn-claim-test-items">
+              <span class="buy-action">立即領取</span>
+              <span class="buy-price">0 金幣</span>
+            </button>
+          </div>
+
+          <div class="camp-card fast-forward-card" id="shop-fast-forward-card">
+            <div class="camp-card-header">
+              <h3 class="camp-card-title">🚀 關卡進度快速跳轉</h3>
+              <span class="camp-card-badge test-badge">⏩ 測試跳轉</span>
+            </div>
+            <div class="camp-card-desc">直達指定關卡！一次性全額發放所有前置首通賞金＋每關30金幣盤面補償！</div>
+            <div class="fast-forward-selector-wrap" style="margin-top: 4px;">
+              <select id="select-fast-forward-stage" class="fast-forward-select"></select>
+            </div>
+            <button class="btn-camp-action btn-fast-forward-action" id="btn-fast-forward">
+              <span class="buy-action">解鎖與發放</span>
+              <span class="buy-price">⚡ 立即跳轉</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 4: SHOP (Cash, IAP & Ad Privileges) (C-STORY-023) ================= -->
+      <section class="tab-view" id="view-shop">
+        <div class="shop-banner">
+          <div class="shop-banner-title">💎 皇家特許寶庫</div>
+          <div class="shop-banner-desc">特許尊榮特權通行證、體力補給與每日皇家福利！</div>
+        </div>
+
+        <div class="shop-privilege-grid">
+          <!-- 1. Lifetime No-Ads Pass -->
+          <div class="privilege-card card-no-ads" id="card-no-ads">
+            <div class="privilege-badge">👑 尊榮終身</div>
+            <div class="privilege-icon">🎟️</div>
+            <div class="privilege-info">
+              <h4 class="privilege-title">終身免廣告 PASS</h4>
+              <p class="privilege-desc">永久免除每 3 關插頁廣告！所有廣告獎勵直接「一鍵秒領」無需等待！</p>
+              <div class="privilege-perks">
+                <span>✔ 關卡插頁廣告全免</span>
+                <span>✔ 每日福利直接領</span>
+                <span>✔ 戰敗復活免看廣告</span>
+              </div>
+            </div>
+            <button class="btn-privilege-buy" id="btn-buy-no-ads">
+              <span class="privilege-price">NT$ 150</span>
+              <span class="privilege-action">特許授權</span>
+            </button>
+          </div>
+
+          <!-- 2. Unlimited Stamina Pass -->
+          <div class="privilege-card card-stamina" id="card-stamina">
+            <div class="privilege-badge">⚡ 暢玩無阻</div>
+            <div class="privilege-icon">⚡</div>
+            <div class="privilege-info">
+              <h4 class="privilege-title">無限體力通行證</h4>
+              <p class="privilege-desc">遠征失利零負擔，敗戰不扣體力，24 小時極限極速推關！</p>
+              <div class="privilege-perks">
+                <span>✔ 敗戰 0 體力消耗</span>
+                <span>✔ 暢遊 350 大關</span>
+              </div>
+            </div>
+            <button class="btn-privilege-buy" id="btn-buy-stamina">
+              <span class="privilege-price">NT$ 90</span>
+              <span class="privilege-action">立即開通</span>
+            </button>
+          </div>
+
+          <!-- 3. Royal Gold Treasury -->
+          <div class="privilege-card card-gold-pack" id="card-gold-pack">
+            <div class="privilege-badge">🔥 超值補給</div>
+            <div class="privilege-icon">💰</div>
+            <div class="privilege-info">
+              <h4 class="privilege-title">50,000 皇家金幣袋</h4>
+              <p class="privilege-desc">王國軍械庫鉅款！直購大量高級裝備，工坊科技狂飆！</p>
+              <div class="privilege-perks">
+                <span>✔ 獲得 50,000 🪙</span>
+                <span>✔ 首購贈送 5,000 🪙</span>
+              </div>
+            </div>
+            <button class="btn-privilege-buy" id="btn-buy-gold-pack">
+              <span class="privilege-price">NT$ 60</span>
+              <span class="privilege-action">儲值金幣</span>
+            </button>
+          </div>
+
+          <!-- 4. Daily Ad Reward -->
+          <div class="privilege-card card-daily-ad" id="card-daily-ad">
+            <div class="privilege-badge">🎁 每日福利</div>
+            <div class="privilege-icon">📺</div>
+            <div class="privilege-info">
+              <h4 class="privilege-title">福利廣告金幣 (+500🪙)</h4>
+              <p class="privilege-desc">觀看宣傳短片領取 500 金幣！（免廣告 PASS 玩家點擊秒領）</p>
+              <div class="daily-ad-counter">
+                <span>今日剩餘：</span>
+                <b id="daily-ad-count-text" style="color: #fbbf24;">3 / 3 次</b>
+              </div>
+            </div>
+            <button class="btn-privilege-buy" id="btn-claim-daily-ad">
+              <span class="privilege-price">免費領取</span>
+              <span class="privilege-action">觀看廣告</span>
+            </button>
+          </div>
+
+          <!-- 5. Master Chapters Expansion -->
+          <div class="privilege-card card-chapter-pass" id="card-chapter-pass">
+            <div class="privilege-badge">⚔️ 遠征解鎖</div>
+            <div class="privilege-icon">🗺️</div>
+            <div class="privilege-info">
+              <h4 class="privilege-title">第 4~8 章大師擴展包</h4>
+              <p class="privilege-desc">突破前三章試煉！直通深淵、滅世黑曜巨龍與終焉神域！</p>
+              <div class="privilege-perks">
+                <span>✔ 解鎖後續 320 道關卡</span>
+                <span>✔ 開啟大師級裝備掉落</span>
+              </div>
+            </div>
+            <button class="btn-privilege-buy" id="btn-buy-chapter-pass">
+              <span class="privilege-price">NT$ 120</span>
+              <span class="privilege-action">購買解鎖</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- BOTTOM PERMANENT NAVIGATION BAR (Clash Royale Style) (C-STORY-023) -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-tab="view-stages" id="nav-stages">
+        <span class="nav-icon">⚔️</span>
+        <span class="nav-label">冒險</span>
+      </button>
+      <button class="nav-item" data-tab="view-armory" id="nav-armory">
+        <span class="nav-icon">🛡️</span>
+        <span class="nav-label">角色</span>
+      </button>
+      <button class="nav-item" data-tab="view-camp" id="nav-camp">
+        <span class="nav-icon">⛺</span>
+        <span class="nav-label">營地</span>
+      </button>
+      <button class="nav-item" data-tab="view-shop" id="nav-shop">
+        <span class="nav-icon">💎</span>
+        <span class="nav-label">商店</span>
+      </button>
+    </nav>
+
+    <!-- ================= VIEW: COMBAT BOARD (Full Overlay) ================= -->
+    <section class="combat-overlay" id="combat-overlay" style="display: none;">
+      <header class="combat-top-bar">
+        <button class="btn-combat-back" id="btn-combat-back" title="返回冒險大廳">◀ 大廳</button>
+        <div class="combat-stage-info">
+          <span class="combat-stage-name" id="combat-stage-name">微風平原</span>
+          <span class="combat-turn-count">回合: <b id="combat-turn-val">0</b></span>
+        </div>
+        <div class="combat-monsters-info">
+          <span class="combat-monster-icon">👾</span>
+          <span class="combat-monster-val" id="combat-monsters-val">1</span>
+        </div>
+      </header>
+
+      <!-- 5x5 Grid Board Area -->
+      <div class="board-wrapper">
+        <div class="board-grid" id="battle-board"></div>
+      </div>
+
+      <!-- Targeting Banner (C-STORY-007) -->
+      <div class="targeting-banner" id="targeting-banner" style="display: none;">
+        <span class="targeting-text" id="targeting-text">🎯 瞄準模式：點選目標</span>
+        <button class="btn-cancel-target" id="btn-cancel-target">取消</button>
+      </div>
+
+      <!-- Combat Item Bar (C-STORY-007) -->
+      <div class="combat-item-bar" id="combat-item-bar">
+        <button class="btn-item-slot" id="btn-item-undo" data-item="undo" title="時光沙漏：回溯上一步">
+          <span class="item-icon">⏳</span>
+          <span class="item-name">沙漏</span>
+          <span class="item-count" id="item-count-undo">0</span>
+        </button>
+        <button class="btn-item-slot" id="btn-item-hammer" data-item="hammer" title="破壞戰槌：粉碎任意 1 格非勇者方塊">
+          <span class="item-icon">🔨</span>
+          <span class="item-name">戰槌</span>
+          <span class="item-count" id="item-count-hammer">0</span>
+        </button>
+        <button class="btn-item-slot" id="btn-item-snipe" data-item="snipe" title="精準重弩：無損狙殺戰力嚴格小於勇者的魔物">
+          <span class="item-icon">🏹</span>
+          <span class="item-name">重弩</span>
+          <span class="item-count" id="item-count-snipe">0</span>
+        </button>
+      </div>
+
+      <footer class="combat-footer">
+        <div class="combat-tip">💡 上下左右滑動方向，合成裝備餵給勇者，斬殺全場魔物！</div>
+      </footer>
+    </section>
+
+    <!-- ================= MODAL: STAGE BRIEFING ================= -->
+    <div class="modal-backdrop" id="modal-stage-briefing" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span class="modal-badge" id="briefing-icon">🌾</span>
+          <h3 class="modal-title" id="briefing-title">第 1 關：微風平原</h3>
+        </div>
+        <div class="modal-body">
+          <p class="briefing-desc" id="briefing-desc">關卡說明情報</p>
+          <div class="briefing-stats">
+            <div class="stat-pill">
+              <span class="stat-lbl">推薦戰力</span>
+              <span class="stat-val" id="briefing-power">2</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-lbl">初次通關獎勵</span>
+              <span class="stat-val" id="briefing-reward">+30 🪙</span>
+            </div>
+          </div>
+          <div class="briefing-monsters-preview">
+            <div class="preview-title">敵軍配置情報:</div>
+            <div class="preview-list" id="briefing-monsters-list"></div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-cancel" id="btn-briefing-cancel">稍後再戰</button>
+          <button class="btn-modal-primary" id="btn-briefing-start">⚔️ 開始出擊</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL: SETTINGS (Top-Right) ================= -->
+    <div class="modal-backdrop" id="modal-settings" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span class="modal-badge">⚙️</span>
+          <h3 class="modal-title">遊戲設定</h3>
+        </div>
+        <div class="modal-body">
+          <div class="setting-row">
+            <span>🔊 遊戲音效</span>
+            <input type="checkbox" id="setting-sound-toggle" checked>
+          </div>
+          <div class="setting-row" style="margin-top: 10px;">
+            <span>🎨 數值外觀風格</span>
+            <select id="setting-theme-select" class="setting-select">
+              <option value="kingdom">🌟 王國奇幻 (預設高對比)</option>
+              <option value="cyber">🌆 賽博霓虹 (Cyber Neon)</option>
+              <option value="retro">🕹️ 復古街機 (Retro 8-Bit)</option>
+              <option value="minimal">🧊 幾何極簡 (Minimalist)</option>
+              <option value="icon_focus">👑 純粹圖標模式 (大圖標+大數字)</option>
+            </select>
+          </div>
+          <hr style="border: 0; border-top: 1px solid #334155; margin: 12px 0;">
+          <div class="setting-desc" style="font-size: 0.8rem; color: #94a3b8; line-height: 1.4;">
+            商業製品測試版 (Phase 1)：<br>
+            獨立純前端運行環境，本地自動存檔。
+          </div>
+          <button class="btn-danger" id="btn-reset-save" style="margin-top: 16px; width: 100%;">🗑️ 清除本地存檔 (重置進度)</button>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-primary" id="btn-settings-close" style="width: 100%;">確定關閉</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL: RESET CONFIRMATION (C-STORY-009) ================= -->
+    <div class="modal-backdrop" id="modal-reset-confirm" style="display: none; z-index: 100;">
+      <div class="modal-card reset-confirm-card" style="border: 2px solid #ef4444;">
+        <div class="defeat-banner" style="background: linear-gradient(135deg, #7f1d1d, #991b1b); color: #fecaca;">⚠️ 重置遊戲紀錄確認</div>
+        <div class="modal-body text-center" style="padding: 16px 12px;">
+          <p style="font-size: 0.95rem; font-weight: bold; color: #fee2e2; margin-bottom: 8px;">
+            確定要清除所有本地進度與存檔嗎？
+          </p>
+          <p style="font-size: 0.8rem; color: #fca5a5; line-height: 1.5; text-align: left; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px;">
+            • 重置後金幣將恢復為初始 300 🪙<br>
+            • 所有關卡解鎖進度將重置回第 1 關<br>
+            • 清空裝備背包與已佩戴裝備<br>
+            • 軍備科技研發將重置為 Tier 1<br>
+            • 救急道具存量清空<br>
+            <span style="color: #f87171; font-weight: bold;">※ 此操作無法還原，請謹慎確認！</span>
+          </p>
+        </div>
+        <div class="modal-actions" style="display: flex; gap: 8px;">
+          <button class="btn-modal-cancel" id="btn-reset-cancel" style="flex: 1;">取消</button>
+          <button class="btn-danger" id="btn-reset-execute" style="flex: 1; padding: 10px;">⚠️ 確認清除重置</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL: VICTORY RESOLUTION ================= -->
+    <div class="modal-backdrop" id="modal-victory" style="display: none;">
+      <div class="modal-card victory-card">
+        <div class="victory-banner">🎉 遠征大捷！</div>
+        <div class="modal-body text-center">
+          <p id="victory-stage-name" style="font-size: 1.1rem; font-weight: bold; color: #38bdf8;">關卡名稱</p>
+          <p style="font-size: 0.85rem; color: #94a3b8; margin: 4px 0 10px 0;">耗費回合: <span id="victory-turns-val">0</span> 步</p>
+
+          <div class="revenue-box" style="text-align: left; background: rgba(0,0,0,0.3); border: 1px solid rgba(251, 191, 36, 0.2); padding: 12px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 0.85rem; line-height: 1.7;">
+            <div style="font-weight: bold; color: #93c5fd; margin-bottom: 4px;">闖關收益：</div>
+            <div id="victory-reward-detail" style="white-space: pre-line; color: #fef08a;"></div>
+            <div style="border-top: 1px solid rgba(255,255,255,0.15); margin-top: 8px; padding-top: 8px; font-weight: bold; color: #fbbf24; font-size: 1.1rem;">
+              總金額：<span id="victory-reward-val">🪙 +0</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-primary" id="btn-victory-confirm" style="width: 100%;">領取賞金返回大廳</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL: DEFEAT RESOLUTION ================= -->
+    <div class="modal-backdrop" id="modal-defeat" style="display: none;">
+      <div class="modal-card defeat-card">
+        <div class="defeat-banner">💀 盤面困局 (戰敗)</div>
+        <div class="modal-body text-center">
+          <p style="font-size: 0.92rem; color: #fca5a5; line-height: 1.5; margin-bottom: 12px;">
+            盤面已無可移動或合體之方塊！<br>
+            重整旗鼓，再次挑戰吧！
+          </p>
+          <div class="revenue-box" style="text-align: left; background: rgba(0,0,0,0.3); border: 1px solid rgba(248, 113, 113, 0.2); padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; font-size: 0.85rem; line-height: 1.6;">
+            <div style="font-weight: bold; color: #93c5fd; margin-bottom: 4px;">闖關收益：</div>
+            <div id="defeat-reward-detail" style="color: #fbbf24; font-weight: bold;">⚔️【戰鬥合成領取】+0 🪙</div>
+          </div>
+        </div>
+        <div class="modal-actions" style="display: flex; gap: 8px;">
+          <button class="btn-modal-cancel" id="btn-defeat-lobby" style="flex: 1;">返回大廳</button>
+          <button class="btn-modal-primary" id="btn-defeat-retry" style="flex: 1;">重新挑戰</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL: GACHA RESULT (C-STORY-005) ================= -->
+    <div class="modal-backdrop" id="modal-gacha-result" style="display: none;">
+      <div class="modal-card gacha-result-card">
+        <div class="modal-header">
+          <span class="modal-badge">🎰</span>
+          <h3 class="modal-title">轉蛋獎勵揭曉！</h3>
+        </div>
+        <div class="modal-body">
+          <div class="gacha-results-grid" id="gacha-results-grid"></div>
+          <div class="gacha-bonus-items-area" id="gacha-bonus-items-area" style="display: none; margin-top: 14px; padding: 10px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; text-align: center;">
+            <div style="font-size: 0.85rem; font-weight: 700; color: #38bdf8; margin-bottom: 6px;">✨ 幸運掉落救急道具！</div>
+            <div class="bonus-items-chips" id="gacha-bonus-items-chips" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;"></div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-primary" id="btn-gacha-confirm" style="width: 100%;">收入裝備背包</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL: GWT TEST RESULTS ================= -->
+    <div class="modal-backdrop" id="modal-gwt-results" style="display: none;">
+      <div class="modal-card" style="max-height: 80vh; overflow-y: auto;">
+        <div class="modal-header">
+          <span class="modal-badge">🧪</span>
+          <h3 class="modal-title">Phase 1 GWT 驗證報告</h3>
+        </div>
+        <div class="modal-body" id="gwt-results-content" style="font-family: monospace; font-size: 0.82rem; line-height: 1.6;">
+          正在運行測試...
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-primary" id="btn-gwt-close" style="width: 100%;">關閉報告</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL: STAMINA EMPTY (C-STORY-026) ================= -->
+    <div class="modal-backdrop" id="modal-stamina-empty" style="display: none; z-index: 120;">
+      <div class="modal-card stamina-empty-card" style="border: 2px solid #38bdf8; max-width: 380px;">
+        <div class="modal-header">
+          <span class="modal-badge">⚡</span>
+          <h3 class="modal-title">體力不足！</h3>
+        </div>
+        <div class="modal-body text-center">
+          <p style="font-size: 0.95rem; color: #bae6fd; margin-bottom: 12px; line-height: 1.5;">
+            當前體力已耗盡（0/5）！<br>
+            勝利闖關不扣體力，戰敗需休整補給。
+          </p>
+          <div class="stamina-recovery-box" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(56,189,248,0.25); border-radius: 10px; padding: 12px; margin-bottom: 14px; text-align: left; font-size: 0.85rem; line-height: 1.6;">
+            <div style="color: #93c5fd; font-weight: bold; margin-bottom: 4px;">補給方案：</div>
+            <div style="color: #f1f5f9;">• 📺 觀看宣傳短片：立即補滿 5 點體力</div>
+            <div style="color: #f1f5f9;">• 💎 皇家特許寶庫：購買無限體力通行證</div>
+            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 4px;">※ 自然恢復每 20 分鐘自動恢復 1 點</div>
+          </div>
+        </div>
+        <div class="modal-actions" style="display: flex; flex-direction: column; gap: 8px;">
+          <button class="btn-modal-primary" id="btn-stamina-ad-refill" style="width: 100%;">📺 看廣告立即補滿 (+5 體力)</button>
+          <button class="btn-modal-cancel" id="btn-stamina-go-shop" style="width: 100%;">💎 前往商店購買特權</button>
+          <button class="btn-modal-cancel" id="btn-stamina-close" style="width: 100%; border: none; background: transparent; color: #94a3b8;">稍後再戰</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL: AD SIMULATOR (5 Seconds Sandbox) (C-STORY-026) ================= -->
+    <div class="modal-backdrop" id="modal-ad-simulator" style="display: none; z-index: 150;">
+      <div class="modal-card ad-simulator-card" style="border: 2px solid #a855f7; max-width: 360px; text-align: center; padding: 0; overflow: hidden;">
+        <div class="ad-sim-header" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; background: rgba(0,0,0,0.5); border-bottom: 1px solid rgba(168,85,247,0.3);">
+          <span style="font-size: 0.75rem; color: #cbd5e1; background: #334155; padding: 2px 8px; border-radius: 4px;">宣傳廣播 (沙盒測試)</span>
+          <span id="ad-timer-badge" style="font-size: 0.82rem; font-weight: bold; color: #facc15; background: rgba(0,0,0,0.6); padding: 3px 10px; border-radius: 12px; border: 1px solid #facc15;">⏳ 廣告倒數 5 秒</span>
+        </div>
+        <div class="ad-sim-body" style="padding: 24px 16px; background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);">
+          <div style="font-size: 3rem; margin-bottom: 10px;">🏰⚔️💎</div>
+          <h3 style="font-size: 1.15rem; color: #e0e7ff; margin-bottom: 6px;">《機械之星：王國遠征》</h3>
+          <p style="font-size: 0.82rem; color: #94a3b8; line-height: 1.5; margin-bottom: 16px;">
+            滑動合成神級軍備，征討 350 大地牢關卡！<br>
+            解鎖終身免廣告 PASS，尊榮特權直接跳過宣傳！
+          </p>
+          <div class="ad-progress-bar-bg" style="width: 100%; height: 6px; background: #334155; border-radius: 3px; overflow: hidden;">
+            <div id="ad-progress-fill" style="width: 100%; height: 100%; background: linear-gradient(90deg, #a855f7, #ec4899); transition: width 0.1s linear;"></div>
+          </div>
+        </div>
+        <div class="ad-sim-footer" style="padding: 12px; background: rgba(0,0,0,0.5); border-top: 1px solid rgba(255,255,255,0.1);">
+          <button class="btn-modal-primary" id="btn-ad-close" disabled style="width: 100%; opacity: 0.5; cursor: not-allowed;">⏳ 請等待廣告結束 (5)</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
