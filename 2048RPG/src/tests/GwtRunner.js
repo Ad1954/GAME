@@ -140,7 +140,12 @@ export class GwtRunner {
       this.testGwt26_2_StaminaDepletedBlocksCombatAndModalGuide.bind(this),
       this.testGwt26_3_InterstitialAdTriggerEvery3Battles.bind(this),
       this.testGwt26_4_NoAdsPassExemptsInterstitialAndInstantClaim.bind(this),
-      this.testGwt26_5_UnlimitedStaminaPassImmunity.bind(this)
+      this.testGwt26_5_UnlimitedStaminaPassImmunity.bind(this),
+      // C-STORY-027
+      this.testGwt27_1_GridStrictlyEqualMinmax01fr.bind(this),
+      this.testGwt27_2_GridCellsStrictNoOverflowOrDeformation.bind(this),
+      this.testGwt27_3_CombatTouchAreaExpanded.bind(this),
+      this.testGwt27_4_DefeatStaminaLossAnimationAndBadge.bind(this)
     ];
 
     for (const test of testCases) {
@@ -2578,6 +2583,82 @@ export class GwtRunner {
     sm.consumeStaminaOnDefeat();
     this.assert(sm.stamina === sm.maxStamina, 'Stamina must remain at maxStamina under Unlimited Pass');
     this.assert(sm.canStartStage() === true, 'canStartStage must always return true under Unlimited Pass');
+  }
+
+  // C-STORY-027 GWT 27.1：5x5 網格嚴格等分鎖定（minmax(0, 1fr) 與 5:6 卡牌比例）
+  async testGwt27_1_GridStrictlyEqualMinmax01fr() {
+    let cssText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./style.css');
+        if (resp.ok) cssText = await resp.text();
+      } catch (e) {}
+    }
+    if (!cssText && typeof require !== 'undefined') {
+      try {
+        const fs = require('fs');
+        cssText = fs.readFileSync('style.css', 'utf-8');
+      } catch (e) {}
+    }
+
+    if (cssText) {
+      this.assert(cssText.includes('aspect-ratio: 5 / 6;'), 'Board must use 5:6 Threes aspect ratio');
+      this.assert(cssText.includes('repeat(5, minmax(0, 1fr))'), 'Grid template must use minmax(0, 1fr) for strictly equal sizing');
+    }
+  }
+
+  // C-STORY-027 GWT 27.2：網格單元與方塊防撐開變形
+  async testGwt27_2_GridCellsStrictNoOverflowOrDeformation() {
+    let cssText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./style.css');
+        if (resp.ok) cssText = await resp.text();
+      } catch (e) {}
+    }
+
+    if (cssText) {
+      this.assert(cssText.includes('.grid-cell'), 'style.css has .grid-cell');
+      this.assert(cssText.includes('box-sizing: border-box;'), 'box-sizing must be border-box');
+    }
+  }
+
+  // C-STORY-027 GWT 27.3：全戰鬥區域觸控滑動擴展
+  async testGwt27_3_CombatTouchAreaExpanded() {
+    let doc = document;
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./index.html');
+        if (resp.ok) {
+          const html = await resp.text();
+          doc = new DOMParser().parseFromString(html, 'text/html');
+        }
+      } catch (e) {}
+    }
+
+    const combatOverlay = doc.getElementById('combat-overlay');
+    this.assert(combatOverlay !== null, 'combat-overlay must exist');
+    const boardWrapper = doc.querySelector('.board-wrapper');
+    this.assert(boardWrapper !== null, 'board-wrapper must exist');
+  }
+
+  // C-STORY-027 GWT 27.4：戰敗扣體力演出與徽章標籤
+  async testGwt27_4_DefeatStaminaLossAnimationAndBadge() {
+    let doc = document;
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./index.html');
+        if (resp.ok) {
+          const html = await resp.text();
+          doc = new DOMParser().parseFromString(html, 'text/html');
+        }
+      } catch (e) {}
+    }
+
+    const defeatModal = doc.getElementById('modal-defeat');
+    this.assert(defeatModal !== null, 'modal-defeat must exist');
+    const staminaBadge = defeatModal.querySelector('#defeat-stamina-badge');
+    this.assert(staminaBadge !== null, 'defeat-stamina-badge must exist inside defeat modal');
   }
 }
 

@@ -380,6 +380,9 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .combat-top-bar {
@@ -433,29 +436,31 @@ body {
   color: #fda4af;
 }
 
-/* 5x5 Grid Board */
+/* 5x5 Grid Board (Threes! Card Aspect Ratio 5:6) (C-STORY-027) */
 .board-wrapper {
   padding: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 1;
+  touch-action: none;
 }
 
 .board-grid {
   width: 100%;
   max-width: 440px;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 5 / 6;
   background: #0f172a;
   border: 2px solid #334155;
   border-radius: 16px;
   padding: 8px;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  grid-template-rows: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(5, minmax(0, 1fr));
   gap: 6px;
   box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.6);
   touch-action: none;
+  box-sizing: border-box;
 }
 
 .grid-cell {
@@ -465,12 +470,20 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* Tile styling */
 .tile {
   width: 100%;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
   border-radius: 8px;
   border: 2px solid;
   display: flex;
@@ -480,6 +493,9 @@ body {
   position: relative;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
   transition: transform 0.1s ease-out;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 2px;
 }
 
 .tile-badge {
@@ -801,6 +817,76 @@ body {
   font-weight: 900;
   color: var(--accent-danger);
   text-align: center;
+}
+
+/* Stamina Deduction Animation & Badge (C-STORY-027) */
+.floating-stamina-loss {
+  position: fixed;
+  z-index: 999;
+  color: #ef4444;
+  font-size: 1.5rem;
+  font-weight: 900;
+  text-shadow: 0 0 12px rgba(239, 68, 68, 0.9), 0 2px 5px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  animation: staminaLossFloat 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes staminaLossFloat {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.7);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1.2);
+  }
+  75% {
+    opacity: 1;
+    transform: translateY(-30px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.85);
+  }
+}
+
+.stamina-pill.deduct-pulse {
+  animation: staminaPillPulse 0.9s ease-in-out;
+}
+
+@keyframes staminaPillPulse {
+  0% { transform: scale(1); border-color: rgba(56, 189, 248, 0.45); }
+  25% { transform: scale(1.2) rotate(-4deg); border-color: #ef4444; background: rgba(239, 68, 68, 0.35); box-shadow: 0 0 16px rgba(239, 68, 68, 0.9); }
+  50% { transform: scale(1.2) rotate(4deg); border-color: #ef4444; }
+  75% { transform: scale(1.08) rotate(-1deg); }
+  100% { transform: scale(1) rotate(0); border-color: rgba(56, 189, 248, 0.45); }
+}
+
+.defeat-stamina-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  margin: 6px 0 12px 0;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  animation: defeatBadgePulse 1.5s infinite alternate ease-in-out;
+}
+
+.defeat-stamina-badge.unlimited {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #7dd3fc;
+}
+
+@keyframes defeatBadgePulse {
+  0% { transform: scale(0.98); }
+  100% { transform: scale(1.02); box-shadow: 0 0 12px rgba(239, 68, 68, 0.35); }
 }
 
 .text-center {

@@ -302,6 +302,20 @@ class AppController {
       if (defeatRewardDetailEl) {
         defeatRewardDetailEl.textContent = `⚔️【戰鬥合成領取】+${inBattleGold || 0} 🪙`;
       }
+
+      // Update Defeat Stamina Loss Badge & Animation (C-STORY-027)
+      const staminaBadgeEl = document.getElementById('defeat-stamina-badge');
+      if (staminaBadgeEl) {
+        if (this.stageManager.hasUnlimitedStamina) {
+          staminaBadgeEl.className = 'defeat-stamina-badge unlimited';
+          staminaBadgeEl.textContent = '⚡ 無限體力特權生效：0 消耗 (∞)';
+        } else {
+          staminaBadgeEl.className = 'defeat-stamina-badge';
+          staminaBadgeEl.textContent = `⚡ 遠征消耗：-1 體力（當前 ${this.stageManager.stamina}/${this.stageManager.maxStamina}）`;
+        }
+      }
+
+      this.triggerStaminaLossAnimation();
       this.modalDefeat.style.display = 'flex';
     });
   }
@@ -598,20 +612,29 @@ class AppController {
       }
     });
 
-    // Touch Swipe Controls
-    const boardEl = this.boardGridEl;
-    if (boardEl) {
-      boardEl.addEventListener('touchstart', (e) => {
+    // Touch Swipe Controls (Expanded to entire combat area below header) (C-STORY-027)
+    const combatArea = this.combatOverlayEl;
+    if (combatArea) {
+      let isTouchTracking = false;
+      let lastTouchTapTime = 0;
+
+      combatArea.addEventListener('touchstart', (e) => {
         if (!this.stageManager.isInBattle) return;
+        // Ignore header bar buttons, item buttons, or open modals
+        if (e.target.closest('button') || e.target.closest('.combat-top-bar') || e.target.closest('.modal-card')) {
+          isTouchTracking = false;
+          return;
+        }
+        isTouchTracking = true;
         const touch = e.touches[0];
         this.touchStartX = touch.clientX;
         this.touchStartY = touch.clientY;
       }, { passive: true });
 
-      let lastTouchTapTime = 0;
+      combatArea.addEventListener('touchend', (e) => {
+        if (!this.stageManager.isInBattle || !isTouchTracking) return;
+        isTouchTracking = false;
 
-      boardEl.addEventListener('touchend', (e) => {
-        if (!this.stageManager.isInBattle) return;
         const touch = e.changedTouches[0];
         const dx = touch.clientX - this.touchStartX;
         const dy = touch.clientY - this.touchStartY;
@@ -638,15 +661,17 @@ class AppController {
       }, { passive: true });
 
       // Click for Desktop Mouse or Pointer
-      boardEl.addEventListener('click', (e) => {
-        if (!this.stageManager.isInBattle) return;
-        if (Date.now() - lastTouchTapTime < 350) return;
-        const cell = e.target.closest('.grid-cell');
-        if (!cell) return;
-        const r = parseInt(cell.dataset.r, 10);
-        const c = parseInt(cell.dataset.c, 10);
-        this.handleCellTap(r, c);
-      });
+      if (this.boardGridEl) {
+        this.boardGridEl.addEventListener('click', (e) => {
+          if (!this.stageManager.isInBattle) return;
+          if (Date.now() - lastTouchTapTime < 350) return;
+          const cell = e.target.closest('.grid-cell');
+          if (!cell) return;
+          const r = parseInt(cell.dataset.r, 10);
+          const c = parseInt(cell.dataset.c, 10);
+          this.handleCellTap(r, c);
+        });
+      }
     }
 
     // Phase 1 GWT Test Runner Trigger
@@ -1377,6 +1402,30 @@ class AppController {
         this.audio.playClick();
         if (this.modalStaminaEmpty) this.modalStaminaEmpty.style.display = 'none';
       });
+    }
+  }
+
+  triggerStaminaLossAnimation() {
+    if (this.stageManager.hasUnlimitedStamina) return;
+
+    if (this.topStaminaPill) {
+      this.topStaminaPill.classList.remove('deduct-pulse');
+      void this.topStaminaPill.offsetWidth; // trigger reflow
+      this.topStaminaPill.classList.add('deduct-pulse');
+
+      const rect = this.topStaminaPill.getBoundingClientRect();
+      const floatEl = document.createElement('div');
+      floatEl.className = 'floating-stamina-loss';
+      floatEl.textContent = '-1 ⚡';
+      floatEl.style.left = `${Math.max(10, rect.left + rect.width / 2 - 20)}px`;
+      floatEl.style.top = `${rect.bottom + 4}px`;
+      document.body.appendChild(floatEl);
+
+      setTimeout(() => {
+        if (floatEl && floatEl.parentNode) {
+          floatEl.parentNode.removeChild(floatEl);
+        }
+      }, 1300);
     }
   }
 
