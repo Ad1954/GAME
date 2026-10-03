@@ -303,15 +303,15 @@ class AppController {
         defeatRewardDetailEl.textContent = `⚔️【戰鬥合成領取】+${inBattleGold || 0} 🪙`;
       }
 
-      // Update Defeat Stamina Loss Badge & Animation (C-STORY-027)
+      // Update Defeat Stamina Loss Badge & Animation (C-STORY-027, C-STORY-028)
       const staminaBadgeEl = document.getElementById('defeat-stamina-badge');
       if (staminaBadgeEl) {
         if (this.stageManager.hasUnlimitedStamina) {
           staminaBadgeEl.className = 'defeat-stamina-badge unlimited';
-          staminaBadgeEl.textContent = '⚡ 無限體力特權生效：0 消耗 (∞)';
+          staminaBadgeEl.textContent = '❤️ 無限體力特權生效：0 消耗 (∞)';
         } else {
           staminaBadgeEl.className = 'defeat-stamina-badge';
-          staminaBadgeEl.textContent = `⚡ 遠征消耗：-1 體力（當前 ${this.stageManager.stamina}/${this.stageManager.maxStamina}）`;
+          staminaBadgeEl.textContent = `❤️ 遠征消耗：-1 體力（當前 ${this.stageManager.stamina}/${this.stageManager.maxStamina}）`;
         }
       }
 
@@ -870,7 +870,7 @@ class AppController {
         this.stageManager.buyUnlimitedStaminaPass();
         this.audio.playVictory();
         this.renderShopPrivileges();
-        alert('⚡ 暢玩通行證開通成功！\n【無限體力通行證】已生效！\n• 遠征戰敗不扣體力，體力顯示為 ∞，暢遊 350 道冒險大關！');
+        alert('❤️ 暢玩通行證開通成功！\n【無限體力通行證】已生效！\n• 遠征戰敗不扣體力，體力顯示為 ∞，暢遊 350 道冒險大關！');
       });
     }
 
@@ -1368,11 +1368,11 @@ class AppController {
       this.topStaminaPill.addEventListener('click', () => {
         this.audio.playClick();
         if (this.stageManager.hasUnlimitedStamina) {
-          alert('⚡ 您已持有【無限體力通行證】，戰敗不扣體力，暢享無限制推關！');
+          alert('❤️ 您已持有【無限體力通行證】，戰敗不扣體力，暢享無限制推關！');
         } else if (this.stageManager.stamina < this.stageManager.maxStamina) {
           if (this.modalStaminaEmpty) this.modalStaminaEmpty.style.display = 'flex';
         } else {
-          alert(`⚡ 體力全滿（${this.stageManager.stamina}/${this.stageManager.maxStamina}）！\n• 勝利闖關不扣體力\n• 戰敗時扣除 1 點\n• 每 20 分鐘自然恢復 1 點`);
+          alert(`❤️ 體力全滿（${this.stageManager.stamina}/${this.stageManager.maxStamina}）！\n• 勝利闖關不扣體力\n• 戰敗時扣除 1 點\n• 每 20 分鐘自然恢復 1 點`);
         }
       });
     }
@@ -1384,7 +1384,7 @@ class AppController {
           this.stageManager.refillStamina();
           if (this.modalStaminaEmpty) this.modalStaminaEmpty.style.display = 'none';
           this.audio.playVictory();
-          alert('⚡ 補給成功！體力已完全補滿（5/5）！');
+          alert('❤️ 補給成功！體力已完全補滿（5/5）！');
         });
       });
     }
@@ -1416,7 +1416,7 @@ class AppController {
       const rect = this.topStaminaPill.getBoundingClientRect();
       const floatEl = document.createElement('div');
       floatEl.className = 'floating-stamina-loss';
-      floatEl.textContent = '-1 ⚡';
+      floatEl.textContent = '-1 ❤️';
       floatEl.style.left = `${Math.max(10, rect.left + rect.width / 2 - 20)}px`;
       floatEl.style.top = `${rect.bottom + 4}px`;
       document.body.appendChild(floatEl);

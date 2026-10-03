@@ -145,7 +145,11 @@ export class GwtRunner {
       this.testGwt27_1_GridStrictlyEqualMinmax01fr.bind(this),
       this.testGwt27_2_GridCellsStrictNoOverflowOrDeformation.bind(this),
       this.testGwt27_3_CombatTouchAreaExpanded.bind(this),
-      this.testGwt27_4_DefeatStaminaLossAnimationAndBadge.bind(this)
+      this.testGwt27_4_DefeatStaminaLossAnimationAndBadge.bind(this),
+      // C-STORY-028
+      this.testGwt28_1_SettingsModalVersionChangelog.bind(this),
+      this.testGwt28_2_TopAndBottomSafePaddingInward.bind(this),
+      this.testGwt28_3_StaminaIconHeartTransformation.bind(this)
     ];
 
     for (const test of testCases) {
@@ -2659,6 +2663,63 @@ export class GwtRunner {
     this.assert(defeatModal !== null, 'modal-defeat must exist');
     const staminaBadge = defeatModal.querySelector('#defeat-stamina-badge');
     this.assert(staminaBadge !== null, 'defeat-stamina-badge must exist inside defeat modal');
+  }
+
+  // C-STORY-028 GWT 28.1：設定頁版本更新履歷專區與滑動機制
+  async testGwt28_1_SettingsModalVersionChangelog() {
+    let doc = document;
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./index.html');
+        if (resp.ok) {
+          const html = await resp.text();
+          doc = new DOMParser().parseFromString(html, 'text/html');
+        }
+      } catch (e) {}
+    }
+
+    const changelogBox = doc.getElementById('version-changelog-box');
+    this.assert(changelogBox !== null, 'version-changelog-box must exist in settings modal');
+    this.assert(changelogBox.textContent.includes('C-STORY-028'), 'Changelog must include C-STORY-028');
+    this.assert(changelogBox.textContent.includes('C-STORY-027'), 'Changelog must include C-STORY-027');
+  }
+
+  // C-STORY-028 GWT 28.2：最上方與最下方安全邊距內收
+  async testGwt28_2_TopAndBottomSafePaddingInward() {
+    let cssText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./style.css');
+        if (resp.ok) cssText = await resp.text();
+      } catch (e) {}
+    }
+
+    if (cssText) {
+      this.assert(cssText.includes('safe-area-inset-top'), 'Top bars must support safe-area-inset-top');
+      this.assert(cssText.includes('safe-area-inset-bottom'), 'Bottom bars must support safe-area-inset-bottom');
+    }
+  }
+
+  // C-STORY-028 GWT 28.3：體力圖標全面更換為愛心
+  async testGwt28_3_StaminaIconHeartTransformation() {
+    let doc = document;
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./index.html');
+        if (resp.ok) {
+          const html = await resp.text();
+          doc = new DOMParser().parseFromString(html, 'text/html');
+        }
+      } catch (e) {}
+    }
+
+    const topPill = doc.getElementById('top-stamina-pill');
+    this.assert(topPill !== null, 'top-stamina-pill must exist');
+    this.assert(topPill.textContent.includes('❤️'), 'top-stamina-pill must contain ❤️ heart icon');
+
+    const defeatBadge = doc.getElementById('defeat-stamina-badge');
+    this.assert(defeatBadge !== null, 'defeat-stamina-badge must exist');
+    this.assert(defeatBadge.textContent.includes('❤️'), 'defeat-stamina-badge must contain ❤️ heart icon');
   }
 }
 

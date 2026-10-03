@@ -39,7 +39,7 @@
     <header class="top-bar">
       <div class="top-left">
         <div class="stamina-pill" id="top-stamina-pill" title="體力值：勝利不扣，戰敗扣1 (每20分鐘恢復1點)">
-          <span class="stamina-icon">⚡</span>
+          <span class="stamina-icon">❤️</span>
           <span class="stamina-val" id="top-stamina-val">5/5</span>
         </div>
         <div class="gold-pill">
@@ -280,8 +280,8 @@
 
           <!-- 2. Unlimited Stamina Pass -->
           <div class="privilege-card card-stamina" id="card-stamina">
-            <div class="privilege-badge">⚡ 暢玩無阻</div>
-            <div class="privilege-icon">⚡</div>
+            <div class="privilege-badge">❤️ 暢玩無阻</div>
+            <div class="privilege-icon">❤️</div>
             <div class="privilege-info">
               <h4 class="privilege-title">無限體力通行證</h4>
               <p class="privilege-desc">遠征失利零負擔，敗戰不扣體力，24 小時極限極速推關！</p>
@@ -477,11 +477,68 @@
             </select>
           </div>
           <hr style="border: 0; border-top: 1px solid #334155; margin: 12px 0;">
+          <div class="setting-section-header" style="margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.92rem; font-weight: 800; color: #38bdf8;">📜 版本更新履歷</span>
+            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v1.2.8</span>
+          </div>
+          <div class="version-changelog-box" id="version-changelog-box">
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-028 (最新)</div>
+              <div class="changelog-title">設定頁版本履歷、安全邊距內收與體力愛心圖標</div>
+              <ul class="changelog-list">
+                <li>📜 設定頁新增版本更新履歷專區，支援流暢滑動瀏覽</li>
+                <li>📱 畫面頂部與底部安全邊距內收約 1 個內文字高，避開圓角與相機挖孔</li>
+                <li>❤️ 體力圖標全面由閃電更換為生動愛心（❤️ 5/5、-1 ❤️ 飄字演出）</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-027</div>
+              <div class="changelog-title">盤面固定尺寸防變形、Threes! 卡牌比例與全螢幕手勢</div>
+              <ul class="changelog-list">
+                <li>📐 5x5 網格鎖定 minmax(0, 1fr)，杜絕多位數文字撐開變形</li>
+                <li>🃏 盤面與方塊採用 5:6 垂直長方卡牌造型，契合手機縱向螢幕</li>
+                <li>📱 手勢擴展至全戰鬥區域，任意邊界滑動皆可靈敏響應</li>
+                <li>⚡ 戰敗結算紅光震顫與體力扣除動畫演出</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-026</div>
+              <div class="changelog-title">體力系統閉環與 5 秒沙盒廣告模擬器</div>
+              <ul class="changelog-list">
+                <li>⚡ 體力上限 5 點，勝戰不扣體力，戰敗扣 1 點</li>
+                <li>📺 每 3 場戰鬥觸發 5 秒沙盒插頁廣告，每日福利廣告領 500 金幣</li>
+                <li>👑 終身免廣告 PASS（秒領福利）、無限體力證（∞暢玩）特權生效</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-025</div>
+              <div class="changelog-title">營地卡片圓弧外框防穿模與視覺排版統一</div>
+              <ul class="changelog-list">
+                <li>🏛️ 軍備科技研發上移至第 2 位，突顯核心產出重要性</li>
+                <li>📦 消除倉庫標籤穿模，全面套用統一發光圓角外框</li>
+                <li>📐 按鈕文字置中且統一「先文字後金額」標準排版</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-024</div>
+              <div class="changelog-title">王國軍備科技大突破裝備實力門檻</div>
+              <ul class="changelog-list">
+                <li>🛡️ 大突破科技需穿戴對應階級武器始得研發，強化裝備養成深度</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-023</div>
+              <div class="changelog-title">商店與營地雙軌分流</div>
+              <ul class="changelog-list">
+                <li>💎 獨立第 4 分頁「皇家特許寶庫」，現金與廣告特權專屬櫥窗</li>
+              </ul>
+            </div>
+          </div>
           <div class="setting-desc" style="font-size: 0.8rem; color: #94a3b8; line-height: 1.4;">
             商業製品測試版 (Phase 1)：<br>
             獨立純前端運行環境，本地自動存檔。
           </div>
-          <button class="btn-danger" id="btn-reset-save" style="margin-top: 16px; width: 100%;">🗑️ 清除本地存檔 (重置進度)</button>
+          <button class="btn-danger" id="btn-reset-save" style="margin-top: 12px; width: 100%;">🗑️ 清除本地存檔 (重置進度)</button>
         </div>
         <div class="modal-actions">
           <button class="btn-modal-primary" id="btn-settings-close" style="width: 100%;">確定關閉</button>
@@ -540,7 +597,7 @@
       <div class="modal-card defeat-card">
         <div class="defeat-banner">💀 盤面困局 (戰敗)</div>
         <div class="modal-body text-center">
-          <div class="defeat-stamina-badge" id="defeat-stamina-badge">⚡ 遠征消耗：-1 體力（當前 4/5）</div>
+          <div class="defeat-stamina-badge" id="defeat-stamina-badge">❤️ 遠征消耗：-1 體力（當前 4/5）</div>
           <p style="font-size: 0.92rem; color: #fca5a5; line-height: 1.5; margin-bottom: 12px;">
             盤面已無可移動或合體之方塊！<br>
             重整旗鼓，再次挑戰吧！
@@ -597,7 +654,7 @@
     <div class="modal-backdrop" id="modal-stamina-empty" style="display: none; z-index: 120;">
       <div class="modal-card stamina-empty-card" style="border: 2px solid #38bdf8; max-width: 380px;">
         <div class="modal-header">
-          <span class="modal-badge">⚡</span>
+          <span class="modal-badge">❤️</span>
           <h3 class="modal-title">體力不足！</h3>
         </div>
         <div class="modal-body text-center">
