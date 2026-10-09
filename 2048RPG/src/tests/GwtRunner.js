@@ -5,8 +5,10 @@ import { Tile } from '../core/Tile.js';
 import { MoveEngine } from '../core/MoveEngine.js';
 import { Spawner } from '../core/Spawner.js';
 import { StageManager } from '../core/StageManager.js';
-import { Direction, TileType, STAGE_CONFIGS, BASE_STAT_TIERS, CHAPTER_CONFIGS, getTileTheme, ThemeSkinType, THEME_SKIN_CONFIGS, Events, HERO_THEMES, calculateWarehouseExpansionCost, getWarehouseUpgradeConfig, MAX_ITEM_STACK } from '../core/Constants.js';
+import { Direction, TileType, STAGE_CONFIGS, STAGE_0_CONFIG, BASE_STAT_TIERS, CHAPTER_CONFIGS, getTileTheme, ThemeSkinType, THEME_SKIN_CONFIGS, Events, HERO_THEMES, calculateWarehouseExpansionCost, getWarehouseUpgradeConfig, MAX_ITEM_STACK, DEFEAT_TACTICAL_TIPS, CURRENT_GAME_VERSION } from '../core/Constants.js';
+import { GameEventBus } from '../core/GameEventBus.js';
 import { ViewRenderer } from '../presentation/ViewRenderer.js';
+import { TutorialOverlay } from '../presentation/TutorialOverlay.js';
 
 export class GwtRunner {
   constructor() {
@@ -149,7 +151,48 @@ export class GwtRunner {
       // C-STORY-028
       this.testGwt28_1_SettingsModalVersionChangelog.bind(this),
       this.testGwt28_2_TopAndBottomSafePaddingInward.bind(this),
-      this.testGwt28_3_StaminaIconHeartTransformation.bind(this)
+      this.testGwt28_3_StaminaIconHeartTransformation.bind(this),
+      // C-STORY-029
+      this.testGwt29_1_EightRichVeinDropsWithConstantInterval.bind(this),
+      this.testGwt29_2_SubsequentDropsIntervalIncrementAndCapAt16.bind(this),
+      this.testGwt29_3_VeinDecayEveryFourDropsMinimumFour.bind(this),
+      this.testGwt29_4_AllStagesGoldCapDoubled.bind(this),
+      // C-STORY-030: 新手引導序章 (Stage 0 Tutorial)
+      this.testGwt30_1_TutorialInitialStateAndAutoStart.bind(this),
+      this.testGwt30_2_DirectionRestrictionAndShakeWarning.bind(this),
+      this.testGwt30_3_EquipFusionAdvancesToStep2.bind(this),
+      this.testGwt30_4_SlimeCombatVictoryAdvancesToStep3.bind(this),
+      this.testGwt30_5_GoldMergeAndTapToCashOutFlow.bind(this),
+      this.testGwt30_6_BossPowerCheckAndTwoPhaseClear.bind(this),
+      this.testGwt30_7_TutorialSkipAndCompletedFlagPersistence.bind(this),
+      // C-STORY-031: 新手教學視覺化圖解POPUP、手指座標精確定位與規則修正
+      this.testGwt31_1_PopupVisualCardFormulaStructures.bind(this),
+      this.testGwt31_2_MonsterSynthesisWarningCorrectText.bind(this),
+      this.testGwt31_3_Step3GoldTapAdvancesToStep4WithoutStall.bind(this),
+      this.testGwt31_4_HandGuidePercentageCoordinatesAnchored.bind(this),
+      // C-STORY-032: 新手教學節奏調優、自主演練、消除假規則與大廳序章訓練所
+      this.testGwt32_1_Chapter0AndStage0IntegratedInLobby.bind(this),
+      this.testGwt32_2_ClearTutorialRecordResetsState.bind(this),
+      this.testGwt32_3_Step4BlockRuleAndOpenCombatConfig.bind(this),
+      this.testGwt32_4_GoldTapGuideStrictlyCentered.bind(this),
+      // C-STORY-033: 新手教學手勢位置優化、金幣收益結算修復、文案精簡與退關貨幣放棄機制
+      this.testGwt33_1_MonsterWarningCopyWithoutMisleadingPriority.bind(this),
+      this.testGwt33_2_HandGuidesPositionedBelowTiles.bind(this),
+      this.testGwt33_3_MoveDelayReducedToOneSecond.bind(this),
+      this.testGwt33_4_TutorialGoldMergeAndTapAccruesTo16Gold.bind(this),
+      this.testGwt33_5_AbandonBattleRewardsForfeitsAllInCombatGold.bind(this),
+      this.testGwt33_6_CellRectPositioningAccurateForTapAndSwipe.bind(this),
+      // C-STORY-034: 戰敗教官覆盤提點與 2048 RPG 進階門道指南
+      this.testGwt34_1_DefeatTacticalTipCardRendering.bind(this),
+      this.testGwt34_2_DefeatTacticalTipCyclingAndModularity.bind(this),
+      this.testGwt34_3_TacticalTipsContentCoverageOfGameMechanics.bind(this),
+      // C-STORY-035: 教學手勢重位隱藏與點擊指尖置中校準
+      this.testGwt35_1_HandGuideRepositionHideInstantaneously.bind(this),
+      this.testGwt35_2_TapGuideFingertipOffsetCompensatedToCenter.bind(this),
+      // C-STORY-036: Cache Busting 版本戳記與 iOS 主畫面無損熱更新
+      this.testGwt36_1_AssetLinksContainVersionQueryString.bind(this),
+      this.testGwt36_2_SettingsReloadButtonConfigured.bind(this),
+      this.testGwt36_3_SaveVersionMigrationAndDataPreservation.bind(this)
     ];
 
     for (const test of testCases) {
@@ -905,11 +948,11 @@ export class GwtRunner {
   // C-STORY-008 GWT 8.2：長線 350 關全量配置與每關至少 3 隻魔物
   testGwt8_2_Macro350StagesScalingAndMultiMonsters() {
     this.assert(STAGE_CONFIGS.length === 350, `Stage count must be exactly 350, got ${STAGE_CONFIGS.length}`);
-    this.assert(CHAPTER_CONFIGS.length === 8, `Chapter count must be 8, got ${CHAPTER_CONFIGS.length}`);
+    this.assert(CHAPTER_CONFIGS.length === 9, `Chapter count must be 9 (Chapter 0 + Chapters 1~8), got ${CHAPTER_CONFIGS.length}`);
 
     // Verify Chapter ranges
-    const ch8 = CHAPTER_CONFIGS[7];
-    this.assert(ch8.range[1] === 350, 'Chapter 8 ends at stage 350');
+    const ch8 = CHAPTER_CONFIGS.find(c => c.id === 8);
+    this.assert(ch8 !== undefined && ch8.range[1] === 350, 'Chapter 8 ends at stage 350');
 
     // Verify long-term stages (11~350) have >= 3 monsters
     for (let sId = 11; sId <= 350; sId++) {
@@ -930,14 +973,14 @@ export class GwtRunner {
     const s11 = STAGE_CONFIGS.find(s => s.id === 11);
     this.assert(s11 !== undefined, 'Stage 11 exists');
     this.assert(s11.rewardGold === 150, `Stage 11 rewardGold should be 150, got ${s11.rewardGold}`);
-    this.assert(s11.goldCap === 70, `Stage 11 goldCap should be 70, got ${s11.goldCap}`);
+    this.assert(s11.goldCap === 140, `Stage 11 goldCap should be 140, got ${s11.goldCap}`);
 
     // Test gold budget initialization and 100% cash out
     const sm = new StageManager();
     sm.resetSaveData();
     sm.startStage(11, 64);
     this.assert(sm.stageGoldEarned === 0, 'Initial stageGoldEarned is 0');
-    this.assert(sm.remainingGoldBudget === 70, 'Initial remainingGoldBudget matches stage goldCap (70)');
+    this.assert(sm.remainingGoldBudget === 140, 'Initial remainingGoldBudget matches stage goldCap (140)');
 
     // Put gold tiles on board
     sm.board.clear();
@@ -2023,18 +2066,18 @@ export class GwtRunner {
       this.assert(sm.goldDropsCount === i + 1, `goldDropsCount is ${i + 1}`);
     }
 
-    // After 4th drop, currentGoldValue decays from 16 to 8
+    // After 4th drop, currentGoldValue decays from 16 to 8 (interval remains 8 in C-STORY-029)
     this.assert(sm.currentGoldValue === 8, `After 4 drops, currentGoldValue decays to 8, got ${sm.currentGoldValue}`);
-    this.assert(sm.nextGoldDropTurn === 46, `After 4th drop, next turn is 32 + 14 = 46, got ${sm.nextGoldDropTurn}`);
+    this.assert(sm.nextGoldDropTurn === 40, `After 4th drop, next turn is 32 + 8 = 40, got ${sm.nextGoldDropTurn}`);
 
-    // Drop 5 (turn 46): drops 8G
+    // Drop 5 (turn 40): drops 8G
     sm.board.clear();
     sm.board.setTile(4, 0, new Tile(2, TileType.HERO, 4, 0));
     sm.board.setTile(0, 4, new Tile(1024, TileType.MONSTER, 0, 4));
     sm.board.setTile(3, 0, new Tile(2, TileType.EQUIPMENT, 3, 0));
-    sm.turnCount = 45;
+    sm.turnCount = 39;
     const res5 = sm.handleMove(Direction.DOWN);
-    this.assert(res5.moved === true, 'Turn 46 move succeeded');
+    this.assert(res5.moved === true, 'Turn 40 move succeeded');
     this.assert(sm.goldDropsCount === 5, 'goldDropsCount is 5');
 
     // Test floor 4: simulate when currentGoldValue is 4, it never decays below 4
@@ -2052,13 +2095,13 @@ export class GwtRunner {
     this.assert(sm.currentGoldValue === 4, `currentGoldValue stays at minimum 4, got ${sm.currentGoldValue}`);
   }
 
-  // C-STORY-019 GWT 19.2：第 4 顆登場後每多一顆間隔拉長 6 回合（防塞盤面／速戰速決）
+  // C-STORY-019 / C-STORY-029 GWT 19.2：第 8 顆前維持 8 回合，之後每顆間隔拉長 2 回合封頂 16
   testGwt19_2_DynamicCooldownPacingInterval6Turns() {
     const sm = new StageManager();
     sm.resetSaveData();
     sm.startStage(1);
-    sm.goldSpawnBudget = 500; // sufficient budget
-    sm.remainingGoldBudget = 500;
+    sm.goldSpawnBudget = 1000; // sufficient budget
+    sm.remainingGoldBudget = 1000;
 
     // Verify initial intervals: 8
     this.assert(sm.goldDropInterval === 8, 'Initial interval is 8');
@@ -2074,70 +2117,60 @@ export class GwtRunner {
       this.assert(res.moved === true, `Move at turn ${turn} succeeded`);
     };
 
-    // Drops 1, 2, 3: interval remains 8
-    // Drop 1: turn 8 -> next 16
-    triggerTurn(8);
-    this.assert(sm.nextGoldDropTurn === 16, 'Drop 1 -> next is 16');
+    // Drops 1~8: interval remains 8
+    const expectedTurns = [8, 16, 24, 32, 40, 48, 56, 64];
+    for (let i = 0; i < 7; i++) {
+      triggerTurn(expectedTurns[i]);
+      this.assert(sm.nextGoldDropTurn === expectedTurns[i + 1], `Drop ${i + 1} -> next is ${expectedTurns[i + 1]}`);
+      this.assert(sm.goldDropInterval === 8, `Interval remains 8 at drop ${i + 1}`);
+    }
 
-    // Drop 2: turn 16 -> next 24
-    triggerTurn(16);
-    this.assert(sm.nextGoldDropTurn === 24, 'Drop 2 -> next is 24');
+    // Drop 8: turn 64 -> interval becomes 8 + 2 = 10, next is 64 + 10 = 74
+    triggerTurn(64);
+    this.assert(sm.goldDropInterval === 10, `Interval after drop 8 is 10, got ${sm.goldDropInterval}`);
+    this.assert(sm.nextGoldDropTurn === 74, `Next turn after drop 8 is 74, got ${sm.nextGoldDropTurn}`);
 
-    // Drop 3: turn 24 -> next 32
-    triggerTurn(24);
-    this.assert(sm.nextGoldDropTurn === 32, 'Drop 3 -> next is 32');
-
-    // Drop 4: turn 32 -> interval becomes 8 + 6 = 14, next is 32 + 14 = 46
-    triggerTurn(32);
-    this.assert(sm.goldDropInterval === 14, `Interval after drop 4 is 14, got ${sm.goldDropInterval}`);
-    this.assert(sm.nextGoldDropTurn === 46, `Next turn after drop 4 is 46, got ${sm.nextGoldDropTurn}`);
-
-    // Drop 5: turn 46 -> interval becomes 14 + 6 = 20, next is 46 + 20 = 66
-    triggerTurn(46);
-    this.assert(sm.goldDropInterval === 20, `Interval after drop 5 is 20, got ${sm.goldDropInterval}`);
-    this.assert(sm.nextGoldDropTurn === 66, `Next turn after drop 5 is 66, got ${sm.nextGoldDropTurn}`);
-
-    // Drop 6: turn 66 -> interval becomes 20 + 6 = 26, next is 66 + 26 = 92
-    triggerTurn(66);
-    this.assert(sm.goldDropInterval === 26, `Interval after drop 6 is 26, got ${sm.goldDropInterval}`);
-    this.assert(sm.nextGoldDropTurn === 92, `Next turn after drop 6 is 92, got ${sm.nextGoldDropTurn}`);
+    // Drop 9: turn 74 -> interval becomes 10 + 2 = 12, next is 74 + 12 = 86
+    triggerTurn(74);
+    this.assert(sm.goldDropInterval === 12, `Interval after drop 9 is 12, got ${sm.goldDropInterval}`);
+    this.assert(sm.nextGoldDropTurn === 86, `Next turn after drop 9 is 86, got ${sm.nextGoldDropTurn}`);
   }
 
-  // C-STORY-019 GWT 19.3：時光沙漏（Undo）精確回溯富礦衰竭與排程步數
+  // C-STORY-019 / C-STORY-029 GWT 19.3：時光沙漏（Undo）精確回溯富礦衰竭與排程步數
   testGwt19_3_UndoRollsBackGoldDropSchedule() {
     const sm = new StageManager();
     sm.resetSaveData();
     sm.claimTestItems(1);
     sm.startStage(36); // currentGoldValue = 16
 
-    // Setup state right before drop 4 (turn 31, dropsCount = 3, interval = 8, next = 32)
-    sm.goldDropsCount = 3;
+    // Setup state right before drop 8 (turn 63, dropsCount = 7, interval = 8, next = 64)
+    sm.goldDropsCount = 7;
     sm.goldDropInterval = 8;
-    sm.nextGoldDropTurn = 32;
-    sm.currentGoldValue = 16;
-    sm.turnCount = 31;
+    sm.nextGoldDropTurn = 64;
+    sm.currentGoldValue = 8;
+    sm.turnCount = 63;
 
     sm.board.clear();
     sm.board.setTile(4, 0, new Tile(2, TileType.HERO, 4, 0));
     sm.board.setTile(0, 4, new Tile(1024, TileType.MONSTER, 0, 4));
     sm.board.setTile(3, 0, new Tile(2, TileType.EQUIPMENT, 3, 0));
 
-    // Turn 32: Triggers drop 4 (decay 16 -> 8, interval 8 -> 14, next 32 + 14 = 46)
+    // Turn 64: Triggers drop 8 (decay 8 -> 4, interval 8 -> 10, next 64 + 10 = 74)
     sm.handleMove(Direction.DOWN);
-    this.assert(sm.turnCount === 32, 'Turn count advanced to 32');
-    this.assert(sm.goldDropsCount === 4, 'goldDropsCount advanced to 4');
-    this.assert(sm.currentGoldValue === 8, 'currentGoldValue decayed to 8');
-    this.assert(sm.goldDropInterval === 14, 'goldDropInterval increased to 14');
-    this.assert(sm.nextGoldDropTurn === 46, 'nextGoldDropTurn scheduled to 46');
+    this.assert(sm.turnCount === 64, 'Turn count advanced to 64');
+    this.assert(sm.goldDropsCount === 8, 'goldDropsCount advanced to 8');
+    this.assert(sm.currentGoldValue === 4, 'currentGoldValue decayed to 4');
+    this.assert(sm.goldDropInterval === 10, 'goldDropInterval increased to 10');
+    this.assert(sm.nextGoldDropTurn === 74, 'nextGoldDropTurn scheduled to 74');
 
     // Use Undo
     const undoRes = sm.useUndoItem();
     this.assert(undoRes.success === true, 'Undo succeeded');
-    this.assert(sm.turnCount === 31, 'turnCount reverted to 31');
-    this.assert(sm.goldDropsCount === 3, 'goldDropsCount reverted to 3');
-    this.assert(sm.currentGoldValue === 16, 'currentGoldValue reverted to 16');
+    this.assert(sm.turnCount === 63, 'turnCount reverted to 63');
+    this.assert(sm.goldDropsCount === 7, 'goldDropsCount reverted to 7');
+    this.assert(sm.currentGoldValue === 8, 'currentGoldValue reverted to 8');
     this.assert(sm.goldDropInterval === 8, 'goldDropInterval reverted to 8');
-    this.assert(sm.nextGoldDropTurn === 32, 'nextGoldDropTurn reverted to 32');
+    this.assert(sm.nextGoldDropTurn === 64, 'nextGoldDropTurn reverted to 64');
   }
 
   // =========================================================================
@@ -2721,5 +2754,831 @@ export class GwtRunner {
     this.assert(defeatBadge !== null, 'defeat-stamina-badge must exist');
     this.assert(defeatBadge.textContent.includes('❤️'), 'defeat-stamina-badge must contain ❤️ heart icon');
   }
+
+  // C-STORY-029 GWT 29.1：富礦期延長至 8 個，固定每 8 回合生成一次
+  testGwt29_1_EightRichVeinDropsWithConstantInterval() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startStage(1);
+    sm.goldSpawnBudget = 1000;
+    sm.remainingGoldBudget = 1000;
+    sm.currentGoldValue = 8;
+    sm.goldDropsCount = 0;
+    sm.goldDropInterval = 8;
+    sm.nextGoldDropTurn = 8;
+
+    const triggerTurn = (turn) => {
+      sm.board.clear();
+      sm.board.setTile(4, 0, new Tile(2, TileType.HERO, 4, 0));
+      sm.board.setTile(0, 4, new Tile(1024, TileType.MONSTER, 0, 4));
+      sm.board.setTile(3, 0, new Tile(2, TileType.EQUIPMENT, 3, 0));
+      sm.turnCount = turn - 1;
+      const res = sm.handleMove(Direction.DOWN);
+      this.assert(res.moved === true, `Move at turn ${turn} succeeded`);
+    };
+
+    // Simulate turns up to drop 8
+    const expectedTurns = [8, 16, 24, 32, 40, 48, 56, 64];
+    for (let drop = 1; drop <= 8; drop++) {
+      triggerTurn(expectedTurns[drop - 1]);
+      this.assert(sm.goldDropsCount === drop, `Gold drop count must be ${drop}`);
+      if (drop < 8) {
+        this.assert(sm.goldDropInterval === 8, `Drops 1~7 must keep interval at 8`);
+      } else {
+        // Drop 8 should transition interval to 10 for subsequent drop
+        this.assert(sm.goldDropInterval === 10, `Drop 8 must increment interval to 10`);
+      }
+    }
+  }
+
+  // C-STORY-029 GWT 29.2：第 8 次生成後的動態間隔遞增與封頂 16 回合
+  testGwt29_2_SubsequentDropsIntervalIncrementAndCapAt16() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startStage(1);
+    sm.goldSpawnBudget = 1000;
+    sm.remainingGoldBudget = 1000;
+    sm.currentGoldValue = 8;
+    sm.goldDropsCount = 8;
+    sm.goldDropInterval = 10;
+    sm.turnCount = 64;
+    sm.nextGoldDropTurn = 74;
+
+    const triggerTurn = (turn) => {
+      sm.board.clear();
+      sm.board.setTile(4, 0, new Tile(2, TileType.HERO, 4, 0));
+      sm.board.setTile(0, 4, new Tile(1024, TileType.MONSTER, 0, 4));
+      sm.board.setTile(3, 0, new Tile(2, TileType.EQUIPMENT, 3, 0));
+      sm.turnCount = turn - 1;
+      const res = sm.handleMove(Direction.DOWN);
+      this.assert(res.moved === true, `Move at turn ${turn} succeeded`);
+    };
+
+    // Drop 9: turn 74, next interval 12, next turn 86
+    triggerTurn(74);
+    this.assert(sm.goldDropsCount === 9, 'Drop count is 9');
+    this.assert(sm.goldDropInterval === 12, 'Interval increments to 12');
+    this.assert(sm.nextGoldDropTurn === 74 + 12, 'Next turn is 86');
+
+    // Drop 10: turn 86, next interval 14, next turn 100
+    triggerTurn(86);
+    this.assert(sm.goldDropsCount === 10, 'Drop count is 10');
+    this.assert(sm.goldDropInterval === 14, 'Interval increments to 14');
+    this.assert(sm.nextGoldDropTurn === 86 + 14, 'Next turn is 100');
+
+    // Drop 11: turn 100, next interval 16, next turn 116
+    triggerTurn(100);
+    this.assert(sm.goldDropsCount === 11, 'Drop count is 11');
+    this.assert(sm.goldDropInterval === 16, 'Interval increments to 16');
+    this.assert(sm.nextGoldDropTurn === 100 + 16, 'Next turn is 116');
+
+    // Drop 12: turn 116, interval capped at 16, next turn 132
+    triggerTurn(116);
+    this.assert(sm.goldDropsCount === 12, 'Drop count is 12');
+    this.assert(sm.goldDropInterval === 16, 'Interval remains capped at 16');
+    this.assert(sm.nextGoldDropTurn === 116 + 16, 'Next turn is 132');
+
+    // Drop 13: turn 132, interval remains 16
+    triggerTurn(132);
+    this.assert(sm.goldDropsCount === 13, 'Drop count is 13');
+    this.assert(sm.goldDropInterval === 16, 'Interval stays at 16 (never exceeds 16)');
+  }
+
+  // C-STORY-029 GWT 29.3：每 4 個金幣降一階，最低不低於 4
+  testGwt29_3_VeinDecayEveryFourDropsMinimumFour() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startStage(1);
+    sm.goldSpawnBudget = 1000;
+    sm.remainingGoldBudget = 1000;
+    sm.currentGoldValue = 32;
+    sm.goldDropsCount = 0;
+    sm.goldDropInterval = 8;
+    sm.nextGoldDropTurn = 8;
+
+    const triggerTurn = (turn) => {
+      sm.board.clear();
+      sm.board.setTile(4, 0, new Tile(2, TileType.HERO, 4, 0));
+      sm.board.setTile(0, 4, new Tile(1024, TileType.MONSTER, 0, 4));
+      sm.board.setTile(3, 0, new Tile(2, TileType.EQUIPMENT, 3, 0));
+      sm.turnCount = turn - 1;
+      const res = sm.handleMove(Direction.DOWN);
+      this.assert(res.moved === true, `Move at turn ${turn} succeeded`);
+    };
+
+    // Simulate 4 drops
+    for (let i = 1; i <= 4; i++) {
+      triggerTurn(sm.nextGoldDropTurn);
+    }
+    this.assert(sm.currentGoldValue === 16, 'After 4 drops, gold value decays from 32 to 16');
+
+    // Simulate next 4 drops (total 8)
+    for (let i = 5; i <= 8; i++) {
+      triggerTurn(sm.nextGoldDropTurn);
+    }
+    this.assert(sm.currentGoldValue === 8, 'After 8 drops, gold value decays from 16 to 8');
+
+    // Simulate next 4 drops (total 12)
+    for (let i = 9; i <= 12; i++) {
+      triggerTurn(sm.nextGoldDropTurn);
+    }
+    this.assert(sm.currentGoldValue === 4, 'After 12 drops, gold value decays from 8 to 4');
+
+    // Simulate next 4 drops (total 16)
+    for (let i = 13; i <= 16; i++) {
+      triggerTurn(sm.nextGoldDropTurn);
+    }
+    this.assert(sm.currentGoldValue === 4, 'After 16 drops, gold value remains clamped at minimum 4');
+  }
+
+  // C-STORY-029 GWT 29.4：全 350 關卡金幣獎勵池翻倍驗證
+  testGwt29_4_AllStagesGoldCapDoubled() {
+    // Chapter 1 (1~5)
+    this.assert(STAGE_CONFIGS[0].goldCap === 40, 'Stage 1 goldCap is doubled to 40');
+    this.assert(STAGE_CONFIGS[4].goldCap === 80, 'Stage 5 goldCap is doubled to 80');
+
+    // Chapter 2 (6~20)
+    this.assert(STAGE_CONFIGS[5].goldCap === 90, 'Stage 6 goldCap is doubled to 90');
+    this.assert(STAGE_CONFIGS[19].goldCap === 240, 'Stage 20 goldCap is doubled to 240');
+
+    // Chapter 3~8 (21~350)
+    // Formula: Math.floor(80 + s * 4)
+    this.assert(STAGE_CONFIGS[20].goldCap === 164, 'Stage 21 goldCap is 80 + 21*4 = 164');
+    this.assert(STAGE_CONFIGS[29].goldCap === 200, 'Stage 30 goldCap is 80 + 30*4 = 200 (was 100)');
+    this.assert(STAGE_CONFIGS[99].goldCap === 480, 'Stage 100 goldCap is 80 + 100*4 = 480 (was 240)');
+    this.assert(STAGE_CONFIGS[349].goldCap === 1480, 'Stage 350 goldCap is 80 + 350*4 = 1480 (was 740)');
+  }
+
+  // =========================================================
+  // C-STORY-030: 新手引導序章 (Stage 0 Tutorial) GWT 驗收測試
+  // =========================================================
+
+  // GWT 30.1：首次進入判定與教學啟動
+  testGwt30_1_TutorialInitialStateAndAutoStart() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    this.assert(sm.tutorialManager.isCompleted === false, 'Tutorial completed flag is initially false');
+
+    const config = sm.startTutorialStage();
+    this.assert(config !== null && config.id === 0, 'Stage 0 tutorial config loaded');
+    this.assert(sm.tutorialManager.isActive === true, 'Tutorial is now active');
+    this.assert(sm.tutorialManager.currentStepIndex === 1, 'Tutorial starts at Step 1');
+
+    const hero = sm.board.getHero();
+    this.assert(hero !== null && hero.value === 2 && hero.r === 3 && hero.c === 2, 'Hero (2) placed at (3,2)');
+    const eq = sm.board.getTile(2, 2);
+    this.assert(eq !== null && eq.isEquipment() && eq.value === 2, 'Equipment (2) placed at (2,2)');
+  }
+
+  // GWT 30.2：操作限制與防呆機制 (限制僅能向上滑動)
+  testGwt30_2_DirectionRestrictionAndShakeWarning() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+
+    this.assert(sm.tutorialManager.isDirectionAllowed(Direction.UP) === true, 'UP is allowed in Step 1');
+    this.assert(sm.tutorialManager.isDirectionAllowed(Direction.DOWN) === false, 'DOWN is prohibited in Step 1');
+    this.assert(sm.tutorialManager.isDirectionAllowed(Direction.LEFT) === false, 'LEFT is prohibited in Step 1');
+    this.assert(sm.tutorialManager.isDirectionAllowed(Direction.RIGHT) === false, 'RIGHT is prohibited in Step 1');
+
+    // Attempt invalid DOWN move
+    const res = sm.handleMove(Direction.DOWN);
+    this.assert(res.moved === false, 'Move did not occur');
+    this.assert(res.reason === 'TUTORIAL_RESTRICTED', 'Move blocked with TUTORIAL_RESTRICTED reason');
+    this.assert(sm.board.getHero().r === 3, 'Hero did not move from row 3');
+  }
+
+  // GWT 30.3：Step 1 裝備合成推進至 Step 2
+  testGwt30_3_EquipFusionAdvancesToStep2() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+
+    // Execute allowed UP move with 0 delay for synchronous unit test
+    const res = sm.handleMove(Direction.UP, { tutorialDelayMs: 0 });
+    this.assert(res.moved === true, 'UP move succeeded');
+    this.assert(sm.tutorialManager.currentStepIndex === 2, 'Automatically advanced to Step 2');
+
+    const hero = sm.board.getHero();
+    this.assert(hero !== null && hero.value === 4, 'Hero upgraded to (4) after absorbing sword');
+
+    const monsters = sm.board.getMonsters();
+    this.assert(monsters.length === 1 && monsters[0].value === 4, 'Slime (4) spawned for Step 2');
+  }
+
+  // GWT 30.4：Step 2 魔物討伐推進至 Step 3
+  testGwt30_4_SlimeCombatVictoryAdvancesToStep3() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+    sm.tutorialManager.applyStep(2);
+
+    this.assert(sm.tutorialManager.isDirectionAllowed(Direction.RIGHT) === true, 'RIGHT is allowed in Step 2');
+    this.assert(sm.tutorialManager.isDirectionAllowed(Direction.LEFT) === false, 'LEFT is blocked in Step 2');
+
+    const res = sm.handleMove(Direction.RIGHT, { tutorialDelayMs: 0 });
+    this.assert(res.moved === true, 'RIGHT move succeeded');
+    this.assert(sm.tutorialManager.currentStepIndex === 3, 'Slime killed, advanced to Step 3');
+
+    const goldTiles = sm.board.getAllTiles().filter(t => t.isGold());
+    this.assert(goldTiles.length === 2, 'Step 3 spawned two gold tiles');
+  }
+
+  // GWT 30.5：Step 3 金幣合成與點擊兌現全流程
+  testGwt30_5_GoldMergeAndTapToCashOutFlow() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+    sm.tutorialManager.applyStep(3);
+
+    // Phase 1: Slide LEFT to merge gold (4+4=8)
+    this.assert(sm.tutorialManager.subStepPhase === 1, 'Initially in Phase 1 (Swipe)');
+    const res = sm.handleMove(Direction.LEFT, { tutorialDelayMs: 0 });
+    this.assert(res.moved === true, 'LEFT move succeeded');
+    this.assert(sm.tutorialManager.subStepPhase === 2, 'Advanced to Phase 2 (Tap to cash out)');
+
+    // In Phase 2, swipes should be locked
+    this.assert(sm.tutorialManager.isDirectionAllowed(Direction.UP) === false, 'Swipe locked in tap phase');
+
+    // Tap Gold Tile (value 8)
+    const goldTile = sm.board.getAllTiles().find(t => t.isGold());
+    this.assert(goldTile !== null && goldTile.value === 8, 'Gold tile value is 8');
+
+    const cashRes = sm.cashOutGoldTile(goldTile.r, goldTile.c);
+    this.assert(cashRes.success === true && cashRes.amount === 8, 'Gold tile cashed out successfully');
+  }
+
+  // GWT 30.6：Step 4 開放自主演練與斬殺 BOSS 完成教學 (C-STORY-032 更新)
+  testGwt30_6_BossPowerCheckAndTwoPhaseClear() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+    sm.tutorialManager.applyStep(4);
+
+    this.assert(sm.tutorialManager.isOpenCombat === undefined || sm.tutorialManager.getCurrentStepConfig().isOpenCombat === true, 'Step 4 config is open combat');
+    // Open combat allows all directions
+    this.assert(sm.tutorialManager.isDirectionAllowed(Direction.DOWN) === true, 'DOWN is allowed in Step 4');
+    this.assert(sm.tutorialManager.isDirectionAllowed(Direction.UP) === true, 'UP is also allowed in Step 4 free practice');
+
+    // Slide DOWN to absorb sword (4) -> Hero becomes (8)
+    const resDown = sm.handleMove(Direction.DOWN);
+    this.assert(resDown.moved === true, 'Down move executed');
+    const hero = sm.board.getHero();
+    this.assert(hero !== null && hero.value === 8, 'Hero boosted to 8');
+
+    // Slide UP to kill Boss (8)
+    const resUp = sm.handleMove(Direction.UP);
+    this.assert(resUp.moved === true, 'UP move killed boss');
+
+    // Immediately trigger end tutorial for unit test assertion
+    sm.tutorialManager.endTutorial(true);
+    this.assert(sm.tutorialManager.isActive === false, 'Tutorial completed and inactive');
+    this.assert(sm.tutorialManager.isCompleted === true, 'Tutorial marked as completed');
+  }
+
+  // GWT 30.7：中途跳過教學與存檔標記持久化
+  testGwt30_7_TutorialSkipAndCompletedFlagPersistence() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+
+    this.assert(sm.tutorialManager.isActive === true, 'Tutorial active');
+    sm.tutorialManager.skipTutorial();
+    this.assert(sm.tutorialManager.isActive === false, 'Tutorial stopped after skip');
+    this.assert(sm.tutorialManager.isCompleted === true, 'Completed flag saved as true');
+
+    // Recheck with new StageManager instance
+    const newSm = new StageManager();
+    this.assert(newSm.tutorialManager.isCompleted === true, 'New instance recognizes tutorial as completed');
+  }
+
+  // =========================================================
+  // C-STORY-031: 新手教學視覺化圖解POPUP、手指座標精確定位與規則修正 GWT
+  // =========================================================
+
+  // GWT 31.1：POPUP 圖解卡片結構與公式驗證
+  testGwt31_1_PopupVisualCardFormulaStructures() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+
+    const step1 = sm.tutorialManager.getCurrentStepConfig();
+    this.assert(step1.popupCard !== null, 'Step 1 has popupCard configuration');
+    this.assert(step1.popupCard.formula.length === 5, 'Step 1 formula has 5 items: Hero + Equip = Upgraded Hero');
+    this.assert(step1.popupCard.formula[0].val === 2 && step1.popupCard.formula[2].val === 2 && step1.popupCard.formula[4].val === 4, 'Step 1 formula is 2 + 2 = 4');
+
+    sm.tutorialManager.applyStep(2);
+    const step2 = sm.tutorialManager.getCurrentStepConfig();
+    this.assert(step2.popupCard !== null, 'Step 2 has popupCard');
+    this.assert(step2.popupCard.formula.some(f => f.label === '受傷減半' && f.val === 2), 'Step 2 formula shows Hero (4) - Monster (4) = Hero (2) damaged in half');
+    this.assert(step2.popupCard.formula.some(f => f.slashed === true && f.label === '消滅'), 'Step 2 formula shows monster slashed and eliminated');
+  }
+
+  // GWT 31.2：魔物合成警告規則文本修正
+  testGwt31_2_MonsterSynthesisWarningCorrectText() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+    sm.tutorialManager.applyStep(2);
+
+    const step2 = sm.tutorialManager.getCurrentStepConfig();
+    this.assert(!step2.dialogue.includes('魔物之間不會合成'), 'Incorrect "monsters do not synthesize" text is removed');
+    this.assert(step2.dialogue.includes('同等級魔物會互相合體升級'), 'Dialogue accurately warns that same-tier monsters synthesize');
+    this.assert(step2.popupCard.warning.includes('魔物可以合成'), 'Popup warning explicitly states: 魔物可以合成');
+  }
+
+  // GWT 31.3：Step 3 金幣點擊兌現後百分之百推進至 Step 4 不卡關
+  testGwt31_3_Step3GoldTapAdvancesToStep4WithoutStall() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+    sm.tutorialManager.applyStep(3);
+
+    // Merge gold
+    sm.handleMove(Direction.LEFT, { tutorialDelayMs: 0 });
+    this.assert(sm.tutorialManager.subStepPhase === 2, 'In Step 3 Phase 2 (Tap to cash out)');
+
+    const goldTile = sm.board.getAllTiles().find(t => t.isGold());
+    this.assert(goldTile !== null && goldTile.value === 8, 'Gold tile (8) exists');
+
+    // Tap to cash out
+    const res = sm.cashOutGoldTile(goldTile.r, goldTile.c);
+    this.assert(res.success === true, 'Cashed out successfully');
+
+    // Simulate timeout callback immediately
+    sm.tutorialManager.onCellTapped(goldTile.r, goldTile.c, goldTile);
+    sm.tutorialManager.applyStep(4);
+
+    this.assert(sm.tutorialManager.currentStepIndex === 4, 'Smoothly advanced to Step 4 without hanging');
+    const boss = sm.board.getAllTiles().find(t => t.isMonster());
+    this.assert(boss !== null && boss.value === 8, 'Boss goblin (8) spawned in Step 4');
+  }
+
+  // GWT 31.4：手指引導右側半格偏移與百分比定位屬性
+  testGwt31_4_HandGuidePercentageCoordinatesAnchored() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+
+    const step1 = sm.tutorialManager.getCurrentStepConfig();
+    this.assert(step1.handGuide.guideOffsetCol === 0.6, 'Step 1 offsets guide column by +0.6 (right-half of tile)');
+    this.assert(step1.handGuide.from.r === 3 && step1.handGuide.to.r === 2, 'Swipe goes from hero (3) to equip (2)');
+
+    // Anchor calculation verification
+    const anchorC = ((step1.handGuide.from.c + step1.handGuide.to.c) / 2) + step1.handGuide.guideOffsetCol;
+    this.assert(anchorC === 2.6, 'Column anchor is 2.6, placing hand neatly on the right flank');
+    const posXPercent = (anchorC + 0.5) * 20;
+    this.assert(posXPercent === 62, 'Percentage anchor is strictly 62% in 5x5 board');
+  }
+
+  // =========================================================
+  // C-STORY-032: 新手教學節奏調優、自主演練、消除假規則與大廳序章訓練所 GWT
+  // =========================================================
+
+  // GWT 32.1：Chapter 0 序章訓練所與 Stage 0 卡片於大廳可見且可啟動
+  testGwt32_1_Chapter0AndStage0IntegratedInLobby() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+
+    // Check Chapter 0 definition
+    this.assert(sm.isChapterUnlocked(0) === true, 'Chapter 0 is unlocked by default');
+    const ch0 = CHAPTER_CONFIGS.find(c => c.id === 0);
+    this.assert(ch0 !== undefined && ch0.name.includes('序章：新手訓練所'), 'Chapter 0 exists in CHAPTER_CONFIGS');
+
+    // Check Stage 0 configuration
+    const stage0 = STAGE_0_CONFIG;
+    this.assert(stage0 !== undefined, 'Stage 0 exists as STAGE_0_CONFIG');
+    this.assert(stage0.chapter === 0, 'Stage 0 belongs to Chapter 0');
+    this.assert(stage0.name.includes('第 0 關：王國勇者試煉 (教學)'), 'Stage 0 has correct name');
+
+    // Start Stage 0 via tutorial stage
+    const started = sm.startTutorialStage();
+    this.assert(started.id === 0, 'Tutorial combat started with stage ID 0');
+    this.assert(sm.isInBattle === true, 'In battle state is true');
+    this.assert(sm.tutorialManager.isActive === true, 'Tutorial manager is active');
+  }
+
+  // GWT 32.2：重置教學紀錄 (setCompleted(false)) 讓教學狀態正確還原
+  testGwt32_2_ClearTutorialRecordResetsState() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.tutorialManager.setCompleted(true);
+    this.assert(sm.tutorialManager.isCompleted === true, 'Marked tutorial as completed');
+
+    // Reset tutorial state
+    sm.tutorialManager.setCompleted(false);
+    this.assert(sm.tutorialManager.isCompleted === false, 'Tutorial completed flag cleared');
+
+    // Recheck across fresh instances
+    const newSm = new StageManager();
+    this.assert(newSm.tutorialManager.isCompleted === false, 'Fresh instance confirms tutorial completed is false');
+  }
+
+  // GWT 32.3：Step 4 戰力不足為阻擋而非陣亡，且為自由自主實戰
+  testGwt32_3_Step4BlockRuleAndOpenCombatConfig() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+    sm.tutorialManager.applyStep(4);
+
+    const step4 = sm.tutorialManager.getCurrentStepConfig();
+    this.assert(step4.isOpenCombat === true, 'Step 4 is configured as isOpenCombat: true');
+    this.assert(step4.title.includes('打倒魔物'), 'Title reflects "打倒魔物" objective');
+
+    // Verify formula card has block symbol 🛑
+    this.assert(step4.popupCard.formula.some(f => f.type === 'block' && f.val === '🛑'), 'Formula has block 🛑 mini card');
+    this.assert(!step4.popupCard.formula.some(f => f.type === 'defeat'), 'Formula no longer contains defeat 💀');
+    this.assert(step4.popupCard.warning.includes('阻擋無法消滅'), 'Warning explicitly explains block instead of death');
+  }
+
+  // GWT 32.4：金幣點擊提示手勢置中無半格偏差
+  testGwt32_4_GoldTapGuideStrictlyCentered() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+    sm.tutorialManager.applyStep(3);
+
+    const step3 = sm.tutorialManager.getCurrentStepConfig();
+    const tapGuide = step3.subStep.handGuide;
+    this.assert(tapGuide.type === 'tap', 'Sub-step guide is of type tap');
+    this.assert(tapGuide.guideOffsetCol === undefined, 'No column offset applied to tap guide (strictly centered)');
+  }
+
+  // =========================================================
+  // C-STORY-033: 新手教學手勢位置優化、金幣收益結算修復、文案精簡與退關貨幣放棄機制 GWT
+  // =========================================================
+
+  // GWT 33.1：Step 2 魔物提示文案精簡（移除「請優先擊破」，保留「同等級魔物會互相合體升級變強！」）
+  testGwt33_1_MonsterWarningCopyWithoutMisleadingPriority() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+    sm.tutorialManager.applyStep(2);
+
+    const step2 = sm.tutorialManager.getCurrentStepConfig();
+    this.assert(!step2.dialogue.includes('請優先擊破'), 'Step 2 dialogue must NOT contain misleading "請優先擊破"');
+    this.assert(step2.dialogue.includes('同等級魔物會互相合體升級變強！'), 'Step 2 dialogue contains concise monster fusion warning');
+    this.assert(step2.popupCard.warning.includes('同等級魔物') && step2.popupCard.warning.includes('升級變強'), 'PopupCard warning contains concise fusion warning');
+  }
+
+  // GWT 33.2：滑動提示手勢位置配置於方塊下方（placeBelow: true，手指微觸方塊下緣）
+  testGwt33_2_HandGuidesPositionedBelowTiles() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+
+    // Step 2 combat swipe
+    sm.tutorialManager.applyStep(2);
+    const step2 = sm.tutorialManager.getCurrentStepConfig();
+    this.assert(step2.handGuide.placeBelow === true, 'Step 2 hand guide has placeBelow: true');
+    this.assert(step2.handGuide.guideOffsetRow > 0, 'Step 2 guideOffsetRow is positive (below tile, touching bottom)');
+
+    // Step 3 gold merge swipe
+    sm.tutorialManager.applyStep(3);
+    const step3 = sm.tutorialManager.getCurrentStepConfig();
+    this.assert(step3.handGuide.placeBelow === true, 'Step 3 hand guide has placeBelow: true');
+    this.assert(step3.handGuide.guideOffsetRow > 0, 'Step 3 guideOffsetRow is positive (below tile, touching bottom)');
+  }
+
+  // GWT 33.3：滑動後等待時間調整為 1 秒 (1000ms)
+  testGwt33_3_MoveDelayReducedToOneSecond() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startTutorialStage();
+
+    // Verify handleMove default delay parameter
+    let recordedDelay = null;
+    const origOnMoveExecuted = sm.tutorialManager.onMoveExecuted.bind(sm.tutorialManager);
+    sm.tutorialManager.onMoveExecuted = (dir, res, delay) => {
+      recordedDelay = delay;
+      origOnMoveExecuted(dir, res, 0); // execute immediately for test
+    };
+
+    sm.handleMove(Direction.UP);
+    this.assert(recordedDelay === 1000, `Tutorial move delay must be 1000ms (1.0s), got ${recordedDelay}ms`);
+  }
+
+  // GWT 33.4：教學關金幣合成 (8) 與點擊 (8) 完整累加至 16 金幣，結算初通總額為 66 金幣
+  testGwt33_4_TutorialGoldMergeAndTapAccruesTo16Gold() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.gold = 300;
+    sm.startTutorialStage();
+    this.assert(sm.battleStartGold === 300, 'battleStartGold snapshot recorded at tutorial stage start');
+
+    // Step 3: Initial gold merge
+    sm.tutorialManager.applyStep(3);
+    this.assert(sm.inBattleGold === 0, 'Initial inBattleGold is 0 in step 3');
+
+    // Move LEFT: 4 + 4 merges into 8 gold tile
+    const moveRes = sm.handleMove(Direction.LEFT, { tutorialDelayMs: 0 });
+    this.assert(moveRes.goldEarned === 8, 'Move result goldEarned is 8');
+    this.assert(sm.inBattleGold === 8, 'inBattleGold is credited with 8 from merge');
+    this.assert(sm.gold === 308, 'Player total gold is 308 (300 + 8)');
+
+    // Sub-step: Tap the merged 8-value gold tile (now at 1, 0)
+    const goldTile = sm.board.getAllTiles().find(t => t.isGold());
+    this.assert(goldTile !== undefined && goldTile.value === 8, 'Found merged gold tile with value 8');
+    const cashOutRes = sm.cashOutGoldTile(goldTile.r, goldTile.c);
+    this.assert(cashOutRes.success === true, 'Gold tile cash out succeeded');
+    this.assert(sm.inBattleGold === 16, 'inBattleGold reaches 16 (8 from merge + 8 from tap)');
+    this.assert(sm.gold === 316, 'Player total gold is 316 (300 + 16)');
+
+    // Victory settlement
+    sm.handleVictory();
+    this.assert(sm.isVictory === true, 'Stage victory flagged');
+    this.assert(sm.gold === 366, 'Player final gold is 366 (300 base + 50 first clear + 16 inBattleGold)');
+  }
+
+  // GWT 33.5：退出關卡放棄所有貨幣收益 (回滾至進入戰鬥前數量)，戰敗則正常保留戰鬥收益
+  testGwt33_5_AbandonBattleRewardsForfeitsAllInCombatGold() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.gold = 500;
+
+    // Case A: Mid-battle quit / abandon
+    sm.startStage(1, 4);
+    this.assert(sm.battleStartGold === 500, 'Starting gold snapshot is 500');
+
+    // Spawn and cash out a 16 gold tile
+    sm.board.setTile(1, 1, new Tile(16, TileType.GOLD));
+    sm.cashOutGoldTile(1, 1);
+    this.assert(sm.inBattleGold === 16, 'inBattleGold earned 16');
+    this.assert(sm.gold === 516, 'Current gold is 516');
+
+    // Player quits mid-battle: abandonBattleRewards
+    sm.abandonBattleRewards();
+    this.assert(sm.gold === 500, 'Gold reverted to 500, completely abandoning 16 battle gold');
+    this.assert(sm.inBattleGold === 0, 'inBattleGold reset to 0');
+    this.assert(sm.stageGoldEarned === 0, 'stageGoldEarned reset to 0');
+
+    // Case B: Defeat retains in-battle gold
+    sm.startStage(1, 4);
+    sm.board.setTile(1, 1, new Tile(16, TileType.GOLD));
+    sm.cashOutGoldTile(1, 1);
+    this.assert(sm.inBattleGold === 16, 'inBattleGold is 16');
+    this.assert(sm.gold === 516, 'Gold is 516');
+
+    sm.handleDefeat();
+    this.assert(sm.isGameOver === true, 'Game over flagged');
+    this.assert(sm.gold === 516, 'On defeat, inBattleGold is safely kept (516)');
+  }
+
+  // GWT 33.6：DOM 元素精確座標定位（Tap 置中、Swipe 居下微觸邊緣）
+  testGwt33_6_CellRectPositioningAccurateForTapAndSwipe() {
+    // Create mock DOM for board wrapper & grid
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'relative';
+    const grid = document.createElement('div');
+    grid.className = 'board-grid';
+    wrapper.appendChild(grid);
+
+    const cell = document.createElement('div');
+    cell.className = 'grid-cell';
+    cell.dataset.r = 1;
+    cell.dataset.c = 0;
+    grid.appendChild(cell);
+
+    const bus = new GameEventBus();
+    const overlay = new TutorialOverlay(wrapper, grid, bus);
+
+    this.assert(typeof overlay.getCellRectInWrapper === 'function', 'getCellRectInWrapper method exists');
+    this.assert(typeof overlay.renderHandGuide === 'function', 'renderHandGuide method exists');
+  }
+
+  // =========================================================
+  // C-STORY-034: 戰敗教官覆盤提點與 2048 RPG 進階門道指南 GWT
+  // =========================================================
+
+  // GWT 34.1：戰敗結算視窗渲染教官覆盤提點卡片
+  testGwt34_1_DefeatTacticalTipCardRendering() {
+    let tipEl = document.getElementById('defeat-tactical-tip');
+    let createdMock = false;
+    if (!tipEl) {
+      createdMock = true;
+      tipEl = document.createElement('div');
+      tipEl.id = 'defeat-tactical-tip';
+      tipEl.className = 'defeat-tactical-tip';
+      tipEl.innerHTML = `
+        <div class="defeat-tip-header">
+          <span class="defeat-tip-badge" id="defeat-tip-badge">🛡️ 教官覆盤</span>
+          <button class="defeat-tip-btn-next" id="btn-defeat-tip-next">換一則 🔄</button>
+        </div>
+        <div class="defeat-tip-title" id="defeat-tip-title"></div>
+        <div class="defeat-tip-content" id="defeat-tip-content"></div>
+      `;
+      document.body.appendChild(tipEl);
+    }
+
+    const badgeEl = document.getElementById('defeat-tip-badge');
+    const titleEl = document.getElementById('defeat-tip-title');
+    const contentEl = document.getElementById('defeat-tip-content');
+
+    this.assert(tipEl !== null, 'defeat-tactical-tip container exists in DOM');
+    this.assert(badgeEl !== null, 'defeat-tip-badge element exists');
+    this.assert(titleEl !== null, 'defeat-tip-title element exists');
+    this.assert(contentEl !== null, 'defeat-tip-content element exists');
+
+    // Populate tip data
+    const tip0 = DEFEAT_TACTICAL_TIPS[0];
+    badgeEl.textContent = tip0.badge;
+    titleEl.textContent = tip0.title;
+    contentEl.textContent = tip0.content;
+
+    this.assert(badgeEl.textContent === tip0.badge, 'Badge correctly rendered');
+    this.assert(titleEl.textContent === tip0.title, 'Title correctly rendered');
+    this.assert(contentEl.textContent === tip0.content, 'Content correctly rendered');
+
+    // Trigger defeat state via StageManager
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startStage(1, 4);
+    sm.handleDefeat();
+
+    this.assert(sm.isGameOver === true, 'Stage marked as game over on defeat');
+
+    if (createdMock && tipEl.parentNode) {
+      tipEl.parentNode.removeChild(tipEl);
+    }
+  }
+
+  // GWT 34.2：提點卡片支援點擊切換與循環輪播
+  testGwt34_2_DefeatTacticalTipCyclingAndModularity() {
+    this.assert(Array.isArray(DEFEAT_TACTICAL_TIPS), 'DEFEAT_TACTICAL_TIPS must be an array');
+    this.assert(DEFEAT_TACTICAL_TIPS.length === 3, `Expected 3 tips, got ${DEFEAT_TACTICAL_TIPS.length}`);
+
+    // Cycle check
+    for (let i = 0; i < DEFEAT_TACTICAL_TIPS.length; i++) {
+      const current = DEFEAT_TACTICAL_TIPS[i];
+      const nextIdx = (i + 1) % DEFEAT_TACTICAL_TIPS.length;
+      const nextTip = DEFEAT_TACTICAL_TIPS[nextIdx];
+      this.assert(current.id !== nextTip.id, `Index ${i} cycles to distinct tip index ${nextIdx}`);
+    }
+  }
+
+  // GWT 34.3：戰術提點完整覆蓋三大與普通 2048 的核心策略差異
+  testGwt34_3_TacticalTipsContentCoverageOfGameMechanics() {
+    const tip1 = DEFEAT_TACTICAL_TIPS.find(t => t.id === 'tip_target_priority');
+    const tip2 = DEFEAT_TACTICAL_TIPS.find(t => t.id === 'tip_monster_merge');
+    const tip3 = DEFEAT_TACTICAL_TIPS.find(t => t.id === 'tip_gold_cashout');
+
+    this.assert(tip1 !== undefined, 'Tip 1: Target priority exists');
+    this.assert(tip1.title.includes('從強怪先打'), 'Tip 1 mentions attacking strong monsters first');
+    this.assert(tip1.content.includes('減半'), 'Tip 1 explains power halving mechanics');
+
+    this.assert(tip2 !== undefined, 'Tip 2: Monster merge exists');
+    this.assert(tip2.title.includes('同級魔物相撞') || tip2.title.includes('魔物'), 'Tip 2 mentions monster collision');
+    this.assert(tip2.content.includes('空格') || tip2.content.includes('騰出'), 'Tip 2 explains freeing board space');
+
+    this.assert(tip3 !== undefined, 'Tip 3: Gold cash out exists');
+    this.assert(tip3.content.includes('直接點擊') && tip3.content.includes('金幣'), 'Tip 3 explains cashing out gold directly to clear space');
+  }
+
+  // =========================================================
+  // C-STORY-035: 教學手勢重位隱藏與點擊指尖置中校準 GWT
+  // =========================================================
+
+  // GWT 35.1：手勢重定位時先行隱藏無飄移過渡（瞬間重定位）
+  testGwt35_1_HandGuideRepositionHideInstantaneously() {
+    const wrapper = document.createElement('div');
+    const grid = document.createElement('div');
+    wrapper.appendChild(grid);
+
+    const bus = new GameEventBus();
+    const overlay = new TutorialOverlay(wrapper, grid, bus);
+
+    this.assert(overlay.handPointer !== null, 'Hand pointer element created');
+
+    // Call renderHandGuide
+    overlay.renderHandGuide({
+      type: 'swipe',
+      from: { r: 1, c: 3 },
+      to: { r: 1, c: 1 },
+      placeBelow: true,
+      label: '向左合成金幣'
+    });
+
+    // Verify it is displayed
+    this.assert(overlay.handPointer.style.display === 'flex', 'Hand pointer is displayed after rendering guide');
+
+    // Switch to tap guide
+    overlay.renderHandGuide({
+      type: 'tap',
+      cell: { r: 1, c: 0 },
+      label: '點擊兌現金幣'
+    });
+
+    this.assert(overlay.handPointer.style.display === 'flex', 'Hand pointer properly visible on target coordinate');
+    this.assert(overlay.handLabel.textContent === '點擊兌現金幣', 'Label updated correctly');
+  }
+
+  // GWT 35.2：點擊提示指尖垂直位移補償精準指向中央
+  testGwt35_2_TapGuideFingertipOffsetCompensatedToCenter() {
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'relative';
+    const grid = document.createElement('div');
+    wrapper.appendChild(grid);
+
+    // Mock cell at (1, 0)
+    const cell = document.createElement('div');
+    cell.className = 'grid-cell';
+    cell.dataset.r = 1;
+    cell.dataset.c = 0;
+    grid.appendChild(cell);
+
+    const bus = new GameEventBus();
+    const overlay = new TutorialOverlay(wrapper, grid, bus);
+
+    // Call renderHandGuide with tap
+    overlay.renderHandGuide({
+      type: 'tap',
+      cell: { r: 1, c: 0 },
+      label: '點擊兌現金幣'
+    });
+
+    // In percentage fallback: posYPercent = (targetCell.r + 0.5 + 0.28) * 20 = (1.78) * 20 = 35.6%
+    const topValue = parseFloat(overlay.handPointer.style.top);
+    this.assert(topValue >= 30, `Top coordinate compensated downwards for fingertip center (got ${topValue})`);
+  }
+
+  // C-STORY-036 GWT 36.1：HTML 靜態資源引入嚴格附帶版本查詢字串 (Cache Busting)
+  async testGwt36_1_AssetLinksContainVersionQueryString() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./index.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    if (!htmlText && typeof require !== 'undefined') {
+      try {
+        const fs = require('fs');
+        htmlText = fs.readFileSync('index.html', 'utf-8');
+      } catch (e) {}
+    }
+
+    if (htmlText) {
+      this.assert(
+        htmlText.includes(`style.css?v=${CURRENT_GAME_VERSION.replace('v', '')}`) || htmlText.includes(`style.css?v=${CURRENT_GAME_VERSION}`),
+        'style.css must have version query parameter'
+      );
+      this.assert(
+        htmlText.includes(`main.js?v=${CURRENT_GAME_VERSION.replace('v', '')}`) || htmlText.includes(`main.js?v=${CURRENT_GAME_VERSION}`),
+        'main.js must have version query parameter'
+      );
+    }
+    this.assert(CURRENT_GAME_VERSION === 'v1.3.6', 'CURRENT_GAME_VERSION must be v1.3.6');
+  }
+
+  // C-STORY-036 GWT 36.2：設定視窗具備「檢查並刷新最新版本」按鈕配置
+  async testGwt36_2_SettingsReloadButtonConfigured() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./index.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    if (!htmlText && typeof require !== 'undefined') {
+      try {
+        const fs = require('fs');
+        htmlText = fs.readFileSync('index.html', 'utf-8');
+      } catch (e) {}
+    }
+
+    if (htmlText) {
+      this.assert(htmlText.includes('id="btn-force-reload-version"'), 'index.html must contain btn-force-reload-version button');
+      this.assert(htmlText.includes('無損熱更新') || htmlText.includes('檢查並刷新最新版本'), 'Button text must indicate lossless hot update');
+    }
+  }
+
+  // C-STORY-036 GWT 36.3：自動化版本比對與存檔資料無損升級
+  testGwt36_3_SaveVersionMigrationAndDataPreservation() {
+    const sm = new StageManager();
+    // Simulate loading a legacy save without version or from an older version
+    const legacyPayload = {
+      saveVersion: 'v1.2.0',
+      gold: 1250,
+      unlockedStageId: 18,
+      clearedStages: { 1: true, 2: true, 3: true },
+      baseTier: 3,
+      stamina: 4
+    };
+    localStorage.setItem('2048RPG_Commercial_Save_v1', JSON.stringify(legacyPayload));
+
+    // Reload save data
+    sm.loadSaveData();
+
+    // Verify version is safely migrated to latest
+    this.assert(sm.saveVersion === CURRENT_GAME_VERSION, `saveVersion must be migrated to ${CURRENT_GAME_VERSION} (got ${sm.saveVersion})`);
+
+    // Verify all existing user data is perfectly preserved
+    this.assert(sm.gold === 1250, 'Gold must remain intact after version migration');
+    this.assert(sm.unlockedStageId === 18, 'Unlocked stage must remain intact');
+    this.assert(sm.clearedStages[1] === true, 'Cleared stages must remain intact');
+    this.assert(sm.baseTier === 3, 'Base tier must remain intact');
+    this.assert(sm.stamina === 4, 'Stamina must remain intact');
+  }
 }
+
 

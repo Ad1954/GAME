@@ -6,6 +6,7 @@ import { Spawner } from './Spawner.js';
 import { GameEventBus } from './GameEventBus.js';
 import { GachaEngine } from './GachaEngine.js';
 import { InventoryManager } from './InventoryManager.js';
+import { TutorialManager } from './TutorialManager.js';
 import { 
   Events, 
   STAGE_CONFIGS, 
@@ -18,7 +19,8 @@ import {
   STAMINA_RECOVERY_INTERVAL_MS,
   INTERSTITIAL_AD_INTERVAL,
   DAILY_AD_GOLD_REWARD,
-  DAILY_AD_MAX_COUNT
+  DAILY_AD_MAX_COUNT,
+  CURRENT_GAME_VERSION
 } from './Constants.js';
 
 const SAVE_KEY = '2048RPG_Commercial_Save_v1';
@@ -26,14 +28,17 @@ const SAVE_KEY = '2048RPG_Commercial_Save_v1';
 export class StageManager {
   constructor(eventBus = new GameEventBus()) {
     this.eventBus = eventBus;
+    this.saveVersion = CURRENT_GAME_VERSION;
     this.board = new Board(BOARD_SIZE);
     this.moveEngine = new MoveEngine(this.board);
     this.spawner = new Spawner(this.board);
     this.gachaEngine = new GachaEngine();
     this.inventory = new InventoryManager();
+    this.tutorialManager = new TutorialManager(this);
 
     // Player Profile State
     this.gold = 300;
+    this.battleStartGold = 300;
     this.unlockedStageId = 1;
     this.clearedStages = {}; // { [stageId]: { stars: number, clearedCount: number } }
     this.gachaExp = 0; // Total pulls
@@ -78,6 +83,11 @@ export class StageManager {
       if (data) {
         const parsed = JSON.parse(data);
         this.gold = typeof parsed.gold === 'number' ? parsed.gold : 300;
+        this.saveVersion = parsed.saveVersion || 'v1.0.0';
+        if (this.saveVersion !== CURRENT_GAME_VERSION) {
+          console.log(`[VersionMigration] Upgrading save version from ${this.saveVersion} to ${CURRENT_GAME_VERSION}`);
+          this.saveVersion = CURRENT_GAME_VERSION;
+        }
         this.unlockedStageId = parsed.unlockedStageId || 1;
         this.clearedStages = parsed.clearedStages || {};
         this.gachaExp = typeof parsed.gachaExp === 'number' ? parsed.gachaExp : 0;
@@ -123,6 +133,7 @@ export class StageManager {
   saveData() {
     try {
       const payload = {
+        saveVersion: this.saveVersion || CURRENT_GAME_VERSION,
         gold: this.gold,
         unlockedStageId: this.unlockedStageId,
         clearedStages: this.clearedStages,
@@ -147,6 +158,7 @@ export class StageManager {
 
   // Reset all save data
   resetSaveData() {
+    this.saveVersion = CURRENT_GAME_VERSION;
     this.gold = 300;
     this.unlockedStageId = 1;
     this.clearedStages = {};
@@ -167,6 +179,10 @@ export class StageManager {
     this.inventory = new InventoryManager();
     try {
       localStorage.removeItem(SAVE_KEY);
+      localStorage.removeItem('2048RPG_Tutorial_Completed');
+      if (this.tutorialManager) {
+        this.tutorialManager.isCompleted = false;
+      }
     } catch (e) {
       // ignore
     }
@@ -521,6 +537,10 @@ export class StageManager {
     this.monstersKilled = 0;
     this.stageGoldEarned = 0;
     this.inBattleGold = 0;
+    this.battleStartGold = this.gold; // Snapshot for abandon rewards rollback (C-STORY-033)
+    if (this.tutorialManager) {
+      this.tutorialManager.isActive = false;
+    }
 
     // Rich vein decay & dynamic interval budget (C-STORY-019)
     const budget = (config && config.goldSpawnBudget !== undefined) 
@@ -576,6 +596,39 @@ export class StageManager {
 
     this.emitState();
     return config;
+  }
+
+  // Start Stage 0 Tutorial
+  startTutorialStage() {
+    this.currentStageConfig = {
+      id: 0,
+      name: '序章：王國勇者試煉 (教學)',
+      chapter: 0,
+      rewardGold: 50,
+      goldCap: 50,
+      recPower: 2,
+      monsters: []
+    };
+    this.isInBattle = true;
+    this.isVictory = false;
+    this.isGameOver = false;
+    this.turnCount = 0;
+    this.monstersKilled = 0;
+    this.stageGoldEarned = 0;
+    this.inBattleGold = 0;
+    this.battleStartGold = this.gold; // Snapshot for abandon rewards rollback (C-STORY-033)
+    this.goldSpawnBudget = 50;
+    this.remainingGoldBudget = 50;
+    this.currentGoldValue = 4;
+    this.nextGoldDropTurn = Infinity; // Tutorial handles gold directly via steps
+    this.history = [];
+
+    this.board.clear();
+    this.moveEngine = new MoveEngine(this.board);
+    this.spawner = new Spawner(this.board);
+
+    this.tutorialManager.startTutorial();
+    return this.currentStageConfig;
   }
 
   // Random Placement Positions in upper region (rows 0~2, cols 0~4) (C-STORY-009)
@@ -641,9 +694,9 @@ export class StageManager {
     };
   }
 
-  // Check if a chapter is unlocked (C-STORY-006 & C-STORY-008: 8 Chapters)
+  // Check if a chapter is unlocked (C-STORY-006 & C-STORY-008: 8 Chapters, C-STORY-032: Chapter 0)
   isChapterUnlocked(chapterId) {
-    if (chapterId === 1) return true;
+    if (chapterId === 0 || chapterId === 1) return true;
     const chConfig = CHAPTER_CONFIGS.find(c => c.id === chapterId);
     if (!chConfig) return false;
     const prevCh = CHAPTER_CONFIGS.find(c => c.id === chapterId - 1);
@@ -697,15 +750,51 @@ export class StageManager {
   }
 
   // Handle player swipe
-  handleMove(direction) {
+  handleMove(direction, options = {}) {
     if (!this.isInBattle || this.isVictory || this.isGameOver) {
       return { moved: false };
+    }
+
+    // Tutorial restriction check (C-STORY-030)
+    if (this.tutorialManager && this.tutorialManager.isActive) {
+      if (!this.tutorialManager.isDirectionAllowed(direction)) {
+        return { moved: false, reason: 'TUTORIAL_RESTRICTED' };
+      }
     }
 
     const snapshot = this.createBattleSnapshot();
     const result = this.moveEngine.move(direction);
 
     if (result.moved) {
+      if (this.tutorialManager && this.tutorialManager.isActive) {
+        const delay = (options.tutorialDelayMs !== undefined) ? options.tutorialDelayMs : 1000;
+        this.tutorialManager.onMoveExecuted(direction, result, delay);
+        this.turnCount++;
+
+        // Accrue monster kills in tutorial (C-STORY-033)
+        if (result.kills > 0) {
+          this.monstersKilled += result.kills;
+          this.eventBus.emit(Events.MONSTER_KILLED, { kills: result.kills });
+        }
+
+        // Accrue gold merged rewards in tutorial (C-STORY-033)
+        if (result.goldEarned && result.goldEarned > 0) {
+          const actualEarned = result.goldEarned;
+          this.stageGoldEarned += actualEarned;
+          this.inBattleGold = (this.inBattleGold || 0) + actualEarned;
+          this.gold += actualEarned;
+          this.saveData();
+          this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
+          this.eventBus.emit(Events.GOLD_MERGED, {
+            amount: actualEarned,
+            totalGold: this.gold,
+            stageGoldEarned: this.stageGoldEarned
+          });
+        }
+
+        this.emitState({ moves: result.moves, vfxEvents: result.vfxEvents });
+        return result;
+      }
       this.history.push(snapshot);
       this.turnCount++;
       if (result.kills > 0) {
@@ -786,14 +875,14 @@ export class StageManager {
           this.remainingGoldBudget -= spawnVal;
           this.goldDropsCount++;
 
-          // Rich vein decay: Every 4 drops, drop 1 tier (halve value down to min 4)
+          // Rich vein decay: Every 4 drops, drop 1 tier (halve value down to min 4) (C-STORY-019 / C-STORY-029)
           if (this.goldDropsCount % 4 === 0) {
             this.currentGoldValue = Math.max(4, Math.floor(this.currentGoldValue / 2));
           }
 
-          // Dynamic pacing: After initial 4 drops, each drop increases next interval by 6 turns
-          if (this.goldDropsCount >= 4) {
-            this.goldDropInterval += 6;
+          // Dynamic pacing: After initial 8 rich drops, each drop increases interval by 2 turns (capped at 16) (C-STORY-029)
+          if (this.goldDropsCount >= 8) {
+            this.goldDropInterval = Math.min(16, this.goldDropInterval + 2);
           }
           this.nextGoldDropTurn = this.turnCount + this.goldDropInterval;
         } else {
@@ -828,6 +917,10 @@ export class StageManager {
     this.stageGoldEarned += amount;
     this.inBattleGold = (this.inBattleGold || 0) + amount;
     this.gold += amount;
+
+    if (this.tutorialManager && this.tutorialManager.isActive) {
+      this.tutorialManager.onCellTapped(r, c, tile);
+    }
 
     this.board.removeTile(r, c);
     this.saveData();
@@ -1011,15 +1104,21 @@ export class StageManager {
     this.gold += totalEarned - inBattleGold; // inBattleGold already credited during combat!
 
     // Record clear & unlock next stage
-    if (isFirstClear) {
-      this.clearedStages[currentId] = { stars: 3, clearedCount: 1 };
+    if (currentId === 0) {
+      if (this.tutorialManager) {
+        this.tutorialManager.setCompleted(true);
+      }
     } else {
-      this.clearedStages[currentId].clearedCount++;
-    }
+      if (isFirstClear) {
+        this.clearedStages[currentId] = { stars: 3, clearedCount: 1 };
+      } else {
+        this.clearedStages[currentId].clearedCount++;
+      }
 
-    if (currentId >= this.unlockedStageId && currentId < STAGE_CONFIGS.length) {
-      this.unlockedStageId = currentId + 1;
-      this.eventBus.emit(Events.STAGE_UNLOCKED, { stageId: this.unlockedStageId });
+      if (currentId >= this.unlockedStageId && currentId < STAGE_CONFIGS.length) {
+        this.unlockedStageId = currentId + 1;
+        this.eventBus.emit(Events.STAGE_UNLOCKED, { stageId: this.unlockedStageId });
+      }
     }
 
     this.saveData();
@@ -1052,6 +1151,21 @@ export class StageManager {
       inBattleGold: this.inBattleGold || 0
     });
     this.emitState();
+  }
+
+  // Abandon Battle Rewards upon quitting/exiting combat mid-game (C-STORY-033)
+  abandonBattleRewards() {
+    if (this.isInBattle && !this.isVictory && !this.isGameOver) {
+      if (this.battleStartGold !== undefined) {
+        this.gold = this.battleStartGold;
+      } else if (this.inBattleGold > 0) {
+        this.gold = Math.max(0, this.gold - this.inBattleGold);
+      }
+      this.inBattleGold = 0;
+      this.stageGoldEarned = 0;
+      this.saveData();
+      this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
+    }
   }
 
   emitState(extra = {}) {

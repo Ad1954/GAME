@@ -38,8 +38,12 @@ export const Events = {
   WAREHOUSE_EXPANDED: 'WAREHOUSE_EXPANDED',
   STAMINA_CHANGED: 'STAMINA_CHANGED',
   PRIVILEGE_CHANGED: 'PRIVILEGE_CHANGED',
-  AD_TRIGGERED: 'AD_TRIGGERED'
+  AD_TRIGGERED: 'AD_TRIGGERED',
+  TUTORIAL_STEP_CHANGED: 'TUTORIAL_STEP_CHANGED',
+  TUTORIAL_COMPLETED: 'TUTORIAL_COMPLETED'
 };
+
+export const CURRENT_GAME_VERSION = 'v1.3.6';
 
 export const MAX_ITEM_STACK = 999;
 
@@ -117,8 +121,9 @@ export const BASE_STAT_TIERS = [
   { tier: 24, cost: 67500, isMajor: true, minEquippedWeapon: 32, baseRange: [32, 64, 128], weights: [0.75, 0.22, 0.03], name: '【大突破】創世星辰', desc: '🚨 徹底淘汰 16！盤面基礎產出達到頂峰 [32, 64, 128]' }
 ];
 
-// 8 Chapters across 350 Stages
+// 9 Chapters (Prologue Chapter 0 + Chapters 1~8)
 export const CHAPTER_CONFIGS = [
+  { id: 0, name: '序章：新手訓練所', range: [0, 0], desc: '王國皇家訓練營，熟悉英雄成長與魔物討伐！', icon: '🎓' },
   { id: 1, name: '第 I 章：微風之境', range: [1, 5], desc: '勇者初出茅廬，討伐邊境散落的魔物！', icon: '🌾' },
   { id: 2, name: '第 II 章：灼熱熔岩', range: [6, 20], desc: '地底烈焰噴湧，深入熔岩剿滅高階魔物！', icon: '🔥' },
   { id: 3, name: '第 III 章：孤峰岩地', range: [21, 50], desc: '懸崖峭壁險峻，擊潰盤據險要的強盜軍團！', icon: '⛰️' },
@@ -128,6 +133,16 @@ export const CHAPTER_CONFIGS = [
   { id: 7, name: '第 VII 章：神魔深淵', range: [221, 280], desc: '撕裂空間的深淵裂隙，混沌惡魔傾巢而出！', icon: '🌌' },
   { id: 8, name: '第 VIII 章：終焉神域', range: [281, 350], desc: '世界之巔的創世王座，考驗凡人勇者的終極之戰！', icon: '☀️' }
 ];
+
+// ==========================================
+// Chapter 0: 序章：新手訓練所 (Stage 0) (C-STORY-032)
+// ==========================================
+export const STAGE_0_CONFIG = {
+  id: 0, chapter: 0, name: '第 0 關：王國勇者試煉 (教學)', subtitle: '皇家訓練營',
+  desc: '皇家騎士團教官親授！學習裝備合成、魔物討伐、金幣兌現與戰力法則！',
+  recPower: 2, rewardGold: 50, goldCap: 50, goldBaseValue: 4,
+  monsters: [4, 8], starterEquipment: [2, 2], waves: [], icon: '🎓'
+};
 
 // ==========================================
 // C-STORY-008: 350 STAGES PROCEDURAL GENERATOR
@@ -143,31 +158,31 @@ function generateAllStages() {
     {
       id: 1, chapter: 1, name: '第 1 關：微風平原', subtitle: '初試鋒芒',
       desc: '討伐哥布林前鋒！場上盤踞 3 隻敵軍，合成裝備餵給勇者一舉擊破！',
-      recPower: 2, rewardGold: 100, goldCap: 20, goldBaseValue: 4,
+      recPower: 2, rewardGold: 100, goldCap: 40, goldBaseValue: 4,
       monsters: [8, 2, 4], starterEquipment: [2, 2], waves: [], icon: '🌾'
     },
     {
       id: 2, chapter: 1, name: '第 2 關：暗夜密林', subtitle: '狂狼出沒',
       desc: '密林中潛伏著狂暴之狼與前鋒！先強化至 16 再行逐一斬殺！',
-      recPower: 4, rewardGold: 105, goldCap: 25, goldBaseValue: 4,
+      recPower: 4, rewardGold: 105, goldCap: 50, goldBaseValue: 4,
       monsters: [16, 4, 4], starterEquipment: [2, 4], waves: [], icon: '🌲'
     },
     {
       id: 3, chapter: 1, name: '第 3 關：孤峰岩地', subtitle: '強盜攔路',
       desc: '強盜小隊包夾隘口！善用 2048 滑動合體突破重圍！',
-      recPower: 4, rewardGold: 110, goldCap: 30, goldBaseValue: 4,
+      recPower: 4, rewardGold: 110, goldCap: 60, goldBaseValue: 4,
       monsters: [16, 4, 8], starterEquipment: [4, 4], waves: [], icon: '⛰️'
     },
     {
       id: 4, chapter: 1, name: '第 4 關：獸人前哨', subtitle: '雙雄夾擊',
       desc: '獸人督軍 (32) 率隊扼守！先斬殺 8 級雜兵削弱敵勢再戰督軍！',
-      recPower: 8, rewardGold: 115, goldCap: 35, goldBaseValue: 4,
+      recPower: 8, rewardGold: 115, goldCap: 70, goldBaseValue: 4,
       monsters: [32, 8, 8], starterEquipment: [4, 4, 8], waves: [], icon: '⛺'
     },
     {
       id: 5, chapter: 1, name: '第 5 關：蛛魔地穴', subtitle: '石像鬼守衛',
       desc: '地穴深處第一章關底！石像鬼領主 (32) 率領三隻護衛形成 4 怪包夾防線！',
-      recPower: 16, rewardGold: 120, goldCap: 40, goldBaseValue: 4,
+      recPower: 16, rewardGold: 120, goldCap: 80, goldBaseValue: 4,
       monsters: [32, 8, 16, 16], starterEquipment: [8, 8, 16], waves: [], icon: '🕸️'
     }
   ];
@@ -182,93 +197,93 @@ function generateAllStages() {
     {
       id: 6, chapter: 2, name: '第 6 關：火鱗前哨', subtitle: '雙蜥盤據',
       desc: '火鱗蜥蜴 (64) 率領 16、32 扼守熔岩入口！逐一擊破！',
-      recPower: 16, rewardGold: 125, goldCap: 45, goldBaseValue: 4,
+      recPower: 16, rewardGold: 125, goldCap: 90, goldBaseValue: 4,
       monsters: [64, 16, 32], starterEquipment: [8, 16, 16], waves: [], icon: '🦎'
     },
     {
       id: 7, chapter: 2, name: '第 7 關：熔岩巢穴', subtitle: '分裂母體',
       desc: '盤踞著異變的熔岩史萊姆母體 (64)！斬殺後將分裂為兩隻 32！',
-      recPower: 32, rewardGold: 130, goldCap: 50, goldBaseValue: 4,
+      recPower: 32, rewardGold: 130, goldCap: 100, goldBaseValue: 4,
       monsters: [{ value: 64, splitOnDeath: true, splitValue: 32, splitCount: 2 }, 16, 32],
       starterEquipment: [8, 16, 16], waves: [], icon: '🦠'
     },
     {
       id: 8, chapter: 2, name: '第 8 關：赤炎隘口', subtitle: '炎魔督軍',
       desc: '炎魔督軍 (128) 率領 32、64 雜兵扼守！必須逐一擊破！',
-      recPower: 64, rewardGold: 135, goldCap: 55, goldBaseValue: 4,
+      recPower: 64, rewardGold: 135, goldCap: 110, goldBaseValue: 4,
       monsters: [128, 32, 64], starterEquipment: [16, 16, 32], waves: [], icon: '🔥'
     },
     {
       id: 9, chapter: 2, name: '第 9 關：熔火魔窟', subtitle: '炎魔母衛',
       desc: '高階混編！炎魔母衛 (128) 率領三隻前鋒形成 4 怪包夾防禦！',
-      recPower: 64, rewardGold: 140, goldCap: 60, goldBaseValue: 8,
+      recPower: 64, rewardGold: 140, goldCap: 120, goldBaseValue: 8,
       monsters: [128, 32, 32, 64], starterEquipment: [16, 32, 32], waves: [], icon: '🌋'
     },
     {
       id: 10, chapter: 2, name: '第 10 關：終焉火山口', subtitle: '黑曜熔岩龍',
       desc: '熔岩之地的霸主！三大護衛簇擁 256 滅世黑曜熔岩巨龍！',
-      recPower: 128, rewardGold: 145, goldCap: 65, goldBaseValue: 8,
+      recPower: 128, rewardGold: 145, goldCap: 130, goldBaseValue: 8,
       monsters: [256, 32, 64, 64], starterEquipment: [32, 32, 64], waves: [], icon: '🐉'
     },
     {
       id: 11, chapter: 2, name: '第 11 關：熔岩走廊', subtitle: '熔炎先鋒',
       desc: '深入地底熔脈！128 熔炎先鋒率領 3 隻前鋒形成 4 怪陣列！',
-      recPower: 64, rewardGold: 150, goldCap: 70, goldBaseValue: 8,
+      recPower: 64, rewardGold: 150, goldCap: 140, goldBaseValue: 8,
       monsters: [128, 32, 64, 64], starterEquipment: [16, 32, 32], waves: [], icon: '🔥'
     },
     {
       id: 12, chapter: 2, name: '第 12 關：熾熱石窟', subtitle: '火魔哨長',
       desc: '炎魔巡防隊！128 哨長率領精銳前鋒夾擊！',
-      recPower: 64, rewardGold: 155, goldCap: 75, goldBaseValue: 8,
+      recPower: 64, rewardGold: 155, goldCap: 150, goldBaseValue: 8,
       monsters: [128, 32, 64, 64], starterEquipment: [16, 32, 32], waves: [], icon: '🔥'
     },
     {
       id: 13, chapter: 2, name: '第 13 關：灼熱熔泉', subtitle: '烈焰巨魔',
       desc: '巨魔盤據熔泉！先擊殺低階前鋒再戰 256 巨魔！',
-      recPower: 128, rewardGold: 160, goldCap: 80, goldBaseValue: 8,
+      recPower: 128, rewardGold: 160, goldCap: 160, goldBaseValue: 8,
       monsters: [256, 32, 64, 64], starterEquipment: [32, 32, 64], waves: [], icon: '🔥'
     },
     {
       id: 14, chapter: 2, name: '第 14 關：熔核裂隙', subtitle: '裂變熔核',
       desc: '異變的熔核母體 (256)！斬殺後將分裂為兩隻 128 小熔核！',
-      recPower: 128, rewardGold: 165, goldCap: 85, goldBaseValue: 8,
+      recPower: 128, rewardGold: 165, goldCap: 170, goldBaseValue: 8,
       monsters: [{ value: 256, splitOnDeath: true, splitValue: 128, splitCount: 2 }, 32, 64, 64],
       starterEquipment: [32, 32, 64], waves: [], icon: '🦠'
     },
     {
       id: 15, chapter: 2, name: '第 15 關：黑曜石階', subtitle: '黑曜近衛',
       desc: '黑曜石近衛團！256 強敵率領 3 隻前鋒形成堅實防線！',
-      recPower: 128, rewardGold: 170, goldCap: 90, goldBaseValue: 8,
+      recPower: 128, rewardGold: 170, goldCap: 180, goldBaseValue: 8,
       monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🌋'
     },
     {
       id: 16, chapter: 2, name: '第 16 關：熔岩巨橋', subtitle: '熔岩督戰官',
       desc: '督戰官親臨戰線！合成強大武器擊破 256 督戰官！',
-      recPower: 128, rewardGold: 175, goldCap: 95, goldBaseValue: 8,
+      recPower: 128, rewardGold: 175, goldCap: 190, goldBaseValue: 8,
       monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🔥'
     },
     {
       id: 17, chapter: 2, name: '第 17 關：地火祭壇', subtitle: '祭壇主祭',
       desc: '祭壇主祭守護地心之火！256 強敵率護衛頑抗！',
-      recPower: 128, rewardGold: 180, goldCap: 100, goldBaseValue: 8,
+      recPower: 128, rewardGold: 180, goldCap: 200, goldBaseValue: 8,
       monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🔥'
     },
     {
       id: 18, chapter: 2, name: '第 18 關：烈焰深淵', subtitle: '深淵炎煞',
       desc: '深淵底部煞氣騰騰！四怪包夾，步步為營！',
-      recPower: 128, rewardGold: 185, goldCap: 105, goldBaseValue: 8,
+      recPower: 128, rewardGold: 185, goldCap: 210, goldBaseValue: 8,
       monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🔥'
     },
     {
       id: 19, chapter: 2, name: '第 19 關：熔岩巨門', subtitle: '門扉巨獸',
       desc: '通往王座的巨門守衛！256 領主扼守通道！',
-      recPower: 128, rewardGold: 190, goldCap: 110, goldBaseValue: 8,
+      recPower: 128, rewardGold: 190, goldCap: 220, goldBaseValue: 8,
       monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🔥'
     },
     {
       id: 20, chapter: 2, name: '第 20 關：烈焰王座', subtitle: '熔岩領主',
       desc: '第二章終極關底！512 熔岩君王率領 64、128、256 三大護衛決死一戰！',
-      recPower: 256, rewardGold: 195, goldCap: 120, goldBaseValue: 16,
+      recPower: 256, rewardGold: 195, goldCap: 240, goldBaseValue: 16,
       monsters: [512, 64, 128, 256], starterEquipment: [64, 64, 128], waves: [], icon: '👑'
     }
   ];
@@ -294,7 +309,7 @@ function generateAllStages() {
     // Stage 180: 995 (under 1000G), Stage 181: 1000, Stage 350: 1845
     const rewardGold = 100 + (s - 1) * 5;
 
-    const goldCap = Math.floor(40 + s * 2);
+    const goldCap = Math.floor(80 + s * 4);
     const goldBaseValue = s <= 35 ? 8 : s <= 90 ? 16 : s <= 180 ? 32 : 64;
 
     // Boss Power Scaling:
@@ -595,4 +610,27 @@ export function getTileTheme(type, value, skin = 'kingdom') {
 
   return { ...baseTheme };
 }
+
+// Defeat Tactical Tips (C-STORY-034)
+export const DEFEAT_TACTICAL_TIPS = [
+  {
+    id: 'tip_target_priority',
+    badge: '🗡️ 先斬強敵',
+    title: '這不是普通 2048！嘗試「從強怪先打」',
+    content: '消滅魔物的代價一律減半！先打強敵，殘存戰力剛好能順手連斬弱怪；若先打弱怪，每次都要重新累積戰力，往往會被耗死！'
+  },
+  {
+    id: 'tip_monster_merge',
+    badge: '🐺 合怪騰地',
+    title: '棋盤快滿了？讓「同級魔物相撞」！',
+    content: '魔物無法被裝備消除，容易塞滿棋盤。主動讓同級魔物合體可以立即騰出 1 個空格解圍！但小心別合出超越自身戰力的巨怪！'
+  },
+  {
+    id: 'tip_gold_cashout',
+    badge: '🪙 見好就收',
+    title: '金幣很誘人，但別被貪婪堵死！',
+    content: '合成金幣賞金翻倍，但金幣不可戰鬥且佔格子。盤面擁擠時別貪心，果斷「直接點擊金幣」兌現入袋，清空格子以保命！'
+  }
+];
+
 

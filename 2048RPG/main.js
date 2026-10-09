@@ -4,7 +4,8 @@ import { GameEventBus } from './src/core/GameEventBus.js';
 import { StageManager } from './src/core/StageManager.js';
 import { ViewRenderer } from './src/presentation/ViewRenderer.js';
 import { AudioEffects } from './src/presentation/AudioEffects.js';
-import { Direction, STAGE_CONFIGS, Events, MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS } from './src/core/Constants.js';
+import { TutorialOverlay } from './src/presentation/TutorialOverlay.js';
+import { Direction, STAGE_CONFIGS, STAGE_0_CONFIG, Events, MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS, DEFEAT_TACTICAL_TIPS } from './src/core/Constants.js';
 import { GwtRunner } from './src/tests/GwtRunner.js';
 
 class AppController {
@@ -13,6 +14,7 @@ class AppController {
     this.stageManager = new StageManager(this.eventBus);
     this.audio = new AudioEffects();
     this.selectedChapter = 1;
+    this.currentDefeatTipIndex = 0;
 
     // DOM Elements
     this.boardGridEl = document.getElementById('battle-board');
@@ -20,6 +22,13 @@ class AppController {
     this.viewRenderer = new ViewRenderer(this.boardGridEl);
     this.viewRenderer.setThemeSkin(this.activeThemeSkin);
     this.isSliding = false;
+
+    // Tutorial Presentation (C-STORY-030)
+    this.tutorialOverlay = new TutorialOverlay(
+      document.querySelector('.app-container'),
+      this.boardGridEl,
+      this.eventBus
+    );
 
     // Title Splash Screen (C-STORY-008)
     this.viewTitleScreen = document.getElementById('view-title-screen');
@@ -121,6 +130,7 @@ class AppController {
     this.bindCombatItemEvents();
     this.bindStaminaAndAdEvents();
     this.bindTitleScreen();
+    this.bindDefeatTipEvents();
     this.renderFastForwardOptions();
     this.renderStagesList();
     this.renderGachaMachine();
@@ -143,6 +153,13 @@ class AppController {
       this.btnStartGame.addEventListener('click', () => {
         this.audio.playClick();
         this.viewTitleScreen.classList.add('fade-out');
+
+        // Check Tutorial: If first time player, automatically trigger Stage 0 Tutorial (C-STORY-030)
+        if (this.stageManager && this.stageManager.tutorialManager && !this.stageManager.tutorialManager.isCompleted) {
+          setTimeout(() => {
+            this.startTutorialCombat();
+          }, 400);
+        }
       });
     }
   }
@@ -315,8 +332,29 @@ class AppController {
         }
       }
 
+      // Render Tactical Defeat Tip (C-STORY-034)
+      this.renderRandomDefeatTip();
+
       this.triggerStaminaLossAnimation();
       this.modalDefeat.style.display = 'flex';
+    });
+
+    this.eventBus.on('TUTORIAL_SKIP_REQUESTED', () => {
+      if (this.stageManager.tutorialManager) {
+        this.stageManager.tutorialManager.skipTutorial();
+      }
+      this.exitCombat();
+    });
+
+    this.eventBus.on(Events.TUTORIAL_COMPLETED, () => {
+      if (this.tutorialOverlay) {
+        this.tutorialOverlay.hide();
+      }
+      if (this.stageManager.isInBattle && this.stageManager.currentStageConfig && this.stageManager.currentStageConfig.id === 0) {
+        setTimeout(() => {
+          this.stageManager.handleVictory();
+        }, 500);
+      }
     });
   }
 
@@ -353,14 +391,20 @@ class AppController {
 
     CHAPTER_CONFIGS.forEach(ch => {
       const isUnlocked = this.stageManager.isChapterUnlocked(ch.id);
-      const icon = chapterIcons[ch.id - 1] || '⚔️';
-      const roman = romanNumerals[ch.id - 1] || ch.id;
+      const icon = ch.icon || '⚔️';
+      let titleText = '';
+      if (ch.id === 0) {
+        titleText = `${icon} 序章訓練所`;
+      } else {
+        const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][ch.id - 1] || ch.id;
+        titleText = `${icon} 第 ${roman} 章`;
+      }
 
       const btn = document.createElement('button');
       btn.className = `chapter-tab-btn ${this.selectedChapter === ch.id ? 'active' : ''} ${isUnlocked ? '' : 'locked'}`;
       btn.dataset.chapter = ch.id;
       btn.id = `tab-chapter-${ch.id}`;
-      btn.textContent = isUnlocked ? `${icon} 第 ${roman} 章` : `${icon} 第 ${roman} 章 🔒`;
+      btn.textContent = isUnlocked ? titleText : `${titleText} 🔒`;
 
       btn.addEventListener('click', () => {
         if (!this.stageManager.isChapterUnlocked(ch.id)) {
@@ -453,6 +497,41 @@ class AppController {
         alert('🎉 遊戲紀錄已全數重置為初始狀態！');
       });
     }
+
+    const btnForceReload = document.getElementById('btn-force-reload-version');
+    if (btnForceReload) {
+      btnForceReload.addEventListener('click', () => {
+        this.audio.playClick();
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set('t', Date.now().toString());
+          window.location.href = url.toString();
+        } catch (e) {
+          window.location.reload(true);
+        }
+      });
+    }
+
+    const btnReplayTutorial = document.getElementById('btn-replay-tutorial');
+    if (btnReplayTutorial) {
+      btnReplayTutorial.addEventListener('click', () => {
+        this.audio.playClick();
+        if (this.modalSettings) this.modalSettings.style.display = 'none';
+        this.startTutorialCombat();
+      });
+    }
+
+    const btnClearTutorialRecord = document.getElementById('btn-clear-tutorial-record');
+    if (btnClearTutorialRecord) {
+      btnClearTutorialRecord.addEventListener('click', () => {
+        this.audio.playClick();
+        if (this.stageManager.tutorialManager) {
+          this.stageManager.tutorialManager.setCompleted(false);
+        }
+        this.renderStagesList();
+        alert('🔄 新手教學引導紀錄已清除！\n您可隨時至大廳「序章：新手訓練所」或重新觸發新手教學！');
+      });
+    }
   }
 
   renderStagesList() {
@@ -470,11 +549,16 @@ class AppController {
     if (bannerDesc) bannerDesc.textContent = chConfig.desc;
 
     const unlockedId = this.stageManager.unlockedStageId;
-    const currentStages = STAGE_CONFIGS.filter(s => s.chapter === this.selectedChapter);
+    const currentStages = (this.selectedChapter === 0)
+      ? [STAGE_0_CONFIG]
+      : STAGE_CONFIGS.filter(s => s.chapter === this.selectedChapter);
 
     currentStages.forEach(stage => {
-      const isUnlocked = stage.id <= unlockedId;
-      const isCleared = !!this.stageManager.clearedStages[stage.id];
+      const isTutorialStage = (stage.id === 0);
+      const isCleared = isTutorialStage 
+        ? (this.stageManager.tutorialManager && this.stageManager.tutorialManager.isCompleted)
+        : !!this.stageManager.clearedStages[stage.id];
+      const isUnlocked = isTutorialStage ? true : (stage.id <= unlockedId);
 
       const card = document.createElement('div');
       card.className = `stage-card ${isUnlocked ? '' : 'locked'}`;
@@ -572,7 +656,7 @@ class AppController {
     // Combat back button
     document.getElementById('btn-combat-back').addEventListener('click', () => {
       this.audio.playClick();
-      if (confirm('確定要返回大廳嗎？本次挑戰進度將結算退出。')) {
+      if (confirm('確定要返回大廳嗎？中途退出將放棄本局獲得的所有金幣收益！')) {
         this.exitCombat();
       }
     });
@@ -766,6 +850,10 @@ class AppController {
         this.audio.playMerge();
       } else {
         this.audio.playSlide();
+      }
+    } else if (res.reason === 'TUTORIAL_RESTRICTED') {
+      if (this.tutorialOverlay) {
+        this.tutorialOverlay.triggerShakingFeedback();
       }
     }
   }
@@ -1563,6 +1651,10 @@ class AppController {
   }
 
   startCombat(stageId) {
+    if (stageId === 0) {
+      this.startTutorialCombat();
+      return;
+    }
     if (!this.stageManager.canStartStage()) {
       if (this.modalStaminaEmpty) {
         this.modalStaminaEmpty.style.display = 'flex';
@@ -1578,8 +1670,29 @@ class AppController {
     this.combatOverlayEl.style.display = 'flex';
   }
 
+  // Start Stage 0 Tutorial Combat (C-STORY-030)
+  startTutorialCombat() {
+    this.setAimingMode(null);
+    this.updateItemCounts();
+    const config = this.stageManager.startTutorialStage();
+    if (!config) return;
+
+    this.combatStageNameEl.textContent = config.name;
+    this.combatOverlayEl.style.display = 'flex';
+  }
+
   exitCombat() {
     this.setAimingMode(null);
+    if (this.tutorialOverlay) {
+      this.tutorialOverlay.hide();
+    }
+    if (this.stageManager.tutorialManager) {
+      this.stageManager.tutorialManager.isActive = false;
+    }
+    // Forfeit all in-battle rewards if leaving mid-combat (C-STORY-033)
+    if (this.stageManager.isInBattle && !this.stageManager.isVictory && !this.stageManager.isGameOver) {
+      this.stageManager.abandonBattleRewards();
+    }
     this.stageManager.isInBattle = false;
     this.combatOverlayEl.style.display = 'none';
     this.renderStagesList();
@@ -1591,6 +1704,50 @@ class AppController {
         this.renderStagesList();
       });
     }
+  }
+
+  // Defeat Tactical Tip Helpers (C-STORY-034)
+  bindDefeatTipEvents() {
+    const tipCard = document.getElementById('defeat-tactical-tip');
+    const btnNext = document.getElementById('btn-defeat-tip-next');
+
+    if (btnNext) {
+      btnNext.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.nextDefeatTip();
+      });
+    }
+
+    if (tipCard) {
+      tipCard.addEventListener('click', () => {
+        this.nextDefeatTip();
+      });
+    }
+  }
+
+  renderDefeatTip(index) {
+    if (!DEFEAT_TACTICAL_TIPS || DEFEAT_TACTICAL_TIPS.length === 0) return;
+    this.currentDefeatTipIndex = (index + DEFEAT_TACTICAL_TIPS.length) % DEFEAT_TACTICAL_TIPS.length;
+    const tip = DEFEAT_TACTICAL_TIPS[this.currentDefeatTipIndex];
+
+    const badgeEl = document.getElementById('defeat-tip-badge');
+    const titleEl = document.getElementById('defeat-tip-title');
+    const contentEl = document.getElementById('defeat-tip-content');
+
+    if (badgeEl) badgeEl.textContent = tip.badge;
+    if (titleEl) titleEl.textContent = tip.title;
+    if (contentEl) contentEl.textContent = tip.content;
+  }
+
+  nextDefeatTip() {
+    if (this.audio && this.audio.playClick) this.audio.playClick();
+    this.renderDefeatTip(this.currentDefeatTipIndex + 1);
+  }
+
+  renderRandomDefeatTip() {
+    if (!DEFEAT_TACTICAL_TIPS || DEFEAT_TACTICAL_TIPS.length === 0) return;
+    const randIdx = Math.floor(Math.random() * DEFEAT_TACTICAL_TIPS.length);
+    this.renderDefeatTip(randIdx);
   }
 }
 

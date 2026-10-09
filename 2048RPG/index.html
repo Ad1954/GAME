@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>2048 RPG：王國遠征 (Commercial Edition)</title>
-  <link rel="stylesheet" href="style.css?v=1.0">
+  <link rel="stylesheet" href="style.css?v=1.3.6">
 </head>
 <body>
 
@@ -31,7 +31,7 @@
           <span class="btn-start-icon">⚔️</span>
           <span class="btn-start-text">開始遊戲</span>
         </button>
-        <div class="title-version">v1.2.0 · 350 Stages Commercial Version</div>
+        <div class="title-version">v1.3.6 · 350 Stages Commercial Version</div>
       </div>
     </div>
 
@@ -479,11 +479,79 @@
           <hr style="border: 0; border-top: 1px solid #334155; margin: 12px 0;">
           <div class="setting-section-header" style="margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
             <span style="font-size: 0.92rem; font-weight: 800; color: #38bdf8;">📜 版本更新履歷</span>
-            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v1.2.8</span>
+            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v1.3.6</span>
           </div>
           <div class="version-changelog-box" id="version-changelog-box">
             <div class="changelog-item">
-              <div class="changelog-badge">🌟 C-STORY-028 (最新)</div>
+              <div class="changelog-badge">🌟 C-STORY-036 (最新)</div>
+              <div class="changelog-title">Cache Busting 版本戳記與 iOS 主畫面無損熱更新</div>
+              <ul class="changelog-list">
+                <li>🛡️ 資源檔 Cache Busting：CSS 與入口 JS 嚴格注入版本號查詢字串，強制作廢舊快取</li>
+                <li>🔄 設定頁新增「檢查並刷新最新版本」按鈕，支援在主畫面模式下一鍵無損熱更新</li>
+                <li>💾 存檔資料與代碼更新完全隔離，保留全部既有金幣、關卡與裝備進度</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-035</div>
+              <div class="changelog-title">教學手勢重位隱藏與點擊指尖置中校準</div>
+              <ul class="changelog-list">
+                <li>🚫 消除手勢跨盤滑動：手勢重定位時先行隱藏，到達目標座標後瞬現，杜絕飄移干擾</li>
+                <li>🎯 點擊指尖精準校準：垂直補償高度偏移，使 👆 指尖精確指向金幣方塊幾何正中心</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-034</div>
+              <div class="changelog-title">戰敗教官覆盤提點與 2048 RPG 進階門道指南</div>
+              <ul class="changelog-list">
+                <li>🛡️ 戰敗結算新增教官覆盤提點卡片，點出與普通 2048 核心玩法的關鍵差異</li>
+                <li>🗡️ 提點一【先斬強敵】：魔物消滅戰力減半，由強至弱連環擊破以戰養戰</li>
+                <li>🐺 提點二【合怪騰地】：魔物佔地堵盤時主動相撞合體騰出空格，控場解圍</li>
+                <li>🪙 提點三【見好就收】：金幣合成翻倍高收益，擁擠時果斷點擊兌現清空格保命</li>
+                <li>🔄 提點卡片支援點擊切換與「換一則」按鈕，三大心法無縫輪播</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-033</div>
+              <div class="changelog-title">手勢位置優化、金幣收益結算修復、文案精簡與退關放棄機制</div>
+              <ul class="changelog-list">
+                <li>🎯 手指提示位置優化：滑動提示置於方塊下方微觸下緣，點擊領取絕對精準置中</li>
+                <li>🪙 修復教學關卡金幣收益：合成 8 + 點擊 8 完整累加為 16 🪙，初通總計 66 🪙</li>
+                <li>⚔️ 文案精簡：移除誤導性優先擊破，明確標註同級魔物合體升級規則</li>
+                <li>🚪 關卡退出機制：戰鬥中途退關放棄所有貨幣收益（回滾開局金幣），戰敗保留收益</li>
+                <li>⏱️ 操作視覺等待時間縮短為 1.0 秒，整體操作體驗更流暢</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-032</div>
+              <div class="changelog-title">新手教學節奏調優、自主演練、消除假規則與大廳序章訓練所</div>
+              <ul class="changelog-list">
+                <li>🏛️ 序章訓練所整合至大廳章節標籤，設定選單支援清除教學紀錄</li>
+                <li>👑 第四步自主實戰演練：戰力不足為阻擋而非陣亡，自由實戰打倒魔物</li>
+                <li>⏱️ 動態操作停留時間調整，刀光居中對準魔物</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-030</div>
+              <div class="changelog-title">新手引導序章 (Stage 0 Tutorial) 系統</div>
+              <ul class="changelog-list">
+                <li>🎓 新手首次進入遊戲自動觸發引導式序章關卡（Stage 0）</li>
+                <li>👆 四步微教學劇本：裝備合成升級、魔物討伐、金幣合成與點擊兌現、戰力不足懲罰</li>
+                <li>🔒 滑動方向限制與防呆晃動回饋，支援手指路徑動態動畫與跳過教學</li>
+                <li>⚙️ 大廳設定選單支援隨時重新體驗新手訓練</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-029</div>
+              <div class="changelog-title">金幣產出節奏重構與全關卡金礦獎勵池翻倍</div>
+              <ul class="changelog-list">
+                <li>🪙 富礦期延長至 8 次（前 8 次固定每 8 回合產出一次）</li>
+                <li>⏳ 動態間隔緩和遞增（每產出 +2 回合），最高封頂 16 回合，消除後期金幣乾涸</li>
+                <li>💰 全 350 關卡金幣獎勵池（goldCap）全額翻倍（第一章翻倍至 40~80、第二章翻倍至 90~240、後續篇章全面倍增）</li>
+                <li>⛏️ 維持每 4 次降一階折半衰減，最低鎖定 4 不出微型碎片</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-028</div>
               <div class="changelog-title">設定頁版本履歷、安全邊距內收與體力愛心圖標</div>
               <ul class="changelog-list">
                 <li>📜 設定頁新增版本更新履歷專區，支援流暢滑動瀏覽</li>
@@ -533,12 +601,27 @@
                 <li>💎 獨立第 4 分頁「皇家特許寶庫」，現金與廣告特權專屬櫥窗</li>
               </ul>
             </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-032</div>
+              <div class="changelog-title">新手教學節奏調優、自主演練、消除假規則與大廳序章訓練所</div>
+              <ul class="changelog-list">
+                <li>⏱️ 教學操作完成後停留 1.5 秒視覺緩衝，合成與消滅效果不再瞬間被打斷</li>
+                <li>🎯 魔物消滅刀光精準斜切幾何中心，貨幣點擊手勢座標絕對置中</li>
+                <li>🛡️ 修正錯誤指引：戰力小於魔物為「阻擋無法消滅」，絕非勇者死亡</li>
+                <li>👑 Step 4 開放全方向自由移動自主演練，任務目標調整為「打倒魔物」</li>
+                <li>🎓 大廳正式整合「序章：新手訓練所」與第 0 關卡片，隨時自由重溫訓練</li>
+                <li>🗑️ 設定頁獨立新增「清除新手教學紀錄」功能，支援隨時重置引導狀態</li>
+              </ul>
+            </div>
           </div>
           <div class="setting-desc" style="font-size: 0.8rem; color: #94a3b8; line-height: 1.4;">
             商業製品測試版 (Phase 1)：<br>
             獨立純前端運行環境，本地自動存檔。
           </div>
-          <button class="btn-danger" id="btn-reset-save" style="margin-top: 12px; width: 100%;">🗑️ 清除本地存檔 (重置進度)</button>
+          <button class="btn-camp-action" id="btn-force-reload-version" style="margin-top: 12px; width: 100%; background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-weight: bold;">🔄 檢查並刷新最新版本 (無損熱更新)</button>
+          <button class="btn-camp-action" id="btn-replay-tutorial" style="margin-top: 8px; width: 100%; background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff;">🎓 重新體驗新手教學 (Stage 0)</button>
+          <button class="btn-camp-action" id="btn-clear-tutorial-record" style="margin-top: 8px; width: 100%; background: linear-gradient(135deg, #b45309, #d97706); color: #fff;">🔄 清除新手教學紀錄 (重置引導狀態)</button>
+          <button class="btn-danger" id="btn-reset-save" style="margin-top: 8px; width: 100%;">🗑️ 清除本地存檔 (重置進度)</button>
         </div>
         <div class="modal-actions">
           <button class="btn-modal-primary" id="btn-settings-close" style="width: 100%;">確定關閉</button>
@@ -605,6 +688,16 @@
           <div class="revenue-box" style="text-align: left; background: rgba(0,0,0,0.3); border: 1px solid rgba(248, 113, 113, 0.2); padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; font-size: 0.85rem; line-height: 1.6;">
             <div style="font-weight: bold; color: #93c5fd; margin-bottom: 4px;">闖關收益：</div>
             <div id="defeat-reward-detail" style="color: #fbbf24; font-weight: bold;">⚔️【戰鬥合成領取】+0 🪙</div>
+          </div>
+
+          <!-- Defeat Tactical Tip (C-STORY-034) -->
+          <div class="defeat-tactical-tip" id="defeat-tactical-tip" title="點擊卡片可切換下一則心法">
+            <div class="defeat-tip-header">
+              <span class="defeat-tip-badge" id="defeat-tip-badge">🛡️ 教官覆盤</span>
+              <button class="defeat-tip-btn-next" id="btn-defeat-tip-next" title="切換下一則小訣竅">換一則 🔄</button>
+            </div>
+            <div class="defeat-tip-title" id="defeat-tip-title">這不是普通 2048！嘗試「從強怪先打」</div>
+            <div class="defeat-tip-content" id="defeat-tip-content">消滅魔物的代價一律減半！先打強敵，殘存戰力剛好能順手連斬弱怪；若先打弱怪，每次都要重新累積戰力，往往會被耗死！</div>
           </div>
         </div>
         <div class="modal-actions" style="display: flex; gap: 8px;">
@@ -703,6 +796,6 @@
 
   </div>
 
-  <script type="module" src="main.js"></script>
+  <script type="module" src="main.js?v=1.3.6"></script>
 </body>
 </html>

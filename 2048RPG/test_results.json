@@ -1,1 +1,543 @@
-{"summary":"RESULTS: 38/38 PASS","passed":38,"total":38,"results":[{"name":"bound testGwt1_1_TopBarAndGoldState","status":"PASS"},{"name":"bound testGwt1_2_SettingsSaveDataReset","status":"PASS"},{"name":"bound testGwt1_3_NavigationAndStagesList","status":"PASS"},{"name":"bound testGwt2_1_StageBriefingConfig","status":"PASS"},{"name":"bound testGwt2_2_SingleStageCombatInitialization","status":"PASS"},{"name":"bound testGwt2_3_FullEliminationVictoryAndUnlockNext","status":"PASS"},{"name":"bound testGwt2_4_DeadlockDefeatDetection","status":"PASS"},{"name":"bound testGwt3_1_HeroEquipmentEqualValueFusion","status":"PASS"},{"name":"bound testGwt3_2_HeroEquipmentDifferentValueBlocking","status":"PASS"},{"name":"bound testGwt3_3_MonsterToHeroDecapitation","status":"PASS"},{"name":"bound testGwt3_4_HeroToMonsterDecapitation","status":"PASS"},{"name":"bound testGwt3_5_EquipmentNonLethalObstacle","status":"PASS"},{"name":"bound testGwt4_1_GoldSpawnsEvery8Turns","status":"PASS"},{"name":"bound testGwt4_2_GoldMergeInstantCashReward","status":"PASS"},{"name":"bound testGwt4_3_GoldDifferentValueBlocking","status":"PASS"},{"name":"bound testGwt4_4_TapToCashOutGoldTile","status":"PASS"},{"name":"bound testGwt4_5_VictoryAutoSweepGold","status":"PASS"},{"name":"bound testGwt5_1_ShopClaimTestGold","status":"PASS"},{"name":"bound testGwt5_2_GachaPullsAndWeightDistribution","status":"PASS"},{"name":"bound testGwt5_3_GachaExpAndLevelUp","status":"PASS"},{"name":"bound testGwt5_4_BatchAutoMerge","status":"PASS"},{"name":"bound testGwt5_5_HeroEquipmentInheritanceInCombat","status":"PASS"},{"name":"bound testGwt5_6_InventoryFullGachaBlocked","status":"PASS"},{"name":"bound testGwt6_1_ChapterProgressionUnlock","status":"PASS"},{"name":"bound testGwt6_2_MixedTierMonsterInitialization","status":"PASS"},{"name":"bound testGwt6_3_IndividualDecapitationInMixedArray","status":"PASS"},{"name":"bound testGwt6_4_SplittingMonsterMechanic","status":"PASS"},{"name":"bound testGwt6_5_ChildrenEliminationAndChapter2Victory","status":"PASS"},{"name":"bound testGwt7_1_EmergencyItemStockAndClaimTestPacks","status":"PASS"},{"name":"bound testGwt7_2_UndoTimeHourglassRevertState","status":"PASS"},{"name":"bound testGwt7_3_HammerDestroysNonHeroTile","status":"PASS"},{"name":"bound testGwt7_4_SnipeStrictlyLesserMonsterOneShotNoDamage","status":"PASS"},{"name":"bound testGwt7_5_SnipeEqualOrGreaterMonsterBlocked","status":"PASS"},{"name":"bound testGwt8_1_TitleScreenCoverInitialDisplayAndStartGame","status":"PASS"},{"name":"bound testGwt8_2_Macro350StagesScalingAndMultiMonsters","status":"PASS"},{"name":"bound testGwt8_3_StageGoldRewardAndInCombatCap","status":"PASS"},{"name":"bound testGwt8_4_BaseTechTierUpgradeMinorAndWeights","status":"PASS"},{"name":"bound testGwt8_5_BaseTechTierMajorUpgradeEliminationUpTo64","status":"PASS"}]}
+{
+  "summary": "RESULTS: 134/134 PASS",
+  "passed": 134,
+  "total": 134,
+  "results": [
+    {
+      "name": "bound testGwt1_1_TopBarAndGoldState",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt1_2_SettingsSaveDataReset",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt1_3_NavigationAndStagesList",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt2_1_StageBriefingConfig",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt2_2_SingleStageCombatInitialization",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt2_3_FullEliminationVictoryAndUnlockNext",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt2_4_DeadlockDefeatDetection",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt3_1_HeroEquipmentEqualValueFusion",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt3_2_HeroEquipmentDifferentValueBlocking",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt3_3_MonsterToHeroDecapitation",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt3_4_HeroToMonsterDecapitation",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt3_5_EquipmentNonLethalObstacle",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt4_1_GoldSpawnsEvery8Turns",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt4_2_GoldMergeInstantCashReward",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt4_3_GoldDifferentValueBlocking",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt4_4_TapToCashOutGoldTile",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt4_5_VictoryAutoSweepGold",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt5_1_ShopClaimTestGold",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt5_2_GachaPullsAndWeightDistribution",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt5_3_GachaExpAndLevelUp",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt5_4_BatchAutoMerge",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt5_5_HeroEquipmentInheritanceInCombat",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt5_6_InventoryFullGachaBlocked",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt6_1_ChapterProgressionUnlock",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt6_2_MixedTierMonsterInitialization",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt6_3_IndividualDecapitationInMixedArray",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt6_4_SplittingMonsterMechanic",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt6_5_ChildrenEliminationAndChapter2Victory",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt7_1_EmergencyItemStockAndClaimTestPacks",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt7_2_UndoTimeHourglassRevertState",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt7_3_HammerDestroysNonHeroTile",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt7_4_SnipeStrictlyLesserMonsterOneShotNoDamage",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt7_5_SnipeEqualOrGreaterMonsterBlocked",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt8_1_TitleScreenCoverInitialDisplayAndStartGame",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt8_2_Macro350StagesScalingAndMultiMonsters",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt8_3_StageGoldRewardAndInCombatCap",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt8_4_BaseTechTierUpgradeMinorAndWeights",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt8_5_BaseTechTierMajorUpgradeEliminationUpTo64",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt9_1_FirstChapterDifficultyScaleStartingAt32",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt9_2_MultiChapterMonsterProgressionScale",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt9_3_HeroAndMonsterRandomPlacementPositions",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt9_4_FirstClearRewardNonRepeatable",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt9_5_FastForwardProgressionAndGoldCompensation",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt9_6_ResetSaveDataCleansAllProgress",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt10_1_RewardGoldSuppressionAndStrictMonotonicity",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt10_2_StageListClearedBadge",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt10_3_BriefingModalClearedState",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt10_4_ThemeSkinSwitchingAndPalettes",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt10_5_FastForwardWithRebalancedRewards",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt11_1_RewardGoldEquableSlopeAndFirst180Under1000",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt11_2_BaseTechTierTableExactMatch",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt11_3_MajorUpgradeSumOfPreviousFourMinorTiers",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt11_4_MinorUpgradeSubtractedRemainderProgression",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt11_5_FastForwardToStage6WithNewFormula",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt12_1_MoveEngineRecordsSlideTrajectoriesAndDiff",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt12_2_FourCombatAndFusionVfxEventDetection",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt12_3_IconFocusSkinThemeConfigAndHeroEquipmentEvolution",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt12_4_ViewRendererAnimateSlideAndVfxExecution",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt12_5_HeroAndMonsterBreathingKeyframeDefinitions",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt13_1_SlideDisplacementShortenedTo120ms",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt13_2_HeroSlashMonsterVfxTriggersAtSlideStart",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt13_3_HeroUpgradeVfxHasHighOpacityAndEnhancedFlare",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt14_1_HeroUpgradeFiveTierDynamicScaling",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt14_2_SuperMarioCoinPopAnimationAndEvent",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt15_1_GoldCashOutUncappedSucceedsAndCappedAlerts",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt15_2_GoldCashOutTriggersMarioCoinVfxAndSound",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt16_1_TitleScreenFadeOutOnStartGameClick",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt17_1_TwoStageGoldBudgetDepletionRichAndTrickle",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt17_2_GoldMerge100PercentPayoutWithoutCap",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt17_3_TapToCashOut100PercentWithoutBlocking",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt17_4_VictoryAutoSweep100PercentFullAmount",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt18_1_VictoryModalFirstClearThreeLinesAndAlignedSum",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt18_2_VictoryModalRepeatClearHidesFirstClearLine",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt18_3_DefeatModalShowsInBattleGoldEarned",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt18_4_UndoHourglassRollsBackInBattleGold",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt19_1_GoldDropDecay4CountAndMin4Floor",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt19_2_DynamicCooldownPacingInterval6Turns",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt19_3_UndoRollsBackGoldDropSchedule",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt21_1_HeroCharacterThemesAndProgressiveIntensity",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt21_2_HeroBreathingWave6pxTripleThickness",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt22_1_WarehouseExpansionPricingAndCapacityProgression",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt22_2_GachaItemDropProbabilityAndWeightDistribution",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt22_3_ItemMaxCap999AndPureQuantityDisplay",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt23_1_FourTabNavigationAndGuildRemoval",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt23_2_RoyalPrivilegeShopCardsRenderAndInteract",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt24_1_GearGatedTechUpgradePreventsBreakthroughWithoutEquippedWeapon",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt24_2_GearGatedTechUpgradeAllowsBreakthroughWithSufficientGear",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt25_1_CampCardOrderAndNoOverlappingBadges",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt25_2_UnifiedCardHeaderAndCenteredButtonFormat",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt26_1_StaminaVictoryNoDeductDefeatDeduct",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt26_2_StaminaDepletedBlocksCombatAndModalGuide",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt26_3_InterstitialAdTriggerEvery3Battles",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt26_4_NoAdsPassExemptsInterstitialAndInstantClaim",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt26_5_UnlimitedStaminaPassImmunity",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt27_1_GridStrictlyEqualMinmax01fr",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt27_2_GridCellsStrictNoOverflowOrDeformation",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt27_3_CombatTouchAreaExpanded",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt27_4_DefeatStaminaLossAnimationAndBadge",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt28_1_SettingsModalVersionChangelog",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt28_2_TopAndBottomSafePaddingInward",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt28_3_StaminaIconHeartTransformation",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt29_1_EightRichVeinDropsWithConstantInterval",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt29_2_SubsequentDropsIntervalIncrementAndCapAt16",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt29_3_VeinDecayEveryFourDropsMinimumFour",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt29_4_AllStagesGoldCapDoubled",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt30_1_TutorialInitialStateAndAutoStart",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt30_2_DirectionRestrictionAndShakeWarning",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt30_3_EquipFusionAdvancesToStep2",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt30_4_SlimeCombatVictoryAdvancesToStep3",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt30_5_GoldMergeAndTapToCashOutFlow",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt30_6_BossPowerCheckAndTwoPhaseClear",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt30_7_TutorialSkipAndCompletedFlagPersistence",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt31_1_PopupVisualCardFormulaStructures",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt31_2_MonsterSynthesisWarningCorrectText",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt31_3_Step3GoldTapAdvancesToStep4WithoutStall",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt31_4_HandGuidePercentageCoordinatesAnchored",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt32_1_Chapter0AndStage0IntegratedInLobby",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt32_2_ClearTutorialRecordResetsState",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt32_3_Step4BlockRuleAndOpenCombatConfig",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt32_4_GoldTapGuideStrictlyCentered",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt33_1_MonsterWarningCopyWithoutMisleadingPriority",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt33_2_HandGuidesPositionedBelowTiles",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt33_3_MoveDelayReducedToOneSecond",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt33_4_TutorialGoldMergeAndTapAccruesTo16Gold",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt33_5_AbandonBattleRewardsForfeitsAllInCombatGold",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt33_6_CellRectPositioningAccurateForTapAndSwipe",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt34_1_DefeatTacticalTipCardRendering",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt34_2_DefeatTacticalTipCyclingAndModularity",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt34_3_TacticalTipsContentCoverageOfGameMechanics",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt35_1_HandGuideRepositionHideInstantaneously",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt35_2_TapGuideFingertipOffsetCompensatedToCenter",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt36_1_AssetLinksContainVersionQueryString",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt36_2_SettingsReloadButtonConfigured",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt36_3_SaveVersionMigrationAndDataPreservation",
+      "status": "PASS"
+    }
+  ]
+}

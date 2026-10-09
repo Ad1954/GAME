@@ -954,6 +954,77 @@ body {
   100% { transform: scale(1.02); box-shadow: 0 0 12px rgba(239, 68, 68, 0.35); }
 }
 
+/* Defeat Tactical Tip (C-STORY-034) */
+.defeat-tactical-tip {
+  margin-top: 10px;
+  margin-bottom: 6px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  user-select: none;
+}
+
+.defeat-tactical-tip:hover {
+  transform: translateY(-1px);
+  border-color: #38bdf8;
+  box-shadow: 0 6px 18px rgba(56, 189, 248, 0.25);
+}
+
+.defeat-tip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.defeat-tip-badge {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+}
+
+.defeat-tip-btn-next {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.defeat-tip-btn-next:hover {
+  color: #f1f5f9;
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+}
+
+.defeat-tip-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #fef08a;
+  margin-bottom: 4px;
+  line-height: 1.35;
+}
+
+.defeat-tip-content {
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
 .text-center {
   text-align: center;
 }
@@ -2637,4 +2708,378 @@ body {
   padding: 3px 10px;
   border-radius: 8px;
 }
+
+/* ========================================================= */
+/* C-STORY-030: TUTORIAL OVERLAY & HAND ANIMATION STYLES      */
+/* ========================================================= */
+.tutorial-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 105;
+}
+
+.tutorial-dialogue-banner {
+  pointer-events: auto;
+  position: absolute;
+  top: 52px;
+  left: 12px;
+  right: 12px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+  border: 2px solid #38bdf8;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 15px rgba(56, 189, 248, 0.35);
+  animation: tutorialSlideDown 0.35s ease-out;
+}
+
+@keyframes tutorialSlideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.tutorial-dialogue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+  padding-bottom: 6px;
+}
+
+.tutorial-badge {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #facc15;
+  background: rgba(250, 204, 21, 0.15);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+}
+
+.tutorial-title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #38bdf8;
+  flex: 1;
+  margin-left: 8px;
+}
+
+.tutorial-btn-skip {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tutorial-btn-skip:active {
+  transform: scale(0.95);
+  background: rgba(239, 68, 68, 0.4);
+}
+
+.tutorial-dialogue-body {
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+/* Tutorial Hand Pointer */
+.tutorial-hand-pointer {
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 106;
+}
+
+.tutorial-hand-pointer .hand-icon {
+  font-size: 2.8rem;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8));
+}
+
+.tutorial-hand-pointer .hand-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #ffffff;
+  background: rgba(14, 116, 144, 0.95);
+  border: 1px solid #38bdf8;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-top: -6px;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+/* Animations */
+@keyframes swipeUpAnim {
+  0% { transform: translate(-50%, 40px); opacity: 0; }
+  25% { opacity: 1; }
+  75% { transform: translate(-50%, -40px); opacity: 1; }
+  100% { transform: translate(-50%, -40px); opacity: 0; }
+}
+
+@keyframes swipeDownAnim {
+  0% { transform: translate(-50%, -40px); opacity: 0; }
+  25% { opacity: 1; }
+  75% { transform: translate(-50%, 40px); opacity: 1; }
+  100% { transform: translate(-50%, 40px); opacity: 0; }
+}
+
+@keyframes swipeRightAnim {
+  0% { transform: translate(-40px, -50%); opacity: 0; }
+  25% { opacity: 1; }
+  75% { transform: translate(40px, -50%); opacity: 1; }
+  100% { transform: translate(40px, -50%); opacity: 0; }
+}
+
+@keyframes swipeLeftAnim {
+  0% { transform: translate(40px, -50%); opacity: 0; }
+  25% { opacity: 1; }
+  75% { transform: translate(-40px, -50%); opacity: 1; }
+  100% { transform: translate(-40px, -50%); opacity: 0; }
+}
+
+@keyframes tapPulseAnim {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.25); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+.animate-swipe-up {
+  animation: swipeUpAnim 1.2s infinite ease-in-out;
+}
+
+.animate-swipe-down {
+  animation: swipeDownAnim 1.2s infinite ease-in-out;
+}
+
+.animate-swipe-right {
+  animation: swipeRightAnim 1.2s infinite ease-in-out;
+}
+
+.animate-swipe-left {
+  animation: swipeLeftAnim 1.2s infinite ease-in-out;
+}
+
+.animate-tap-pulse {
+  animation: tapPulseAnim 1s infinite ease-in-out;
+}
+
+.tutorial-shake {
+  animation: shakeWarning 0.35s ease-in-out !important;
+}
+
+@keyframes shakeWarning {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+/* ========================================================= */
+/* C-STORY-031: TUTORIAL POPUP VISUAL MODAL STYLES           */
+/* ========================================================= */
+.tutorial-popup-backdrop {
+  pointer-events: auto;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 110;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.tutorial-popup-card {
+  background: #1e293b;
+  border: 2px solid #38bdf8;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 380px;
+  padding: 20px 16px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: popupCardZoom 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popupCardZoom {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.tutorial-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.popup-header-icon {
+  font-size: 1.3rem;
+}
+
+.popup-header-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: 0.5px;
+}
+
+/* Formula Row */
+.tutorial-formula-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.formula-symbol {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #f1f5f9;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.formula-card-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.formula-mini-card {
+  width: 58px;
+  height: 70px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  box-sizing: border-box;
+}
+
+.formula-mini-card.card-hero {
+  background: #1e40af;
+  border: 2px solid #60a5fa;
+  box-shadow: 0 0 10px rgba(96, 165, 250, 0.4);
+}
+
+.formula-mini-card.card-equipment {
+  background: #78350f;
+  border: 2px solid #b45309;
+}
+
+.formula-mini-card.card-monster {
+  background: #451a03;
+  border: 2px solid #ef4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+
+.formula-mini-card.card-gold {
+  background: #b45309;
+  border: 2px solid #fbbf24;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+}
+
+.formula-mini-card.card-defeat {
+  background: #450a0a;
+  border: 2px solid #f87171;
+}
+
+.formula-mini-card.card-block {
+  background: #334155;
+  border: 2px solid #64748b;
+}
+
+.mini-card-badge {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.mini-card-val {
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #ffffff;
+  margin-top: 2px;
+}
+
+.mini-card-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #cbd5e1;
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* Slashed Monster in Combat Formula - Centered 45deg cut line */
+.formula-mini-card.slashed::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -8px;
+  width: calc(100% + 16px);
+  height: 3px;
+  background: #ffffff;
+  transform: translateY(-50%) rotate(-45deg);
+  transform-origin: center;
+  box-shadow: 0 0 6px #ef4444;
+  pointer-events: none;
+}
+
+/* Warning & Confirmation */
+.tutorial-popup-warning {
+  width: 100%;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+.tutorial-popup-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  border: none;
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 0.96rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+  transition: transform 0.1s, opacity 0.15s;
+}
+
+.tutorial-popup-btn:active {
+  transform: scale(0.97);
+}
+
+
 

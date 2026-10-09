@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>GWT Test Runner</title>
+</head>
+<body>
+  <h1>GWT Test Runner</h1>
+  <div id="output">Running tests...</div>
+  <script type="module">
+    import { GwtRunner } from './src/tests/GwtRunner.js';
+    async function run() {
+      try {
+        console.log('Starting GwtRunner...');
+        const runner = new GwtRunner();
+        const results = await runner.runAllTests();
+        const passedCount = results.filter(r => r.status === 'PASS').length;
+        const totalCount = results.length;
+        const payload = {
+          summary: `RESULTS: ${passedCount}/${totalCount} PASS`,
+          passed: passedCount,
+          total: totalCount,
+          results: results
+        };
+        await fetch('/report_test_results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload, null, 2)
+        });
+        document.getElementById('output').textContent = payload.summary;
+      } catch (e) {
+        console.error('Test execution error:', e);
+        await fetch('/report_test_results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ error: e.toString(), stack: e.stack, passed: 0, total: 0, results: [] }, null, 2)
+        });
+        document.getElementById('output').textContent = 'ERROR: ' + e;
+      }
+    }
+    run();
+  </script>
+</body>
+</html>
