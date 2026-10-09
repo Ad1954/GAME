@@ -143,31 +143,31 @@ function generateAllStages() {
     {
       id: 1, chapter: 1, name: '第 1 關：微風平原', subtitle: '初試鋒芒',
       desc: '討伐哥布林前鋒！場上盤踞 3 隻敵軍，合成裝備餵給勇者一舉擊破！',
-      recPower: 2, rewardGold: 100, goldCap: 40, goldBaseValue: 4,
+      recPower: 2, rewardGold: 100, goldCap: 20, goldBaseValue: 4,
       monsters: [8, 2, 4], starterEquipment: [2, 2], waves: [], icon: '🌾'
     },
     {
       id: 2, chapter: 1, name: '第 2 關：暗夜密林', subtitle: '狂狼出沒',
       desc: '密林中潛伏著狂暴之狼與前鋒！先強化至 16 再行逐一斬殺！',
-      recPower: 4, rewardGold: 105, goldCap: 50, goldBaseValue: 4,
+      recPower: 4, rewardGold: 105, goldCap: 25, goldBaseValue: 4,
       monsters: [16, 4, 4], starterEquipment: [2, 4], waves: [], icon: '🌲'
     },
     {
       id: 3, chapter: 1, name: '第 3 關：孤峰岩地', subtitle: '強盜攔路',
       desc: '強盜小隊包夾隘口！善用 2048 滑動合體突破重圍！',
-      recPower: 4, rewardGold: 110, goldCap: 60, goldBaseValue: 4,
+      recPower: 4, rewardGold: 110, goldCap: 30, goldBaseValue: 4,
       monsters: [16, 4, 8], starterEquipment: [4, 4], waves: [], icon: '⛰️'
     },
     {
       id: 4, chapter: 1, name: '第 4 關：獸人前哨', subtitle: '雙雄夾擊',
       desc: '獸人督軍 (32) 率隊扼守！先斬殺 8 級雜兵削弱敵勢再戰督軍！',
-      recPower: 8, rewardGold: 115, goldCap: 70, goldBaseValue: 4,
+      recPower: 8, rewardGold: 115, goldCap: 35, goldBaseValue: 4,
       monsters: [32, 8, 8], starterEquipment: [4, 4, 8], waves: [], icon: '⛺'
     },
     {
       id: 5, chapter: 1, name: '第 5 關：蛛魔地穴', subtitle: '石像鬼守衛',
       desc: '地穴深處第一章關底！石像鬼領主 (32) 率領三隻護衛形成 4 怪包夾防線！',
-      recPower: 16, rewardGold: 120, goldCap: 80, goldBaseValue: 4,
+      recPower: 16, rewardGold: 120, goldCap: 40, goldBaseValue: 4,
       monsters: [32, 8, 16, 16], starterEquipment: [8, 8, 16], waves: [], icon: '🕸️'
     }
   ];
@@ -182,93 +182,93 @@ function generateAllStages() {
     {
       id: 6, chapter: 2, name: '第 6 關：火鱗前哨', subtitle: '雙蜥盤據',
       desc: '火鱗蜥蜴 (64) 率領 16、32 扼守熔岩入口！逐一擊破！',
-      recPower: 16, rewardGold: 125, goldCap: 90, goldBaseValue: 4,
+      recPower: 16, rewardGold: 125, goldCap: 45, goldBaseValue: 4,
       monsters: [64, 16, 32], starterEquipment: [8, 16, 16], waves: [], icon: '🦎'
     },
     {
       id: 7, chapter: 2, name: '第 7 關：熔岩巢穴', subtitle: '分裂母體',
       desc: '盤踞著異變的熔岩史萊姆母體 (64)！斬殺後將分裂為兩隻 32！',
-      recPower: 32, rewardGold: 130, goldCap: 100, goldBaseValue: 4,
+      recPower: 32, rewardGold: 130, goldCap: 50, goldBaseValue: 4,
       monsters: [{ value: 64, splitOnDeath: true, splitValue: 32, splitCount: 2 }, 16, 32],
       starterEquipment: [8, 16, 16], waves: [], icon: '🦠'
     },
     {
       id: 8, chapter: 2, name: '第 8 關：赤炎隘口', subtitle: '炎魔督軍',
       desc: '炎魔督軍 (128) 率領 32、64 雜兵扼守！必須逐一擊破！',
-      recPower: 64, rewardGold: 135, goldCap: 110, goldBaseValue: 4,
+      recPower: 64, rewardGold: 135, goldCap: 55, goldBaseValue: 4,
       monsters: [128, 32, 64], starterEquipment: [16, 16, 32], waves: [], icon: '🔥'
     },
     {
       id: 9, chapter: 2, name: '第 9 關：熔火魔窟', subtitle: '炎魔母衛',
       desc: '高階混編！炎魔母衛 (128) 率領三隻前鋒形成 4 怪包夾防禦！',
-      recPower: 64, rewardGold: 140, goldCap: 120, goldBaseValue: 8,
+      recPower: 64, rewardGold: 140, goldCap: 60, goldBaseValue: 8,
       monsters: [128, 32, 32, 64], starterEquipment: [16, 32, 32], waves: [], icon: '🌋'
     },
     {
       id: 10, chapter: 2, name: '第 10 關：終焉火山口', subtitle: '黑曜熔岩龍',
       desc: '熔岩之地的霸主！三大護衛簇擁 256 滅世黑曜熔岩巨龍！',
-      recPower: 128, rewardGold: 145, goldCap: 130, goldBaseValue: 8,
+      recPower: 128, rewardGold: 145, goldCap: 65, goldBaseValue: 8,
       monsters: [256, 32, 64, 64], starterEquipment: [32, 32, 64], waves: [], icon: '🐉'
     },
     {
       id: 11, chapter: 2, name: '第 11 關：熔岩走廊', subtitle: '熔炎先鋒',
       desc: '深入地底熔脈！128 熔炎先鋒率領 3 隻前鋒形成 4 怪陣列！',
-      recPower: 64, rewardGold: 150, goldCap: 140, goldBaseValue: 8,
+      recPower: 64, rewardGold: 150, goldCap: 70, goldBaseValue: 8,
       monsters: [128, 32, 64, 64], starterEquipment: [16, 32, 32], waves: [], icon: '🔥'
     },
     {
       id: 12, chapter: 2, name: '第 12 關：熾熱石窟', subtitle: '火魔哨長',
       desc: '炎魔巡防隊！128 哨長率領精銳前鋒夾擊！',
-      recPower: 64, rewardGold: 155, goldCap: 150, goldBaseValue: 8,
+      recPower: 64, rewardGold: 155, goldCap: 75, goldBaseValue: 8,
       monsters: [128, 32, 64, 64], starterEquipment: [16, 32, 32], waves: [], icon: '🔥'
     },
     {
       id: 13, chapter: 2, name: '第 13 關：灼熱熔泉', subtitle: '烈焰巨魔',
       desc: '巨魔盤據熔泉！先擊殺低階前鋒再戰 256 巨魔！',
-      recPower: 128, rewardGold: 160, goldCap: 160, goldBaseValue: 8,
+      recPower: 128, rewardGold: 160, goldCap: 80, goldBaseValue: 8,
       monsters: [256, 32, 64, 64], starterEquipment: [32, 32, 64], waves: [], icon: '🔥'
     },
     {
       id: 14, chapter: 2, name: '第 14 關：熔核裂隙', subtitle: '裂變熔核',
       desc: '異變的熔核母體 (256)！斬殺後將分裂為兩隻 128 小熔核！',
-      recPower: 128, rewardGold: 165, goldCap: 170, goldBaseValue: 8,
+      recPower: 128, rewardGold: 165, goldCap: 85, goldBaseValue: 8,
       monsters: [{ value: 256, splitOnDeath: true, splitValue: 128, splitCount: 2 }, 32, 64, 64],
       starterEquipment: [32, 32, 64], waves: [], icon: '🦠'
     },
     {
       id: 15, chapter: 2, name: '第 15 關：黑曜石階', subtitle: '黑曜近衛',
       desc: '黑曜石近衛團！256 強敵率領 3 隻前鋒形成堅實防線！',
-      recPower: 128, rewardGold: 170, goldCap: 180, goldBaseValue: 8,
+      recPower: 128, rewardGold: 170, goldCap: 90, goldBaseValue: 8,
       monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🌋'
     },
     {
       id: 16, chapter: 2, name: '第 16 關：熔岩巨橋', subtitle: '熔岩督戰官',
       desc: '督戰官親臨戰線！合成強大武器擊破 256 督戰官！',
-      recPower: 128, rewardGold: 175, goldCap: 190, goldBaseValue: 8,
+      recPower: 128, rewardGold: 175, goldCap: 95, goldBaseValue: 8,
       monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🔥'
     },
     {
       id: 17, chapter: 2, name: '第 17 關：地火祭壇', subtitle: '祭壇主祭',
       desc: '祭壇主祭守護地心之火！256 強敵率護衛頑抗！',
-      recPower: 128, rewardGold: 180, goldCap: 200, goldBaseValue: 8,
+      recPower: 128, rewardGold: 180, goldCap: 100, goldBaseValue: 8,
       monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🔥'
     },
     {
       id: 18, chapter: 2, name: '第 18 關：烈焰深淵', subtitle: '深淵炎煞',
       desc: '深淵底部煞氣騰騰！四怪包夾，步步為營！',
-      recPower: 128, rewardGold: 185, goldCap: 210, goldBaseValue: 8,
+      recPower: 128, rewardGold: 185, goldCap: 105, goldBaseValue: 8,
       monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🔥'
     },
     {
       id: 19, chapter: 2, name: '第 19 關：熔岩巨門', subtitle: '門扉巨獸',
       desc: '通往王座的巨門守衛！256 領主扼守通道！',
-      recPower: 128, rewardGold: 190, goldCap: 220, goldBaseValue: 8,
+      recPower: 128, rewardGold: 190, goldCap: 110, goldBaseValue: 8,
       monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🔥'
     },
     {
       id: 20, chapter: 2, name: '第 20 關：烈焰王座', subtitle: '熔岩領主',
       desc: '第二章終極關底！512 熔岩君王率領 64、128、256 三大護衛決死一戰！',
-      recPower: 256, rewardGold: 195, goldCap: 240, goldBaseValue: 16,
+      recPower: 256, rewardGold: 195, goldCap: 120, goldBaseValue: 16,
       monsters: [512, 64, 128, 256], starterEquipment: [64, 64, 128], waves: [], icon: '👑'
     }
   ];
@@ -294,7 +294,7 @@ function generateAllStages() {
     // Stage 180: 995 (under 1000G), Stage 181: 1000, Stage 350: 1845
     const rewardGold = 100 + (s - 1) * 5;
 
-    const goldCap = Math.floor(80 + s * 4);
+    const goldCap = Math.floor(40 + s * 2);
     const goldBaseValue = s <= 35 ? 8 : s <= 90 ? 16 : s <= 180 ? 32 : 64;
 
     // Boss Power Scaling:

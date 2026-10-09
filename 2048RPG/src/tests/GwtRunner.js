@@ -149,12 +149,7 @@ export class GwtRunner {
       // C-STORY-028
       this.testGwt28_1_SettingsModalVersionChangelog.bind(this),
       this.testGwt28_2_TopAndBottomSafePaddingInward.bind(this),
-      this.testGwt28_3_StaminaIconHeartTransformation.bind(this),
-      // C-STORY-029
-      this.testGwt29_1_EightRichVeinDropsWithConstantInterval.bind(this),
-      this.testGwt29_2_SubsequentDropsIntervalIncrementAndCapAt16.bind(this),
-      this.testGwt29_3_VeinDecayEveryFourDropsMinimumFour.bind(this),
-      this.testGwt29_4_AllStagesGoldCapDoubled.bind(this)
+      this.testGwt28_3_StaminaIconHeartTransformation.bind(this)
     ];
 
     for (const test of testCases) {
@@ -935,14 +930,14 @@ export class GwtRunner {
     const s11 = STAGE_CONFIGS.find(s => s.id === 11);
     this.assert(s11 !== undefined, 'Stage 11 exists');
     this.assert(s11.rewardGold === 150, `Stage 11 rewardGold should be 150, got ${s11.rewardGold}`);
-    this.assert(s11.goldCap === 140, `Stage 11 goldCap should be 140, got ${s11.goldCap}`);
+    this.assert(s11.goldCap === 70, `Stage 11 goldCap should be 70, got ${s11.goldCap}`);
 
     // Test gold budget initialization and 100% cash out
     const sm = new StageManager();
     sm.resetSaveData();
     sm.startStage(11, 64);
     this.assert(sm.stageGoldEarned === 0, 'Initial stageGoldEarned is 0');
-    this.assert(sm.remainingGoldBudget === 140, 'Initial remainingGoldBudget matches stage goldCap (140)');
+    this.assert(sm.remainingGoldBudget === 70, 'Initial remainingGoldBudget matches stage goldCap (70)');
 
     // Put gold tiles on board
     sm.board.clear();
@@ -2028,18 +2023,18 @@ export class GwtRunner {
       this.assert(sm.goldDropsCount === i + 1, `goldDropsCount is ${i + 1}`);
     }
 
-    // After 4th drop, currentGoldValue decays from 16 to 8 (interval remains 8 in C-STORY-029)
+    // After 4th drop, currentGoldValue decays from 16 to 8
     this.assert(sm.currentGoldValue === 8, `After 4 drops, currentGoldValue decays to 8, got ${sm.currentGoldValue}`);
-    this.assert(sm.nextGoldDropTurn === 40, `After 4th drop, next turn is 32 + 8 = 40, got ${sm.nextGoldDropTurn}`);
+    this.assert(sm.nextGoldDropTurn === 46, `After 4th drop, next turn is 32 + 14 = 46, got ${sm.nextGoldDropTurn}`);
 
-    // Drop 5 (turn 40): drops 8G
+    // Drop 5 (turn 46): drops 8G
     sm.board.clear();
     sm.board.setTile(4, 0, new Tile(2, TileType.HERO, 4, 0));
     sm.board.setTile(0, 4, new Tile(1024, TileType.MONSTER, 0, 4));
     sm.board.setTile(3, 0, new Tile(2, TileType.EQUIPMENT, 3, 0));
-    sm.turnCount = 39;
+    sm.turnCount = 45;
     const res5 = sm.handleMove(Direction.DOWN);
-    this.assert(res5.moved === true, 'Turn 40 move succeeded');
+    this.assert(res5.moved === true, 'Turn 46 move succeeded');
     this.assert(sm.goldDropsCount === 5, 'goldDropsCount is 5');
 
     // Test floor 4: simulate when currentGoldValue is 4, it never decays below 4
@@ -2057,13 +2052,13 @@ export class GwtRunner {
     this.assert(sm.currentGoldValue === 4, `currentGoldValue stays at minimum 4, got ${sm.currentGoldValue}`);
   }
 
-  // C-STORY-019 / C-STORY-029 GWT 19.2：第 8 顆前維持 8 回合，之後每顆間隔拉長 2 回合封頂 16
+  // C-STORY-019 GWT 19.2：第 4 顆登場後每多一顆間隔拉長 6 回合（防塞盤面／速戰速決）
   testGwt19_2_DynamicCooldownPacingInterval6Turns() {
     const sm = new StageManager();
     sm.resetSaveData();
     sm.startStage(1);
-    sm.goldSpawnBudget = 1000; // sufficient budget
-    sm.remainingGoldBudget = 1000;
+    sm.goldSpawnBudget = 500; // sufficient budget
+    sm.remainingGoldBudget = 500;
 
     // Verify initial intervals: 8
     this.assert(sm.goldDropInterval === 8, 'Initial interval is 8');
@@ -2079,60 +2074,70 @@ export class GwtRunner {
       this.assert(res.moved === true, `Move at turn ${turn} succeeded`);
     };
 
-    // Drops 1~8: interval remains 8
-    const expectedTurns = [8, 16, 24, 32, 40, 48, 56, 64];
-    for (let i = 0; i < 7; i++) {
-      triggerTurn(expectedTurns[i]);
-      this.assert(sm.nextGoldDropTurn === expectedTurns[i + 1], `Drop ${i + 1} -> next is ${expectedTurns[i + 1]}`);
-      this.assert(sm.goldDropInterval === 8, `Interval remains 8 at drop ${i + 1}`);
-    }
+    // Drops 1, 2, 3: interval remains 8
+    // Drop 1: turn 8 -> next 16
+    triggerTurn(8);
+    this.assert(sm.nextGoldDropTurn === 16, 'Drop 1 -> next is 16');
 
-    // Drop 8: turn 64 -> interval becomes 8 + 2 = 10, next is 64 + 10 = 74
-    triggerTurn(64);
-    this.assert(sm.goldDropInterval === 10, `Interval after drop 8 is 10, got ${sm.goldDropInterval}`);
-    this.assert(sm.nextGoldDropTurn === 74, `Next turn after drop 8 is 74, got ${sm.nextGoldDropTurn}`);
+    // Drop 2: turn 16 -> next 24
+    triggerTurn(16);
+    this.assert(sm.nextGoldDropTurn === 24, 'Drop 2 -> next is 24');
 
-    // Drop 9: turn 74 -> interval becomes 10 + 2 = 12, next is 74 + 12 = 86
-    triggerTurn(74);
-    this.assert(sm.goldDropInterval === 12, `Interval after drop 9 is 12, got ${sm.goldDropInterval}`);
-    this.assert(sm.nextGoldDropTurn === 86, `Next turn after drop 9 is 86, got ${sm.nextGoldDropTurn}`);
+    // Drop 3: turn 24 -> next 32
+    triggerTurn(24);
+    this.assert(sm.nextGoldDropTurn === 32, 'Drop 3 -> next is 32');
+
+    // Drop 4: turn 32 -> interval becomes 8 + 6 = 14, next is 32 + 14 = 46
+    triggerTurn(32);
+    this.assert(sm.goldDropInterval === 14, `Interval after drop 4 is 14, got ${sm.goldDropInterval}`);
+    this.assert(sm.nextGoldDropTurn === 46, `Next turn after drop 4 is 46, got ${sm.nextGoldDropTurn}`);
+
+    // Drop 5: turn 46 -> interval becomes 14 + 6 = 20, next is 46 + 20 = 66
+    triggerTurn(46);
+    this.assert(sm.goldDropInterval === 20, `Interval after drop 5 is 20, got ${sm.goldDropInterval}`);
+    this.assert(sm.nextGoldDropTurn === 66, `Next turn after drop 5 is 66, got ${sm.nextGoldDropTurn}`);
+
+    // Drop 6: turn 66 -> interval becomes 20 + 6 = 26, next is 66 + 26 = 92
+    triggerTurn(66);
+    this.assert(sm.goldDropInterval === 26, `Interval after drop 6 is 26, got ${sm.goldDropInterval}`);
+    this.assert(sm.nextGoldDropTurn === 92, `Next turn after drop 6 is 92, got ${sm.nextGoldDropTurn}`);
   }
 
-  // C-STORY-019 / C-STORY-029 GWT 19.3：時光沙漏（Undo）精確回溯富礦衰竭與排程步數
+  // C-STORY-019 GWT 19.3：時光沙漏（Undo）精確回溯富礦衰竭與排程步數
   testGwt19_3_UndoRollsBackGoldDropSchedule() {
     const sm = new StageManager();
     sm.resetSaveData();
     sm.claimTestItems(1);
     sm.startStage(36); // currentGoldValue = 16
 
-    // Setup state right before drop 8 (turn 63, dropsCount = 7, interval = 8, next = 64)
-    sm.goldDropsCount = 7;
+    // Setup state right before drop 4 (turn 31, dropsCount = 3, interval = 8, next = 32)
+    sm.goldDropsCount = 3;
     sm.goldDropInterval = 8;
-    sm.nextGoldDropTurn = 64;
-    sm.currentGoldValue = 8;
-    sm.turnCount = 63;
+    sm.nextGoldDropTurn = 32;
+    sm.currentGoldValue = 16;
+    sm.turnCount = 31;
 
     sm.board.clear();
     sm.board.setTile(4, 0, new Tile(2, TileType.HERO, 4, 0));
     sm.board.setTile(0, 4, new Tile(1024, TileType.MONSTER, 0, 4));
     sm.board.setTile(3, 0, new Tile(2, TileType.EQUIPMENT, 3, 0));
 
-    // Turn 64: Triggers drop 8 (decay 8 -> 4, interval 8 -> 10, next 64 + 10 = 74)
+    // Turn 32: Triggers drop 4 (decay 16 -> 8, interval 8 -> 14, next 32 + 14 = 46)
     sm.handleMove(Direction.DOWN);
-    this.assert(sm.turnCount === 64, 'Turn count advanced to 64');
-    this.assert(sm.goldDropsCount === 8, 'goldDropsCount advanced to 8');
-    this.assert(sm.currentGoldValue === 4, 'currentGoldValue decayed to 4');
-    this.assert(sm.goldDropInterval === 10, 'goldDropInterval increased to 10');
-    this.assert(sm.nextGoldDropTurn === 74, 'nextGoldDropTurn scheduled to 74');
+    this.assert(sm.turnCount === 32, 'Turn count advanced to 32');
+    this.assert(sm.goldDropsCount === 4, 'goldDropsCount advanced to 4');
+    this.assert(sm.currentGoldValue === 8, 'currentGoldValue decayed to 8');
+    this.assert(sm.goldDropInterval === 14, 'goldDropInterval increased to 14');
+    this.assert(sm.nextGoldDropTurn === 46, 'nextGoldDropTurn scheduled to 46');
 
     // Use Undo
     const undoRes = sm.useUndoItem();
     this.assert(undoRes.success === true, 'Undo succeeded');
-    this.assert(sm.turnCount === 63, 'turnCount reverted to 63');
-    this.assert(sm.goldDropsCount === 7, 'goldDropsCount reverted to 7');
-    this.assert(sm.currentGoldValue === 8, 'currentGoldValue reverted to 8');
+    this.assert(sm.turnCount === 31, 'turnCount reverted to 31');
+    this.assert(sm.goldDropsCount === 3, 'goldDropsCount reverted to 3');
+    this.assert(sm.currentGoldValue === 16, 'currentGoldValue reverted to 16');
     this.assert(sm.goldDropInterval === 8, 'goldDropInterval reverted to 8');
-    this.assert(sm.nextGoldDropTurn === 64, 'nextGoldDropTurn reverted to 64');
+    this.assert(sm.nextGoldDropTurn === 32, 'nextGoldDropTurn reverted to 32');
   }
 
   // =========================================================================
@@ -2716,160 +2721,5 @@ export class GwtRunner {
     this.assert(defeatBadge !== null, 'defeat-stamina-badge must exist');
     this.assert(defeatBadge.textContent.includes('❤️'), 'defeat-stamina-badge must contain ❤️ heart icon');
   }
-
-  // C-STORY-029 GWT 29.1：富礦期延長至 8 個，固定每 8 回合生成一次
-  testGwt29_1_EightRichVeinDropsWithConstantInterval() {
-    const sm = new StageManager();
-    sm.resetSaveData();
-    sm.startStage(1);
-    sm.goldSpawnBudget = 1000;
-    sm.remainingGoldBudget = 1000;
-    sm.currentGoldValue = 8;
-    sm.goldDropsCount = 0;
-    sm.goldDropInterval = 8;
-    sm.nextGoldDropTurn = 8;
-
-    const triggerTurn = (turn) => {
-      sm.board.clear();
-      sm.board.setTile(4, 0, new Tile(2, TileType.HERO, 4, 0));
-      sm.board.setTile(0, 4, new Tile(1024, TileType.MONSTER, 0, 4));
-      sm.board.setTile(3, 0, new Tile(2, TileType.EQUIPMENT, 3, 0));
-      sm.turnCount = turn - 1;
-      const res = sm.handleMove(Direction.DOWN);
-      this.assert(res.moved === true, `Move at turn ${turn} succeeded`);
-    };
-
-    // Simulate turns up to drop 8
-    const expectedTurns = [8, 16, 24, 32, 40, 48, 56, 64];
-    for (let drop = 1; drop <= 8; drop++) {
-      triggerTurn(expectedTurns[drop - 1]);
-      this.assert(sm.goldDropsCount === drop, `Gold drop count must be ${drop}`);
-      if (drop < 8) {
-        this.assert(sm.goldDropInterval === 8, `Drops 1~7 must keep interval at 8`);
-      } else {
-        // Drop 8 should transition interval to 10 for subsequent drop
-        this.assert(sm.goldDropInterval === 10, `Drop 8 must increment interval to 10`);
-      }
-    }
-  }
-
-  // C-STORY-029 GWT 29.2：第 8 次生成後的動態間隔遞增與封頂 16 回合
-  testGwt29_2_SubsequentDropsIntervalIncrementAndCapAt16() {
-    const sm = new StageManager();
-    sm.resetSaveData();
-    sm.startStage(1);
-    sm.goldSpawnBudget = 1000;
-    sm.remainingGoldBudget = 1000;
-    sm.currentGoldValue = 8;
-    sm.goldDropsCount = 8;
-    sm.goldDropInterval = 10;
-    sm.turnCount = 64;
-    sm.nextGoldDropTurn = 74;
-
-    const triggerTurn = (turn) => {
-      sm.board.clear();
-      sm.board.setTile(4, 0, new Tile(2, TileType.HERO, 4, 0));
-      sm.board.setTile(0, 4, new Tile(1024, TileType.MONSTER, 0, 4));
-      sm.board.setTile(3, 0, new Tile(2, TileType.EQUIPMENT, 3, 0));
-      sm.turnCount = turn - 1;
-      const res = sm.handleMove(Direction.DOWN);
-      this.assert(res.moved === true, `Move at turn ${turn} succeeded`);
-    };
-
-    // Drop 9: turn 74, next interval 12, next turn 86
-    triggerTurn(74);
-    this.assert(sm.goldDropsCount === 9, 'Drop count is 9');
-    this.assert(sm.goldDropInterval === 12, 'Interval increments to 12');
-    this.assert(sm.nextGoldDropTurn === 74 + 12, 'Next turn is 86');
-
-    // Drop 10: turn 86, next interval 14, next turn 100
-    triggerTurn(86);
-    this.assert(sm.goldDropsCount === 10, 'Drop count is 10');
-    this.assert(sm.goldDropInterval === 14, 'Interval increments to 14');
-    this.assert(sm.nextGoldDropTurn === 86 + 14, 'Next turn is 100');
-
-    // Drop 11: turn 100, next interval 16, next turn 116
-    triggerTurn(100);
-    this.assert(sm.goldDropsCount === 11, 'Drop count is 11');
-    this.assert(sm.goldDropInterval === 16, 'Interval increments to 16');
-    this.assert(sm.nextGoldDropTurn === 100 + 16, 'Next turn is 116');
-
-    // Drop 12: turn 116, interval capped at 16, next turn 132
-    triggerTurn(116);
-    this.assert(sm.goldDropsCount === 12, 'Drop count is 12');
-    this.assert(sm.goldDropInterval === 16, 'Interval remains capped at 16');
-    this.assert(sm.nextGoldDropTurn === 116 + 16, 'Next turn is 132');
-
-    // Drop 13: turn 132, interval remains 16
-    triggerTurn(132);
-    this.assert(sm.goldDropsCount === 13, 'Drop count is 13');
-    this.assert(sm.goldDropInterval === 16, 'Interval stays at 16 (never exceeds 16)');
-  }
-
-  // C-STORY-029 GWT 29.3：每 4 個金幣降一階，最低不低於 4
-  testGwt29_3_VeinDecayEveryFourDropsMinimumFour() {
-    const sm = new StageManager();
-    sm.resetSaveData();
-    sm.startStage(1);
-    sm.goldSpawnBudget = 1000;
-    sm.remainingGoldBudget = 1000;
-    sm.currentGoldValue = 32;
-    sm.goldDropsCount = 0;
-    sm.goldDropInterval = 8;
-    sm.nextGoldDropTurn = 8;
-
-    const triggerTurn = (turn) => {
-      sm.board.clear();
-      sm.board.setTile(4, 0, new Tile(2, TileType.HERO, 4, 0));
-      sm.board.setTile(0, 4, new Tile(1024, TileType.MONSTER, 0, 4));
-      sm.board.setTile(3, 0, new Tile(2, TileType.EQUIPMENT, 3, 0));
-      sm.turnCount = turn - 1;
-      const res = sm.handleMove(Direction.DOWN);
-      this.assert(res.moved === true, `Move at turn ${turn} succeeded`);
-    };
-
-    // Simulate 4 drops
-    for (let i = 1; i <= 4; i++) {
-      triggerTurn(sm.nextGoldDropTurn);
-    }
-    this.assert(sm.currentGoldValue === 16, 'After 4 drops, gold value decays from 32 to 16');
-
-    // Simulate next 4 drops (total 8)
-    for (let i = 5; i <= 8; i++) {
-      triggerTurn(sm.nextGoldDropTurn);
-    }
-    this.assert(sm.currentGoldValue === 8, 'After 8 drops, gold value decays from 16 to 8');
-
-    // Simulate next 4 drops (total 12)
-    for (let i = 9; i <= 12; i++) {
-      triggerTurn(sm.nextGoldDropTurn);
-    }
-    this.assert(sm.currentGoldValue === 4, 'After 12 drops, gold value decays from 8 to 4');
-
-    // Simulate next 4 drops (total 16)
-    for (let i = 13; i <= 16; i++) {
-      triggerTurn(sm.nextGoldDropTurn);
-    }
-    this.assert(sm.currentGoldValue === 4, 'After 16 drops, gold value remains clamped at minimum 4');
-  }
-
-  // C-STORY-029 GWT 29.4：全 350 關卡金幣獎勵池翻倍驗證
-  testGwt29_4_AllStagesGoldCapDoubled() {
-    // Chapter 1 (1~5)
-    this.assert(STAGE_CONFIGS[0].goldCap === 40, 'Stage 1 goldCap is doubled to 40');
-    this.assert(STAGE_CONFIGS[4].goldCap === 80, 'Stage 5 goldCap is doubled to 80');
-
-    // Chapter 2 (6~20)
-    this.assert(STAGE_CONFIGS[5].goldCap === 90, 'Stage 6 goldCap is doubled to 90');
-    this.assert(STAGE_CONFIGS[19].goldCap === 240, 'Stage 20 goldCap is doubled to 240');
-
-    // Chapter 3~8 (21~350)
-    // Formula: Math.floor(80 + s * 4)
-    this.assert(STAGE_CONFIGS[20].goldCap === 164, 'Stage 21 goldCap is 80 + 21*4 = 164');
-    this.assert(STAGE_CONFIGS[29].goldCap === 200, 'Stage 30 goldCap is 80 + 30*4 = 200 (was 100)');
-    this.assert(STAGE_CONFIGS[99].goldCap === 480, 'Stage 100 goldCap is 80 + 100*4 = 480 (was 240)');
-    this.assert(STAGE_CONFIGS[349].goldCap === 1480, 'Stage 350 goldCap is 80 + 350*4 = 1480 (was 740)');
-  }
 }
-
 

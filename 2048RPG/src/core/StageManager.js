@@ -786,14 +786,14 @@ export class StageManager {
           this.remainingGoldBudget -= spawnVal;
           this.goldDropsCount++;
 
-          // Rich vein decay: Every 4 drops, drop 1 tier (halve value down to min 4) (C-STORY-019 / C-STORY-029)
+          // Rich vein decay: Every 4 drops, drop 1 tier (halve value down to min 4)
           if (this.goldDropsCount % 4 === 0) {
             this.currentGoldValue = Math.max(4, Math.floor(this.currentGoldValue / 2));
           }
 
-          // Dynamic pacing: After initial 8 rich drops, each drop increases interval by 2 turns (capped at 16) (C-STORY-029)
-          if (this.goldDropsCount >= 8) {
-            this.goldDropInterval = Math.min(16, this.goldDropInterval + 2);
+          // Dynamic pacing: After initial 4 drops, each drop increases next interval by 6 turns
+          if (this.goldDropsCount >= 4) {
+            this.goldDropInterval += 6;
           }
           this.nextGoldDropTurn = this.turnCount + this.goldDropInterval;
         } else {
