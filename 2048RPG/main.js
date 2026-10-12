@@ -5,6 +5,7 @@ import { StageManager } from './src/core/StageManager.js';
 import { ViewRenderer } from './src/presentation/ViewRenderer.js';
 import { AudioEffects } from './src/presentation/AudioEffects.js';
 import { TutorialOverlay } from './src/presentation/TutorialOverlay.js';
+import { StageListView } from './src/presentation/StageListView.js';
 import { Direction, STAGE_CONFIGS, STAGE_0_CONFIG, Events, MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS, DEFEAT_TACTICAL_TIPS } from './src/core/Constants.js';
 import { GwtRunner } from './src/tests/GwtRunner.js';
 
@@ -36,6 +37,15 @@ class AppController {
 
     this.topGoldValEl = document.getElementById('top-gold-val');
     this.stagesListEl = document.getElementById('stages-list');
+
+    // Stage List Presentation View (C-STORY-040 Architecture Decoupling)
+    this.stageListView = new StageListView({
+      stageManager: this.stageManager,
+      audio: this.audio,
+      onSelectStage: (stage) => this.openBriefingModal(stage),
+      onChapterChanged: (chapterId) => { this.selectedChapter = chapterId; }
+    });
+
     this.combatOverlayEl = document.getElementById('combat-overlay');
     this.combatStageNameEl = document.getElementById('combat-stage-name');
     this.combatTurnValEl = document.getElementById('combat-turn-val');
@@ -375,6 +385,12 @@ class AppController {
         });
         const targetView = document.getElementById(tabId);
         if (targetView) targetView.classList.add('active');
+
+        // C-STORY-039: Reset scroll position to top on tab switch
+        const mainContent = document.getElementById('main-content');
+        if (mainContent) {
+          mainContent.scrollTop = 0;
+        }
       });
     });
 
@@ -382,44 +398,10 @@ class AppController {
   }
 
   renderChapterTabs() {
-    const tabsContainer = document.getElementById('chapter-tabs');
-    if (!tabsContainer) return;
-    tabsContainer.innerHTML = '';
-
-    const chapterIcons = ['🌾', '🔥', '🌲', '🏰', '⛰️', '💀', '⚡', '👑'];
-    const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
-
-    CHAPTER_CONFIGS.forEach(ch => {
-      const isUnlocked = this.stageManager.isChapterUnlocked(ch.id);
-      const icon = ch.icon || '⚔️';
-      let titleText = '';
-      if (ch.id === 0) {
-        titleText = `${icon} 序章訓練所`;
-      } else {
-        const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][ch.id - 1] || ch.id;
-        titleText = `${icon} 第 ${roman} 章`;
-      }
-
-      const btn = document.createElement('button');
-      btn.className = `chapter-tab-btn ${this.selectedChapter === ch.id ? 'active' : ''} ${isUnlocked ? '' : 'locked'}`;
-      btn.dataset.chapter = ch.id;
-      btn.id = `tab-chapter-${ch.id}`;
-      btn.textContent = isUnlocked ? titleText : `${titleText} 🔒`;
-
-      btn.addEventListener('click', () => {
-        if (!this.stageManager.isChapterUnlocked(ch.id)) {
-          const prevCh = CHAPTER_CONFIGS.find(c => c.id === ch.id - 1);
-          const reqStage = prevCh ? prevCh.range[1] : (ch.id - 1) * 5;
-          alert(`🔒 請先通關第 ${ch.id - 1} 章最後一關（第 ${reqStage} 關）以解鎖本章節！`);
-          return;
-        }
-        this.audio.playClick();
-        this.selectedChapter = ch.id;
-        this.renderStagesList();
-      });
-
-      tabsContainer.appendChild(btn);
-    });
+    if (this.stageListView) {
+      this.stageListView.selectedChapter = this.selectedChapter;
+      this.stageListView.renderChapterTabs();
+    }
   }
 
   bindSettings() {
@@ -535,73 +517,10 @@ class AppController {
   }
 
   renderStagesList() {
-    if (!this.stagesListEl) return;
-    this.stagesListEl.innerHTML = '';
-
-    // Update chapter tabs locked state & text
-    this.renderChapterTabs();
-
-    // Update chapter banner text
-    const chConfig = CHAPTER_CONFIGS.find(c => c.id === this.selectedChapter) || CHAPTER_CONFIGS[0];
-    const bannerTitle = document.getElementById('chapter-title');
-    const bannerDesc = document.getElementById('chapter-desc');
-    if (bannerTitle) bannerTitle.textContent = chConfig.name;
-    if (bannerDesc) bannerDesc.textContent = chConfig.desc;
-
-    const unlockedId = this.stageManager.unlockedStageId;
-    const currentStages = (this.selectedChapter === 0)
-      ? [STAGE_0_CONFIG]
-      : STAGE_CONFIGS.filter(s => s.chapter === this.selectedChapter);
-
-    currentStages.forEach(stage => {
-      const isTutorialStage = (stage.id === 0);
-      const isCleared = isTutorialStage 
-        ? (this.stageManager.tutorialManager && this.stageManager.tutorialManager.isCompleted)
-        : !!this.stageManager.clearedStages[stage.id];
-      const isUnlocked = isTutorialStage ? true : (stage.id <= unlockedId);
-
-      const card = document.createElement('div');
-      card.className = `stage-card ${isUnlocked ? '' : 'locked'}`;
-
-      let statusHtml = '';
-      if (isCleared) {
-        statusHtml = '<span class="stage-status-pill status-cleared">★ 已通關</span>';
-      } else if (isUnlocked) {
-        statusHtml = '<span class="stage-status-pill status-ready">⚔️ 可出擊</span>';
-      } else {
-        statusHtml = '<span class="stage-status-pill status-locked">🔒 未解鎖</span>';
-      }
-
-      let rewardBadgeHtml = '';
-      if (isCleared) {
-        rewardBadgeHtml = '<div class="stage-reward-badge cleared">✔ 已領取</div>';
-      } else {
-        rewardBadgeHtml = `<div class="stage-reward-badge">初次 +${stage.rewardGold} 🪙</div>`;
-      }
-
-      card.innerHTML = `
-        <div class="stage-card-left">
-          <div class="stage-icon-box">${stage.icon || '⚔️'}</div>
-          <div class="stage-meta">
-            <h4>${stage.name}</h4>
-            <div class="stage-sub">${stage.subtitle}</div>
-          </div>
-        </div>
-        <div class="stage-card-right">
-          ${rewardBadgeHtml}
-          ${statusHtml}
-        </div>
-      `;
-
-      if (isUnlocked) {
-        card.addEventListener('click', () => {
-          this.audio.playClick();
-          this.openBriefingModal(stage);
-        });
-      }
-
-      this.stagesListEl.appendChild(card);
-    });
+    if (this.stageListView) {
+      this.stageListView.selectedChapter = this.selectedChapter;
+      this.stageListView.render();
+    }
   }
 
   openBriefingModal(stage) {
@@ -1533,6 +1452,12 @@ class AppController {
     });
     const target = document.getElementById(tabId);
     if (target) target.classList.add('active');
+
+    // C-STORY-039: Reset scroll position to top on programmatic tab switch
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+      mainContent.scrollTop = 0;
+    }
   }
 
   showAdSimulator(onComplete) {

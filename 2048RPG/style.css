@@ -169,6 +169,13 @@ body {
   display: block;
 }
 
+/* C-STORY-040: View Stages Layout - chapter-tabs flush to top without padding gap and auto height for full sticky scope */
+#view-stages {
+  padding-top: 0;
+  height: auto;
+  min-height: 100%;
+}
+
 /* Chapter Banner */
 .chapter-banner {
   background: linear-gradient(135deg, rgba(2, 132, 199, 0.25), rgba(99, 102, 241, 0.2));
@@ -1558,17 +1565,6 @@ body {
    C-STORY-006: CHAPTER TABS & SPLITTER MONSTER STYLES
    ========================================================================== */
 
-/* Chapter Switcher Tabs */
-.chapter-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  background: rgba(15, 23, 42, 0.6);
-  padding: 4px;
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-}
-
 .chapter-tab-btn {
   flex: 1;
   background: transparent;
@@ -2043,13 +2039,22 @@ body {
   cursor: not-allowed;
 }
 
-/* Chapter Tab Bar horizontal scroll */
+/* Chapter Tab Bar horizontal scroll & Fixed Sticky Header (C-STORY-039 / C-STORY-040) */
 .chapter-tabs {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #0f172a;
   display: flex;
   gap: 6px;
   overflow-x: auto;
   white-space: nowrap;
-  padding-bottom: 6px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
   -webkit-overflow-scrolling: touch;
 }
 

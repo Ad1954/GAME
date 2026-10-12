@@ -49,6 +49,8 @@
 - 🟢 `C-STORY-036`: Cache Busting 版本戳記與 iOS 主畫面無損熱更新
 - 🟢 `C-STORY-037`: 轉蛋機山形曲線擴展、科技費用平滑化、十連必送救急道具、初通賞金溫和增溫與裝備上限 65536
 - 🟢 `C-STORY-038`: 英雄魔物光圈復原、受阻微震與滿盤瀕危紅光警示
+- 🟢 `C-STORY-039`: 大廳分頁捲動重置置頂、冒險章節懸浮與挑戰關卡智慧定位
+- 🟢 `C-STORY-040`: 章節列頂部完全釘選、已通關靜態瞬現與關卡視圖模組化解耦
 
 ---
 
@@ -650,6 +652,69 @@
   * **Given**: 戰鬥進行中，盤面上的方塊數量逐漸增加，剩餘空格極少。
   * **When**: `ViewRenderer` 渲染戰鬥盤面時檢測 `board.getEmptyCells().length <= 1`（全盤 25 格中只剩 1 格或 0 格空格）。
   * **Then**: 戰鬥盤面容器（`#battle-board`）立即加入邊緣紅色危險閃爍類別（`.board-danger-flash`），盤面四週邊界呈現高辨識度的鮮紅發光脈衝呼吸特效（`dangerPulse`）；當玩家透過合成騰出空格、擊殺魔物、使用戰槌破壞方塊，或點擊領取金幣使空格數量回升至 2 格以上時，`.board-danger-flash` 立即自動移除，警報解除。
+
+---
+
+## 🌟 C-STORY-039：大廳分頁捲動重置置頂、冒險章節標籤懸浮與最新挑戰關卡智慧定位 (Lobby Navigation Scroll Reset & Smart Stage Scroll)
+
+* **身分 (As a)**: 探索大廳各項系統與挑戰 350 大地牢關卡的玩家
+* **想要 (I want to)**: 
+  1. **分頁捲動重置至頂**：當前不同分頁（冒險、角色、營地、商店）共用主滾動視窗，當我在冒險滑到很後面的關卡再切換到營地時，希望視圖預設在最頂端，第一眼就能看到最重要的軍需轉蛋機與設施，而非停在大廳最底部。
+  2. **冒險章節標籤持續置頂**：在冒險分頁向下滾動瀏覽長長的關卡清單時，章節切換欄（Chapter Tabs）持續懸浮置頂（Sticky），方便隨時橫向滑動切換其他章節，無須辛苦往上滑回最開頭。
+  3. **最新挑戰關卡智慧定位**：
+     - 持久化記錄玩家最新出擊挑戰的關卡 `lastChallengedStageId`。
+     - 進入冒險或切換至未全數通關的章節時，自動平滑滾動並將焦點關卡（最新挑戰或第一個未通關關卡）置中對齊於螢幕中央。
+     - 若該章節已經全數通關，則自動平滑滾動至最底部，方便玩家快速回顧最終關卡或點選最後的大魔王關。
+* **以便 (So that)**: 操作導航流暢自然、資訊一目了然，隨時掌握自己目前的挑戰進度，杜絕頻繁折返手動滑動的疲憊感。
+
+### 驗收標準 (Acceptance Criteria / GWT Specification)
+
+* **【GWT 39.1：切換分頁時重置主內容捲動軸至最頂端 (scrollTop = 0)】**
+  * **Given**: 玩家在冒險分頁（或任何分頁）將 `#main-content` 垂直捲動至較深位置（例如 `scrollTop = 500`）。
+  * **When**: 玩家點擊底部導航欄切換至「營地」、「角色」或「商店」等任何其他分頁，或透過程式化觸發 `switchToTab()`。
+  * **Then**: `#main-content` 之 `scrollTop` 立即重設為 0，新切換的分頁內容完整從最頂端呈現，營地分頁一進入即可看見頂部核心轉蛋機。
+* **【GWT 39.2：冒險章節切換欄具備 sticky 懸浮置頂樣式規則】**
+  * **Given**: 冒險分頁中的關卡清單包含大量關卡卡片，頁面長度超出視窗高度。
+  * **When**: 玩家在冒險分頁中上下滾動瀏覽關卡。
+  * **Then**: `.chapter-tabs` 擁有 `position: sticky; top: 0; z-index: 15; background: #0f172a;`，牢牢釘選在滾動視圖最上方，章節切換按鈕持續可見且可點擊切換，關卡卡片自然自其下方穿過滾動。
+* **【GWT 39.3：最新挑戰關卡 ID (lastChallengedStageId) 記錄與持久化存檔】**
+  * **Given**: 玩家進行遊戲，點擊進入某關卡（例如 Stage 15）。
+  * **When**: `stageManager.startStage(stageId)` 觸發執行。
+  * **Then**: `stageManager.lastChallengedStageId` 自動記錄為 15，並隨 `saveData()` 存入 localStorage；重新載入遊戲時能完整復原該數值，呼叫 `resetSaveData()` 則正確復原為預設值 1。
+* **【GWT 39.4：已全通關章節與未全通關章節之智慧自動滾動邏輯驗證】**
+  * **Given**: 玩家開啟或切換至某一冒險章節。
+  * **When**: `renderStagesList()` 渲染該章節的所有關卡卡片。
+  * **Then**: 
+    - 若該章節所有關卡皆已獲得通關星級標記（All Cleared）：自動平滑滾動定位至最底部的最後一張關卡卡片（`lastCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' })`）。
+    - 若該章節尚未全部通關：自動定位最新挑戰的關卡（若在本章內）或本章第一個解鎖且未通關的關卡，並平滑滾動將其置中對齊（`targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' })`）。
+
+---
+
+## 🌟 C-STORY-040：章節列頂部完全釘選、已通關靜態瞬現與關卡視圖模組化解耦 (Flawless Sticky Tabs, Instant Cleared Bottom Anchor & StageListView Decoupling)
+
+* **身分 (As a)**: 探索地牢遠征的冒險玩家與維護系統架構的開發者
+* **想要 (I want to)**: 
+  1. **章節列頂部完全釘選**：徹底消除冒險頁頂部的內距空隙，提高 sticky 層級並加上邊界陰影，使章節切換欄在持續向下滾動時 100% 牢靠釘選在頂部，絕不隨關卡列表滾出畫面。
+  2. **已通關靜態瞬現最底端**：切換到已全通關章節時，直接以靜態（Instant）方式顯示在最底端關卡，杜絕「先看到頂部再滑下去」的視覺穿幫。
+  3. **冒險關卡視圖模組化解耦**：將關卡列表與章節標籤的 DOM 控制與渲染邏輯從 `main.js` 抽離為專職的 `StageListView` 模組，為後續關卡系統介面全新改版預作無痛整塊抽換準備。
+* **以便 (So that)**: 冒險操作體驗純粹乾脆，架構職責分明，後續大改版時能保證零代碼殘留與零全域污染。
+
+### 驗收標準 (Acceptance Criteria / GWT Specification)
+
+* **【GWT 40.1：冒險章節切換欄樣式優化（0 頂部間距、高 z-index 20 與底部分隔陰影）】**
+  * **Given**: 冒險分頁（`#view-stages`）處於啟用狀態，包含章節切換欄（`.chapter-tabs`）與關卡清單。
+  * **When**: 檢查視圖樣式定義與層疊結構。
+  * **Then**: `#view-stages` 具有 `padding-top: 0`；`.chapter-tabs` 擁有 `position: sticky; top: 0; z-index: 20; background: #0f172a;`，並具備底部分隔線與陰影效果，確保向下滾動時牢牢固鎖在視窗頂端，文字與關卡卡片完全不遮擋或移出。
+* **【GWT 40.2：切換至已通關章節時直接以 instant 行為置底，杜絕平滑滑動穿幫】**
+  * **Given**: 玩家切換至一個所有關卡均已獲得星級通關的章節（All Cleared）。
+  * **When**: `StageListView.scrollToAppropriateStage()` 計算定位。
+  * **Then**: 系統使用 `behavior: 'instant'` 將最後一張卡片瞬現於視圖底部，消除任何自頂端平滑滑動的延遲與穿幫，使玩家第一眼立即看見最新或最後一關。
+* **【GWT 40.3：StageListView 模組職責完整解耦，提供標準 render、setChapter 與 destroy 介面】**
+  * **Given**: 冒險介面控制器架構。
+  * **When**: 調用 `StageListView` 獨立實例的方法。
+  * **Then**: 具備完整的獨立生命週期，提供 `render()`、`setChapter(id)`、`scrollToAppropriateStage()` 與 `destroy()`，與主控制器 `main.js` 僅透過回調溝通，使後續關卡介面全新改版時能無縫替換、零歷史代碼殘留。
+
+
 
 
 

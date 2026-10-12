@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>2048 RPG：王國遠征 (Commercial Edition)</title>
-  <link rel="stylesheet" href="style.css?v=1.3.8">
+  <link rel="stylesheet" href="style.css?v=1.4.0">
 </head>
 <body>
 
@@ -31,7 +31,7 @@
           <span class="btn-start-icon">⚔️</span>
           <span class="btn-start-text">開始遊戲</span>
         </button>
-        <div class="title-version">v1.3.8 · 350 Stages Commercial Version</div>
+        <div class="title-version">v1.4.0 · 350 Stages Commercial Version</div>
       </div>
     </div>
 
@@ -479,11 +479,29 @@
           <hr style="border: 0; border-top: 1px solid #334155; margin: 12px 0;">
           <div class="setting-section-header" style="margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
             <span style="font-size: 0.92rem; font-weight: 800; color: #38bdf8;">📜 版本更新履歷</span>
-            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v1.3.8</span>
+            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v1.4.0</span>
           </div>
           <div class="version-changelog-box" id="version-changelog-box">
             <div class="changelog-item">
-              <div class="changelog-badge">🌟 C-STORY-038 (最新)</div>
+              <div class="changelog-badge">🌟 C-STORY-040 (最新)</div>
+              <div class="changelog-title">章節列頂部完全釘選、已通關靜態瞬現與關卡視圖模組化解耦</div>
+              <ul class="changelog-list">
+                <li>📌 章節列完全釘選：消除頂部間隙並提高層級，向下滾動時章節切換欄 100% 牢固置頂</li>
+                <li>⚡ 已通關靜態瞬現：切換已全通關章節直接在最底端呈現，杜絕由上往下滑動的視覺穿幫</li>
+                <li>🧩 關卡視圖模組化：獨立封裝 StageListView，隔離 UI 與邏輯，為後續關卡介面全新改版預作無痛抽換準備</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-039</div>
+              <div class="changelog-title">分頁切換自動置頂、冒險章節懸浮與挑戰關卡智慧定位</div>
+              <ul class="changelog-list">
+                <li>🔝 分頁滾動自動重置：點擊底部導航切換至營地、角色、冒險、商店時，視圖自動回彈頂部</li>
+                <li>📌 冒險章節標籤置頂：關卡清單上下滾動時，橫向章節切換欄固定於頂端，隨時切換免折返</li>
+                <li>🎯 最新挑戰智慧定位：持久化最新挑戰關卡，未全通自動置中對齊，全通章節貼心滑動至底部</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-038</div>
               <div class="changelog-title">英雄魔物光圈復原、受阻微震與滿盤瀕危紅光警示</div>
               <ul class="changelog-list">
                 <li>✨ 英雄魔物光圈完全恢復：解除裁切限制，5px 粗框伴隨水藍呼吸波浪與鮮紅脈衝光圈</li>
@@ -816,6 +834,6 @@
 
   </div>
 
-  <script type="module" src="main.js?v=1.3.8"></script>
+  <script type="module" src="main.js?v=1.4.0"></script>
 </body>
 </html>

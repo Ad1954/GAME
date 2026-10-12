@@ -40,6 +40,7 @@ export class StageManager {
     this.gold = 300;
     this.battleStartGold = 300;
     this.unlockedStageId = 1;
+    this.lastChallengedStageId = 1; // C-STORY-039: Track latest challenged stage
     this.clearedStages = {}; // { [stageId]: { stars: number, clearedCount: number } }
     this.gachaExp = 0; // Total pulls
     this.gachaLevel = 1;
@@ -89,6 +90,7 @@ export class StageManager {
           this.saveVersion = CURRENT_GAME_VERSION;
         }
         this.unlockedStageId = parsed.unlockedStageId || 1;
+        this.lastChallengedStageId = parsed.lastChallengedStageId || this.unlockedStageId || 1;
         this.clearedStages = parsed.clearedStages || {};
         this.gachaExp = typeof parsed.gachaExp === 'number' ? parsed.gachaExp : 0;
         this.gachaLevel = this.gachaEngine.calculateLevel(this.gachaExp);
@@ -136,6 +138,7 @@ export class StageManager {
         saveVersion: this.saveVersion || CURRENT_GAME_VERSION,
         gold: this.gold,
         unlockedStageId: this.unlockedStageId,
+        lastChallengedStageId: this.lastChallengedStageId || 1,
         clearedStages: this.clearedStages,
         gachaExp: this.gachaExp,
         inventory: this.inventory.serialize(),
@@ -161,6 +164,7 @@ export class StageManager {
     this.saveVersion = CURRENT_GAME_VERSION;
     this.gold = 300;
     this.unlockedStageId = 1;
+    this.lastChallengedStageId = 1;
     this.clearedStages = {};
     this.gachaExp = 0;
     this.gachaLevel = 1;
@@ -530,6 +534,8 @@ export class StageManager {
     const actualHeroPower = (heroPower !== undefined) ? heroPower : this.inventory.getEquippedPower();
 
     this.currentStageConfig = config;
+    this.lastChallengedStageId = stageId;
+    this.saveData();
     this.isInBattle = true;
     this.isVictory = false;
     this.isGameOver = false;

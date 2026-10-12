@@ -1,7 +1,7 @@
 {
-  "summary": "RESULTS: 142/142 PASS",
-  "passed": 142,
-  "total": 142,
+  "summary": "RESULTS: 149/149 PASS",
+  "passed": 149,
+  "total": 149,
   "results": [
     {
       "name": "bound testGwt1_1_TopBarAndGoldState",
@@ -569,6 +569,34 @@
     },
     {
       "name": "bound testGwt38_3_DangerPulseFlashWhenOneCellOrFull",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt39_1_TabSwitchResetsScrollPositionToTop",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt39_2_StickyChapterTabsCssConfiguration",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt39_3_LastChallengedStagePersistenceAndSmartScroll",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt39_4_AllClearedChapterScrollsToBottom",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt40_1_ChapterTabsFixedZeroTopGapAndElevation",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt40_2_AllClearedChapterInstantScrollWithoutGlitch",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt40_3_StageListViewArchitectureDecoupling",
       "status": "PASS"
     }
   ]

@@ -43,7 +43,7 @@ export const Events = {
   TUTORIAL_COMPLETED: 'TUTORIAL_COMPLETED'
 };
 
-export const CURRENT_GAME_VERSION = 'v1.3.8';
+export const CURRENT_GAME_VERSION = 'v1.4.0';
 
 export const MAX_ITEM_STACK = 999;
 

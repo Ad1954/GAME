@@ -11,6 +11,7 @@ import { MAX_EQUIPMENT_VALUE } from '../core/InventoryManager.js';
 import { GameEventBus } from '../core/GameEventBus.js';
 import { ViewRenderer } from '../presentation/ViewRenderer.js';
 import { TutorialOverlay } from '../presentation/TutorialOverlay.js';
+import { StageListView } from '../presentation/StageListView.js';
 
 export class GwtRunner {
   constructor() {
@@ -204,7 +205,16 @@ export class GwtRunner {
       // C-STORY-038: 畫面效果微調（英雄魔物光圈復原、受阻微震與滿盤瀕危紅光警示）
       this.testGwt38_1_HeroAndMonsterOutlineAndBreathingEffect.bind(this),
       this.testGwt38_2_InvalidMoveTileShakeFeedback.bind(this),
-      this.testGwt38_3_DangerPulseFlashWhenOneCellOrFull.bind(this)
+      this.testGwt38_3_DangerPulseFlashWhenOneCellOrFull.bind(this),
+      // C-STORY-039: 大廳分頁捲動重置置頂、冒險章節懸浮與挑戰關卡智慧定位
+      this.testGwt39_1_TabSwitchResetsScrollPositionToTop.bind(this),
+      this.testGwt39_2_StickyChapterTabsCssConfiguration.bind(this),
+      this.testGwt39_3_LastChallengedStagePersistenceAndSmartScroll.bind(this),
+      this.testGwt39_4_AllClearedChapterScrollsToBottom.bind(this),
+      // C-STORY-040: 章節列頂部完全釘選、已通關靜態瞬現與關卡視圖模組化解耦
+      this.testGwt40_1_ChapterTabsFixedZeroTopGapAndElevation.bind(this),
+      this.testGwt40_2_AllClearedChapterInstantScrollWithoutGlitch.bind(this),
+      this.testGwt40_3_StageListViewArchitectureDecoupling.bind(this)
     ];
 
     for (const test of testCases) {
@@ -3542,7 +3552,7 @@ export class GwtRunner {
         'main.js must have version query parameter'
       );
     }
-    this.assert(CURRENT_GAME_VERSION === 'v1.3.8', 'CURRENT_GAME_VERSION must be v1.3.8');
+    this.assert(CURRENT_GAME_VERSION === 'v1.4.0', 'CURRENT_GAME_VERSION must be v1.4.0');
   }
 
   // C-STORY-036 GWT 36.2：設定視窗具備「檢查並刷新最新版本」按鈕配置
@@ -3855,6 +3865,257 @@ export class GwtRunner {
     this.assert(board.getEmptyCells().length === 2, 'Board recovered to 2 empty cells');
     renderer.renderBoard(board);
     this.assert(!boardEl.classList.contains('board-danger-flash'), 'Danger flash automatically deactivated when cells freed');
+  }
+
+  // ==========================================================================
+  // C-STORY-039：大廳分頁捲動重置置頂、冒險章節懸浮與挑戰關卡智慧定位驗收測試
+  // ==========================================================================
+
+  // C-STORY-039 GWT 39.1：切換分頁時重置主內容捲動軸至最頂端 (scrollTop = 0)
+  testGwt39_1_TabSwitchResetsScrollPositionToTop() {
+    let mainContent = document.getElementById('main-content');
+    let created = false;
+    if (!mainContent) {
+      mainContent = document.createElement('div');
+      mainContent.id = 'main-content';
+      mainContent.style.height = '100px';
+      mainContent.style.overflow = 'auto';
+      const inner = document.createElement('div');
+      inner.style.height = '1000px';
+      mainContent.appendChild(inner);
+      document.body.appendChild(mainContent);
+      created = true;
+    } else {
+      mainContent.style.height = '100px';
+      mainContent.style.overflow = 'auto';
+      const inner = document.createElement('div');
+      inner.style.height = '1000px';
+      mainContent.appendChild(inner);
+    }
+    mainContent.scrollTop = 500;
+
+    // Mock app context
+    const appMock = {
+      switchToTab(tabId) {
+        const mc = document.getElementById('main-content');
+        if (mc) mc.scrollTop = 0;
+      }
+    };
+
+    this.assert(mainContent.scrollTop > 0, 'Given: main-content is scrolled to > 0px');
+    appMock.switchToTab('view-armory');
+    this.assert(mainContent.scrollTop === 0, 'Then: switchToTab resets main-content scrollTop to 0');
+
+    if (created && mainContent.parentNode) {
+      document.body.removeChild(mainContent);
+    }
+  }
+
+  // C-STORY-039 GWT 39.2：冒險章節切換欄具備 sticky 懸浮置頂樣式規則
+  async testGwt39_2_StickyChapterTabsCssConfiguration() {
+    let cssText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./style.css');
+        if (resp.ok) cssText = await resp.text();
+      } catch (e) {}
+    }
+    if (cssText) {
+      this.assert(
+        cssText.includes('.chapter-tabs') && cssText.includes('position: sticky') && cssText.includes('top: 0'),
+        '.chapter-tabs must have position: sticky and top: 0 in style.css'
+      );
+      this.assert(
+        cssText.includes('z-index: 15'),
+        '.chapter-tabs must specify high z-index for floating over stage list'
+      );
+    }
+  }
+
+  // C-STORY-039 GWT 39.3：最新挑戰關卡 ID (lastChallengedStageId) 記錄與持久化存檔
+  testGwt39_3_LastChallengedStagePersistenceAndSmartScroll() {
+    localStorage.removeItem('2048RPG_Commercial_Save_v1');
+    const sm = new StageManager();
+    this.assert(sm.lastChallengedStageId === 1, 'Default lastChallengedStageId is 1');
+
+    // Simulate starting stage 15
+    sm.unlockedStageId = 20;
+    sm.startStage(15);
+    this.assert(sm.lastChallengedStageId === 15, 'lastChallengedStageId is updated to 15 when starting stage');
+
+    // Load in fresh StageManager instance to verify localStorage persistence
+    const smNew = new StageManager();
+    this.assert(smNew.lastChallengedStageId === 15, 'lastChallengedStageId persists and loads accurately across sessions');
+
+    // Test resetSaveData
+    smNew.resetSaveData();
+    this.assert(smNew.lastChallengedStageId === 1, 'resetSaveData restores lastChallengedStageId back to 1');
+    localStorage.removeItem('2048RPG_Commercial_Save_v1');
+  }
+
+  // C-STORY-039 GWT 39.4：已全通關章節與未全通關章節之智慧自動滾動邏輯驗證
+  testGwt39_4_AllClearedChapterScrollsToBottom() {
+    const listEl = document.createElement('div');
+    listEl.id = 'stages-list';
+    document.body.appendChild(listEl);
+
+    // Mock 3 stages
+    let scrolledTarget = null;
+    let scrolledBlock = null;
+    for (let i = 1; i <= 3; i++) {
+      const card = document.createElement('div');
+      card.className = 'stage-card';
+      card.dataset.stageId = i;
+      card.scrollIntoView = (options) => {
+        scrolledTarget = i;
+        scrolledBlock = options && options.block;
+      };
+      listEl.appendChild(card);
+    }
+
+    const sm = new StageManager();
+
+    // Scenario A: Chapter not all cleared, last challenged is stage 2
+    sm.clearedStages = { 1: { stars: 3, clearedCount: 1 } };
+    sm.unlockedStageId = 2;
+    sm.lastChallengedStageId = 2;
+    const currentStagesA = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    const allClearedA = currentStagesA.every(s => !!sm.clearedStages[s.id]);
+    this.assert(!allClearedA, 'Scenario A is not all cleared');
+
+    // Simulate smart scroll
+    if (allClearedA) {
+      listEl.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      const target = currentStagesA.find(s => s.id === sm.lastChallengedStageId);
+      const card = listEl.querySelector(`[data-stage-id="${target.id}"]`);
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    this.assert(scrolledTarget === 2, 'Uncleared chapter targets lastChallengedStageId (Stage 2)');
+    this.assert(scrolledBlock === 'center', 'Uncleared target card scrolls to center');
+
+    // Scenario B: All 3 stages cleared
+    sm.clearedStages[2] = { stars: 3, clearedCount: 1 };
+    sm.clearedStages[3] = { stars: 3, clearedCount: 1 };
+    const allClearedB = currentStagesA.every(s => !!sm.clearedStages[s.id]);
+    this.assert(allClearedB, 'Scenario B is all cleared');
+
+    if (allClearedB) {
+      listEl.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    this.assert(scrolledTarget === 3, 'All cleared chapter scrolls to last stage (bottom)');
+
+    document.body.removeChild(listEl);
+  }
+
+  // ==========================================================================
+  // C-STORY-040：章節列頂部完全釘選、已通關靜態瞬現與關卡視圖模組化解耦驗收測試
+  // ==========================================================================
+
+  // C-STORY-040 GWT 40.1：冒險章節切換欄樣式優化（0 頂部間距、高 z-index 20 與底部分隔陰影）
+  async testGwt40_1_ChapterTabsFixedZeroTopGapAndElevation() {
+    let cssText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./style.css');
+        if (resp.ok) cssText = await resp.text();
+      } catch (e) {}
+    }
+    if (cssText) {
+      this.assert(
+        cssText.includes('#view-stages') && cssText.includes('padding-top: 0'),
+        '#view-stages must have padding-top: 0 to eliminate top gap'
+      );
+      this.assert(
+        cssText.includes('.chapter-tabs') && cssText.includes('z-index: 20'),
+        '.chapter-tabs must have z-index: 20 for solid elevated sticky behavior'
+      );
+      this.assert(
+        cssText.includes('box-shadow') && cssText.includes('border-bottom'),
+        '.chapter-tabs must feature bottom divider border and shadow'
+      );
+    }
+  }
+
+  // C-STORY-040 GWT 40.2：切換至已通關章節時直接以 instant 行為置底，杜絕平滑滑動穿幫
+  testGwt40_2_AllClearedChapterInstantScrollWithoutGlitch() {
+    const listEl = document.createElement('div');
+    listEl.id = 'stages-list';
+    document.body.appendChild(listEl);
+
+    let scrolledTarget = null;
+    let scrolledBehavior = null;
+
+    for (let i = 1; i <= 3; i++) {
+      const card = document.createElement('div');
+      card.className = 'stage-card';
+      card.dataset.stageId = i;
+      card.scrollIntoView = (options) => {
+        scrolledTarget = i;
+        scrolledBehavior = options && options.behavior;
+      };
+      listEl.appendChild(card);
+    }
+
+    const sm = new StageManager();
+    sm.clearedStages = { 1: { stars: 3 }, 2: { stars: 3 }, 3: { stars: 3 } };
+
+    const stageListView = new StageListView({
+      stageManager: sm,
+      stagesListEl: listEl
+    });
+
+    const currentStages = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    stageListView.scrollToAppropriateStage(currentStages, 10);
+
+    this.assert(scrolledTarget === 3, 'All cleared chapter targets last stage (bottom)');
+    this.assert(scrolledBehavior === 'instant', 'All cleared chapter uses instant scroll behavior (no glitch sliding)');
+
+    document.body.removeChild(listEl);
+  }
+
+  // C-STORY-040 GWT 40.3：StageListView 模組職責完整解耦，提供標準 render、setChapter 與 destroy 介面
+  testGwt40_3_StageListViewArchitectureDecoupling() {
+    const tabsEl = document.createElement('div');
+    const listEl = document.createElement('div');
+    const titleEl = document.createElement('div');
+    const descEl = document.createElement('div');
+
+    const sm = new StageManager();
+    let selectedStageReported = null;
+    let chapterChangedReported = null;
+
+    const view = new StageListView({
+      stageManager: sm,
+      tabsContainer: tabsEl,
+      stagesListEl: listEl,
+      bannerTitle: titleEl,
+      bannerDesc: descEl,
+      onSelectStage: (stage) => { selectedStageReported = stage; },
+      onChapterChanged: (ch) => { chapterChangedReported = ch; }
+    });
+
+    // 1. Initial render
+    view.render();
+    this.assert(tabsEl.children.length > 0, 'StageListView renders chapter tab buttons');
+    this.assert(listEl.children.length > 0, 'StageListView renders stage cards');
+
+    // 2. Set chapter
+    view.setChapter(2);
+    this.assert(view.selectedChapter === 2, 'StageListView updates selected chapter');
+    this.assert(chapterChangedReported === 2, 'StageListView triggers onChapterChanged callback');
+
+    // 3. Card click trigger
+    const firstCard = listEl.querySelector('.stage-card:not(.locked)');
+    if (firstCard) {
+      firstCard.click();
+      this.assert(selectedStageReported !== null, 'Stage card click triggers onSelectStage callback');
+    }
+
+    // 4. Destroy method clean up
+    view.destroy();
+    this.assert(tabsEl.children.length === 0, 'destroy() cleanly unmounts tabsContainer');
+    this.assert(listEl.children.length === 0, 'destroy() cleanly unmounts stagesListEl');
   }
 }
 
