@@ -855,6 +855,11 @@ class AppController {
       if (this.tutorialOverlay) {
         this.tutorialOverlay.triggerShakingFeedback();
       }
+    } else {
+      // C-STORY-038: Tactile shake feedback on invalid direction
+      if (this.viewRenderer && this.viewRenderer.triggerInvalidMoveShake) {
+        this.viewRenderer.triggerInvalidMoveShake(dir);
+      }
     }
   }
 

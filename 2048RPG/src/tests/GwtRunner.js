@@ -6,6 +6,8 @@ import { MoveEngine } from '../core/MoveEngine.js';
 import { Spawner } from '../core/Spawner.js';
 import { StageManager } from '../core/StageManager.js';
 import { Direction, TileType, STAGE_CONFIGS, STAGE_0_CONFIG, BASE_STAT_TIERS, CHAPTER_CONFIGS, getTileTheme, ThemeSkinType, THEME_SKIN_CONFIGS, Events, HERO_THEMES, calculateWarehouseExpansionCost, getWarehouseUpgradeConfig, MAX_ITEM_STACK, DEFEAT_TACTICAL_TIPS, CURRENT_GAME_VERSION } from '../core/Constants.js';
+import { GACHA_LEVEL_CONFIGS } from '../core/GachaEngine.js';
+import { MAX_EQUIPMENT_VALUE } from '../core/InventoryManager.js';
 import { GameEventBus } from '../core/GameEventBus.js';
 import { ViewRenderer } from '../presentation/ViewRenderer.js';
 import { TutorialOverlay } from '../presentation/TutorialOverlay.js';
@@ -192,7 +194,17 @@ export class GwtRunner {
       // C-STORY-036: Cache Busting 版本戳記與 iOS 主畫面無損熱更新
       this.testGwt36_1_AssetLinksContainVersionQueryString.bind(this),
       this.testGwt36_2_SettingsReloadButtonConfigured.bind(this),
-      this.testGwt36_3_SaveVersionMigrationAndDataPreservation.bind(this)
+      this.testGwt36_3_SaveVersionMigrationAndDataPreservation.bind(this),
+      // C-STORY-037: 轉蛋機山形曲線擴展、科技費用重構與十連送道具革新
+      this.testGwt37_1_GachaEightLevelsAndBellCurveProgression.bind(this),
+      this.testGwt37_2_BaseTechTierRebalancedCostsAndRatios.bind(this),
+      this.testGwt37_3_TenPullGuaranteedBonusItem.bind(this),
+      this.testGwt37_4_ModerateAccelerationRewardProgression.bind(this),
+      this.testGwt37_5_EquipmentMaxCapacityAndCap65536.bind(this),
+      // C-STORY-038: 畫面效果微調（英雄魔物光圈復原、受阻微震與滿盤瀕危紅光警示）
+      this.testGwt38_1_HeroAndMonsterOutlineAndBreathingEffect.bind(this),
+      this.testGwt38_2_InvalidMoveTileShakeFeedback.bind(this),
+      this.testGwt38_3_DangerPulseFlashWhenOneCellOrFull.bind(this)
     ];
 
     for (const test of testCases) {
@@ -1230,7 +1242,7 @@ export class GwtRunner {
     const s20 = STAGE_CONFIGS.find(s => s.id === 20);
     const s21 = STAGE_CONFIGS.find(s => s.id === 21);
     this.assert(s20.rewardGold === 195, `Stage 20 reward is suppressed to 195, got ${s20.rewardGold}`);
-    this.assert(s21.rewardGold === 200, `Stage 21 reward is 200, got ${s21.rewardGold}`);
+    this.assert(s21.rewardGold === 205, `Stage 21 reward is 205 (rebalanced in C-STORY-037), got ${s21.rewardGold}`);
     this.assert(s21.rewardGold > s20.rewardGold, 'Stage 21 reward strictly greater than Stage 20 (no chapter inversion)');
 
     // Verify all 350 stages are strictly monotonic: R(s+1) > R(s)
@@ -1240,9 +1252,9 @@ export class GwtRunner {
       this.assert(next.rewardGold > cur.rewardGold, `Stage ${next.id} reward (${next.rewardGold}) must be > Stage ${cur.id} reward (${cur.rewardGold})`);
     }
 
-    // Verify no single stage gives more than 1000 gold before Stage 180
-    const s180 = STAGE_CONFIGS.find(s => s.id === 180);
-    this.assert(s180.rewardGold < 1000, `Stage 180 reward (${s180.rewardGold}) does not exceed 1000 gold (ten-pull cost)`);
+    // Verify Stage 65 reward matches C-STORY-037 moderate warming specification (795 gold)
+    const s65 = STAGE_CONFIGS.find(s => s.id === 65);
+    this.assert(s65.rewardGold === 795, `Stage 65 reward is 795, got ${s65.rewardGold}`);
   }
 
   // C-STORY-010 GWT 10.2：關卡列表已通關之賞金 UI 轉為「已領取」
@@ -1325,42 +1337,52 @@ export class GwtRunner {
   // C-STORY-011 TESTS
   // ==========================================
 
-  // C-STORY-011 GWT 11.1：首通賞金全域等速率公式與前 180 關千元以內驗證
+  // C-STORY-011 GWT 11.1：首通賞金全域等速率公式（已在 C-STORY-037 升級為溫和加速曲線）
   testGwt11_1_RewardGoldEquableSlopeAndFirst180Under1000() {
     this.assert(STAGE_CONFIGS.length === 350, 'Total 350 stages configured');
     
-    // Formula verification: R(s) = 100 + (s - 1) * 5
+    // Formula verification per C-STORY-037:
+    // s<=20: 100 + (s - 1) * 5
+    // 21<=s<=50: 195 + (s - 20) * 10
+    // 51<=s<=90: 495 + (s - 50) * 20
+    // s>90: 1295 + (s - 90) * 30
     for (let s = 1; s <= 350; s++) {
       const cfg = STAGE_CONFIGS.find(st => st.id === s);
-      const expected = 100 + (s - 1) * 5;
+      let expected = 100;
+      if (s <= 20) expected = 100 + (s - 1) * 5;
+      else if (s <= 50) expected = 195 + (s - 20) * 10;
+      else if (s <= 90) expected = 495 + (s - 50) * 20;
+      else expected = 1295 + (s - 90) * 30;
       this.assert(cfg.rewardGold === expected, `Stage ${s} rewardGold is ${expected}, got ${cfg.rewardGold}`);
     }
 
-    // Stage 1 allows 1 pull
+    // Key milestone verification
     this.assert(STAGE_CONFIGS[0].rewardGold === 100, 'Stage 1 reward is exactly 100 (1 single pull)');
+    const s20 = STAGE_CONFIGS.find(s => s.id === 20);
+    this.assert(s20.rewardGold === 195, `Stage 20 reward is 195, got ${s20.rewardGold}`);
+    const s50 = STAGE_CONFIGS.find(s => s.id === 50);
+    this.assert(s50.rewardGold === 495, `Stage 50 reward is 495, got ${s50.rewardGold}`);
+    const s65 = STAGE_CONFIGS.find(s => s.id === 65);
+    this.assert(s65.rewardGold === 795, `Stage 65 reward is 795, got ${s65.rewardGold}`);
+    const s90 = STAGE_CONFIGS.find(s => s.id === 90);
+    this.assert(s90.rewardGold === 1295, `Stage 90 reward is 1295, got ${s90.rewardGold}`);
+    const s350 = STAGE_CONFIGS.find(s => s.id === 350);
+    this.assert(s350.rewardGold === 9095, `Stage 350 reward is 9095, got ${s350.rewardGold}`);
 
-    // Stage 180 is under 1000
-    const s180 = STAGE_CONFIGS.find(s => s.id === 180);
-    this.assert(s180.rewardGold === 995, `Stage 180 reward is 995 (< 1000), got ${s180.rewardGold}`);
-
-    // Stage 181 reaches 1000
-    const s181 = STAGE_CONFIGS.find(s => s.id === 181);
-    this.assert(s181.rewardGold === 1000, `Stage 181 reward is 1000, got ${s181.rewardGold}`);
-
-    // Every stage has strictly identical slope (+5G)
+    // Every stage has strictly positive delta
     for (let i = 0; i < STAGE_CONFIGS.length - 1; i++) {
       const delta = STAGE_CONFIGS[i + 1].rewardGold - STAGE_CONFIGS[i].rewardGold;
-      this.assert(delta === 5, `Slope between stage ${i+1} and ${i+2} is 5, got ${delta}`);
+      this.assert(delta > 0, `Slope between stage ${i+1} and ${i+2} is positive (${delta})`);
     }
   }
 
-  // C-STORY-011 GWT 11.2：科技升階研發費用試算表精確匹配
+  // C-STORY-011 GWT 11.2：科技升階研發費用試算表精確匹配（已在 C-STORY-037 平滑重構）
   testGwt11_2_BaseTechTierTableExactMatch() {
     const expectedCosts = [
-      0, 1000, 1200, 1400, 1600, 5200,
-      1900, 2200, 2600, 3100, 3700, 11600,
-      4400, 5200, 6200, 7400, 8800, 27600,
-      10500, 12600, 15100, 18100, 21700, 67500
+      0, 600, 700, 800, 900, 2700,
+      1000, 1100, 1200, 1300, 1400, 4200,
+      1600, 1800, 2000, 2300, 2600, 7800,
+      2900, 3300, 3700, 4200, 4800, 14400
     ];
 
     this.assert(BASE_STAT_TIERS.length === 24, `Must have 24 tiers, got ${BASE_STAT_TIERS.length}`);
@@ -1371,41 +1393,38 @@ export class GwtRunner {
     }
   }
 
-  // C-STORY-011 GWT 11.3：大升階數值等於前 4 階小升階總和判定
+  // C-STORY-011 GWT 11.3：大升階數值等於前一階 3 倍判定（已在 C-STORY-037 重構）
   testGwt11_3_MajorUpgradeSumOfPreviousFourMinorTiers() {
+    const t5 = BASE_STAT_TIERS.find(t => t.tier === 5);
     const t6 = BASE_STAT_TIERS.find(t => t.tier === 6);
-    const sum6 = BASE_STAT_TIERS.slice(1, 5).reduce((acc, t) => acc + t.cost, 0);
-    this.assert(t6.cost === sum6, `Tier 6 cost (${t6.cost}) equals sum of T2~T5 (${sum6})`);
+    this.assert(t6.cost === t5.cost * 3, `Tier 6 cost (${t6.cost}) equals 3x Tier 5 (${t5.cost * 3})`);
 
+    const t11 = BASE_STAT_TIERS.find(t => t.tier === 11);
     const t12 = BASE_STAT_TIERS.find(t => t.tier === 12);
-    const sum12 = BASE_STAT_TIERS.slice(7, 11).reduce((acc, t) => acc + t.cost, 0);
-    this.assert(t12.cost === sum12, `Tier 12 cost (${t12.cost}) equals sum of T8~T11 (${sum12})`);
+    this.assert(t12.cost === t11.cost * 3, `Tier 12 cost (${t12.cost}) equals 3x Tier 11 (${t11.cost * 3})`);
 
+    const t17 = BASE_STAT_TIERS.find(t => t.tier === 17);
     const t18 = BASE_STAT_TIERS.find(t => t.tier === 18);
-    const sum18 = BASE_STAT_TIERS.slice(13, 17).reduce((acc, t) => acc + t.cost, 0);
-    this.assert(t18.cost === sum18, `Tier 18 cost (${t18.cost}) equals sum of T14~T17 (${sum18})`);
+    this.assert(t18.cost === t17.cost * 3, `Tier 18 cost (${t18.cost}) equals 3x Tier 17 (${t17.cost * 3})`);
 
+    const t23 = BASE_STAT_TIERS.find(t => t.tier === 23);
     const t24 = BASE_STAT_TIERS.find(t => t.tier === 24);
-    const sum24 = BASE_STAT_TIERS.slice(19, 23).reduce((acc, t) => acc + t.cost, 0);
-    this.assert(t24.cost === sum24, `Tier 24 cost (${t24.cost}) equals sum of T20~T23 (${sum24})`);
+    this.assert(t24.cost === t23.cost * 3, `Tier 24 cost (${t24.cost}) equals 3x Tier 23 (${t23.cost * 3})`);
   }
 
-  // C-STORY-011 GWT 11.4：小升階數值去除尾數平滑延續判定
+  // C-STORY-011 GWT 11.4：小升階數值平滑延續判定（C-STORY-037 規格：跨突破起點溫和遞增）
   testGwt11_4_MinorUpgradeSubtractedRemainderProgression() {
-    // Tier 7 continues from Tier 5 (1600 * 1.2 = 1920 -> 1900)
     const t5 = BASE_STAT_TIERS.find(t => t.tier === 5);
     const t7 = BASE_STAT_TIERS.find(t => t.tier === 7);
-    this.assert(t7.cost === Math.floor(t5.cost * 1.2 / 100) * 100, 'Tier 7 cost is floor to 100 of Tier 5 * 1.2');
+    this.assert(t7.cost === 1000 && t7.cost > t5.cost, 'Tier 7 starts at 1000 smoothly progressing from Tier 5');
 
-    // Tier 13 continues from Tier 11 (3700 * 1.2 = 4440 -> 4400)
     const t11 = BASE_STAT_TIERS.find(t => t.tier === 11);
     const t13 = BASE_STAT_TIERS.find(t => t.tier === 13);
-    this.assert(t13.cost === Math.floor(t11.cost * 1.2 / 100) * 100, 'Tier 13 cost is floor to 100 of Tier 11 * 1.2');
+    this.assert(t13.cost === 1600 && t13.cost > t11.cost, 'Tier 13 starts at 1600 smoothly progressing from Tier 11');
 
-    // Tier 19 continues from Tier 17 (8800 * 1.2 = 10560 -> 10500)
     const t17 = BASE_STAT_TIERS.find(t => t.tier === 17);
     const t19 = BASE_STAT_TIERS.find(t => t.tier === 19);
-    this.assert(t19.cost === Math.floor(t17.cost * 1.2 / 100) * 100, 'Tier 19 cost is floor to 100 of Tier 17 * 1.2');
+    this.assert(t19.cost === 2900 && t19.cost > t17.cost, 'Tier 19 starts at 2900 smoothly progressing from Tier 17');
   }
 
   // C-STORY-011 GWT 11.5：快速跳轉功能金幣補償同步適配新等速曲線
@@ -2240,45 +2259,41 @@ export class GwtRunner {
     this.assert(sm.inventory.maxCapacity === 32, 'Capacity remains 32');
   }
 
-  // C-STORY-022 GWT 22.2：裝備轉蛋 1/30 機率額外掉落道具（6:3:1 比例）
+  // C-STORY-022 GWT 22.2：轉蛋道具掉落與權重分佈（在 C-STORY-037 升級為十連抽必定掉落，單抽不掉落）
   testGwt22_2_GachaItemDropProbabilityAndWeightDistribution() {
     const sm = new StageManager();
     sm.resetSaveData();
 
-    // Statistical test of rollBonusItem on GachaEngine (sample size 30,000)
-    let drops = 0;
+    // Single pulls no longer drop items (per C-STORY-037)
+    this.assert(sm.gachaEngine.rollBonusItem() === null, 'Single pulls do not drop bonus items');
+
+    // Statistical test of rollBonusItemForTenPull on GachaEngine (sample size 10,000)
     let undoCount = 0;
     let hammerCount = 0;
     let snipeCount = 0;
-    const sampleSize = 30000;
+    const sampleSize = 10000;
 
     for (let i = 0; i < sampleSize; i++) {
-      const b = sm.gachaEngine.rollBonusItem();
-      if (b) {
-        drops++;
-        if (b.type === 'undo') undoCount++;
-        else if (b.type === 'hammer') hammerCount++;
-        else if (b.type === 'snipe') snipeCount++;
-      }
+      const b = sm.gachaEngine.rollBonusItemForTenPull();
+      this.assert(b !== null, 'Ten pull bonus item is guaranteed');
+      if (b.type === 'undo') undoCount++;
+      else if (b.type === 'hammer') hammerCount++;
+      else if (b.type === 'snipe') snipeCount++;
     }
 
-    const dropRate = drops / sampleSize;
-    // Expected: 1/30 = 3.33%. Tolerance: 2.3% ~ 4.5%
-    this.assert(dropRate >= 0.023 && dropRate <= 0.045, `Drop rate (${(dropRate * 100).toFixed(2)}%) within 1/30 expected range`);
-
-    // Expected ratio: 6:3:1 -> undo ~60%, hammer ~30%, snipe ~10%
-    const undoRatio = undoCount / drops;
-    const hammerRatio = hammerCount / drops;
-    const snipeRatio = snipeCount / drops;
-    this.assert(undoRatio >= 0.50 && undoRatio <= 0.70, `Undo ratio (${(undoRatio * 100).toFixed(1)}%) around 60%`);
-    this.assert(hammerRatio >= 0.22 && hammerRatio <= 0.38, `Hammer ratio (${(hammerRatio * 100).toFixed(1)}%) around 30%`);
-    this.assert(snipeRatio >= 0.05 && snipeRatio <= 0.16, `Snipe ratio (${(snipeRatio * 100).toFixed(1)}%) around 10%`);
+    // Expected ratio: 40% undo, 35% hammer, 25% snipe
+    const undoRatio = undoCount / sampleSize;
+    const hammerRatio = hammerCount / sampleSize;
+    const snipeRatio = snipeCount / sampleSize;
+    this.assert(undoRatio >= 0.35 && undoRatio <= 0.45, `Undo ratio (${(undoRatio * 100).toFixed(1)}%) around 40%`);
+    this.assert(hammerRatio >= 0.30 && hammerRatio <= 0.40, `Hammer ratio (${(hammerRatio * 100).toFixed(1)}%) around 35%`);
+    this.assert(snipeRatio >= 0.20 && snipeRatio <= 0.30, `Snipe ratio (${(snipeRatio * 100).toFixed(1)}%) around 25%`);
 
     // Gacha pull test with bonusItems field returned
     sm.gold = 10000;
     const pullRes = sm.pullGacha(10);
     this.assert(pullRes.success === true, 'Gacha pull succeeded');
-    this.assert(Array.isArray(pullRes.bonusItems), 'bonusItems array is present in result');
+    this.assert(Array.isArray(pullRes.bonusItems) && pullRes.bonusItems.length === 1, 'bonusItems array contains guaranteed 1 item');
   }
 
   // C-STORY-022 GWT 22.3：道具持有上限 999 與純數值顯示
@@ -2437,7 +2452,7 @@ export class GwtRunner {
     const res = sm.upgradeBaseTier();
     this.assert(res.success === true, 'Upgrade to Tier 6 succeeds with Tier 4 gear');
     this.assert(sm.baseTier === 6, 'Base tier upgraded to 6');
-    this.assert(sm.gold === 10000 - 5200, 'Cost 5200 correctly deducted');
+    this.assert(sm.gold === 10000 - 2700, 'Cost 2700 correctly deducted (rebalanced in C-STORY-037)');
     this.assert(res.tierConfig.baseRange[0] === 4, 'Base range starts from 4');
   }
 
@@ -3527,7 +3542,7 @@ export class GwtRunner {
         'main.js must have version query parameter'
       );
     }
-    this.assert(CURRENT_GAME_VERSION === 'v1.3.6', 'CURRENT_GAME_VERSION must be v1.3.6');
+    this.assert(CURRENT_GAME_VERSION === 'v1.3.8', 'CURRENT_GAME_VERSION must be v1.3.8');
   }
 
   // C-STORY-036 GWT 36.2：設定視窗具備「檢查並刷新最新版本」按鈕配置
@@ -3578,6 +3593,268 @@ export class GwtRunner {
     this.assert(sm.clearedStages[1] === true, 'Cleared stages must remain intact');
     this.assert(sm.baseTier === 3, 'Base tier must remain intact');
     this.assert(sm.stamina === 4, 'Stamina must remain intact');
+  }
+
+  // ==========================================
+  // C-STORY-037 TESTS
+  // ==========================================
+
+  // C-STORY-037 GWT 37.1：轉蛋機階梯上限解鎖至 Lv.8 與山形曲線掉落規劃
+  testGwt37_1_GachaEightLevelsAndBellCurveProgression() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+
+    // 1. Verify 8 levels configured
+    const levels = Object.keys(GACHA_LEVEL_CONFIGS).map(Number);
+    this.assert(levels.length === 8, `GACHA_LEVEL_CONFIGS must have 8 levels, got ${levels.length}`);
+    this.assert(levels.includes(1) && levels.includes(8), 'Levels include 1 through 8');
+
+    // 2. Verify calculateLevel thresholds
+    this.assert(sm.gachaEngine.calculateLevel(0) === 1, '0 pulls is Lv.1');
+    this.assert(sm.gachaEngine.calculateLevel(29) === 1, '29 pulls is Lv.1');
+    this.assert(sm.gachaEngine.calculateLevel(30) === 2, '30 pulls is Lv.2');
+    this.assert(sm.gachaEngine.calculateLevel(99) === 2, '99 pulls is Lv.2');
+    this.assert(sm.gachaEngine.calculateLevel(100) === 3, '100 pulls is Lv.3');
+    this.assert(sm.gachaEngine.calculateLevel(199) === 3, '199 pulls is Lv.3');
+    this.assert(sm.gachaEngine.calculateLevel(200) === 4, '200 pulls is Lv.4');
+    this.assert(sm.gachaEngine.calculateLevel(339) === 4, '339 pulls is Lv.4');
+    this.assert(sm.gachaEngine.calculateLevel(340) === 5, '340 pulls is Lv.5');
+    this.assert(sm.gachaEngine.calculateLevel(529) === 5, '529 pulls is Lv.5');
+    this.assert(sm.gachaEngine.calculateLevel(530) === 6, '530 pulls is Lv.6');
+    this.assert(sm.gachaEngine.calculateLevel(789) === 6, '789 pulls is Lv.6');
+    this.assert(sm.gachaEngine.calculateLevel(790) === 7, '790 pulls is Lv.7');
+    this.assert(sm.gachaEngine.calculateLevel(1149) === 7, '1149 pulls is Lv.7');
+    this.assert(sm.gachaEngine.calculateLevel(1150) === 8, '1150 pulls is Lv.8');
+    this.assert(sm.gachaEngine.calculateLevel(5000) === 8, '5000 pulls remains Lv.8');
+
+    // 3. Verify bell curve peak shift & max drops
+    const lv1Cfg = GACHA_LEVEL_CONFIGS[1];
+    const lv4Cfg = GACHA_LEVEL_CONFIGS[4];
+    const lv8Cfg = GACHA_LEVEL_CONFIGS[8];
+
+    this.assert(lv1Cfg.maxDropValue === 32, 'Lv.1 max drop is 32');
+    this.assert(lv8Cfg.maxDropValue === 4096, 'Lv.8 max drop is 4096');
+
+    // Find peak (highest weight) for Lv.1, Lv.4, and Lv.8
+    const getPeak = (cfg) => cfg.weights.reduce((prev, curr) => (curr.weight > prev.weight ? curr : prev)).value;
+    this.assert(getPeak(lv1Cfg) === 2, 'Lv.1 peak is 2');
+    this.assert(getPeak(lv4Cfg) === 8, 'Lv.4 peak is 8');
+    this.assert(getPeak(lv8Cfg) === 128, 'Lv.8 peak is 128');
+  }
+
+  // C-STORY-037 GWT 37.2：王國軍備科技費用平滑化與大突破 3 倍階梯重構
+  testGwt37_2_BaseTechTierRebalancedCostsAndRatios() {
+    this.assert(BASE_STAT_TIERS.length === 24, 'Must have 24 tiers');
+
+    // 起點壓低至 600
+    this.assert(BASE_STAT_TIERS[1].cost === 600, 'Tier 2 starts at 600 (lowered from 1000)');
+
+    // 驗證四大突破為前階 3 倍
+    const t5 = BASE_STAT_TIERS.find(t => t.tier === 5);
+    const t6 = BASE_STAT_TIERS.find(t => t.tier === 6);
+    this.assert(t6.cost === t5.cost * 3, `Tier 6 cost (${t6.cost}) is 3x Tier 5 (${t5.cost * 3})`);
+    this.assert(t6.cost === 2700, 'Tier 6 cost is 2700');
+
+    const t11 = BASE_STAT_TIERS.find(t => t.tier === 11);
+    const t12 = BASE_STAT_TIERS.find(t => t.tier === 12);
+    this.assert(t12.cost === t11.cost * 3, `Tier 12 cost (${t12.cost}) is 3x Tier 11 (${t11.cost * 3})`);
+    this.assert(t12.cost === 4200, 'Tier 12 cost is 4200');
+
+    const t17 = BASE_STAT_TIERS.find(t => t.tier === 17);
+    const t18 = BASE_STAT_TIERS.find(t => t.tier === 18);
+    this.assert(t18.cost === t17.cost * 3, `Tier 18 cost (${t18.cost}) is 3x Tier 17 (${t17.cost * 3})`);
+    this.assert(t18.cost === 7800, 'Tier 18 cost is 7800');
+
+    const t23 = BASE_STAT_TIERS.find(t => t.tier === 23);
+    const t24 = BASE_STAT_TIERS.find(t => t.tier === 24);
+    this.assert(t24.cost === t23.cost * 3, `Tier 24 cost (${t24.cost}) is 3x Tier 23 (${t23.cost * 3})`);
+    this.assert(t24.cost === 14400, 'Tier 24 cost is 14400');
+  }
+
+  // C-STORY-037 GWT 37.3：每次十連抽固定額外贈送 1 救急道具，單抽不贈送
+  testGwt37_3_TenPullGuaranteedBonusItem() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.gold = 5000;
+
+    const initialUndo = sm.items.undo;
+    const initialHammer = sm.items.hammer;
+    const initialSnipe = sm.items.snipe;
+
+    // Single pull: no bonus item
+    const singleRes = sm.pullGacha(1);
+    this.assert(singleRes.success === true, 'Single pull succeeded');
+    this.assert(singleRes.bonusItems.length === 0, 'Single pull does not give bonus items');
+    this.assert(sm.items.undo === initialUndo, 'Undo count unchanged after single pull');
+
+    // Ten pull: guaranteed exactly 1 bonus item
+    const tenRes = sm.pullGacha(10);
+    this.assert(tenRes.success === true, 'Ten pull succeeded');
+    this.assert(tenRes.bonusItems.length === 1, 'Ten pull gives guaranteed 1 bonus item');
+    const grantedItem = tenRes.bonusItems[0];
+    this.assert(['undo', 'hammer', 'snipe'].includes(grantedItem.type), 'Granted item has valid type');
+
+    const totalItemsAfter = sm.items.undo + sm.items.hammer + sm.items.snipe;
+    const totalItemsBefore = initialUndo + initialHammer + initialSnipe;
+    this.assert(totalItemsAfter === totalItemsBefore + 1, 'Exactly 1 item added to player inventory');
+  }
+
+  // C-STORY-037 GWT 37.4：通關賞金溫和加速曲線與 Stage 65 十連保證
+  testGwt37_4_ModerateAccelerationRewardProgression() {
+    const s20 = STAGE_CONFIGS.find(s => s.id === 20);
+    const s50 = STAGE_CONFIGS.find(s => s.id === 50);
+    const s65 = STAGE_CONFIGS.find(s => s.id === 65);
+    const s90 = STAGE_CONFIGS.find(s => s.id === 90);
+    const s350 = STAGE_CONFIGS.find(s => s.id === 350);
+
+    this.assert(s20.rewardGold === 195, `Stage 20 reward is 195, got ${s20.rewardGold}`);
+    this.assert(s50.rewardGold === 495, `Stage 50 reward is 495, got ${s50.rewardGold}`);
+    this.assert(s65.rewardGold === 795, `Stage 65 reward is 795, got ${s65.rewardGold}`);
+    this.assert(s90.rewardGold === 1295, `Stage 90 reward is 1295, got ${s90.rewardGold}`);
+    this.assert(s350.rewardGold === 9095, `Stage 350 reward is 9095, got ${s350.rewardGold}`);
+
+    // Verify Stage 65 reward + typical board gold (~205) reaches 1000 gold
+    this.assert(s65.rewardGold + 205 >= 1000, 'Stage 65 allows a 10-pull with board earnings');
+  }
+
+  // C-STORY-037 GWT 37.5：局外裝備最高上限 65536 嚴格錨定
+  testGwt37_5_EquipmentMaxCapacityAndCap65536() {
+    this.assert(MAX_EQUIPMENT_VALUE === 65536, 'MAX_EQUIPMENT_VALUE is 65536');
+
+    const sm = new StageManager();
+    sm.resetSaveData();
+
+    // Add two 32768 items and merge
+    const item1 = sm.inventory.addItem(32768);
+    const item2 = sm.inventory.addItem(32768);
+    this.assert(item1 && item2, 'Added two 32768 items');
+
+    const merged = sm.inventory.mergeItems(item1.id, item2.id);
+    this.assert(merged && merged.success === true, 'Merge succeeded');
+    this.assert(merged.newItem.value === 65536, 'Merged item has value 65536 (Divine Artifact)');
+
+    // Attempt to merge two 65536 items: must be capped / disallowed
+    const item3 = sm.inventory.addItem(65536);
+    this.assert(item3 !== null, 'Added another 65536 item');
+
+    const invalidMerge = sm.inventory.mergeItems(merged.newItem.id, item3.id);
+    this.assert(invalidMerge && invalidMerge.success === false, 'Merging two 65536 items is blocked by MAX_EQUIPMENT_VALUE cap');
+
+    // Auto-merge also respects cap
+    const autoMergeRes = sm.inventory.batchAutoMerge();
+    this.assert(autoMergeRes.mergedCount === 0, 'No merges performed on capped items');
+    this.assert(sm.inventory.items.every(it => it.value <= 65536), 'All items remain <= 65536');
+  }
+
+  // ==========================================
+  // C-STORY-038 TESTS: 畫面效果微調
+  // ==========================================
+
+  // C-STORY-038 GWT 38.1：英雄與魔物外框光圈恢復與呼吸特效解鎖裁切
+  async testGwt38_1_HeroAndMonsterOutlineAndBreathingEffect() {
+    const boardEl = document.createElement('div');
+    const renderer = new ViewRenderer(boardEl);
+
+    const heroTile = new Tile(2, TileType.HERO, 0, 0);
+    const heroEl = renderer.createTileElement(heroTile);
+    this.assert(heroEl.classList.contains('tile-hero'), 'Hero tile element has tile-hero class');
+
+    const monsterTile = new Tile(8, TileType.MONSTER, 0, 1);
+    const monsterEl = renderer.createTileElement(monsterTile);
+    this.assert(monsterEl.classList.contains('tile-monster'), 'Monster tile element has tile-monster class');
+
+    // Verify CSS file has overflow: visible on grid-cell and hero/monster, plus breathing animations
+    let cssText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./style.css');
+        if (resp.ok) cssText = await resp.text();
+      } catch (e) {}
+    }
+    if (!cssText && typeof require !== 'undefined') {
+      try {
+        const fs = require('fs');
+        cssText = fs.readFileSync('style.css', 'utf-8');
+      } catch (e) {}
+    }
+
+    if (cssText) {
+      this.assert(cssText.includes('.grid-cell') && cssText.includes('overflow: visible;'), 'grid-cell must have overflow: visible to allow breathing wave to expand');
+      this.assert(cssText.includes('.tile.tile-hero') && cssText.includes('overflow: visible !important;'), 'tile-hero must have overflow: visible !important');
+      this.assert(cssText.includes('.tile.tile-monster') && cssText.includes('overflow: visible !important;'), 'tile-monster must have overflow: visible !important');
+      this.assert(cssText.includes('heroBreathingWave'), 'heroBreathingWave animation must exist in CSS');
+      this.assert(cssText.includes('monsterBreathingPulse'), 'monsterBreathingPulse animation must exist in CSS');
+    }
+  }
+
+  // C-STORY-038 GWT 38.2：無法移動或合成方向之全方塊受阻微震反饋
+  async testGwt38_2_InvalidMoveTileShakeFeedback() {
+    const boardEl = document.createElement('div');
+    boardEl.id = 'battle-board';
+    const renderer = new ViewRenderer(boardEl);
+
+    const board = new Board(5);
+    board.setTile(0, 0, new Tile(2, TileType.EQUIPMENT, 0, 0));
+    board.setTile(0, 1, new Tile(4, TileType.EQUIPMENT, 0, 1));
+    renderer.renderBoard(board);
+
+    // Test horizontal shake trigger
+    renderer.triggerInvalidMoveShake('LEFT');
+    const tiles = boardEl.querySelectorAll('.tile');
+    this.assert(tiles.length === 2, 'Board contains 2 tiles');
+    this.assert(tiles[0].classList.contains('tile-shake-h'), 'First tile has tile-shake-h class on horizontal invalid move');
+    this.assert(tiles[1].classList.contains('tile-shake-h'), 'Second tile has tile-shake-h class on horizontal invalid move');
+
+    // Test vertical shake trigger
+    renderer.triggerInvalidMoveShake('UP');
+    this.assert(tiles[0].classList.contains('tile-shake-v'), 'Tile switches to tile-shake-v class on vertical invalid move');
+
+    // Wait for auto cleanup (250ms)
+    await new Promise(resolve => setTimeout(resolve, 280));
+    this.assert(!tiles[0].classList.contains('tile-shake-h') && !tiles[0].classList.contains('tile-shake-v'), 'Shake classes are cleaned up after animation completes');
+  }
+
+  // C-STORY-038 GWT 38.3：盤面剩餘 1 格或已滿時之危急邊界紅光閃爍 (board-danger-flash)
+  testGwt38_3_DangerPulseFlashWhenOneCellOrFull() {
+    const boardEl = document.createElement('div');
+    boardEl.id = 'battle-board';
+    const renderer = new ViewRenderer(boardEl);
+
+    const board = new Board(5); // 25 cells total
+
+    // Case 1: Empty board (25 empty cells) -> no danger flash
+    renderer.renderBoard(board);
+    this.assert(!boardEl.classList.contains('board-danger-flash'), 'Safe board (> 1 empty cell) has no board-danger-flash');
+
+    // Case 2: Fill 23 cells -> 2 empty cells remain -> no danger flash
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        if (r === 4 && c >= 3) continue; // Leave 2 cells empty: (4,3) and (4,4)
+        board.setTile(r, c, new Tile(2, TileType.EQUIPMENT, r, c));
+      }
+    }
+    this.assert(board.getEmptyCells().length === 2, 'Board has exactly 2 empty cells');
+    renderer.renderBoard(board);
+    this.assert(!boardEl.classList.contains('board-danger-flash'), 'Board with 2 empty cells does not flash danger');
+
+    // Case 3: Fill 1 more cell -> exactly 1 empty cell remains -> DANGER FLASH ACTIVE!
+    board.setTile(4, 3, new Tile(4, TileType.EQUIPMENT, 4, 3));
+    this.assert(board.getEmptyCells().length === 1, 'Board has exactly 1 empty cell');
+    renderer.renderBoard(board);
+    this.assert(boardEl.classList.contains('board-danger-flash'), 'Board with 1 empty cell activates board-danger-flash');
+
+    // Case 4: Fill last cell -> 0 empty cells remain (completely full) -> DANGER FLASH ACTIVE!
+    board.setTile(4, 4, new Tile(8, TileType.EQUIPMENT, 4, 4));
+    this.assert(board.getEmptyCells().length === 0, 'Board has 0 empty cells');
+    renderer.renderBoard(board);
+    this.assert(boardEl.classList.contains('board-danger-flash'), 'Completely full board activates board-danger-flash');
+
+    // Case 5: Free up cells (e.g. tile destroyed or merged) -> 2 empty cells -> danger flash cleared!
+    board.removeTile(4, 3);
+    board.removeTile(4, 4);
+    this.assert(board.getEmptyCells().length === 2, 'Board recovered to 2 empty cells');
+    renderer.renderBoard(board);
+    this.assert(!boardEl.classList.contains('board-danger-flash'), 'Danger flash automatically deactivated when cells freed');
   }
 }
 

@@ -1,6 +1,7 @@
 // InventoryManager.js: Manages Out-of-Combat Equipment Inventory, Merging, and Loadout
 
 export const MAX_INVENTORY_CAPACITY = 24;
+export const MAX_EQUIPMENT_VALUE = 65536;
 
 export class InventoryManager {
   constructor(maxCapacity = MAX_INVENTORY_CAPACITY) {
@@ -121,6 +122,7 @@ export class InventoryManager {
       let mergedAny = false;
 
       for (const val of sortedValues) {
+        if (val >= MAX_EQUIPMENT_VALUE) continue; // C-STORY-037: Cap at 65536
         const count = counts.get(val);
         if (count >= 2) {
           const pairs = Math.floor(count / 2);
@@ -177,6 +179,10 @@ export class InventoryManager {
 
     if (it1.value !== it2.value) {
       return { success: false, reason: '數值不同無法合成' };
+    }
+
+    if (it1.value >= MAX_EQUIPMENT_VALUE) {
+      return { success: false, reason: '裝備已達神器最高戰力（65536），無法再合成！' };
     }
 
     const newVal = it1.value * 2;

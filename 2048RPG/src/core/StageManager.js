@@ -316,10 +316,10 @@ export class StageManager {
     const rolledValues = this.gachaEngine.rollMulti(this.gachaLevel, times);
     const addedItems = this.inventory.addItems(rolledValues);
 
-    // Roll bonus emergency items (1/30 probability, 6:3:1 ratio) (C-STORY-022)
+    // Roll bonus emergency items: Exactly 1 for 10-pull, 0 for 1-pull (C-STORY-037)
     const bonusItems = [];
-    for (let i = 0; i < times; i++) {
-      const bonus = this.gachaEngine.rollBonusItem();
+    if (times === 10) {
+      const bonus = this.gachaEngine.rollBonusItemForTenPull();
       if (bonus) {
         bonusItems.push(bonus);
         this.items[bonus.type] = Math.min(MAX_ITEM_STACK, (this.items[bonus.type] || 0) + 1);

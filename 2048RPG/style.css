@@ -477,7 +477,7 @@ body {
   min-height: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
   box-sizing: border-box;
 }
 
@@ -525,13 +525,19 @@ body {
   line-height: 1.2;
 }
 
+/* Hero Tile: 5px Brilliant Blue Outline + Water Blue Breathing Aura (C-STORY-003 / C-STORY-021 / C-STORY-038) */
+.tile.tile-hero,
 .tile-hero {
   border: 5px solid #38bdf8 !important;
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.85), inset 0 0 8px rgba(255, 255, 255, 0.5);
-  z-index: 2;
+  border-color: #38bdf8 !important;
+  border-width: 5px !important;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.9), inset 0 0 8px rgba(255, 255, 255, 0.6) !important;
+  z-index: 5 !important;
+  overflow: visible !important;
 }
 
-/* Hero Breathing: Water blue outline expanding outward, 3x thickened to 6px (C-STORY-021) */
+/* Hero Breathing: Water blue outline expanding outward, 3x thickened to 6px (C-STORY-021 / C-STORY-038) */
+.tile.tile-hero::after,
 .tile-hero::after {
   content: '';
   position: absolute;
@@ -541,6 +547,7 @@ body {
   pointer-events: none;
   animation: heroBreathingWave 1.8s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
   box-sizing: border-box;
+  z-index: 6;
 }
 
 @keyframes heroBreathingWave {
@@ -566,22 +573,29 @@ body {
   }
 }
 
+/* Monster Tile: 5px Blood Red Outline + Menacing Red Warning Pulse (C-STORY-003 / C-STORY-012 / C-STORY-038) */
+.tile.tile-monster,
 .tile-monster {
   border: 5px solid #f43f5e !important;
-  box-shadow: 0 0 14px rgba(244, 63, 94, 0.8), inset 0 0 6px rgba(0, 0, 0, 0.4);
-  z-index: 2;
+  border-color: #f43f5e !important;
+  border-width: 5px !important;
+  box-shadow: 0 0 16px rgba(244, 63, 94, 0.85), inset 0 0 6px rgba(0, 0, 0, 0.5) !important;
+  z-index: 5 !important;
+  overflow: visible !important;
 }
 
-/* Monster Breathing: Deep red outline expanding outward and contracting back (C-STORY-012) */
+/* Monster Breathing: Deep red outline expanding outward and contracting back (C-STORY-012 / C-STORY-038) */
+.tile.tile-monster::after,
 .tile-monster::after {
   content: '';
   position: absolute;
   inset: -4px;
   border-radius: 10px;
-  border: 2.5px solid #ef4444;
+  border: 3px solid #ef4444;
   pointer-events: none;
   animation: monsterBreathingPulse 1.6s ease-in-out infinite;
   box-sizing: border-box;
+  z-index: 6;
 }
 
 @keyframes monsterBreathingPulse {
@@ -2884,6 +2898,50 @@ body {
   0%, 100% { transform: translateX(0); }
   20%, 60% { transform: translateX(-8px); }
   40%, 80% { transform: translateX(8px); }
+}
+
+/* ========================================================= */
+/* C-STORY-038: INVALID MOVE SHAKE & DANGER PULSE ANIMATIONS */
+/* ========================================================= */
+@keyframes invalidShakeH {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+
+@keyframes invalidShakeV {
+  0%, 100% { transform: translateY(0); }
+  20% { transform: translateY(-4px); }
+  40% { transform: translateY(4px); }
+  60% { transform: translateY(-2px); }
+  80% { transform: translateY(2px); }
+}
+
+.tile.tile-shake-h {
+  animation: invalidShakeH 0.22s ease-in-out !important;
+}
+
+.tile.tile-shake-v {
+  animation: invalidShakeV 0.22s ease-in-out !important;
+}
+
+/* Danger Pulsing Red Border when 1 or 0 cells remain on board (C-STORY-038) */
+@keyframes dangerPulse {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.45), inset 0 0 12px rgba(239, 68, 68, 0.25);
+    border-color: #ef4444;
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.95), inset 0 0 20px rgba(239, 68, 68, 0.6);
+    border-color: #f87171;
+  }
+}
+
+.board-danger-flash {
+  animation: dangerPulse 1.2s infinite ease-in-out !important;
+  border: 3px solid #ef4444 !important;
 }
 
 /* ========================================================= */

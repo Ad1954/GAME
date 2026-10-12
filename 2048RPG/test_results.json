@@ -1,7 +1,7 @@
 {
-  "summary": "RESULTS: 134/134 PASS",
-  "passed": 134,
-  "total": 134,
+  "summary": "RESULTS: 142/142 PASS",
+  "passed": 142,
+  "total": 142,
   "results": [
     {
       "name": "bound testGwt1_1_TopBarAndGoldState",
@@ -537,6 +537,38 @@
     },
     {
       "name": "bound testGwt36_3_SaveVersionMigrationAndDataPreservation",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt37_1_GachaEightLevelsAndBellCurveProgression",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt37_2_BaseTechTierRebalancedCostsAndRatios",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt37_3_TenPullGuaranteedBonusItem",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt37_4_ModerateAccelerationRewardProgression",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt37_5_EquipmentMaxCapacityAndCap65536",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt38_1_HeroAndMonsterOutlineAndBreathingEffect",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt38_2_InvalidMoveTileShakeFeedback",
+      "status": "PASS"
+    },
+    {
+      "name": "bound testGwt38_3_DangerPulseFlashWhenOneCellOrFull",
       "status": "PASS"
     }
   ]

@@ -16,6 +16,16 @@ export class ViewRenderer {
     if (!this.boardElement) return;
     this.boardElement.innerHTML = '';
 
+    // C-STORY-038: Danger Flash on Board when 1 cell or 0 cells remain
+    if (board && typeof board.getEmptyCells === 'function') {
+      const emptyCount = board.getEmptyCells().length;
+      if (emptyCount <= 1) {
+        this.boardElement.classList.add('board-danger-flash');
+      } else {
+        this.boardElement.classList.remove('board-danger-flash');
+      }
+    }
+
     const size = board.size;
     for (let r = 0; r < size; r++) {
       for (let c = 0; c < size; c++) {
@@ -46,7 +56,10 @@ export class ViewRenderer {
     if (theme) {
       el.style.backgroundColor = theme.bg;
       el.style.color = theme.text;
-      el.style.borderColor = theme.border;
+      // Let dedicated CSS handle hero and monster outlines (C-STORY-038)
+      if (!tile.isHero() && !tile.isMonster()) {
+        el.style.borderColor = theme.border;
+      }
     }
 
     // Badge icon
@@ -192,5 +205,30 @@ export class ViewRenderer {
         }, duration);
       }
     });
+  }
+
+  // C-STORY-038: Tactile Shake Feedback on Invalid Direction Move
+  triggerInvalidMoveShake(direction) {
+    if (!this.boardElement) return;
+    const isVertical = direction === 'UP' || direction === 'DOWN';
+    const shakeClass = isVertical ? 'tile-shake-v' : 'tile-shake-h';
+
+    const tiles = this.boardElement.querySelectorAll('.tile');
+    tiles.forEach(tile => {
+      tile.classList.remove('tile-shake-h', 'tile-shake-v');
+      // Force reflow so animation restarts cleanly on rapid inputs
+      void tile.offsetWidth;
+      tile.classList.add(shakeClass);
+    });
+
+    if (this._invalidShakeTimer) {
+      clearTimeout(this._invalidShakeTimer);
+    }
+    this._invalidShakeTimer = setTimeout(() => {
+      tiles.forEach(tile => {
+        tile.classList.remove('tile-shake-h', 'tile-shake-v');
+      });
+      this._invalidShakeTimer = null;
+    }, 250);
   }
 }
