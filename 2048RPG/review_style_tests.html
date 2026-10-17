@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>《2048 RPG：王國遠征》製品版美術畫風決策展廳 (5大風格完整對稱版)</title>
+  <style>
+    :root {
+      --bg-main: #090d16;
+      --bg-card: #131c2e;
+      --border-card: #22324e;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --tile-bg-active: #ca8a04; /* Default equipment gold */
+      --tile-border-color: #fef08a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif;
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    header {
+      max-width: 1240px;
+      margin: 0 auto 20px auto;
+      text-align: center;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: #38bdf8;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+
+    /* Batch Tabs Bar */
+    .batch-bar {
+      max-width: 1240px;
+      margin: 0 auto 16px auto;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+    .batch-tab {
+      background: #1e293b;
+      border: 2px solid #334155;
+      color: #94a3b8;
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .batch-tab:hover {
+      border-color: #38bdf8;
+      color: #f1f5f9;
+    }
+    .batch-tab.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #fff;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+    }
+
+    /* Controls Toolbar */
+    .toolbar {
+      max-width: 1240px;
+      margin: 0 auto 28px auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 16px;
+      z-index: 100;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      backdrop-filter: blur(10px);
+    }
+    .tool-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .tool-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .btn-group {
+      display: flex;
+      gap: 6px;
+    }
+    .btn-color {
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-color:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    .btn-color.active {
+      outline: 2px solid #38bdf8;
+      box-shadow: 0 0 12px #38bdf8;
+    }
+
+    /* Content Area */
+    .styles-container {
+      max-width: 1240px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .style-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.3);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .style-card:hover {
+      border-color: #38bdf8;
+      box-shadow: 0 12px 32px var(--accent-glow);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border-card);
+      padding-bottom: 16px;
+    }
+    .style-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .style-badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      background: #0369a1;
+      color: #e0f2fe;
+    }
+    .style-desc {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-top: 6px;
+      max-width: 820px;
+    }
+
+    .vote-btn {
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #cbd5e1;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .vote-btn:hover {
+      background: #334155;
+      color: #fff;
+    }
+    .vote-btn.selected {
+      background: #ca8a04;
+      border-color: #eab308;
+      color: #fff;
+      box-shadow: 0 0 14px rgba(234, 179, 8, 0.4);
+    }
+
+    /* Comparison Grid */
+    .card-body {
+      display: grid;
+      grid-template-columns: 440px 1fr;
+      gap: 28px;
+    }
+    @media (max-width: 980px) {
+      .card-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left: 4-Grid Master Image */
+    .master-view {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .section-tag {
+      font-size: 13px;
+      font-weight: 700;
+      color: #7dd3fc;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .img-frame {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid #334155;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+      position: relative;
+      cursor: zoom-in;
+    }
+    .img-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s;
+    }
+    .img-frame:hover img {
+      transform: scale(1.02);
+    }
+
+    /* Right: Simulation Views */
+    .sim-view {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .board-sim-container {
+      background: #070a12;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .stage-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .stage-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .stage-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-align: center;
+    }
+
+    /* =========================================
+       EXACT GAME 5:6 VERTICAL RECTANGLE TILE
+       寬 68px x 高 82px (完全對齊 style.css)
+       ========================================= */
+    .tile-exact-game {
+      width: 68px;
+      height: 82px;
+      border-radius: 8px;
+      background: var(--tile-bg-active);
+      border: 2px solid var(--tile-border-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+      transition: background-color 0.2s, transform 0.15s;
+      overflow: hidden;
+      padding: 4px 2px 2px 2px;
+      box-sizing: border-box;
+    }
+    .tile-exact-game:hover {
+      transform: scale(1.08);
+      z-index: 10;
+    }
+
+    /* 上半部：圖片展示區（高約 44px） */
+    .tile-exact-imgbox {
+      width: 100%;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+    .tile-exact-imgbox img {
+      max-width: 96%;
+      max-height: 44px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.7));
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
+
+    /* 下半部：超大粗體數值與名稱 (對齊 .tile-value 與 .tile-name) */
+    .tile-exact-footer {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      margin-top: -2px;
+    }
+    .tile-exact-val {
+      font-size: 1.45rem; /* 1.45rem 超大粗體 */
+      font-weight: 950;
+      letter-spacing: -0.5px;
+      line-height: 1;
+      color: #ffffff;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.95);
+    }
+    .tile-exact-name {
+      font-size: 0.65rem;
+      opacity: 0.95;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 95%;
+      line-height: 1.1;
+      color: #fef08a;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
+
+    /* 256px Individual Panel Preview */
+    .detail-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 6px;
+    }
+    .detail-box {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .detail-box img {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+      background: var(--tile-bg-active);
+      border-radius: 6px;
+      transition: background-color 0.2s;
+    }
+    .detail-box span {
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    /* Verdict Box */
+    .verdict-box {
+      margin-top: 14px;
+      background: rgba(15, 23, 42, 0.7);
+      border-left: 3px solid #38bdf8;
+      border-radius: 0 8px 8px 0;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+    .verdict-box strong {
+      color: #38bdf8;
+    }
+
+    /* Lightbox Modal */
+    #lightbox {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+    #lightbox img {
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(56,189,248,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>⚔️《2048 RPG：王國遠征》製品版美術畫風決策展廳</h1>
+    <p class="subtitle">5 大視覺風格（A~E 嚴格排序）× 實體長方形戰鬥方塊 (68×82) 鑲嵌 × 雙批次橫向交叉對照</p>
+  </header>
+
+  <!-- Batch Switcher Tabs -->
+  <div class="batch-bar">
+    <button class="batch-tab active" id="tab-b2" onclick="switchBatch('b2')">
+      🌟 Batch 2：Q版寬刃·超60%遮蔽·真去背·兩兩輪替 (最新版，A~E全5款)
+    </button>
+    <button class="batch-tab" id="tab-b1" onclick="switchBatch('b1')">
+      📦 Batch 1：初始寫實比例·全套累積 (歷史對照，A~E全5款)
+    </button>
+  </div>
+
+  <!-- Controls Toolbar -->
+  <div class="toolbar">
+    <div class="tool-group">
+      <span class="tool-label">🎮 實體方塊底色即時切換：</span>
+      <div class="btn-group">
+        <button class="btn-color active" style="background: #ca8a04;" onclick="setTileBg('#ca8a04', '#fef08a', this)">🟡 裝備金底 (#ca8a04)</button>
+        <button class="btn-color" style="background: #1e40af;" onclick="setTileBg('#1e40af', '#93c5fd', this)">🔵 英雄藍底 (#1e40af)</button>
+        <button class="btn-color" style="background: #991b1b;" onclick="setTileBg('#991b1b', '#fca5a5', this)">🔴 魔物紅底 (#991b1b)</button>
+        <button class="btn-color" style="background: #0f172a;" onclick="setTileBg('#0f172a', '#475569', this)">🌑 暗夜深色 (#0f172a)</button>
+        <button class="btn-color" style="background: #ffffff; color: #1e293b;" onclick="setTileBg('#ffffff', '#cbd5e1', this)">⚪ 白底對照</button>
+      </div>
+    </div>
+    <div class="tool-group">
+      <span id="vote-summary" style="font-size: 14px; font-weight: 700; color: #facc15;">未標記首選</span>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- BATCH 2 CONTAINER (5款風格按 A -> B -> C -> D -> E 嚴格排列)        -->
+  <!-- ============================================================== -->
+  <div class="styles-container" id="view-batch2">
+
+    <!-- B2: STYLE A -->
+    <div class="style-card" id="b2-card-a">
+      <div class="card-header">
+        <div>
+          <div class="style-title">
+            <span>Style A (Batch 2)：16-bit 精緻像素風 (Retro Pixel Art)</span>
+            <span class="style-badge" style="background:#0284c7;">復古硬核王道</span>
+          </div>
+          <p class="style-desc">
+            <strong>【點陣像素寬刃 + 鷹徽金盾 + 鉚釘鋼靴 + 翼靴金冠】</strong>：純黑像素硬邊，加厚劍身在像素顆粒下俐落明快。格3雙鉚釘戰靴份量感十足；格4天界羽翼飛靴與鑲寶皇冠顆粒細膩。透明去背完美穿透！
+          </p>
+        </div>
+        <button class="vote-btn" onclick="toggleVote('Batch 2: Style A (16-bit像素風)', this)">⭐ 標記為首選風格</button>
+      </div>
+      <div class="card-body">
+        <div class="master-view">
+          <div class="section-tag">🔍 4 格演變原圖 (點擊檢視 1:1 大圖)</div>
+          <div class="img-frame" onclick="openLightbox('assets/TEMP/style_test/batch2/b2_style_a.png')">
+            <img src="assets/TEMP/style_test/batch2/b2_style_a.png" alt="Batch 2 Style A">
+          </div>
+        </div>
+        <div class="sim-view">
+          <div class="board-sim-container">
+            <div class="section-tag">🎮 實體戰鬥長方形方塊 (68×82) 鑲嵌測試 — 1.45rem 超大字無遮擋！</div>
+            <div class="stage-row">
+              <div class="stage-col">
+                <span class="stage-label">1. 像素巨刃</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_a_1.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">2</span><span class="tile-exact-name">像素鋼劍</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">2. 巨劍+鷹盾</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_a_2.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">4</span><span class="tile-exact-name">鷹徽衛盾</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">3. 盾牌+鉚釘靴</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_a_3.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">8</span><span class="tile-exact-name">鐵甲近衛</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">4. 翼靴+金冠</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_a_4.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">16</span><span class="tile-exact-name">王權降臨</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="section-tag">✨ 真透明去背檢視 (底色直接穿透圖案空隙)</div>
+          <div class="detail-strip">
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_a_1.png"><span>像素劍</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_a_2.png"><span>鷹盾</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_a_3.png"><span>鉚釘靴</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_a_4.png"><span>金冠靴</span></div>
+          </div>
+          <div class="verdict-box">
+            <strong>🎯 評審結論：</strong>純黑像素描邊能徹底隔絕棋盤底色干擾，加寬劍身讓 68×82 方塊充滿「老派王道 JRPG」的厚重紮實感。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B2: STYLE B -->
+    <div class="style-card" id="b2-card-b">
+      <div class="card-header">
+        <div>
+          <div class="style-title">
+            <span>Style B (Batch 2)：3D 立體 Emoji / 向量粗框 Q 版</span>
+            <span class="style-badge" style="background:#059669;">手遊首選推薦</span>
+          </div>
+          <p class="style-desc">
+            <strong>【45° 霸氣寬刃 + 獅頭金盾 + 騎士重靴 + 羽靴神冠】</strong>：超大金屬高光大劍斜跨 75% 畫面。格2配搭厚重獅頭金盾；格3聚焦盾牌與騎士重戰靴；格4為神羽光翼靴與天界神聖皇冠。去背完美融合底色！
+          </p>
+        </div>
+        <button class="vote-btn" onclick="toggleVote('Batch 2: Style B (3D立體Emoji Q版)', this)">⭐ 標記為首選風格</button>
+      </div>
+      <div class="card-body">
+        <div class="master-view">
+          <div class="section-tag">🔍 4 格演變原圖 (點擊檢視 1:1 大圖)</div>
+          <div class="img-frame" onclick="openLightbox('assets/TEMP/style_test/batch2/b2_style_b.png')">
+            <img src="assets/TEMP/style_test/batch2/b2_style_b.png" alt="Batch 2 Style B">
+          </div>
+        </div>
+        <div class="sim-view">
+          <div class="board-sim-container">
+            <div class="section-tag">🎮 實體戰鬥長方形方塊 (68×82) 鑲嵌測試 — 1.45rem 超大字無遮擋！</div>
+            <div class="stage-row">
+              <div class="stage-col">
+                <span class="stage-label">1. 巨刃單劍</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_b_1.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">2</span><span class="tile-exact-name">鍛造巨刃</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">2. 巨劍+金盾</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_b_2.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">4</span><span class="tile-exact-name">獅心盾劍</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">3. 盾牌+重靴</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_b_3.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">8</span><span class="tile-exact-name">鐵衛套裝</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">4. 羽靴+神冠</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_b_4.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">16</span><span class="tile-exact-name">神話天尊</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="section-tag">✨ 真透明去背檢視 (底色直接穿透圖案空隙)</div>
+          <div class="detail-strip">
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_b_1.png"><span>巨刃</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_b_2.png"><span>劍盾</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_b_3.png"><span>盾靴</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_b_4.png"><span>冠靴</span></div>
+          </div>
+          <div class="verdict-box">
+            <strong>🎯 評審結論：</strong>在 68×82 的直立長方形方塊中，上半部的寬刃大圖標與下方的 1.45rem 大數字形成了完美的上下分層，底色無死角穿透，無論金底或藍底均極具大廠商用打擊感。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B2: STYLE C -->
+    <div class="style-card" id="b2-card-c">
+      <div class="card-header">
+        <div>
+          <div class="style-title">
+            <span>Style C (Batch 2)：3D 體素方塊風 (3D Voxel Art)</span>
+            <span class="style-badge" style="background:#7c3aed;">獨特幾何趣味</span>
+          </div>
+          <p class="style-desc">
+            <strong>【體素大闊刃 + 藍金體素盾 + 方塊戰靴 + 光翼立體神冠】</strong>：3D 立方體幾何拼接，全新加寬的體素大劍斜跨畫面，邊界硬朗明快。格4體素天界神靴與發光方塊王冠立體光影極佳。
+          </p>
+        </div>
+        <button class="vote-btn" onclick="toggleVote('Batch 2: Style C (3D體素方塊風)', this)">⭐ 標記為首選風格</button>
+      </div>
+      <div class="card-body">
+        <div class="master-view">
+          <div class="section-tag">🔍 4 格演變原圖 (點擊檢視 1:1 大圖)</div>
+          <div class="img-frame" onclick="openLightbox('assets/TEMP/style_test/batch2/b2_style_c.png')">
+            <img src="assets/TEMP/style_test/batch2/b2_style_c.png" alt="Batch 2 Style C">
+          </div>
+        </div>
+        <div class="sim-view">
+          <div class="board-sim-container">
+            <div class="section-tag">🎮 實體戰鬥長方形方塊 (68×82) 鑲嵌測試 — 1.45rem 超大字無遮擋！</div>
+            <div class="stage-row">
+              <div class="stage-col">
+                <span class="stage-label">1. 體素闊劍</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_c_1.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">2</span><span class="tile-exact-name">方塊闊刃</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">2. 巨劍+體素盾</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_c_2.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">4</span><span class="tile-exact-name">藍金方盾</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">3. 盾牌+體素靴</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_c_3.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">8</span><span class="tile-exact-name">方塊重裝</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">4. 翼靴+發光冠</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_c_4.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">16</span><span class="tile-exact-name">天界幾何</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="section-tag">✨ 真透明去背檢視 (底色直接穿透圖案空隙)</div>
+          <div class="detail-strip">
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_c_1.png"><span>體素劍</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_c_2.png"><span>體素盾</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_c_3.png"><span>體素靴</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_c_4.png"><span>體素冠</span></div>
+          </div>
+          <div class="verdict-box">
+            <strong>🎯 評審結論：</strong>在長方形方塊中呈現出極具現代獨立精品遊戲氣息的積木感，輪廓清晰，且立體陰影在各色彩底色上表現突出。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B2: STYLE D -->
+    <div class="style-card" id="b2-card-d">
+      <div class="card-header">
+        <div>
+          <div class="style-title">
+            <span>Style D (Batch 2)：美式美漫厚塗賽璐珞風 (Bold Comic Cel-shaded)</span>
+            <span class="style-badge" style="background:#b91c1c;">極致張力戰損</span>
+          </div>
+          <p class="style-desc">
+            <strong>【重墨線條 + 粗獷戰損大劍 + 木紋鐵獅盾】</strong>：美漫厚墨線條具備最強的視覺侵略性，對角線霸氣斜插，深色金屬脛甲與神聖金靴層次極度硬朗。
+          </p>
+        </div>
+        <button class="vote-btn" onclick="toggleVote('Batch 2: Style D (美漫厚塗賽璐珞)', this)">⭐ 標記為首選風格</button>
+      </div>
+      <div class="card-body">
+        <div class="master-view">
+          <div class="section-tag">🔍 4 格演變原圖 (點擊檢視 1:1 大圖)</div>
+          <div class="img-frame" onclick="openLightbox('assets/TEMP/style_test/batch2/b2_style_d.png')">
+            <img src="assets/TEMP/style_test/batch2/b2_style_d.png" alt="Batch 2 Style D">
+          </div>
+        </div>
+        <div class="sim-view">
+          <div class="board-sim-container">
+            <div class="section-tag">🎮 實體戰鬥長方形方塊 (68×82) 鑲嵌測試 — 1.45rem 超大字無遮擋！</div>
+            <div class="stage-row">
+              <div class="stage-col">
+                <span class="stage-label">1. 戰損霸劍</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_d_1.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">2</span><span class="tile-exact-name">破軍闊劍</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">2. 霸劍+獅盾</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_d_2.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">4</span><span class="tile-exact-name">獅心堅盾</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">3. 獅盾+重脛甲</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_d_3.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">8</span><span class="tile-exact-name">重裝前鋒</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">4. 金翼靴+光冠</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_d_4.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">16</span><span class="tile-exact-name">諸神聖諭</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="section-tag">✨ 真透明去背檢視 (底色直接穿透圖案空隙)</div>
+          <div class="detail-strip">
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_d_1.png"><span>闊劍</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_d_2.png"><span>獅盾</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_d_3.png"><span>脛甲</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_d_4.png"><span>光冠</span></div>
+          </div>
+          <div class="verdict-box">
+            <strong>🎯 評審結論：</strong>墨線厚度冠絕全場，在任何亮色或暗色背景下方塊邊界皆無比剛硬，動態戰損刮痕更增添了肅殺感。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B2: STYLE E -->
+    <div class="style-card" id="b2-card-e">
+      <div class="card-header">
+        <div>
+          <div class="style-title">
+            <span>Style E (Batch 2)：實體桌遊微縮模型 / 黏土浮雕風 (Claymorphism)</span>
+            <span class="style-badge" style="background:#d97706;">實體觸感溫暖收藏</span>
+          </div>
+          <p class="style-desc">
+            <strong>【黏土捏塑巨刃 + 金邊黏土盾 + 軟萌重靴 + 天使神聖光環冠】</strong>：圓潤厚重倒角、磨砂啞光質感與實體微縮玩具觸感。加寬巨劍帶有親和力與手感厚重感，第4格金色光翼飛靴與懸浮金冠極具收藏公仔感。
+          </p>
+        </div>
+        <button class="vote-btn" onclick="toggleVote('Batch 2: Style E (黏土浮雕微縮)', this)">⭐ 標記為首選風格</button>
+      </div>
+      <div class="card-body">
+        <div class="master-view">
+          <div class="section-tag">🔍 4 格演變原圖 (點擊檢視 1:1 大圖)</div>
+          <div class="img-frame" onclick="openLightbox('assets/TEMP/style_test/batch2/b2_style_e.png')">
+            <img src="assets/TEMP/style_test/batch2/b2_style_e.png" alt="Batch 2 Style E">
+          </div>
+        </div>
+        <div class="sim-view">
+          <div class="board-sim-container">
+            <div class="section-tag">🎮 實體戰鬥長方形方塊 (68×82) 鑲嵌測試 — 1.45rem 超大字無遮擋！</div>
+            <div class="stage-row">
+              <div class="stage-col">
+                <span class="stage-label">1. 黏土闊劍</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_e_1.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">2</span><span class="tile-exact-name">捏塑闊劍</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">2. 巨劍+金盾</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_e_2.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">4</span><span class="tile-exact-name">黏土衛盾</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">3. 盾牌+重靴</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_e_3.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">8</span><span class="tile-exact-name">泥塑戰衛</span></div>
+                </div>
+              </div>
+              <div class="stage-col">
+                <span class="stage-label">4. 翼靴+天冠</span>
+                <div class="tile-exact-game">
+                  <div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch2/b2_style_e_4.png"></div>
+                  <div class="tile-exact-footer"><span class="tile-exact-val">16</span><span class="tile-exact-name">天尊金像</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="section-tag">✨ 真透明去背檢視 (底色直接穿透圖案空隙)</div>
+          <div class="detail-strip">
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_e_1.png"><span>黏土劍</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_e_2.png"><span>黏土盾</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_e_3.png"><span>黏土靴</span></div>
+            <div class="detail-box"><img src="assets/TEMP/style_test/batch2/b2_style_e_4.png"><span>金冠靴</span></div>
+          </div>
+          <div class="verdict-box">
+            <strong>🎯 評審結論：</strong>在盤面格子中展現出溫暖手作微縮玩具感，去背邊緣圓潤厚實，適合喜愛實體桌遊與高品質潮玩收藏風格的玩家。
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- BATCH 1 CONTAINER (完整5款風格按 A -> B -> C -> D -> E 嚴格排列)     -->
+  <!-- ============================================================== -->
+  <div class="styles-container" id="view-batch1" style="display: none;">
+
+    <div class="verdict-box" style="border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.1);">
+      <strong>⚠️ 歷史對照說明 (Batch 1 全5款風格)：</strong>本批次為初版測試樣張（存放於 <code>batch1/</code>，與 Batch 2 完全隔離不覆蓋）。特徵為「垂直細長劍身、4件全塞堆疊、圖片未去背保留灰白方塊底」。兩批次皆以 68×82 直立長方形格子進行精準對照。
+    </div>
+
+    <!-- B1: STYLE A -->
+    <div class="style-card" id="b1-card-a">
+      <div class="card-header">
+        <div>
+          <div class="style-title">Style A (Batch 1)：16-bit 復古像素</div>
+          <p class="style-desc">細長垂直像素刺劍，依序堆疊格里芬獅鷲盾、精鋼戰靴與神聖光翼飛靴。</p>
+        </div>
+        <button class="vote-btn" onclick="toggleVote('Batch 1: Style A (像素)', this)">⭐ 標記為首選</button>
+      </div>
+      <div class="card-body">
+        <div class="master-view">
+          <div class="img-frame" onclick="openLightbox('assets/TEMP/style_test/batch1/style_a_pixel.png')">
+            <img src="assets/TEMP/style_test/batch1/style_a_pixel.png">
+          </div>
+        </div>
+        <div class="sim-view">
+          <div class="board-sim-container">
+            <div class="stage-row">
+              <div class="stage-col"><span class="stage-label">1. 單劍</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_a_1.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">2</span><span class="tile-exact-name">初階劍</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">2. 劍盾</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_a_2.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">4</span><span class="tile-exact-name">獅盾組</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">3. 劍盾靴</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_a_3.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">8</span><span class="tile-exact-name">騎士套</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">4. 全套裝</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_a_4.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">16</span><span class="tile-exact-name">光翼神劍</span></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B1: STYLE B -->
+    <div class="style-card" id="b1-card-b">
+      <div class="card-header">
+        <div>
+          <div class="style-title">Style B (Batch 1)：3D 立體 Emoji / 向量粗框 Q 版</div>
+          <p class="style-desc">圓潤飽滿高光短劍，依序增添圓形金邊盾、高光鐵靴與神聖羽翼套裝。</p>
+        </div>
+        <button class="vote-btn" onclick="toggleVote('Batch 1: Style B (Emoji)', this)">⭐ 標記為首選</button>
+      </div>
+      <div class="card-body">
+        <div class="master-view">
+          <div class="img-frame" onclick="openLightbox('assets/TEMP/style_test/batch1/style_b_emoji.png')">
+            <img src="assets/TEMP/style_test/batch1/style_b_emoji.png">
+          </div>
+        </div>
+        <div class="sim-view">
+          <div class="board-sim-container">
+            <div class="stage-row">
+              <div class="stage-col"><span class="stage-label">1. 單劍</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_b_1.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">2</span><span class="tile-exact-name">高光刃</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">2. 劍盾</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_b_2.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">4</span><span class="tile-exact-name">金邊圓盾</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">3. 劍盾靴</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_b_3.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">8</span><span class="tile-exact-name">鐵甲套裝</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">4. 全套裝</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_b_4.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">16</span><span class="tile-exact-name">神聖大賞</span></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B1: STYLE C -->
+    <div class="style-card" id="b1-card-c">
+      <div class="card-header">
+        <div>
+          <div class="style-title">Style C (Batch 1)：3D 體素方塊風</div>
+          <p class="style-desc">積木幾何立方體拼接，等角俯視角下單長劍、體素盾牌、方塊靴與透光神話套裝。</p>
+        </div>
+        <button class="vote-btn" onclick="toggleVote('Batch 1: Style C (體素)', this)">⭐ 標記為首選</button>
+      </div>
+      <div class="card-body">
+        <div class="master-view">
+          <div class="img-frame" onclick="openLightbox('assets/TEMP/style_test/batch1/style_c_voxel.png')">
+            <img src="assets/TEMP/style_test/batch1/style_c_voxel.png">
+          </div>
+        </div>
+        <div class="sim-view">
+          <div class="board-sim-container">
+            <div class="stage-row">
+              <div class="stage-col"><span class="stage-label">1. 單劍</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_c_1.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">2</span><span class="tile-exact-name">方塊長劍</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">2. 劍盾</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_c_2.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">4</span><span class="tile-exact-name">體素盾組</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">3. 劍盾靴</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_c_3.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">8</span><span class="tile-exact-name">重裝步靴</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">4. 全套裝</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_c_4.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">16</span><span class="tile-exact-name">神話方塊</span></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B1: STYLE D -->
+    <div class="style-card" id="b1-card-d">
+      <div class="card-header">
+        <div>
+          <div class="style-title">Style D (Batch 1)：美式美漫厚塗賽璐珞風</div>
+          <p class="style-desc">厚重黑墨線條、戰損木紋盾牌、深色鐵脛甲與狂怒神聖炎刃。</p>
+        </div>
+        <button class="vote-btn" onclick="toggleVote('Batch 1: Style D (美漫)', this)">⭐ 標記為首選</button>
+      </div>
+      <div class="card-body">
+        <div class="master-view">
+          <div class="img-frame" onclick="openLightbox('assets/TEMP/style_test/batch1/style_d_comic.png')">
+            <img src="assets/TEMP/style_test/batch1/style_d_comic.png">
+          </div>
+        </div>
+        <div class="sim-view">
+          <div class="board-sim-container">
+            <div class="stage-row">
+              <div class="stage-col"><span class="stage-label">1. 單劍</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_d_1.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">2</span><span class="tile-exact-name">戰損短劍</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">2. 劍盾</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_d_2.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">4</span><span class="tile-exact-name">木紋鐵盾</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">3. 劍盾靴</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_d_3.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">8</span><span class="tile-exact-name">鐵甲重裝</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">4. 全套裝</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_d_4.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">16</span><span class="tile-exact-name">天界神罰</span></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B1: STYLE E -->
+    <div class="style-card" id="b1-card-e">
+      <div class="card-header">
+        <div>
+          <div class="style-title">Style E (Batch 1)：實體桌遊微縮模型 / 黏土浮雕風</div>
+          <p class="style-desc">手工捏塑黏土短劍、金邊小圓盾、厚實泥靴與純金天尊手辦雕塑。</p>
+        </div>
+        <button class="vote-btn" onclick="toggleVote('Batch 1: Style E (黏土)', this)">⭐ 標記為首選</button>
+      </div>
+      <div class="card-body">
+        <div class="master-view">
+          <div class="img-frame" onclick="openLightbox('assets/TEMP/style_test/batch1/style_e_clay.png')">
+            <img src="assets/TEMP/style_test/batch1/style_e_clay.png">
+          </div>
+        </div>
+        <div class="sim-view">
+          <div class="board-sim-container">
+            <div class="stage-row">
+              <div class="stage-col"><span class="stage-label">1. 單劍</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_e_1.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">2</span><span class="tile-exact-name">初階泥劍</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">2. 劍盾</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_e_2.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">4</span><span class="tile-exact-name">黏土小盾</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">3. 劍盾靴</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_e_3.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">8</span><span class="tile-exact-name">厚實套組</span></div></div></div>
+              <div class="stage-col"><span class="stage-label">4. 全套裝</span><div class="tile-exact-game"><div class="tile-exact-imgbox"><img src="assets/TEMP/style_test/batch1/style_e_4.png"></div><div class="tile-exact-footer"><span class="tile-exact-val">16</span><span class="tile-exact-name">金雕天尊</span></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Lightbox Modal -->
+  <div id="lightbox" onclick="closeLightbox()">
+    <img id="lightbox-img" src="">
+  </div>
+
+  <script>
+    function switchBatch(batchId) {
+      document.querySelectorAll('.batch-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-' + batchId).classList.add('active');
+
+      if (batchId === 'b2') {
+        document.getElementById('view-batch2').style.display = 'flex';
+        document.getElementById('view-batch1').style.display = 'none';
+      } else {
+        document.getElementById('view-batch2').style.display = 'none';
+        document.getElementById('view-batch1').style.display = 'flex';
+      }
+    }
+
+    function setTileBg(bgColor, borderColor, btn) {
+      document.documentElement.style.setProperty('--tile-bg-active', bgColor);
+      document.documentElement.style.setProperty('--tile-border-color', borderColor || 'rgba(255,255,255,0.2)');
+      document.querySelectorAll('.btn-color').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    function openLightbox(src) {
+      const lb = document.getElementById('lightbox');
+      const img = document.getElementById('lightbox-img');
+      img.src = src;
+      lb.style.display = 'flex';
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').style.display = 'none';
+    }
+
+    function toggleVote(styleName, btn) {
+      const isAlready = btn.classList.contains('selected');
+      document.querySelectorAll('.vote-btn').forEach(b => {
+        b.classList.remove('selected');
+        b.innerHTML = '⭐ 標記為首選風格';
+      });
+
+      const summary = document.getElementById('vote-summary');
+      if (!isAlready) {
+        btn.classList.add('selected');
+        btn.innerHTML = '✅ 已選定為首選風格';
+        summary.innerHTML = `🏆 目前首選：<span style="color:#38bdf8;">${styleName}</span>`;
+        localStorage.setItem('2048_favorite_style', styleName);
+      } else {
+        summary.innerHTML = '未標記首選';
+        localStorage.removeItem('2048_favorite_style');
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('2048_favorite_style');
+      if (saved) {
+        const btns = document.querySelectorAll('.vote-btn');
+        btns.forEach(btn => {
+          if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(saved)) {
+            btn.classList.add('selected');
+            btn.innerHTML = '✅ 已選定為首選風格';
+            document.getElementById('vote-summary').innerHTML = `🏆 目前首選：<span style="color:#38bdf8;">${saved}</span>`;
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

@@ -32,12 +32,8 @@ export class Spawner {
     return tile;
   }
 
-  // Spawns natural equipment after each valid move, respecting base stat tier
-  spawnTurnEquipment(tierConfigOrBase = null) {
-    const empty = this.board.getEmptyCells();
-    if (empty.length === 0) return null;
-    const cell = empty[Math.floor(Math.random() * empty.length)];
-
+  // Computes which equipment value would spawn given the base stat tier (for Next preview)
+  calculateTurnEquipmentValue(tierConfigOrBase = null) {
     let val = 2;
     if (tierConfigOrBase && typeof tierConfigOrBase === 'object' && tierConfigOrBase.baseRange && tierConfigOrBase.weights) {
       const rand = Math.random();
@@ -55,7 +51,15 @@ export class Spawner {
     } else {
       val = Math.random() < 0.85 ? 2 : 4;
     }
+    return val;
+  }
 
+  // Spawns natural equipment after each valid move, respecting base stat tier
+  spawnTurnEquipment(tierConfigOrBase = null) {
+    const empty = this.board.getEmptyCells();
+    if (empty.length === 0) return null;
+    const cell = empty[Math.floor(Math.random() * empty.length)];
+    const val = this.calculateTurnEquipmentValue(tierConfigOrBase);
     return this.spawnEquipment(val, cell);
   }
 

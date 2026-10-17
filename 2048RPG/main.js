@@ -6,7 +6,7 @@ import { ViewRenderer } from './src/presentation/ViewRenderer.js';
 import { AudioEffects } from './src/presentation/AudioEffects.js';
 import { TutorialOverlay } from './src/presentation/TutorialOverlay.js';
 import { StageListView } from './src/presentation/StageListView.js';
-import { Direction, STAGE_CONFIGS, STAGE_0_CONFIG, Events, MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS, DEFEAT_TACTICAL_TIPS } from './src/core/Constants.js';
+import { Direction, TileType, STAGE_CONFIGS, STAGE_0_CONFIG, Events, MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS, DEFEAT_TACTICAL_TIPS, getEquipmentImagePath, getMonsterImagePath, getHeroImagePath, getMonsterThemeByChapter } from './src/core/Constants.js';
 import { GwtRunner } from './src/tests/GwtRunner.js';
 
 class AppController {
@@ -19,9 +19,11 @@ class AppController {
 
     // DOM Elements
     this.boardGridEl = document.getElementById('battle-board');
-    this.activeThemeSkin = localStorage.getItem('rpg_2048_theme_skin') || 'kingdom';
+    this.activeThemeSkin = localStorage.getItem('rpg_2048_theme_skin') || 'icon_focus';
+    this.activeIconStyle = localStorage.getItem('rpg_2048_icon_style') || 'style_b_emoji';
     this.viewRenderer = new ViewRenderer(this.boardGridEl);
     this.viewRenderer.setThemeSkin(this.activeThemeSkin);
+    this.viewRenderer.setIconStyle(this.activeIconStyle);
     this.isSliding = false;
 
     // Tutorial Presentation (C-STORY-030)
@@ -50,6 +52,9 @@ class AppController {
     this.combatStageNameEl = document.getElementById('combat-stage-name');
     this.combatTurnValEl = document.getElementById('combat-turn-val');
     this.combatMonstersValEl = document.getElementById('combat-monsters-val');
+    this.nextPreviewCardEl = document.getElementById('next-preview-card');
+    this.nextCardBadgeEl = document.getElementById('next-card-badge');
+    this.nextCardValEl = document.getElementById('next-card-val');
 
     // Shop Elements
     this.btnClaimTestGold = document.getElementById('btn-claim-test-gold');
@@ -89,8 +94,18 @@ class AppController {
 
     // Modals
     this.modalBriefing = document.getElementById('modal-stage-briefing');
+    // Settings & Appearance (C-STORY-010, C-STORY-042 & C-STORY-043 3D Matrix)
     this.modalSettings = document.getElementById('modal-settings');
+    this.settingLayoutSelect = document.getElementById('setting-layout-select');
+    this.settingIconStyleSelect = document.getElementById('setting-icon-style-select');
     this.settingThemeSelect = document.getElementById('setting-theme-select');
+    this.activeTileLayout = localStorage.getItem('rpg_2048_tile_layout') || 'layout_modern_pure';
+    this.activeIconStyle = localStorage.getItem('rpg_2048_icon_style') || 'style_b_emoji';
+    this.activeThemeSkin = localStorage.getItem('rpg_2048_theme_skin') || 'kingdom';
+    this.viewRenderer.setTileLayout(this.activeTileLayout);
+    this.viewRenderer.setIconStyle(this.activeIconStyle);
+    this.viewRenderer.setThemeSkin(this.activeThemeSkin);
+
     this.modalResetConfirm = document.getElementById('modal-reset-confirm');
     this.btnResetExecute = document.getElementById('btn-reset-execute');
     this.btnResetCancel = document.getElementById('btn-reset-cancel');
@@ -232,8 +247,12 @@ class AppController {
     });
 
     this.eventBus.on(Events.BOARD_CHANGED, state => {
+      if (this.stageManager && this.stageManager.currentStageConfig) {
+        this.viewRenderer.setChapterId(this.stageManager.currentStageConfig.chapter);
+      }
       if (this.combatTurnValEl) this.combatTurnValEl.textContent = state.turnCount;
       if (this.combatMonstersValEl) this.combatMonstersValEl.textContent = state.monstersRemaining;
+      this.renderNextTilePreview(state.nextTilePreview);
 
       if (state.moves && state.moves.length > 0) {
         this.isSliding = true;
@@ -417,6 +436,40 @@ class AppController {
       });
     }
 
+    if (this.settingLayoutSelect) {
+      this.settingLayoutSelect.value = this.activeTileLayout;
+      this.settingLayoutSelect.addEventListener('change', (e) => {
+        this.audio.playClick();
+        this.activeTileLayout = e.target.value;
+        localStorage.setItem('rpg_2048_tile_layout', this.activeTileLayout);
+        this.viewRenderer.setTileLayout(this.activeTileLayout);
+        if (this.stageManager.isInBattle) {
+          this.viewRenderer.renderBoard(this.stageManager.board);
+          this.renderNextTilePreview(this.stageManager.nextTilePreview);
+        }
+        this.renderArmory();
+      });
+    }
+
+    if (this.settingIconStyleSelect) {
+      this.settingIconStyleSelect.value = this.activeIconStyle;
+      this.settingIconStyleSelect.addEventListener('change', (e) => {
+        this.audio.playClick();
+        this.activeIconStyle = e.target.value;
+        localStorage.setItem('rpg_2048_icon_style', this.activeIconStyle);
+        this.viewRenderer.setIconStyle(this.activeIconStyle);
+        if (this.updateSkinBtnLabel) this.updateSkinBtnLabel();
+        if (this.stageManager.isInBattle) {
+          if (this.stageManager.currentStageConfig) {
+            this.viewRenderer.setChapterId(this.stageManager.currentStageConfig.chapter);
+          }
+          this.viewRenderer.renderBoard(this.stageManager.board);
+          this.renderNextTilePreview(this.stageManager.nextTilePreview);
+        }
+        this.renderArmory();
+      });
+    }
+
     if (this.settingThemeSelect) {
       this.settingThemeSelect.value = this.activeThemeSkin;
       this.settingThemeSelect.addEventListener('change', (e) => {
@@ -426,6 +479,7 @@ class AppController {
         this.viewRenderer.setThemeSkin(this.activeThemeSkin);
         if (this.stageManager.isInBattle) {
           this.viewRenderer.renderBoard(this.stageManager.board);
+          this.renderNextTilePreview(this.stageManager.nextTilePreview);
         }
         this.renderArmory();
       });
@@ -579,6 +633,50 @@ class AppController {
         this.exitCombat();
       }
     });
+
+    // Quick Skin Toggle in Combat Top Bar (C-STORY-043 6-Style Cycle)
+    const ICON_STYLES_CYCLE = [
+      { id: 'style_b_emoji', label: '🎭 3D立體' },
+      { id: 'style_e_clay', label: '🗿 黏土浮雕' },
+      { id: 'style_d_comic', label: '🎨 賽璐珞' },
+      { id: 'style_a_pixel', label: '👾 像素點陣' },
+      { id: 'style_c_voxel', label: '🧱 體素方塊' },
+      { id: 'style_native_emoji', label: '🔤 原生Emoji' }
+    ];
+
+    const btnCombatSkin = document.getElementById('btn-combat-skin');
+    const updateSkinBtnLabel = () => {
+      const labelEl = document.getElementById('combat-skin-label');
+      if (!labelEl) return;
+      const found = ICON_STYLES_CYCLE.find(s => s.id === this.activeIconStyle);
+      labelEl.textContent = found ? found.label : '🎭 3D立體';
+    };
+    this.updateSkinBtnLabel = updateSkinBtnLabel;
+    updateSkinBtnLabel();
+
+    if (btnCombatSkin) {
+      btnCombatSkin.addEventListener('click', () => {
+        this.audio.playClick();
+        const currentIndex = ICON_STYLES_CYCLE.findIndex(s => s.id === this.activeIconStyle);
+        const nextIndex = (currentIndex + 1) % ICON_STYLES_CYCLE.length;
+        this.activeIconStyle = ICON_STYLES_CYCLE[nextIndex].id;
+
+        localStorage.setItem('rpg_2048_icon_style', this.activeIconStyle);
+        this.viewRenderer.setIconStyle(this.activeIconStyle);
+        updateSkinBtnLabel();
+        if (this.settingIconStyleSelect) {
+          this.settingIconStyleSelect.value = this.activeIconStyle;
+        }
+        if (this.stageManager && this.stageManager.isInBattle) {
+          if (this.stageManager.currentStageConfig) {
+            this.viewRenderer.setChapterId(this.stageManager.currentStageConfig.chapter);
+          }
+          this.viewRenderer.renderBoard(this.stageManager.board);
+          this.renderNextTilePreview(this.stageManager.nextTilePreview);
+        }
+        this.renderArmory();
+      });
+    }
 
     // Victory confirm
     document.getElementById('btn-victory-confirm').addEventListener('click', () => {
@@ -1597,6 +1695,7 @@ class AppController {
     if (!config) return;
 
     this.combatStageNameEl.textContent = config.name;
+    this.viewRenderer.setChapterId(config.chapter);
     this.combatOverlayEl.style.display = 'flex';
   }
 
@@ -1608,6 +1707,7 @@ class AppController {
     if (!config) return;
 
     this.combatStageNameEl.textContent = config.name;
+    this.viewRenderer.setChapterId(config.chapter);
     this.combatOverlayEl.style.display = 'flex';
   }
 
@@ -1678,6 +1778,64 @@ class AppController {
     if (!DEFEAT_TACTICAL_TIPS || DEFEAT_TACTICAL_TIPS.length === 0) return;
     const randIdx = Math.floor(Math.random() * DEFEAT_TACTICAL_TIPS.length);
     this.renderDefeatTip(randIdx);
+  }
+
+  // ==========================================
+  // C-STORY-041 & C-STORY-042: NEXT TILE PREVIEW RENDERER (IMAGE & EMOJI DECOUPLING)
+  // ==========================================
+  renderNextTilePreview(preview) {
+    if (!this.nextPreviewCardEl || !this.nextCardBadgeEl || !this.nextCardValEl) return;
+    if (!preview) {
+      this.nextPreviewCardEl.style.display = 'none';
+      return;
+    }
+    this.nextPreviewCardEl.style.display = 'flex';
+
+    if (preview.type === TileType.GOLD) {
+      this.nextCardValEl.textContent = preview.value;
+      this.nextPreviewCardEl.classList.add('preview-gold');
+      this.nextPreviewCardEl.style.backgroundColor = '';
+      this.nextPreviewCardEl.style.borderColor = '';
+      // Ensure badge element is clean
+      this.nextCardBadgeEl.innerHTML = '';
+      this.nextCardBadgeEl.style.display = 'none';
+    } else {
+      let theme = null;
+      let previewImgPath = null;
+      const chId = this.stageManager && this.stageManager.currentStageConfig ? this.stageManager.currentStageConfig.chapter : undefined;
+
+      if (preview.type === TileType.MONSTER) {
+        theme = getMonsterThemeByChapter(chId, preview.value);
+        previewImgPath = getMonsterImagePath(chId, preview.value, this.activeIconStyle);
+      } else if (preview.type === TileType.HERO) {
+        theme = HERO_THEMES[preview.value];
+        previewImgPath = getHeroImagePath(preview.value, this.activeIconStyle, this.activeHeroClass || 'knight');
+      } else {
+        theme = EQUIPMENT_THEMES[preview.value] || { bg: '#334155', border: '#475569', text: '#ffffff', badge: '⚔️' };
+        previewImgPath = getEquipmentImagePath(preview.value, this.activeIconStyle);
+      }
+
+      this.nextCardValEl.textContent = preview.value;
+      this.nextPreviewCardEl.classList.remove('preview-gold');
+      this.nextPreviewCardEl.style.backgroundColor = (theme && theme.bg) || '#334155';
+      this.nextPreviewCardEl.style.borderColor = (theme && theme.border) || '#475569';
+
+      if (previewImgPath) {
+        this.nextCardBadgeEl.style.display = 'flex';
+        this.nextCardBadgeEl.innerHTML = `<img src="${previewImgPath}" class="next-preview-img" alt="next-tile" onerror="this.remove()">`;
+      } else if (theme && theme.badge) {
+        this.nextCardBadgeEl.style.display = 'flex';
+        this.nextCardBadgeEl.textContent = theme.badge;
+      } else {
+        this.nextCardBadgeEl.innerHTML = '';
+        this.nextCardBadgeEl.style.display = 'none';
+      }
+    }
+
+    // Trigger pop bounce animation
+    this.nextPreviewCardEl.classList.remove('pop-effect');
+    void this.nextPreviewCardEl.offsetWidth; // Force reflow
+    this.nextPreviewCardEl.classList.add('pop-effect');
   }
 }
 

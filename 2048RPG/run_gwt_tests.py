@@ -11,6 +11,18 @@ if hasattr(sys.stdout, 'reconfigure'):
     except Exception:
         pass
 
+import socket
+
+def is_port_open(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('127.0.0.1', port)) == 0
+
+managed_srv = None
+if not is_port_open(8081):
+    print("Port 8081 not running. Starting temporary server.py...")
+    managed_srv = subprocess.Popen([sys.executable, "server.py", "8081"], cwd=r"C:\Antigravity\2048RPG\Commercial_Edition")
+    time.sleep(1.2)
+
 results_file = os.path.join(r"C:\Antigravity\2048RPG\Commercial_Edition", "test_results.json")
 if os.path.exists(results_file):
     os.remove(results_file)
@@ -58,6 +70,13 @@ try:
     edge_proc.wait(timeout=2)
 except Exception:
     pass
+
+if managed_srv:
+    try:
+        managed_srv.terminate()
+        managed_srv.wait(timeout=2)
+    except Exception:
+        pass
 
 if not found:
     print("FAILED: Timeout waiting for test results.")

@@ -40,10 +40,11 @@ export const Events = {
   PRIVILEGE_CHANGED: 'PRIVILEGE_CHANGED',
   AD_TRIGGERED: 'AD_TRIGGERED',
   TUTORIAL_STEP_CHANGED: 'TUTORIAL_STEP_CHANGED',
-  TUTORIAL_COMPLETED: 'TUTORIAL_COMPLETED'
+  TUTORIAL_COMPLETED: 'TUTORIAL_COMPLETED',
+  NEXT_TILE_CHANGED: 'NEXT_TILE_CHANGED'
 };
 
-export const CURRENT_GAME_VERSION = 'v1.4.0';
+export const CURRENT_GAME_VERSION = 'v1.4.4';
 
 export const MAX_ITEM_STACK = 999;
 
@@ -499,6 +500,138 @@ export const MONSTER_THEMES = {
   262144: { name: '萬古始祖神', badge: '☀️', bg: '#451a03', text: '#fed7aa', border: '#f59e0b' }
 };
 
+// ==========================================
+// C-STORY-067: CHAPTER-THEMED BIOME MONSTER POOLS
+// ==========================================
+export const CHAPTER_MONSTER_POOLS = {
+  0: {
+    id: 0, name: '序章：新手訓練所', range: [4, 8],
+    monsters: {
+      4: { name: '訓練假人', badge: '🪵', bg: '#3b0764', text: '#f3e8ff', border: '#a855f7' },
+      8: { name: '教官傀儡', badge: '🤖', bg: '#450a0a', text: '#fca5a5', border: '#ef4444' }
+    }
+  },
+  1: {
+    id: 1, name: '第 I 章：微風之境', range: [2, 32],
+    monsters: {
+      2:  { name: '洞穴蝙蝠', badge: '🦇', bg: '#3b0764', text: '#f3e8ff', border: '#a855f7', clayImg: 'assets/images/monsters_clay/monster_ch01_02.png' },
+      4:  { name: '森林幼狼', badge: '🐺', bg: '#451a03', text: '#ffedd5', border: '#f97316', clayImg: 'assets/images/monsters_clay/monster_ch01_04.png' },
+      8:  { name: '哥布林斥候', badge: '👺', bg: '#14532d', text: '#bbf7d0', border: '#22c55e', clayImg: 'assets/images/monsters_clay/monster_ch01_08.png' },
+      16: { name: '野生史萊姆', badge: '🦠', bg: '#4c0519', text: '#fecdd3', border: '#e11d48', clayImg: 'assets/images/monsters_clay/monster_ch01_16.png' },
+      32: { name: '獸人督軍', badge: '👹', isBoss: true, bg: '#701a75', text: '#f5d0fe', border: '#d946ef', clayImg: 'assets/images/monsters_clay/monster_ch01_32.png' }
+    }
+  },
+  2: {
+    id: 2, name: '第 II 章：灼熱熔岩', range: [16, 512],
+    monsters: {
+      16:  { name: '火苗蜥蜴', badge: '🦎', bg: '#451a03', text: '#fed7aa', border: '#f97316', clayImg: 'assets/images/monsters_clay/monster_ch02_16.png' },
+      32:  { name: '熔岩火靈', badge: '🔥', bg: '#7c2d12', text: '#ffedd5', border: '#ea580c', clayImg: 'assets/images/monsters_clay/monster_ch02_32.png' },
+      64:  { name: '熔岩史萊姆', badge: '🦠', trait: 'split', bg: '#991b1b', text: '#fee2e2', border: '#ef4444', clayImg: 'assets/images/monsters_clay/monster_ch02_64.png' },
+      128: { name: '炎魔督軍', badge: '👹', bg: '#701a75', text: '#f5d0fe', border: '#d946ef', clayImg: 'assets/images/monsters_clay/monster_ch02_128.png' },
+      256: { name: '赤炎巨魔', badge: '🌋', bg: '#581c87', text: '#f3e8ff', border: '#a855f7', clayImg: 'assets/images/monsters_clay/monster_ch02_256.png' },
+      512: { name: '黑曜熔岩龍', badge: '🐉', isBoss: true, bg: '#450a0a', text: '#fca5a5', border: '#dc2626', clayImg: 'assets/images/monsters_clay/monster_ch02_512.png' }
+    }
+  },
+  3: {
+    id: 3, name: '第 III 章：孤峰岩地', range: [64, 2048],
+    monsters: {
+      64:   { name: '懸崖強盜', badge: '🥷', bg: '#1e293b', text: '#cbd5e1', border: '#64748b', clayImg: 'assets/images/monsters_clay/monster_ch03_64.png' },
+      128:  { name: '落石石像鬼', badge: '🦇', trait: 'armor', bg: '#334155', text: '#f1f5f9', border: '#94a3b8', clayImg: 'assets/images/monsters_clay/monster_ch03_128.png' },
+      256:  { name: '岩穴巨蜥', badge: '🦎', bg: '#451a03', text: '#fed7aa', border: '#f97316', clayImg: 'assets/images/monsters_clay/monster_ch03_256.png' },
+      512:  { name: '石魔守衛', badge: '🗿', bg: '#292524', text: '#e7e5e4', border: '#78716c', clayImg: 'assets/images/monsters_clay/monster_ch03_512.png' },
+      1024: { name: '山嶺巨人', badge: '🪨', bg: '#1c1917', text: '#f5f5f4', border: '#57534e', clayImg: 'assets/images/monsters_clay/monster_ch03_1024.png' },
+      2048: { name: '岩地霸主', badge: '👑', isBoss: true, bg: '#78350f', text: '#fef3c7', border: '#f59e0b', clayImg: 'assets/images/monsters_clay/monster_ch03_2048.png' }
+    }
+  },
+  4: {
+    id: 4, name: '第 IV 章：蛛魔荒漠', range: [256, 4096],
+    monsters: {
+      256:  { name: '沙丘毒蠍', badge: '🦂', bg: '#713f12', text: '#fef08a', border: '#eab308', clayImg: 'assets/images/monsters_clay/monster_ch04_256.png' },
+      512:  { name: '刺針母蛛', badge: '🕷️', trait: 'split', bg: '#3b0764', text: '#f3e8ff', border: '#a855f7', clayImg: 'assets/images/monsters_clay/monster_ch04_512.png' },
+      1024: { name: '荒漠毒蛛', badge: '🕸️', bg: '#2e1065', text: '#e9d5ff', border: '#9333ea', clayImg: 'assets/images/monsters_clay/monster_ch04_1024.png' },
+      2048: { name: '蛛魔祭司', badge: '🧙', bg: '#581c87', text: '#fae8ff', border: '#c026d3', clayImg: 'assets/images/monsters_clay/monster_ch04_2048.png' },
+      4096: { name: '遠古蛛皇', badge: '👑', isBoss: true, bg: '#4c0519', text: '#ffe4e6', border: '#f43f5e', clayImg: 'assets/images/monsters_clay/monster_ch04_4096.png' }
+    }
+  },
+  5: {
+    id: 5, name: '第 V 章：遠古地宮', range: [1024, 16384],
+    monsters: {
+      1024:  { name: '不死骷髏', badge: '💀', bg: '#1e293b', text: '#e2e8f0', border: '#94a3b8', clayImg: 'assets/images/monsters_clay/monster_ch05_1024.png' },
+      2048:  { name: '幽魂術士', badge: '👻', bg: '#0f172a', text: '#38bdf8', border: '#0284c7', clayImg: 'assets/images/monsters_clay/monster_ch05_2048.png' },
+      4096:  { name: '皇陵守衛', badge: '🛡️', bg: '#312e81', text: '#c7d2fe', border: '#6366f1', clayImg: 'assets/images/monsters_clay/monster_ch05_4096.png' },
+      8192:  { name: '木乃伊王', badge: '🧟', bg: '#78350f', text: '#fef3c7', border: '#d97706', clayImg: 'assets/images/monsters_clay/monster_ch05_8192.png' },
+      16384: { name: '冥界巫妖', badge: '⚡', isBoss: true, bg: '#2e1065', text: '#e9d5ff', border: '#a855f7', clayImg: 'assets/images/monsters_clay/monster_ch05_16384.png' }
+    }
+  },
+  6: {
+    id: 6, name: '第 VI 章：滅世黑曜', range: [4096, 65536],
+    monsters: {
+      4096:  { name: '黑曜石魔', badge: '🗿', bg: '#09090b', text: '#cbd5e1', border: '#3f3f46', clayImg: 'assets/images/monsters_clay/monster_ch06_4096.png' },
+      8192:  { name: '黑曜熔火怪', badge: '🔥', bg: '#450a0a', text: '#fca5a5', border: '#dc2626', clayImg: 'assets/images/monsters_clay/monster_ch06_8192.png' },
+      16384: { name: '黑曜幼龍', badge: '🐲', bg: '#1c1917', text: '#fbbf24', border: '#d97706', clayImg: 'assets/images/monsters_clay/monster_ch06_16384.png' },
+      32768: { name: '黑曜侍僧', badge: '🔮', bg: '#2e1065', text: '#d8b4fe', border: '#9333ea', clayImg: 'assets/images/monsters_clay/monster_ch06_32768.png' },
+      65536: { name: '遠古黑曜巨龍', badge: '🐉', isBoss: true, bg: '#450a0a', text: '#fee2e2', border: '#b91c1c', clayImg: 'assets/images/monsters_clay/monster_ch06_65536.png' }
+    }
+  },
+  7: {
+    id: 7, name: '第 VII 章：神魔深淵', range: [16384, 131072],
+    monsters: {
+      16384:  { name: '虛空行者', badge: '👤', bg: '#0f172a', text: '#7dd3fc', border: '#0284c7', clayImg: 'assets/images/monsters_clay/monster_ch07_16384.png' },
+      32768:  { name: '深淵眼魔', badge: '👁️', bg: '#2e1065', text: '#f0abfc', border: '#c026d3', clayImg: 'assets/images/monsters_clay/monster_ch07_32768.png' },
+      65536:  { name: '裂隙巨妖', badge: '🐙', bg: '#172554', text: '#93c5fd', border: '#2563eb', clayImg: 'assets/images/monsters_clay/monster_ch07_65536.png' },
+      131072: { name: '混沌魔皇', badge: '💥', isBoss: true, bg: '#311042', text: '#fae8ff', border: '#a21caf', clayImg: 'assets/images/monsters_clay/monster_ch07_131072.png' }
+    }
+  },
+  8: {
+    id: 8, name: '第 VIII 章：終焉神域', range: [65536, 262144],
+    monsters: {
+      65536:  { name: '天界裁決者', badge: '⚔️', bg: '#172554', text: '#e0e7ff', border: '#4f46e5', clayImg: 'assets/images/monsters_clay/monster_ch08_65536.png' },
+      131072: { name: '終焉智腦', badge: '🔮', bg: '#042f2e', text: '#99f6e4', border: '#0d9488', clayImg: 'assets/images/monsters_clay/monster_ch08_131072.png' },
+      262144: { name: '萬古始祖神', badge: '☀️', isBoss: true, bg: '#451a03', text: '#fef08a', border: '#ea580c', clayImg: 'assets/images/monsters_clay/monster_ch08_262144.png' }
+    }
+  }
+};
+
+/**
+ * 依章節與數值取得專屬魔物主題 (C-STORY-067)
+ * 若未指定章節或超出章節，自動平滑 Fallback 至既有全域 MONSTER_THEMES
+ */
+export function getMonsterThemeByChapter(chapterId, value) {
+  if (chapterId !== undefined && CHAPTER_MONSTER_POOLS[chapterId]) {
+    const chapter = CHAPTER_MONSTER_POOLS[chapterId];
+    if (chapter.monsters && chapter.monsters[value]) {
+      return { ...chapter.monsters[value] };
+    }
+  }
+  return MONSTER_THEMES[value] || { name: '魔物', badge: '👾', bg: '#4c0519', text: '#fecdd3', border: '#e11d48' };
+}
+
+/**
+ * 取得魔物微縮模型圖片路徑 (C-STORY-067)
+ */
+export function getMonsterImagePath(chapterId, value, iconStyle = 'style_e_clay') {
+  if (iconStyle === 'style_native_emoji' || iconStyle === 'style_d_native') return null;
+  if (!value || value <= 0) return null;
+
+  if (iconStyle === 'style_e_clay' || !iconStyle) {
+    if (chapterId !== undefined && CHAPTER_MONSTER_POOLS[chapterId]) {
+      const chapter = CHAPTER_MONSTER_POOLS[chapterId];
+      if (chapter.monsters && chapter.monsters[value] && chapter.monsters[value].clayImg) {
+        return chapter.monsters[value].clayImg;
+      }
+    }
+    // 全域查找模式：自動搜尋全章節生態池中已註冊之魔物圖資
+    for (const chId in CHAPTER_MONSTER_POOLS) {
+      const ch = CHAPTER_MONSTER_POOLS[chId];
+      if (ch.monsters && ch.monsters[value] && ch.monsters[value].clayImg) {
+        return ch.monsters[value].clayImg;
+      }
+    }
+  }
+  return null;
+}
+
+
 export const GOLD_THEMES = {
   1:      { name: '碎金微光', badge: '🪙', bg: '#78350f', text: '#fef3c7', border: '#f59e0b' },
   2:      { name: '黃銅小幣', badge: '🪙', bg: '#92400e', text: '#fef3c7', border: '#f59e0b' },
@@ -511,43 +644,162 @@ export const GOLD_THEMES = {
 };
 
 // ==========================================
-// C-STORY-010: MULTIPLE VISUAL THEME SKINS
+// C-STORY-010 & C-STORY-042: DECOUPLED PALETTE SKINS & ICON ART STYLES
 // ==========================================
-export const ThemeSkinType = {
+export const PaletteSkinType = {
+  ICON_FOCUS: 'icon_focus',
   KINGDOM: 'kingdom',
   CYBER: 'cyber',
   RETRO: 'retro',
-  MINIMAL: 'minimal',
-  ICON_FOCUS: 'icon_focus'
+  MINIMAL: 'minimal'
 };
 
-export const THEME_SKIN_CONFIGS = {
+export const PALETTE_SKIN_CONFIGS = {
+  icon_focus: {
+    id: 'icon_focus',
+    name: '👑 純粹圖標 (無字+大圖標)',
+    desc: '無方塊名稱干擾，中央大圖標與醒目大戰力數值'
+  },
   kingdom: {
     id: 'kingdom',
-    name: '🌟 王國奇幻 (預設高對比)',
-    desc: '經典王國冒險風格，鮮明深色階與高飽和邊框'
+    name: '🌟 王國奇幻 (經典高對比)',
+    desc: '經典王國冒險配色，鮮明深色階與高飽和邊框'
   },
   cyber: {
     id: 'cyber',
     name: '🌆 賽博霓虹 (Cyber Neon)',
-    desc: '未來終端科技風格，暗黑底色搭配高彩螢光電路'
+    desc: '未來終端科技配色，暗黑底色搭配螢光高對比'
   },
   retro: {
     id: 'retro',
     name: '🕹️ 復古街機 (Retro 8-Bit)',
-    desc: '經典 8 位元街機風格，高反差像素邊框與純粹色塊'
+    desc: '經典 8 位元街機配色，高反差純粹色塊與鮮明邊框'
   },
   minimal: {
     id: 'minimal',
     name: '🧊 幾何極簡 (Minimalist Flat)',
     desc: '現代幾何扁平風格，北歐冷調低飽和雅緻質感'
-  },
-  icon_focus: {
-    id: 'icon_focus',
-    name: '👑 純粹圖標模式 (大圖標+大數字)',
-    desc: '無文字極簡佈局，英雄裝備隨戰力進化，中央大圖標與醒目大戰力'
   }
 };
+
+// 4 種圖標美術風格 (A / B / C / D)
+export const IconStyleType = {
+  STYLE_A_PIXEL: 'style_a_pixel',       // 風格 A：像素點陣 (Pixel 16-Bit)
+  STYLE_B_EMOJI: 'style_b_emoji',       // 風格 B：立體 Emoji (Vibrant Emoji)
+  STYLE_C_VOXEL: 'style_c_voxel',       // 風格 C：體素方塊 (Minecraft Voxel)
+  STYLE_D_NATIVE: 'style_d_native'      // 風格 D：經典原生 Emoji (Classic Emoji)
+};
+
+export const ICON_STYLE_CONFIGS = {
+  style_a_pixel: {
+    id: 'style_a_pixel',
+    name: '👾 像素點陣 (Pixel 16-Bit)',
+    desc: '粗顆粒、厚外框像素點陣風（目前套用 16 階暫代武器圖）'
+  },
+  style_b_emoji: {
+    id: 'style_b_emoji',
+    name: '🎭 立體 Emoji (Vibrant Art)',
+    desc: '大飽滿、高辨識色塊立體美術圖（尚未有圖時自動 Fallback）'
+  },
+  style_c_voxel: {
+    id: 'style_c_voxel',
+    name: '🧱 體素方塊 (Minecraft Voxel)',
+    desc: '經典 3D 體素等角方塊風格（尚未有圖時自動 Fallback）'
+  },
+  style_d_native: {
+    id: 'style_d_native',
+    name: '😀 經典原生 Emoji (純文字)',
+    desc: '原版純文字 Emoji 符號，極致輕量、最高對比'
+  }
+};
+
+// 向下相容既有 ThemeSkinType (含歷史 ICON_FOCUS 測試相容)
+export const ThemeSkinType = {
+  ...PaletteSkinType,
+  ICON_FOCUS: 'icon_focus'
+};
+export const THEME_SKIN_CONFIGS = {
+  ...PALETTE_SKIN_CONFIGS,
+  icon_focus: {
+    id: 'icon_focus',
+    name: '👑 純粹圖標模式 (歷史相容)',
+    desc: '大圖標與醒目大戰力模式'
+  }
+};
+
+/**
+ * 取得裝備階級對應之圖片路徑 (C-STORY-042)
+ * @param {number} value 裝備數值 (2, 4, 8, ... 65536)
+ * @param {string} iconStyle 圖標風格 (style_a_pixel, style_b_emoji, style_c_voxel, style_d_native)
+ * @returns {string|null} 圖片路徑或 null
+ */
+export function getEquipmentImagePath(value, iconStyle = 'style_a_pixel') {
+  if (iconStyle === 'style_native_emoji' || iconStyle === 'style_d_native') return null;
+  if (!value || value <= 0) return null;
+  const tier = Math.round(Math.log2(value));
+  if (tier >= 1) {
+    // 風格 E (實體桌遊微縮模型 / 黏土浮雕風，C-STORY-057: 支援全 16 階與超限安全封頂)
+    if (iconStyle === 'style_e_clay') {
+      const clampedTier = Math.min(16, tier);
+      const padded = String(clampedTier).padStart(2, '0');
+      return `assets/images/equipment_clay/equip_${padded}.png`;
+    }
+
+    if (tier <= 16) {
+      const padded = String(tier).padStart(2, '0');
+      // 風格 A (16-Bit 復古像素點陣風)
+      if (iconStyle === 'style_a_pixel' || !iconStyle) {
+        return `assets/images/equipment/equip_${padded}.png`;
+      }
+      // 風格 B (3D 立體 Emoji / 向量粗框 Q 版)
+      if (iconStyle === 'style_b_emoji') {
+        return `assets/images/equipment_emoji/equip_${padded}.png`;
+      }
+      // 風格 C (3D 體素方塊風)
+      if (iconStyle === 'style_c_voxel') {
+        return `assets/images/equipment_voxel/equip_${padded}.png`;
+      }
+      // 風格 D (美式美漫厚塗賽璐珞風)
+      if (iconStyle === 'style_d_comic') {
+        return `assets/images/equipment_comic/equip_${padded}.png`;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * 取得勇者角色階級對應之圖片路徑 (C-STORY-047 / C-STORY-049 / C-STORY-057)
+ * 與微縮模型裝備圖共同透過『微縮模型』(style_e_clay) 選項呼叫綁定
+ * @param {number} value 勇者數值 (2, 4, 8, ... 65536)
+ * @param {string} iconStyle 圖標風格 (style_native_emoji, style_e_clay, etc.)
+ * @param {string} characterClass 職業 (預設 'knight' 中古奇幻勇者，相容 'samurai')
+ * @returns {string|null} 圖片路徑或 null
+ */
+export function getHeroImagePath(value, iconStyle = 'style_e_clay', characterClass = 'knight') {
+  if (iconStyle === 'style_native_emoji' || iconStyle === 'style_d_native') return null;
+  if (!value || value <= 0) return null;
+  const tier = Math.round(Math.log2(value));
+  
+  if (characterClass === 'samurai') {
+    if (tier >= 1 && tier <= 4) {
+      const padded = String(tier).padStart(2, '0');
+      return `assets/images/hero_samurai/hero_${padded}.png`;
+    }
+    return null;
+  }
+
+  // 騎士／勇者與軍備共同綁定至『微縮模型』(style_e_clay) 套組 (C-STORY-057 / C-STORY-058)
+  if (iconStyle === 'style_e_clay' || !iconStyle) {
+    if (tier >= 1) {
+      const clampedTier = Math.min(17, tier);
+      const padded = String(clampedTier).padStart(2, '0');
+      return `assets/images/hero_knight/hero_${padded}.png`;
+    }
+  }
+
+  return null;
+}
 
 export function getTileTheme(type, value, skin = 'kingdom') {
   let baseTheme = null;

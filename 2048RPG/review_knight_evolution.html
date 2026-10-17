@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>《2048 RPG》3D 黏土多樣動態 戰士／勇者外觀展廳 (Era 1: T01~T04)</title>
+  <style>
+    :root {
+      --bg-main: #090d16;
+      --bg-card: #131c2e;
+      --border-card: #22324e;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 2rem 1rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    header h1 {
+      font-size: 2.1rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #38bdf8, #fbbf24, #f43f5e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .badge-bar {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #7dd3fc;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    /* Small tile 64px comparison section */
+    .small-preview-section {
+      background: #111a2e;
+      border: 1px solid #22324e;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .small-preview-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #7dd3fc;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .small-tiles-row {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .small-tile-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .small-tile {
+      width: 64px;
+      height: 64px;
+      background: #1e293b;
+      border: 3px solid #38bdf8;
+      border-radius: 8px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+      overflow: hidden;
+    }
+
+    .small-tile img {
+      width: 90%;
+      height: 90%;
+      object-fit: contain;
+    }
+
+    .small-tile-val {
+      position: absolute;
+      bottom: 2px;
+      font-size: 0.75rem;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 1px 3px #000;
+      z-index: 2;
+    }
+
+    .small-tile-label {
+      font-size: 0.75rem;
+      color: #cbd5e1;
+      font-weight: 700;
+    }
+
+    /* Main cards */
+    .grid-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: #38bdf8;
+    }
+
+    .card-tier {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      color: #e2e8f0;
+    }
+
+    .card-val {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(56, 189, 248, 0.2);
+      border: 1px solid #38bdf8;
+      font-size: 0.85rem;
+      font-weight: 900;
+      padding: 2px 8px;
+      border-radius: 6px;
+      color: #38bdf8;
+    }
+
+    /* Simulation of game tile with subtle checkerboard to verify hole transparency */
+    .hero-tile-box {
+      width: 156px;
+      height: 156px;
+      margin-top: 1.75rem;
+      margin-bottom: 1rem;
+      background: #1e293b;
+      border: 4px solid #38bdf8;
+      border-radius: 14px;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.6), inset 0 0 10px rgba(56, 189, 248, 0.3);
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      animation: pulse-halo 2.5s infinite ease-in-out;
+      overflow: hidden;
+      background-image: 
+        linear-gradient(45deg, #162032 25%, transparent 25%), 
+        linear-gradient(-45deg, #162032 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #162032 75%), 
+        linear-gradient(-45deg, transparent 75%, #162032 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+
+    @keyframes pulse-halo {
+      0%, 100% {
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.5), inset 0 0 8px rgba(56, 189, 248, 0.2);
+        border-color: #38bdf8;
+      }
+      50% {
+        box-shadow: 0 0 24px rgba(56, 189, 248, 0.9), inset 0 0 14px rgba(56, 189, 248, 0.4);
+        border-color: #7dd3fc;
+      }
+    }
+
+    .hero-img {
+      width: 95%;
+      height: 95%;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+    }
+
+    .card-name {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #f8fafc;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+
+    .card-subtitle {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-bottom: 12px;
+      text-align: center;
+      line-height: 1.4;
+      min-height: 48px;
+    }
+
+    .pairing-box {
+      width: 100%;
+      background: #0d1525;
+      border: 1px dashed #243552;
+      border-radius: 10px;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: auto;
+    }
+
+    .equip-thumb {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+      background: #1e293b;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      padding: 2px;
+    }
+
+    .pairing-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pairing-title {
+      font-size: 0.72rem;
+      color: #64748b;
+    }
+
+    .pairing-name {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #facc15;
+    }
+
+    footer {
+      text-align: center;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border-card);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>《2048 RPG》3D 黏土雕塑 2.0頭身全露臉 待機架式 全16階終極大合輯展廳</h1>
+      <p>嚴格 2.0 頭身 Q 版大頭 ‧ 舉武器備戰待機架式 ‧ 100% 露臉 ‧ 裝備因果 1:1 共鳴 ‧ 洋紅幕去背</p>
+      <div class="badge-bar">
+        <span class="badge" style="background: rgba(234, 179, 8, 0.2); border-color: #eab308; color: #fde047;">🏆 全 16 階 (2 ~ 65536) 100% 圓滿達成</span>
+        <span class="badge">嚴格 2.0 頭身 Q 版 (縮小 64px 臉部極致清晰)</span>
+        <span class="badge">舉武器備戰待機動作 (非揮刀攻擊、可做呼吸動態)</span>
+        <span class="badge">100% 開放式露臉 (拒絕全閉頭盔)</span>
+        <span class="badge">手臂與跨下封閉孔洞 100% 鏤空</span>
+        <span class="badge">眼白與高光 100% 完好</span>
+      </div>
+    </header>
+
+    <!-- Section 1: Era 1 -->
+    <div style="margin-top: 2rem; margin-bottom: 1rem; border-left: 4px solid #38bdf8; padding-left: 12px;">
+      <h2 style="font-size: 1.4rem; color: #f8fafc;">第一時代：Era 1 手作黑鐵時代 (T01 ~ T04 / 數值 2 ~ 16)</h2>
+      <p style="color: #94a3b8; font-size: 0.9rem;">新手侍從、荒野傭兵、城鎮衛兵、王國步兵</p>
+    </div>
+
+    <!-- Small tile 64px comparison Era 1 -->
+    <div class="small-preview-section">
+      <div class="small-preview-title">🔍 Era 1 縮小至 64px 遊戲實際方塊尺寸測試</div>
+      <div class="small-tiles-row">
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_01.png" alt="T01" />
+            <span class="small-tile-val">2</span>
+          </div>
+          <span class="small-tile-label">2 · 侍從持木劍</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_02.png" alt="T02" />
+            <span class="small-tile-val">4</span>
+          </div>
+          <span class="small-tile-label">4 · 冒險短劍皮甲</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_03.png" alt="T03" />
+            <span class="small-tile-val">8</span>
+          </div>
+          <span class="small-tile-label">8 · 低伏架盾備戰</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_04.png" alt="T04" />
+            <span class="small-tile-val">16</span>
+          </div>
+          <span class="small-tile-label">16 · 肩側豎劍衛兵</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main cards Era 1 -->
+    <div class="grid-cards">
+      <!-- T01 -->
+      <div class="card">
+        <span class="card-tier">T01 · 侍從</span>
+        <span class="card-val">LV 2</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_01.png" alt="見習侍從" />
+        </div>
+        <div class="card-name">見習侍從</div>
+        <div class="card-subtitle">【粗布木劍初學者】粗布長袍 ‧ 雙手握粗短木劍直立待命 ‧ 初入冒險世界的青澀少年</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_01.png" alt="冒險短劍" />
+          <div class="pairing-info">
+            <span class="pairing-title">初始狀態 / 合成目標</span>
+            <span class="pairing-name">侍從 (2) ＋ 冒險短劍 (2) ＝ 見習戰士 (4)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- T02 -->
+      <div class="card" style="border-color: #38bdf8; box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);">
+        <span class="card-tier" style="background: rgba(56, 189, 248, 0.25); color: #38bdf8;">T02 · 見習 🚨新因果</span>
+        <span class="card-val">LV 4</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_02.png" alt="見習戰士" />
+        </div>
+        <div class="card-name">見習戰士</div>
+        <div class="card-subtitle">【持冒險短劍備戰】雙手橫握銀白鋼鐵冒險短劍 ‧ 身披縫線皮革胸甲與銅釦束帶 ‧ 眼神自信英挺</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_01.png" alt="冒險短劍" />
+          <div class="pairing-info">
+            <span class="pairing-title">剛吸收合成之裝備</span>
+            <span class="pairing-name">T01 冒險短劍 (手握寬刃鋼短劍 ‧ 披上皮革胸甲)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- T03 -->
+      <div class="card">
+        <span class="card-tier">T03 · 傭兵</span>
+        <span class="card-val">LV 8</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_03.png" alt="荒野傭兵" />
+        </div>
+        <div class="card-name">荒野傭兵</div>
+        <div class="card-subtitle">【低伏盾牌架劍待機】雙腿微蹲蓄勢 ‧ 生皮圓盾橫胸防禦 ‧ 熟鐵短劍搭在盾上向前瞄準待命</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_02.png" alt="獵戶皮盾" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T02 獵戶皮盾 (熟鐵劍搭生皮圓盾)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- T04 -->
+      <div class="card">
+        <span class="card-tier">T04 · 衛兵</span>
+        <span class="card-val">LV 16</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_04.png" alt="城鎮衛兵" />
+        </div>
+        <div class="card-name">城鎮衛兵</div>
+        <div class="card-subtitle">【肩側豎立巨劍待機】昂首挺胸 ‧ 青銅半面盔露臉高馬尾 ‧ 十字巨劍端正豎於右肩 ‧ 青銅十字盾挺立</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_03.png" alt="衛士泥盾靴" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T03 衛士泥盾靴 (十字泥盾與青銅劍)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Era 2 -->
+    <div style="margin-top: 3.5rem; margin-bottom: 1rem; border-left: 4px solid #a855f7; padding-left: 12px;">
+      <h2 style="font-size: 1.4rem; color: #f8fafc;">第二時代：Era 2 秘銀泰坦精銳 (T05 ~ T08 / 數值 32 ~ 256)</h2>
+      <p style="color: #94a3b8; font-size: 0.9rem;">授勳騎士、封邑領主、龍血先鋒、泰坦戰將</p>
+    </div>
+
+    <!-- Small tile 64px comparison Era 2 -->
+    <div class="small-preview-section">
+      <div class="small-preview-title">🔍 Era 2 縮小至 64px 遊戲實際方塊尺寸測試</div>
+      <div class="small-tiles-row">
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_05.png" alt="T05" />
+            <span class="small-tile-val">32</span>
+          </div>
+          <span class="small-tile-label">32 · 提劍盾側防</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_06.png" alt="T06" />
+            <span class="small-tile-val">64</span>
+          </div>
+          <span class="small-tile-label">64 · 雙手拄劍立姿</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_07.png" alt="T07" />
+            <span class="small-tile-val">128</span>
+          </div>
+          <span class="small-tile-label">128 · 龍劍扛肩傲立</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_08.png" alt="T08" />
+            <span class="small-tile-val">256</span>
+          </div>
+          <span class="small-tile-label">256 · 塔盾鎮地劍平端</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main cards Era 2 -->
+    <div class="grid-cards">
+      <!-- T05 -->
+      <div class="card">
+        <span class="card-tier">T05 · 授勳騎士</span>
+        <span class="card-val">LV 32</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_05.png" alt="授勳騎士" />
+        </div>
+        <div class="card-name">授勳騎士</div>
+        <div class="card-subtitle">【單手提劍盾側防待機】冰藍羽飾開冠露臉 ‧ 秘銀厚刃十字劍斜指地戒備 ‧ 秘銀紋章大鳶盾端正立於胸前</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_05.png" alt="秘銀闊劍" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T05 秘銀闊劍 (冰藍秘銀劍與大鳶盾)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- T06 -->
+      <div class="card">
+        <span class="card-tier">T06 · 封邑領主</span>
+        <span class="card-val">LV 64</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_06.png" alt="封邑領主" />
+        </div>
+        <div class="card-name">封邑領主</div>
+        <div class="card-subtitle">【雙手按劍立姿待命】金邊騎士金冠露臉 ‧ 深藍板甲獅頭肩甲 ‧ 雙手拄鍍金長劍垂直立於地面 ‧ 獅徽金盾斜靠</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_06.png" alt="領主金盾" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T06 領主金盾 (黃金獅首浮雕盾)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- T07 -->
+      <div class="card">
+        <span class="card-tier">T07 · 龍血先鋒</span>
+        <span class="card-val">LV 128</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_07.png" alt="龍血先鋒" />
+        </div>
+        <div class="card-name">龍血先鋒</div>
+        <div class="card-subtitle">【龍劍扛肩傲立待機】雙生龍角開面盔露臉紅髮 ‧ 赤紅龍鱗甲 ‧ 赤焰黑鐵闊劍霸氣扛於右肩 ‧ 龍鱗盾斜舉</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_07.png" alt="龍鱗戰靴" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T07 龍鱗戰靴 (赤焰闊劍與龍鱗盾)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- T08 -->
+      <div class="card">
+        <span class="card-tier">T08 · 泰坦戰將</span>
+        <span class="card-val">LV 256</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_08.png" alt="泰坦戰將" />
+        </div>
+        <div class="card-name">泰坦戰將</div>
+        <div class="card-subtitle">【巨塔盾鎮地大劍平端】雙牛角黑金額盔露臉 ‧ 黑金厚重全身甲 ‧ 左手巨塔盾立地 ‧ 泰坦巨劍架於盾前向前平端</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_08.png" alt="泰坦重鎧" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T08 泰坦重鎧 (泰坦巨劍與巨塔盾)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Era 3 -->
+    <div style="margin-top: 3.5rem; margin-bottom: 1rem; border-left: 4px solid #eab308; padding-left: 12px;">
+      <h2 style="font-size: 1.4rem; color: #f8fafc;">第三時代：Era 3 聖殿龍皇榮光 (T09 ~ T12 / 數值 512 ~ 4096)</h2>
+      <p style="color: #94a3b8; font-size: 0.9rem;">聖殿十字軍、神聖座天使、日冕審判官、龍皇守護神</p>
+    </div>
+
+    <!-- Small tile 64px comparison Era 3 -->
+    <div class="small-preview-section">
+      <div class="small-preview-title">🔍 Era 3 縮小至 64px 遊戲實際方塊尺寸測試</div>
+      <div class="small-tiles-row">
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_09.png" alt="T09" />
+            <span class="small-tile-val">512</span>
+          </div>
+          <span class="small-tile-label">512 · 握聖劍微蹲蓄勢</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_10.png" alt="T10" />
+            <span class="small-tile-val">1024</span>
+          </div>
+          <span class="small-tile-label">1024 · 天際指引神劍</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_11.png" alt="T11" />
+            <span class="small-tile-val">2048</span>
+          </div>
+          <span class="small-tile-label">2048 · 烈陽巨刃高提</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_12.png" alt="T12" />
+            <span class="small-tile-val">4096</span>
+          </div>
+          <span class="small-tile-label">4096 · 雙手交疊握龍劍</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main cards Era 3 -->
+    <div class="grid-cards">
+      <!-- T09 -->
+      <div class="card">
+        <span class="card-tier">T09 · 聖殿十字軍</span>
+        <span class="card-val">LV 512</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_09.png" alt="聖殿十字軍" />
+        </div>
+        <div class="card-name">聖殿十字軍</div>
+        <div class="card-subtitle">【雙手握聖劍微蹲蓄力】光翼冠盔露臉金髮 ‧ 純白耀金板甲 ‧ 雙手緊握羽翼藍寶石神劍直立胸前蓄勢 ‧ 白金聖盾護身</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_09.png" alt="聖殿光刃" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T09 聖殿光刃 (羽翼金劍與聖光盾)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- T10 -->
+      <div class="card">
+        <span class="card-tier">T10 · 神聖座天使</span>
+        <span class="card-val">LV 1024</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_10.png" alt="神聖座天使" />
+        </div>
+        <div class="card-name">神聖座天使</div>
+        <div class="card-subtitle">【天際指引神劍待機】天使光環露臉金瞳 ‧ 背負微型黏土天使羽翼 ‧ 右手神劍斜指天際 ‧ 左手天使雙翼盾護身</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_10.png" alt="天使翼盾" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T10 天使翼盾 (天使雙翼拱衛盾)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- T11 -->
+      <div class="card">
+        <span class="card-tier">T11 · 日冕審判官</span>
+        <span class="card-val">LV 2048</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_11.png" alt="日冕審判官" />
+        </div>
+        <div class="card-name">日冕審判官</div>
+        <div class="card-subtitle">【金陽巨刃雙手高提】日冕金芒冠露臉 ‧ 金曜太陽鎧鑲巨型紅寶石 ‧ 雙手斜橫烈陽神劍於胸前 ‧ 日冕金輪巨盾散發金芒</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_11.png" alt="日冕戰靴" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T11 日冕戰靴 (烈陽大劍與日冕金盾)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- T12 -->
+      <div class="card">
+        <span class="card-tier">T12 · 龍皇守護神</span>
+        <span class="card-val">LV 4096</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_12.png" alt="龍皇守護神" />
+        </div>
+        <div class="card-name">龍皇守護神</div>
+        <div class="card-subtitle">【龍神雙手交疊握劍待機】三叉龍皇冠露臉 ‧ 璀璨純金巨龍雕紋神甲 ‧ 雙手交疊握雙龍金柄神劍垂直立於胸前 ‧ 黃金龍首壁壘盾昂立</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_12.png" alt="龍皇金鎧" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T12 龍皇金鎧 (金柄神劍與龍首金盾)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Era 4 -->
+    <div style="margin-top: 3.5rem; margin-bottom: 1rem; border-left: 4px solid #f43f5e; padding-left: 12px;">
+      <h2 style="font-size: 1.4rem; color: #f8fafc;">第四時代：Era 4 星辰創世神威 (T13 ~ T16 / 數值 8192 ~ 65536)</h2>
+      <p style="color: #94a3b8; font-size: 0.9rem;">星辰征服者、虛空滅界尊、創世神衛、至高萬神至尊</p>
+    </div>
+
+    <!-- Small tile 64px comparison Era 4 -->
+    <div class="small-preview-section">
+      <div class="small-preview-title">🔍 Era 4 縮小至 64px 遊戲實際方塊尺寸測試</div>
+      <div class="small-tiles-row">
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_13.png" alt="T13" />
+            <span class="small-tile-val">8192</span>
+          </div>
+          <span class="small-tile-label">8192 · 星晶巨刃橫斜架勢</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_14.png" alt="T14" />
+            <span class="small-tile-val">16384</span>
+          </div>
+          <span class="small-tile-label">16384 · 魔刃垂立身後蓄力</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_15.png" alt="T15" />
+            <span class="small-tile-val">32768</span>
+          </div>
+          <span class="small-tile-label">32768 · 創世神兵雙手擎起</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_knight/hero_16.png" alt="T16" />
+            <span class="small-tile-val">65536</span>
+          </div>
+          <span class="small-tile-label">65536 · 萬神神兵至尊待命</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main cards Era 4 -->
+    <div class="grid-cards">
+      <!-- T13 -->
+      <div class="card">
+        <span class="card-tier">T13 · 星辰征服者</span>
+        <span class="card-val">LV 8192</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_13.png" alt="星辰征服者" />
+        </div>
+        <div class="card-name">星辰征服者</div>
+        <div class="card-subtitle">【星晶巨刃橫斜架勢】夜空星紋冠冕露臉藍髮發光星瞳 ‧ 暗夜星斑神甲環繞微型星環 ‧ 雙手斜握青晶星辰滅世刃橫置身前 ‧ 星軌盾微光</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_13.png" alt="星辰滅刃" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T13 星辰滅刃 (青晶巨劍與星軌盾)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- T14 -->
+      <div class="card">
+        <span class="card-tier">T14 · 虛空滅界尊</span>
+        <span class="card-val">LV 16384</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_14.png" alt="虛空滅界尊" />
+        </div>
+        <div class="card-name">虛空滅界尊</div>
+        <div class="card-subtitle">【魔刃垂立身後蓄力】黑曜雙角冠露臉暗紫冷峻面容 ‧ 黑曜石板鎧帶深紫裂隙 ‧ 右手紫晶裂天魔劍垂立身後地表引導虛空 ‧ 三目重裂盾鎖前方</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_14.png" alt="虛空裂盾" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T14 虛空裂盾 (紫晶魔劍與三目盾)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- T15 -->
+      <div class="card">
+        <span class="card-tier">T15 · 創世神衛</span>
+        <span class="card-val">LV 32768</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_15.png" alt="創世神衛" />
+        </div>
+        <div class="card-name">創世神衛</div>
+        <div class="card-subtitle">【創世巨神兵雙手擎起】白金七彩神冠露臉 ‧ 背負七彩神環流光神鎧 ‧ 雙手穩穩托舉創世璀璨晶劍直立面前 ‧ 七曜神盾身側懸浮</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_15.png" alt="創世神靴" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T15 創世神靴 (創世巨劍與七曜盾)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- T16 -->
+      <div class="card">
+        <span class="card-tier">T16 · 至高萬神至尊</span>
+        <span class="card-val">LV 65536</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_knight/hero_16.png" alt="至高萬神至尊" />
+        </div>
+        <div class="card-name">至高萬神至尊</div>
+        <div class="card-subtitle">【萬神神兵至尊待命】九天神王重冠露臉純金俊朗金身容顏 ‧ 純金神袍大披風 ‧ 右手純金裁決神劍垂直指地入磐石 ‧ 萬神至尊圓壁盾橫胸</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_16.png" alt="至高神像" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T16 至高神像 (純金至尊神劍與圓壁)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      《2048 RPG：王國遠征》角色美術風格評估展廳 ‧ 全 16 階黏土雕塑大頭待機姿態 100% 圓滿達成 ‧ Commercial Edition C-STORY-056
+    </footer>
+  </div>
+</body>
+</html>

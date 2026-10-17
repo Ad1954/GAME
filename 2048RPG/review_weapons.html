@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>武器 16 階預審展廳 (Assets TEMP Review)</title>
+  <style>
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 24px;
+      margin: 0;
+    }
+    h1 {
+      text-align: center;
+      color: #38bdf8;
+      margin-bottom: 8px;
+    }
+    p.subtitle {
+      text-align: center;
+      color: #94a3b8;
+      margin-bottom: 32px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: #38bdf8;
+    }
+    .img-box {
+      width: 140px;
+      height: 140px;
+      background: radial-gradient(circle, #334155 0%, #1e293b 80%);
+      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 12px;
+      position: relative;
+      border: 1px solid #475569;
+    }
+    .img-box img {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+    }
+    .tier-badge {
+      font-size: 12px;
+      font-weight: 800;
+      color: #38bdf8;
+      background: #082f49;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      margin-bottom: 6px;
+    }
+    .name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+    }
+    .file-name {
+      font-size: 12px;
+      color: #64748b;
+      font-family: monospace;
+    }
+    .raw-section {
+      max-width: 1080px;
+      margin: 48px auto 0 auto;
+      border-top: 1px solid #334155;
+      padding-top: 24px;
+    }
+    .raw-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+    .raw-item {
+      background: #1e293b;
+      padding: 16px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .raw-item img {
+      max-width: 100%;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚔️ 武器 16 階美術圖標 (TEMP 預審展廳)</h1>
+  <p class="subtitle">規格：256x256 透明去背 PNG / 規範檔名：equip_01.png ~ equip_16.png</p>
+
+  <div class="grid" id="icon-grid"></div>
+
+  <div class="raw-section">
+    <h2 style="color: #cbd5e1; text-align: center; margin-bottom: 16px;">AI 原始 2x2 生成組圖 (Raw Sprite Sheets)</h2>
+    <div class="raw-grid">
+      <div class="raw-item">
+        <h3>Group 1: 初階 (T1~T4)</h3>
+        <img src="assets/TEMP/raw/group_01.jpg" alt="Group 1">
+      </div>
+      <div class="raw-item">
+        <h3>Group 2: 進階 (T5~T8)</h3>
+        <img src="assets/TEMP/raw/group_02.jpg" alt="Group 2">
+      </div>
+      <div class="raw-item">
+        <h3>Group 3: 史詩 (T9~T12)</h3>
+        <img src="assets/TEMP/raw/group_03.jpg" alt="Group 3">
+      </div>
+      <div class="raw-item">
+        <h3>Group 4: 神話 (T13~T16)</h3>
+        <img src="assets/TEMP/raw/group_04.jpg" alt="Group 4">
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const data = [
+      { t: 1, val: 2, name: '粗糙木棒' },
+      { t: 2, val: 4, name: '獵戶短刃' },
+      { t: 3, val: 8, name: '鍛造鐵劍' },
+      { t: 4, val: 16, name: '先鋒破甲劍' },
+      { t: 5, val: 32, name: '附魔秘銀刃' },
+      { t: 6, val: 64, name: '黃金領主劍' },
+      { t: 7, val: 128, name: '巨龍炎息盾劍' },
+      { t: 8, val: 256, name: '泰坦破天斧' },
+      { t: 9, val: 512, name: '星穹晶石刃' },
+      { t: 10, val: 1024, name: '永恆聖靈劍' },
+      { t: 11, val: 2048, name: '滅神王權大劍' },
+      { t: 12, val: 4096, name: '混沌開闢虛空斧' },
+      { t: 13, val: 8192, name: '龍皇破滅盾劍' },
+      { t: 14, val: 16384, name: '神話創世翡翠劍' },
+      { t: 15, val: 32768, name: '星雲裂滅刃' },
+      { t: 16, val: 65536, name: '創世萬界神環劍' }
+    ];
+
+    const container = document.getElementById('icon-grid');
+    data.forEach(item => {
+      const pad = String(item.t).padStart(2, '0');
+      const filename = `equip_${pad}.png`;
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="tier-badge">Tier ${item.t} (數值 ${item.val})</div>
+        <div class="img-box">
+          <img src="assets/TEMP/equipment/${filename}" alt="${item.name}">
+        </div>
+        <div class="name">${item.name}</div>
+        <div class="file-name">${filename}</div>
+      `;
+      container.appendChild(card);
+    });
+  </script>
+</body>
+</html>

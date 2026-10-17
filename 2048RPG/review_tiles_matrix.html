@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>《2048 RPG：王國遠征》全要素方格色調矩陣 ＆ 人物辨識度即時控制器</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css?v=1.4.4">
+  <style>
+    :root {
+      --bg-dark: #0b1120;
+      --card-bg: #131d31;
+      --border-color: #263554;
+      --accent: #38bdf8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      background: var(--bg-dark) !important;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 1.5rem 1rem 4rem;
+      min-height: 100vh;
+      height: auto !important;
+      max-height: none !important;
+      display: block !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+    }
+
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 1.8rem;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #38bdf8, #facc15, #f43f5e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.4rem;
+    }
+
+    header p {
+      color: #94a3b8;
+      font-size: 0.9rem;
+    }
+
+    /* Floating / Sticky Control Panel */
+    .control-panel {
+      position: sticky;
+      top: 10px;
+      z-index: 100;
+      background: rgba(19, 29, 49, 0.92);
+      backdrop-filter: blur(12px);
+      border: 1px solid #38bdf8;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 0 15px rgba(56, 189, 248, 0.25);
+      border-radius: 14px;
+      padding: 1rem 1.4rem;
+      margin-bottom: 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .control-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #93c5fd;
+      white-space: nowrap;
+    }
+
+    .slider-val {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #facc15;
+      min-width: 44px;
+      display: inline-block;
+    }
+
+    input[type=range] {
+      cursor: pointer;
+      accent-color: #38bdf8;
+    }
+
+    .btn-toggle-group {
+      display: flex;
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 3px;
+      border: 1px solid #334155;
+    }
+
+    .btn-toggle {
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-toggle.active {
+      background: #0284c7;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.4);
+    }
+
+    /* Studio Panel & Tabs (C-STORY-064) */
+    .studio-panel {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .studio-tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .studio-tab-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .studio-tab-btn:hover {
+      color: #f8fafc;
+      border-color: #64748b;
+    }
+
+    .studio-tab-btn.active {
+      background: #0284c7;
+      color: #ffffff;
+      border-color: #38bdf8;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.5);
+    }
+
+    .studio-tab-pane {
+      display: none;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      padding: 4px 0;
+    }
+
+    .studio-tab-pane.active {
+      display: flex;
+    }
+
+    .studio-action-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      border-top: 1px solid #1e293b;
+      padding-top: 10px;
+      align-items: center;
+    }
+
+    .btn-action {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      transition: all 0.15s ease;
+    }
+
+    .btn-save-apply {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);
+    }
+    .btn-save-apply:hover {
+      filter: brightness(1.15);
+      transform: translateY(-1px);
+    }
+
+    .btn-reset {
+      background: #334155;
+      color: #cbd5e1;
+      border: 1px solid #475569;
+    }
+    .btn-reset:hover {
+      background: #475569;
+      color: #ffffff;
+    }
+
+    .btn-copy-css {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: #ffffff;
+    }
+    .btn-copy-css:hover {
+      filter: brightness(1.15);
+      transform: translateY(-1px);
+    }
+
+    /* Section card styling */
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.2rem;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 0.7rem;
+    }
+
+    .section-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-desc {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+
+    /* Tiles Grid Layout with Visible Scrollbar */
+    .tiles-row {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 14px;
+      padding-top: 4px;
+      max-width: 100%;
+      scrollbar-width: auto;
+      scrollbar-color: #38bdf8 #0f172a;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tiles-row::-webkit-scrollbar {
+      height: 10px;
+    }
+    .tiles-row::-webkit-scrollbar-track {
+      background: #0f172a;
+      border-radius: 5px;
+    }
+    .tiles-row::-webkit-scrollbar-thumb {
+      background: linear-gradient(90deg, #38bdf8, #818cf8);
+      border-radius: 5px;
+      border: 2px solid #0f172a;
+    }
+
+    /* Wrap Layout Mode */
+    body.layout-wrap .tiles-row {
+      flex-wrap: wrap !important;
+      overflow-x: visible !important;
+      justify-content: flex-start;
+    }
+
+    .tier-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      min-width: 68px;
+    }
+
+    .tier-header-badge {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #facc15;
+      background: rgba(250, 204, 21, 0.12);
+      border: 1px solid rgba(250, 204, 21, 0.3);
+      padding: 2px 6px;
+      border-radius: 6px;
+      text-align: center;
+      width: 100%;
+    }
+
+    /* Realistic Board Tile Wrapper */
+    .sim-tile-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Realistic Board Tile: Exact 5:6 Aspect Ratio (1:1.2 Rectangular) */
+    .sim-tile {
+      aspect-ratio: 5 / 6;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+      border-width: 2px;
+      border-style: solid;
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    body.view-size-real .tier-column { min-width: 62px; }
+    body.view-size-medium .tier-column { min-width: 82px; }
+    body.view-size-large .tier-column { min-width: 102px; }
+
+    /* Size variants (Exact 5:6 Game Board Ratio) */
+    body.view-size-real .sim-tile { width: 58px; height: 70px; }
+    body.view-size-medium .sim-tile { width: 76px; height: 91px; }
+    body.view-size-large .sim-tile { width: 96px; height: 115px; }
+
+    /* Tile badge / image layer with negative margin to allow bold numbers to overlap */
+    .sim-badge {
+      width: 100%;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-bottom: -6px;
+      z-index: 1;
+    }
+
+    body.view-size-real .sim-badge { height: 38px; margin-bottom: -6px; }
+    body.view-size-medium .sim-badge { height: 50px; margin-bottom: -8px; }
+    body.view-size-large .sim-badge { height: 64px; margin-bottom: -10px; }
+
+    .sim-img {
+      max-width: 90%;
+      max-height: 100%;
+      object-fit: contain;
+      transform-origin: center center;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    /* Dynamic CSS values controlled by Studio (C-STORY-064) */
+    .hero-dynamic-img {
+      transform: scale(var(--hero-scale, 1.4)) translateY(var(--hero-trans-y, -3px));
+      filter: var(--hero-filter, drop-shadow(0 0 2px rgba(255,255,255,0.85)) drop-shadow(0 3px 6px rgba(0,0,0,0.8)));
+      transform-origin: center center;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    .hero-spotlight {
+      position: absolute;
+      width: 80%;
+      height: 80%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.05) 50%, transparent 75%);
+      pointer-events: none;
+      display: var(--hero-spotlight-display, block);
+    }
+
+    .equip-dynamic-img {
+      transform: scale(var(--equip-scale, 1.20)) translateY(var(--equip-trans-y, 0px));
+      filter: var(--equip-filter, drop-shadow(0 3px 6px rgba(0,0,0,0.9)));
+      transform-origin: center center;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    .monster-dynamic-target {
+      transform: scale(var(--monster-scale, 1.35)) translateY(var(--monster-trans-y, 0px));
+      filter: var(--monster-filter, drop-shadow(0 0 2.5px rgba(239,68,68,0.95)) drop-shadow(0 3px 6px rgba(0,0,0,0.85)));
+      transform-origin: center center;
+      transition: transform 0.15s ease, filter 0.15s ease;
+      display: inline-block;
+    }
+
+    /* Value text: Full bold font matching real game (.tile-value) */
+    .sim-val {
+      font-size: 1.45rem;
+      font-weight: 950;
+      letter-spacing: -0.5px;
+      line-height: 1.05;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 2px rgba(0, 0, 0, 0.9);
+      z-index: 2;
+    }
+    body.view-size-real .sim-val { font-size: 1.30rem; }
+    body.view-size-medium .sim-val { font-size: 1.65rem; }
+    body.view-size-large .sim-val { font-size: 2.10rem; }
+
+    .sim-val-compact {
+      font-size: 0.92rem !important;
+      letter-spacing: -1px;
+    }
+
+    /* Element type row labels */
+    .row-meta-tag {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tag-hero { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+    .tag-equip { background: rgba(250, 204, 21, 0.2); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.4); }
+    .tag-monster { background: rgba(244, 63, 94, 0.2); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.4); }
+    .tag-gold { background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4); }
+
+    /* Hero Special Border & Aura in Kingdom Theme */
+    .sim-tile.type-hero {
+      border: 4px solid #38bdf8 !important;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.4), inset 0 0 6px rgba(56, 189, 248, 0.2);
+    }
+
+    /* Monster Special Border */
+    .sim-tile.type-monster {
+      border-width: 3px !important;
+      border-color: #ef4444 !important;
+    }
+
+    /* A/B Comparison Side by Side */
+    .ab-compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 768px) {
+      .ab-compare-grid { grid-template-columns: 1fr; }
+    }
+
+    .ab-box {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 1rem;
+    }
+
+    .ab-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Empty Slot in Staircase Matrix (C-STORY-067) */
+    .sim-tile-empty {
+      width: 60px;
+      height: 72px;
+      border-radius: 8px;
+      background: #060911;
+      border: 1px dashed #1e293b;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #334155;
+      font-size: 0.72rem;
+      user-select: none;
+      opacity: 0.38;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    body.view-size-real .sim-tile-empty { width: 60px; height: 72px; }
+    body.view-size-medium .sim-tile-empty { width: 76px; height: 91px; }
+    body.view-size-large .sim-tile-empty { width: 96px; height: 115px; }
+
+    /* Chapter Ladder Container & Rows (C-STORY-068 Sticky & Scroll) */
+    .ladder-scroll-wrapper {
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 14px;
+      scrollbar-width: auto;
+      scrollbar-color: #38bdf8 #0f172a;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 12px;
+      border: 1px solid #1e293b;
+      background: #060911;
+      padding: 10px;
+    }
+    .ladder-scroll-wrapper::-webkit-scrollbar {
+      height: 10px;
+    }
+    .ladder-scroll-wrapper::-webkit-scrollbar-track {
+      background: #0f172a;
+      border-radius: 5px;
+    }
+    .ladder-scroll-wrapper::-webkit-scrollbar-thumb {
+      background: linear-gradient(90deg, #38bdf8, #818cf8);
+      border-radius: 5px;
+      border: 2px solid #0f172a;
+    }
+
+    .ladder-matrix-table {
+      min-width: max-content;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chapter-ladder-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 12px;
+      background: rgba(15, 23, 42, 0.85);
+      border-radius: 12px;
+      border: 1px solid #1e293b;
+      transition: border-color 0.2s ease;
+      min-width: max-content;
+    }
+    .chapter-ladder-row:hover {
+      border-color: #38bdf8;
+    }
+
+    .chapter-ladder-header {
+      width: 175px;
+      min-width: 175px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex-shrink: 0;
+      position: sticky;
+      left: 0;
+      z-index: 10;
+      background: #0b1120;
+      padding: 8px 12px 8px 6px;
+      border-right: 2px solid #334155;
+      box-shadow: 4px 0 10px rgba(0, 0, 0, 0.7);
+      border-radius: 8px 0 0 8px;
+    }
+    .chapter-badge-title {
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .chapter-badge-range {
+      font-size: 0.75rem;
+      color: #38bdf8;
+      font-weight: 700;
+    }
+    .chapter-badge-desc {
+      font-size: 0.7rem;
+      color: #94a3b8;
+      line-height: 1.25;
+    }
+
+    .chapter-ladder-tiles {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    /* Top Tier Values Header Row */
+    .ladder-tier-header-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 12px;
+      background: #090e17;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      margin-bottom: 2px;
+      min-width: max-content;
+    }
+    .ladder-tier-header-title {
+      width: 175px;
+      min-width: 175px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #38bdf8;
+      position: sticky;
+      left: 0;
+      z-index: 12;
+      background: #090e17;
+      padding: 6px 12px 6px 6px;
+      border-right: 2px solid #334155;
+      box-shadow: 4px 0 10px rgba(0, 0, 0, 0.7);
+      border-radius: 8px 0 0 8px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ladder-tier-badges-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .ladder-tier-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #94a3b8;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 4px 0;
+      flex-shrink: 0;
+      line-height: 1.15;
+    }
+    body.view-size-real .ladder-tier-badge { width: 58px; }
+    body.view-size-medium .ladder-tier-badge { width: 76px; }
+    body.view-size-large .ladder-tier-badge { width: 96px; }
+
+    /* Monster Dynamic Image in Ladder */
+    .monster-clay-img {
+      transform: scale(var(--monster-scale, 1.35)) translateY(var(--monster-trans-y, 0px));
+      filter: var(--monster-filter, drop-shadow(0 0 2.5px rgba(239,68,68,0.95)) drop-shadow(0 3px 6px rgba(0,0,0,0.85)));
+      transform-origin: center center;
+      transition: transform 0.15s ease, filter 0.15s ease;
+      max-width: 90%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    /* Toast notice */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #10b981;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+      display: none;
+      z-index: 999;
+      transition: all 0.2s ease;
+    }
+    .toast.toast-success { background: #059669; border: 1px solid #34d399; }
+    .toast.toast-info { background: #4f46e5; border: 1px solid #818cf8; }
+    .toast.toast-warn { background: #d97706; border: 1px solid #fbbf24; }
+  </style>
+</head>
+<body class="view-size-real">
+
+  <div class="container">
+    <header>
+      <h1>👑 《2048 RPG》王國遠征全要素方格色調矩陣</h1>
+      <p>按數值排列 ‧ 王國遠征真實底色 ‧ 人物特寫與高反差描邊即時控制器</p>
+    </header>
+
+    <div id="file-protocol-banner" style="display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; border-radius: 10px; padding: 10px 16px; margin-bottom: 1.2rem; text-align: center; font-size: 0.88rem; color: #fca5a5;">
+      ⚠️ 檢測到您是直接在檔案總管雙擊開啟 (file:// 協議)。因瀏覽器安全性限制，請回到資料夾雙擊 <b>「啟動全要素展廳.bat」</b> 一鍵自動啟動伺服器並載入！
+    </div>
+    <script>
+      if (window.location.protocol === 'file:') {
+        document.getElementById('file-protocol-banner').style.display = 'block';
+      }
+    </script>
+
+    <!-- VISUAL TUNING STUDIO (C-STORY-064) -->
+    <div class="studio-panel">
+      <!-- 1. Tabs Navigation -->
+      <div class="studio-tabs">
+        <button class="studio-tab-btn active" data-tab="tab-hero">👑 勇者特寫調校</button>
+        <button class="studio-tab-btn" data-tab="tab-equip">⚔️ 黏土裝備調校</button>
+        <button class="studio-tab-btn" data-tab="tab-monster">👾 地牢魔物調校</button>
+        <button class="studio-tab-btn" data-tab="tab-global">📐 展廳排版設定</button>
+      </div>
+
+      <!-- Tab Content: HERO -->
+      <div class="studio-tab-pane active" id="tab-hero">
+        <div class="control-group">
+          <span class="control-label">🔍 勇者鏡頭縮放:</span>
+          <input type="range" id="slider-hero-scale" min="80" max="200" value="140" step="5">
+          <span class="slider-val" id="val-hero-scale">1.40x</span>
+        </div>
+        <div class="control-group">
+          <span class="control-label">⬆️ 垂直焦點微調:</span>
+          <input type="range" id="slider-hero-transy" min="-20" max="20" value="-3" step="1">
+          <span class="slider-val" id="val-hero-transy">-3px</span>
+        </div>
+        <div class="control-group">
+          <span class="control-label">✨ 貼紙高光描邊:</span>
+          <div class="btn-toggle-group" id="group-hero-outline">
+            <button class="btn-toggle" data-val="none">無</button>
+            <button class="btn-toggle active" data-val="white">亮白貼紙</button>
+            <button class="btn-toggle" data-val="blue">天藍光暈</button>
+            <button class="btn-toggle" data-val="gold">暖金高光</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <span class="control-label">💡 背後聚光燈:</span>
+          <div class="btn-toggle-group" id="group-hero-spotlight">
+            <button class="btn-toggle active" data-val="on">開啟</button>
+            <button class="btn-toggle" data-val="off">關閉</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content: EQUIP -->
+      <div class="studio-tab-pane" id="tab-equip">
+        <div class="control-group">
+          <span class="control-label">🔍 裝備飽滿縮放:</span>
+          <input type="range" id="slider-equip-scale" min="80" max="180" value="120" step="5">
+          <span class="slider-val" id="val-equip-scale">1.20x</span>
+        </div>
+        <div class="control-group">
+          <span class="control-label">⬆️ 垂直位移微調:</span>
+          <input type="range" id="slider-equip-transy" min="-20" max="20" value="0" step="1">
+          <span class="slider-val" id="val-equip-transy">0px</span>
+        </div>
+        <div class="control-group">
+          <span class="control-label">🌑 裝備立體陰影:</span>
+          <div class="btn-toggle-group" id="group-equip-shadow">
+            <button class="btn-toggle" data-val="soft">柔和淺影</button>
+            <button class="btn-toggle" data-val="medium">標準立體</button>
+            <button class="btn-toggle active" data-val="sharp">深邃銳利</button>
+            <button class="btn-toggle" data-val="gold">傳奇金光</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content: MONSTER -->
+      <div class="studio-tab-pane" id="tab-monster">
+        <div class="control-group">
+          <span class="control-label">🔍 魔物霸氣縮放:</span>
+          <input type="range" id="slider-monster-scale" min="80" max="200" value="135" step="5">
+          <span class="slider-val" id="val-monster-scale">1.35x</span>
+        </div>
+        <div class="control-group">
+          <span class="control-label">⬆️ 垂直焦點微調:</span>
+          <input type="range" id="slider-monster-transy" min="-20" max="20" value="0" step="1">
+          <span class="slider-val" id="val-monster-transy">0px</span>
+        </div>
+        <div class="control-group">
+          <span class="control-label">🩸 魔物氣場光暈:</span>
+          <div class="btn-toggle-group" id="group-monster-aura">
+            <button class="btn-toggle" data-val="none">無</button>
+            <button class="btn-toggle active" data-val="blood">血煞紅光</button>
+            <button class="btn-toggle" data-val="purple">深淵幽紫</button>
+            <button class="btn-toggle" data-val="toxic">劇毒幽綠</button>
+            <button class="btn-toggle" data-val="white">冷白銳利</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content: GLOBAL -->
+      <div class="studio-tab-pane" id="tab-global">
+        <div class="control-group">
+          <span class="control-label">📐 方塊尺寸:</span>
+          <div class="btn-toggle-group" id="group-size">
+            <button class="btn-toggle active" data-size="real">實戰 (58x70px)</button>
+            <button class="btn-toggle" data-size="medium">中型 (76x91px)</button>
+            <button class="btn-toggle" data-size="large">大特寫 (96x115px)</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <span class="control-label">📑 排版模式:</span>
+          <div class="btn-toggle-group" id="group-layout">
+            <button class="btn-toggle active" data-layout="scroll">👉 水平滑動 (無溢出)</button>
+            <button class="btn-toggle" data-layout="wrap">📐 自動折行</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Studio Action Bar -->
+      <div class="studio-action-bar">
+        <button class="btn-action btn-save-apply" id="btn-save-apply">
+          <span>💾</span> 一鍵儲存並套用至遊戲本體
+        </button>
+        <button class="btn-action btn-reset" id="btn-reset-tuning">
+          <span>🔄</span> 還原預設值
+        </button>
+        <button class="btn-action btn-copy-css" id="btn-copy-css">
+          <span>📋</span> 複製完整 CSS
+        </button>
+      </div>
+    </div>
+
+    <!-- SECTION 1: A/B DIRECT COMPARISON (Before vs After) -->
+    <div class="section-card">
+      <div class="section-header">
+        <div>
+          <div class="section-title">⚖️ A/B 辨識度極限實測：原版全身 vs 特寫高反差</div>
+          <div class="section-desc">直觀評測：特別是 128 (烈焰戰狂)、256 (神域武聖)、512 等深色勇者在深色方塊中的跳脫感</div>
+        </div>
+      </div>
+
+      <div class="ab-compare-grid">
+        <!-- Box A: Original 100% -->
+        <div class="ab-box">
+          <div class="ab-title" style="color: #f87171;">
+            <span>❌ 調整前：100% 全身縮放 (頭部縮小至 15px ‧ 無描邊 ‧ 易與深色底融成黑影)</span>
+          </div>
+          <div class="tiles-row" id="row-ab-before">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+        <!-- Box B: Optimized with Live Controls -->
+        <div class="ab-box" style="border-color: #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);">
+          <div class="ab-title" style="color: #38bdf8;">
+            <span>✨ 調整後：即時特寫 ＋ 高光白邊 ＋ 聚光燈 (大頭與武器放大 1.4x ‧ 立體輪廓鮮明)</span>
+          </div>
+          <div class="tiles-row" id="row-ab-after">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: FULL TILES MATRIX (KINGDOM THEME) -->
+    <div class="section-card">
+      <div class="section-header">
+        <div>
+          <div class="section-title">👑 全要素王國遠征色調矩陣 (2 ~ 131,072)</div>
+          <div class="section-desc">同台展示各數值之【勇者角色】、【微縮裝備】、【地牢魔物】與【金幣】，驗證視覺平衡感與階梯共鳴</div>
+        </div>
+      </div>
+
+      <!-- Full Matrix Table -->
+      <div style="overflow-x: auto;">
+        <div class="tiles-row" id="full-matrix-container">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: MONSTER STAIRCASE BIOME MATRIX (C-STORY-067) -->
+    <div class="section-card" id="section-monster-ladder">
+      <div class="section-header">
+        <div>
+          <div class="section-title">👾 9 大章節階梯狀魔物生態矩陣 (2 ~ 262,144)</div>
+          <div class="section-desc">橫軸展開 18 階數值 ‧ 縱軸排列 9 大章節生態 ‧ 未登場數值呈現黑底空槽，呈現完整階梯瀑布交叉比對</div>
+        </div>
+      </div>
+
+      <!-- Staircase Container with Horizontal Scroll Wrapper (C-STORY-068) -->
+      <div class="ladder-scroll-wrapper">
+        <div class="ladder-matrix-table" id="monster-ladder-container">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast-msg">已複製最佳 CSS 代碼至剪貼簿！</div>
+
+  <script type="module">
+    import { 
+      HERO_THEMES, EQUIPMENT_THEMES, MONSTER_THEMES, GOLD_THEMES, 
+      CHAPTER_MONSTER_POOLS, getHeroImagePath, getEquipmentImagePath,
+      getMonsterThemeByChapter, getMonsterImagePath 
+    } from './src/core/Constants.js';
+
+    // Values to display: Tier 1 (2) to Tier 18 (262144) (C-STORY-067)
+    const TIER_VALUES = [
+      2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144
+    ];
+
+    // Filter mappings
+    const heroFilters = {
+      none: 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+      white: 'drop-shadow(0 0 1.5px rgba(255,255,255,0.95)) drop-shadow(0 2px 5px rgba(0,0,0,0.85))',
+      blue: 'drop-shadow(0 0 2px rgba(56,189,248,0.95)) drop-shadow(0 2px 5px rgba(0,0,0,0.85))',
+      gold: 'drop-shadow(0 0 2px rgba(250,204,21,0.95)) drop-shadow(0 2px 5px rgba(0,0,0,0.85))'
+    };
+    const equipFilters = {
+      soft: 'drop-shadow(0 2px 3px rgba(0,0,0,0.4))',
+      medium: 'drop-shadow(0 2px 5px rgba(0,0,0,0.7))',
+      sharp: 'drop-shadow(0 3px 6px rgba(0,0,0,0.9))',
+      gold: 'drop-shadow(0 0 2px rgba(250,204,21,0.9)) drop-shadow(0 2px 5px rgba(0,0,0,0.8))'
+    };
+    const monsterFilters = {
+      none: 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+      blood: 'drop-shadow(0 0 2.5px rgba(239,68,68,0.95)) drop-shadow(0 3px 6px rgba(0,0,0,0.85))',
+      purple: 'drop-shadow(0 0 2.5px rgba(168,85,247,0.95)) drop-shadow(0 3px 6px rgba(0,0,0,0.85))',
+      toxic: 'drop-shadow(0 0 2.5px rgba(34,197,94,0.95)) drop-shadow(0 3px 6px rgba(0,0,0,0.85))',
+      white: 'drop-shadow(0 0 1.5px rgba(255,255,255,0.95)) drop-shadow(0 2px 5px rgba(0,0,0,0.85))'
+    };
+
+    // Master tuning state (C-STORY-064)
+    let tuningConfig = {
+      hero: { scale: 1.40, transY: -3, outline: 'white', spotlight: 'on' },
+      equip: { scale: 1.20, transY: 0, shadow: 'sharp' },
+      monster: { scale: 1.35, transY: 0, aura: 'blood' }
+    };
+
+    function updateRootStyles() {
+      // Hero
+      document.documentElement.style.setProperty('--hero-scale', tuningConfig.hero.scale);
+      document.documentElement.style.setProperty('--hero-trans-y', `${tuningConfig.hero.transY}px`);
+      document.documentElement.style.setProperty('--hero-filter', heroFilters[tuningConfig.hero.outline] || heroFilters.white);
+      document.documentElement.style.setProperty('--hero-spotlight-display', tuningConfig.hero.spotlight === 'on' ? 'block' : 'none');
+
+      // Equip
+      document.documentElement.style.setProperty('--equip-scale', tuningConfig.equip.scale);
+      document.documentElement.style.setProperty('--equip-trans-y', `${tuningConfig.equip.transY}px`);
+      document.documentElement.style.setProperty('--equip-filter', equipFilters[tuningConfig.equip.shadow] || equipFilters.sharp);
+
+      // Monster
+      document.documentElement.style.setProperty('--monster-scale', tuningConfig.monster.scale);
+      document.documentElement.style.setProperty('--monster-trans-y', `${tuningConfig.monster.transY}px`);
+      document.documentElement.style.setProperty('--monster-filter', monsterFilters[tuningConfig.monster.aura] || monsterFilters.blood);
+    }
+
+    function syncControlsToState() {
+      // 1. Hero UI
+      document.getElementById('slider-hero-scale').value = Math.round(tuningConfig.hero.scale * 100);
+      document.getElementById('val-hero-scale').textContent = `${tuningConfig.hero.scale.toFixed(2)}x`;
+      document.getElementById('slider-hero-transy').value = tuningConfig.hero.transY;
+      document.getElementById('val-hero-transy').textContent = `${tuningConfig.hero.transY}px`;
+      document.querySelectorAll('#group-hero-outline .btn-toggle').forEach(b => {
+        b.classList.toggle('active', b.dataset.val === tuningConfig.hero.outline);
+      });
+      document.querySelectorAll('#group-hero-spotlight .btn-toggle').forEach(b => {
+        b.classList.toggle('active', b.dataset.val === tuningConfig.hero.spotlight);
+      });
+
+      // 2. Equip UI
+      document.getElementById('slider-equip-scale').value = Math.round(tuningConfig.equip.scale * 100);
+      document.getElementById('val-equip-scale').textContent = `${tuningConfig.equip.scale.toFixed(2)}x`;
+      document.getElementById('slider-equip-transy').value = tuningConfig.equip.transY;
+      document.getElementById('val-equip-transy').textContent = `${tuningConfig.equip.transY}px`;
+      document.querySelectorAll('#group-equip-shadow .btn-toggle').forEach(b => {
+        b.classList.toggle('active', b.dataset.val === tuningConfig.equip.shadow);
+      });
+
+      // 3. Monster UI
+      document.getElementById('slider-monster-scale').value = Math.round(tuningConfig.monster.scale * 100);
+      document.getElementById('val-monster-scale').textContent = `${tuningConfig.monster.scale.toFixed(2)}x`;
+      document.getElementById('slider-monster-transy').value = tuningConfig.monster.transY;
+      document.getElementById('val-monster-transy').textContent = `${tuningConfig.monster.transY}px`;
+      document.querySelectorAll('#group-monster-aura .btn-toggle').forEach(b => {
+        b.classList.toggle('active', b.dataset.val === tuningConfig.monster.aura);
+      });
+
+      updateRootStyles();
+    }
+
+    function showToast(text, type = 'success') {
+      const toast = document.getElementById('toast-msg');
+      toast.textContent = text;
+      toast.className = `toast toast-${type}`;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3200);
+    }
+
+    // Tab Navigation
+    document.querySelectorAll('.studio-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.studio-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.studio-tab-pane').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        const targetPane = document.getElementById(btn.dataset.tab);
+        if (targetPane) targetPane.classList.add('active');
+      });
+    });
+
+    // Hero Listeners
+    const sliderHeroScale = document.getElementById('slider-hero-scale');
+    sliderHeroScale.addEventListener('input', (e) => {
+      tuningConfig.hero.scale = parseFloat((parseInt(e.target.value) / 100).toFixed(2));
+      document.getElementById('val-hero-scale').textContent = `${tuningConfig.hero.scale.toFixed(2)}x`;
+      updateRootStyles();
+    });
+
+    const sliderHeroTransY = document.getElementById('slider-hero-transy');
+    sliderHeroTransY.addEventListener('input', (e) => {
+      tuningConfig.hero.transY = parseInt(e.target.value);
+      document.getElementById('val-hero-transy').textContent = `${tuningConfig.hero.transY}px`;
+      updateRootStyles();
+    });
+
+    document.querySelectorAll('#group-hero-outline .btn-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#group-hero-outline .btn-toggle').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tuningConfig.hero.outline = btn.dataset.val;
+        updateRootStyles();
+      });
+    });
+
+    document.querySelectorAll('#group-hero-spotlight .btn-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#group-hero-spotlight .btn-toggle').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tuningConfig.hero.spotlight = btn.dataset.val;
+        updateRootStyles();
+      });
+    });
+
+    // Equip Listeners
+    const sliderEquipScale = document.getElementById('slider-equip-scale');
+    sliderEquipScale.addEventListener('input', (e) => {
+      tuningConfig.equip.scale = parseFloat((parseInt(e.target.value) / 100).toFixed(2));
+      document.getElementById('val-equip-scale').textContent = `${tuningConfig.equip.scale.toFixed(2)}x`;
+      updateRootStyles();
+    });
+
+    const sliderEquipTransY = document.getElementById('slider-equip-transy');
+    sliderEquipTransY.addEventListener('input', (e) => {
+      tuningConfig.equip.transY = parseInt(e.target.value);
+      document.getElementById('val-equip-transy').textContent = `${tuningConfig.equip.transY}px`;
+      updateRootStyles();
+    });
+
+    document.querySelectorAll('#group-equip-shadow .btn-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#group-equip-shadow .btn-toggle').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tuningConfig.equip.shadow = btn.dataset.val;
+        updateRootStyles();
+      });
+    });
+
+    // Monster Listeners
+    const sliderMonsterScale = document.getElementById('slider-monster-scale');
+    sliderMonsterScale.addEventListener('input', (e) => {
+      tuningConfig.monster.scale = parseFloat((parseInt(e.target.value) / 100).toFixed(2));
+      document.getElementById('val-monster-scale').textContent = `${tuningConfig.monster.scale.toFixed(2)}x`;
+      updateRootStyles();
+    });
+
+    const sliderMonsterTransY = document.getElementById('slider-monster-transy');
+    sliderMonsterTransY.addEventListener('input', (e) => {
+      tuningConfig.monster.transY = parseInt(e.target.value);
+      document.getElementById('val-monster-transy').textContent = `${tuningConfig.monster.transY}px`;
+      updateRootStyles();
+    });
+
+    document.querySelectorAll('#group-monster-aura .btn-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#group-monster-aura .btn-toggle').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tuningConfig.monster.aura = btn.dataset.val;
+        updateRootStyles();
+      });
+    });
+
+    // Global Display (Size & Layout)
+    let currentSize = 'real';
+    let currentLayout = 'scroll';
+
+    function updateBodyClasses() {
+      document.body.className = `view-size-${currentSize} ${currentLayout === 'wrap' ? 'layout-wrap' : ''}`.trim();
+    }
+
+    document.querySelectorAll('#group-size .btn-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#group-size .btn-toggle').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentSize = btn.dataset.size;
+        updateBodyClasses();
+      });
+    });
+
+    document.querySelectorAll('#group-layout .btn-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#group-layout .btn-toggle').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentLayout = btn.dataset.layout;
+        updateBodyClasses();
+      });
+    });
+
+    // Action 1: Save & Apply to Game Backend (POST /api/save_visual_tuning)
+    document.getElementById('btn-save-apply').addEventListener('click', async () => {
+      try {
+        const resp = await fetch('/api/save_visual_tuning', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(tuningConfig)
+        });
+        const res = await resp.json();
+        if (res.success) {
+          showToast('✅ 視覺參數已成功儲存！已自動同步至遊戲本體 (visual_tuning.css)！', 'success');
+        } else {
+          showToast('❌ 儲存失敗: ' + (res.error || '未知錯誤'), 'warn');
+        }
+      } catch (err) {
+        showToast('⚠️ 本地伺服器未響應，請確認是透過批次檔 (Port 8082) 啟動展廳！', 'warn');
+      }
+    });
+
+    // Action 2: Reset to Defaults (POST /api/reset_visual_tuning)
+    document.getElementById('btn-reset-tuning').addEventListener('click', async () => {
+      try {
+        const resp = await fetch('/api/reset_visual_tuning', { method: 'POST' });
+        const res = await resp.json();
+        if (res.success && res.config) {
+          tuningConfig = res.config;
+          syncControlsToState();
+          showToast('🔄 已成功還原為系統預設值並同步至遊戲本體！', 'info');
+        }
+      } catch (err) {
+        tuningConfig = {
+          hero: { scale: 1.40, transY: -3, outline: 'white', spotlight: 'on' },
+          equip: { scale: 1.20, transY: 0, shadow: 'sharp' },
+          monster: { scale: 1.35, transY: 0, aura: 'blood' }
+        };
+        syncControlsToState();
+        showToast('🔄 已還原為預設值 (本機預設)', 'info');
+      }
+    });
+
+    // Action 3: Copy CSS
+    document.getElementById('btn-copy-css').addEventListener('click', () => {
+      const h = tuningConfig.hero;
+      const e = tuningConfig.equip;
+      const m = tuningConfig.monster;
+      const cssCode = `/* 《2048 RPG》全要素可視化調校參數 (C-STORY-064) */
+:root {
+  --hero-scale: ${h.scale.toFixed(2)};
+  --hero-trans-y: ${h.transY}px;
+  --hero-filter: ${heroFilters[h.outline]};
+  --hero-spotlight-display: ${h.spotlight === 'on' ? 'block' : 'none'};
+
+  --equip-scale: ${e.scale.toFixed(2)};
+  --equip-trans-y: ${e.transY}px;
+  --equip-filter: ${equipFilters[e.shadow]};
+
+  --monster-scale: ${m.scale.toFixed(2)};
+  --monster-trans-y: ${m.transY}px;
+  --monster-filter: ${monsterFilters[m.aura]};
+}`;
+
+      navigator.clipboard.writeText(cssCode).then(() => {
+        showToast('📋 已複製完整全要素 CSS 代碼至剪貼簿！', 'info');
+      });
+    });
+
+    // Render A/B Test Section
+    function renderABSection() {
+      const testValues = [4, 16, 64, 128, 256, 1024, 4096, 65536];
+      const containerBefore = document.getElementById('row-ab-before');
+      const containerAfter = document.getElementById('row-ab-after');
+      containerBefore.innerHTML = '';
+      containerAfter.innerHTML = '';
+
+      testValues.forEach(val => {
+        const heroTheme = HERO_THEMES[val] || { bg: '#1e3a8a', text: '#ffffff', border: '#38bdf8' };
+        const heroImgPath = getHeroImagePath(val, 'style_e_clay');
+
+        // Before (100% full body, no spotlight, no rim light)
+        const colBefore = document.createElement('div');
+        colBefore.className = 'tier-column';
+        colBefore.innerHTML = `
+          <div class="tier-header-badge">${val}</div>
+          <div class="sim-tile type-hero" style="background-color: ${heroTheme.bg}; color: ${heroTheme.text};">
+            <div class="sim-badge">
+              <img class="sim-img" style="transform: scale(1.0); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));" src="${heroImgPath}" alt="${val}" />
+            </div>
+            <div class="sim-val ${val >= 10000 ? 'sim-val-compact' : ''}">${val}</div>
+          </div>
+        `;
+        containerBefore.appendChild(colBefore);
+
+        // After (Dynamic scale, spotlight, rim light)
+        const colAfter = document.createElement('div');
+        colAfter.className = 'tier-column';
+        colAfter.innerHTML = `
+          <div class="tier-header-badge">${val}</div>
+          <div class="sim-tile type-hero" style="background-color: ${heroTheme.bg}; color: ${heroTheme.text};">
+            <div class="sim-badge">
+              <div class="hero-spotlight"></div>
+              <img class="sim-img hero-dynamic-img" src="${heroImgPath}" alt="${val}" />
+            </div>
+            <div class="sim-val ${val >= 10000 ? 'sim-val-compact' : ''}">${val}</div>
+          </div>
+        `;
+        containerAfter.appendChild(colAfter);
+      });
+    }
+
+    // Render Full Matrix Table
+    function renderFullMatrix() {
+      const container = document.getElementById('full-matrix-container');
+      container.innerHTML = '';
+
+      TIER_VALUES.forEach((val, idx) => {
+        const tier = idx + 1;
+        const col = document.createElement('div');
+        col.className = 'tier-column';
+
+        const heroTheme = HERO_THEMES[val] || { name: '勇者', bg: '#1e3a8a', text: '#93c5fd', border: '#38bdf8' };
+        const equipTheme = EQUIPMENT_THEMES[val] || { name: '裝備', bg: '#334155', text: '#f8fafc', border: '#cbd5e1' };
+        const monsterTheme = MONSTER_THEMES[val] || { name: '魔物', bg: '#4c0519', text: '#fecdd3', border: '#ef4444' };
+        const hasGold = val <= 128;
+        const goldTheme = hasGold 
+          ? (GOLD_THEMES[val] || { name: '金幣', badge: '🪙', bg: '#78350f', text: '#fef3c7', border: '#f59e0b' })
+          : { name: '無產出', badge: '—', bg: '#0f172a', text: '#475569', border: '#1e293b' };
+
+        const heroImgPath = getHeroImagePath(val, 'style_e_clay');
+        const equipImgPath = getEquipmentImagePath(val, 'style_e_clay');
+
+        col.innerHTML = `
+          <!-- Header Badge -->
+          <div class="tier-header-badge">T${String(tier).padStart(2, '0')}<br>${val}</div>
+
+          <!-- 1. Hero Tile -->
+          <div class="row-meta-tag tag-hero">👑 勇者</div>
+          <div class="sim-tile type-hero" style="background-color: ${heroTheme.bg}; color: ${heroTheme.text};" title="${heroTheme.name}">
+            <div class="sim-badge">
+              <div class="hero-spotlight"></div>
+              <img class="sim-img hero-dynamic-img" src="${heroImgPath}" alt="${val}" />
+            </div>
+            <div class="sim-val ${val >= 10000 ? 'sim-val-compact' : ''}">${val}</div>
+          </div>
+
+          <!-- 2. Clay Equipment Tile -->
+          <div class="row-meta-tag tag-equip">⚔️ 裝備</div>
+          <div class="sim-tile type-equip" style="background-color: ${equipTheme.bg}; color: ${equipTheme.text}; border-color: ${equipTheme.border};" title="${equipTheme.name}">
+            <div class="sim-badge">
+              <img class="sim-img equip-dynamic-img" src="${equipImgPath || 'assets/images/equipment_clay/equip_16.png'}" alt="equip" />
+            </div>
+            <div class="sim-val ${val >= 10000 ? 'sim-val-compact' : ''}">${val}</div>
+          </div>
+
+          <!-- 3. Monster Tile -->
+          <div class="row-meta-tag tag-monster">👾 魔物</div>
+          <div class="sim-tile type-monster" style="background-color: ${monsterTheme.bg}; color: ${monsterTheme.text};" title="${monsterTheme.name}">
+            <div class="sim-badge" style="font-size: 1.5rem;">
+              ${getMonsterImagePath(undefined, val, 'style_e_clay') 
+                ? `<img class="monster-clay-img" src="${getMonsterImagePath(undefined, val, 'style_e_clay')}" alt="${monsterTheme.name}" onerror="this.outerHTML='<span class=\\'monster-dynamic-target\\'>${monsterTheme.badge}</span>'" />`
+                : `<span class="monster-dynamic-target">${monsterTheme.badge}</span>`
+              }
+            </div>
+            <div class="sim-val ${val >= 10000 ? 'sim-val-compact' : ''}">${val}</div>
+          </div>
+
+          <!-- 4. Gold Tile -->
+          <div class="row-meta-tag tag-gold">🪙 金幣</div>
+          <div class="sim-tile" style="background-color: ${goldTheme.bg}; color: ${goldTheme.text}; border-color: ${goldTheme.border};" title="${goldTheme.name}">
+            <div class="sim-badge" style="font-size: 1.5rem;">
+              ${goldTheme.badge}
+            </div>
+            <div class="sim-val ${val >= 10000 ? 'sim-val-compact' : ''}">${hasGold ? val : '—'}</div>
+          </div>
+        `;
+
+        container.appendChild(col);
+      });
+    }
+
+    // Render 9 Chapters Monster Staircase Matrix (C-STORY-067 & C-STORY-068)
+    function renderMonsterLadderMatrix() {
+      const container = document.getElementById('monster-ladder-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      // 1. Top Tier Values Header Row (Sticky Left Title + 18 Tier Badges)
+      const headerRow = document.createElement('div');
+      headerRow.className = 'ladder-tier-header-row';
+      
+      const titleCol = document.createElement('div');
+      titleCol.className = 'ladder-tier-header-title';
+      titleCol.innerHTML = '<span>🧭</span> 章節生態階梯';
+      headerRow.appendChild(titleCol);
+
+      const badgesGroup = document.createElement('div');
+      badgesGroup.className = 'ladder-tier-badges-group';
+      TIER_VALUES.forEach((val, idx) => {
+        const tier = idx + 1;
+        const b = document.createElement('div');
+        b.className = 'ladder-tier-badge';
+        b.innerHTML = `<span>T${String(tier).padStart(2, '0')}</span><span>${val >= 10000 ? (val/1000) + 'k' : val}</span>`;
+        badgesGroup.appendChild(b);
+      });
+      headerRow.appendChild(badgesGroup);
+      container.appendChild(headerRow);
+
+      // 2. 9 Chapters Rows
+      const chapterList = [
+        { id: 0, name: '序章：訓練所', icon: '🎓', desc: '4 ~ 8 基礎傀儡' },
+        { id: 1, name: '第 I 章：微風之境', icon: '🌾', desc: '2 ~ 32 邊境魔物' },
+        { id: 2, name: '第 II 章：灼熱熔岩', icon: '🔥', desc: '16 ~ 512 熔火史萊姆' },
+        { id: 3, name: '第 III 章：孤峰岩地', icon: '⛰️', desc: '64 ~ 2048 岩地石像鬼' },
+        { id: 4, name: '第 IV 章：蛛魔荒漠', icon: '🏜️', desc: '256 ~ 4096 毒蛛分裂母體' },
+        { id: 5, name: '第 V 章：遠古地宮', icon: '🏛️', desc: '1024 ~ 16384 不死皇陵' },
+        { id: 6, name: '第 VI 章：滅世黑曜', icon: '🌋', desc: '4096 ~ 65536 黑曜巨龍' },
+        { id: 7, name: '第 VII 章：神魔深淵', icon: '🌌', desc: '16384 ~ 131072 混沌裂隙' },
+        { id: 8, name: '第 VIII 章：終焉神域', icon: '☀️', desc: '65536 ~ 262144 創世神話' }
+      ];
+
+      chapterList.forEach(ch => {
+        const pool = CHAPTER_MONSTER_POOLS[ch.id];
+        const range = pool ? pool.range : [0, 0];
+
+        const row = document.createElement('div');
+        row.className = 'chapter-ladder-row';
+
+        // 1. Chapter Header info (Sticky Left)
+        const header = document.createElement('div');
+        header.className = 'chapter-ladder-header';
+        header.innerHTML = `
+          <div class="chapter-badge-title">${ch.icon} ${ch.name}</div>
+          <div class="chapter-badge-range">區間: ${range[0]} ~ ${range[1]}</div>
+          <div class="chapter-badge-desc">${ch.desc}</div>
+        `;
+        row.appendChild(header);
+
+        // 2. Ladder Tiles
+        const tilesRow = document.createElement('div');
+        tilesRow.className = 'chapter-ladder-tiles';
+
+        TIER_VALUES.forEach(val => {
+          const inRange = val >= range[0] && val <= range[1];
+          const monsterInfo = pool?.monsters ? pool.monsters[val] : null;
+
+          if (inRange && monsterInfo) {
+            const tile = document.createElement('div');
+            tile.className = 'sim-tile type-monster';
+            tile.style.backgroundColor = monsterInfo.bg || '#4c0519';
+            tile.style.color = monsterInfo.text || '#fecdd3';
+            tile.style.borderColor = monsterInfo.border || '#ef4444';
+            tile.title = `${ch.name} - ${monsterInfo.name} (${val})`;
+
+            const clayImg = monsterInfo.clayImg || getMonsterImagePath(ch.id, val, 'style_e_clay');
+
+            let badgeHtml = '';
+            if (clayImg) {
+              badgeHtml = `<img class="monster-clay-img" src="${clayImg}" alt="${monsterInfo.name}" onerror="this.outerHTML='<span class=\\'monster-dynamic-target\\'>${monsterInfo.badge}</span>'" />`;
+            } else {
+              badgeHtml = `<span class="monster-dynamic-target" style="font-size: 1.5rem;">${monsterInfo.badge}</span>`;
+            }
+
+            tile.innerHTML = `
+              <div class="sim-badge">
+                ${badgeHtml}
+              </div>
+              <div class="sim-val ${val >= 10000 ? 'sim-val-compact' : ''}">${val}</div>
+            `;
+            tilesRow.appendChild(tile);
+          } else {
+            const emptyTile = document.createElement('div');
+            emptyTile.className = 'sim-tile-empty';
+            emptyTile.innerHTML = `<span>${val >= 10000 ? (val/1000) + 'k' : val}</span>`;
+            emptyTile.title = `數值 ${val} (非 ${ch.name} 出場區間)`;
+            tilesRow.appendChild(emptyTile);
+          }
+        });
+
+        row.appendChild(tilesRow);
+        container.appendChild(row);
+      });
+    }
+
+    // Async Init sequence (loads saved visual_tuning.json)
+    async function init() {
+      try {
+        const resp = await fetch('visual_tuning.json');
+        if (resp.ok) {
+          const saved = await resp.json();
+          if (saved.hero) Object.assign(tuningConfig.hero, saved.hero);
+          if (saved.equip) Object.assign(tuningConfig.equip, saved.equip);
+          if (saved.monster) Object.assign(tuningConfig.monster, saved.monster);
+        }
+      } catch (e) {
+        console.warn('Using default tuning config');
+      }
+      syncControlsToState();
+      updateBodyClasses();
+      renderABSection();
+      renderFullMatrix();
+      renderMonsterLadderMatrix();
+    }
+    init();
+  </script>
+</body>
+</html>

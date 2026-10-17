@@ -392,40 +392,51 @@ body {
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+  overflow: hidden;
 }
 
 .combat-top-bar {
-  height: calc(54px + max(14px, env(safe-area-inset-top, 14px)));
+  min-height: 50px;
   background: rgba(15, 23, 42, 0.95);
   border-bottom: 1px solid var(--border-card);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: max(14px, env(safe-area-inset-top, 14px)) 16px 0 16px;
+  padding: max(10px, env(safe-area-inset-top, 10px)) 12px 6px 12px;
   box-sizing: border-box;
+  flex-shrink: 0;
+  gap: 6px;
+  z-index: 15;
 }
 
 .btn-combat-back {
   background: rgba(30, 41, 59, 0.8);
   border: 1px solid var(--border-card);
   color: var(--text-main);
-  padding: 6px 12px;
+  padding: 5px 10px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .combat-stage-info {
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-width: 0;
+  flex: 1;
 }
 
 .combat-stage-name {
-  font-size: 1.15rem;
+  font-size: 1rem;
   font-weight: 800;
   color: var(--accent-blue-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
 }
 
 .combat-turn-count {
@@ -446,20 +457,134 @@ body {
   color: #fda4af;
 }
 
-/* 5x5 Grid Board (Threes! Card Aspect Ratio 5:6) (C-STORY-027) */
-.board-wrapper {
-  padding: 12px;
+/* ================= COMBAT MAIN ZONE & PREVIEW SHELF (C-STORY-041 DYNAMIC-ALIGN) ================= */
+.combat-main-zone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 2px 0;
+}
+
+.combat-preview-shelf {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  flex-shrink: 0;
+  margin: 4px 0 2px 0;
+  padding: 0;
+  height: 46px;
+}
+
+.combat-next-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: transparent;
+  padding: 0;
+}
+
+.next-preview-label {
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: #38bdf8;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.next-preview-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 42px;
+  background: #1e293b;
+  border: 2px solid #475569;
+  border-radius: 9px;
+  box-sizing: border-box;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s, border-color 0.2s;
+  overflow: hidden;
+}
+
+.next-preview-card.pop-effect {
+  animation: nextCardPop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes nextCardPop {
+  0% { transform: scale(0.65); }
+  55% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+.next-card-badge {
+  display: none; /* Hide micro icon to focus purely on large readable numeric display */
+}
+
+.next-card-val {
+  position: relative;
+  z-index: 2;
+  font-size: 1.45rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+/* Gold Tile Preview Skin: Yellow background with deep gold border and prominent circular embossed gold coin backdrop */
+.next-preview-card.preview-gold {
+  border-color: #f59e0b;
+  background: #b45309;
+}
+
+/* Circular Coin Embossed Backdrop behind number */
+.next-preview-card.preview-gold::before {
+  content: '';
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fde047 30%, #eab308 70%, #ca8a04 100%);
+  border: 2px solid #fef08a;
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.8), inset 0 -1px 2px rgba(161, 98, 7, 0.7);
+  z-index: 1;
+}
+
+.next-preview-card.preview-gold .next-card-val {
+  color: #78350f; /* Deep amber-brown text on bright golden coin face for high contrast readability */
+  text-shadow: 0 1px 1px rgba(254, 240, 138, 0.8);
+  font-weight: 950;
+}
+
+/* =================================================================== */
+
+/* 5x5 Grid Board (Threes! Card Aspect Ratio 5:6) (C-STORY-027, C-STORY-041-LAYOUT) */
+.board-wrapper {
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
   flex: 1;
+  min-height: 0;
   touch-action: none;
 }
 
 .board-grid {
-  width: 100%;
-  max-width: 440px;
+  /* Dynamically bounded by viewport height and max width to guarantee zero overlap */
+  width: min(100%, calc((100vh - 250px) * 5 / 6), 420px);
   aspect-ratio: 5 / 6;
+  max-height: 100%;
   background: #0f172a;
   border: 2px solid #334155;
   border-radius: 16px;
@@ -511,14 +636,45 @@ body {
 .tile-badge {
   font-size: 1.4rem;
   line-height: 1;
-  margin-bottom: 2px;
+  margin-bottom: 0px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  z-index: 1;
+}
+
+.tile-badge.has-tile-img {
+  width: 100%;
+  height: 55%;
+  margin-bottom: -6px; /* 允許數字微微疊在圖片底端，釋放垂直空間 */
+}
+
+.tile-icon-img {
+  max-width: 90%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  opacity: 0.95;
+}
+
+.next-preview-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+  image-rendering: crisp-edges;
 }
 
 .tile-value {
-  font-size: 1.35rem;
-  font-weight: 900;
+  font-size: 1.45rem; /* 恢復飽滿超大字體 */
+  font-weight: 950;
   letter-spacing: -0.5px;
-  line-height: 1.1;
+  line-height: 1.05;
+  z-index: 2; /* 確保數字優先浮於最上層 */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 2px rgba(0, 0, 0, 0.9);
 }
 
 .tile-name {
@@ -818,6 +974,12 @@ body {
   align-items: center;
   justify-content: space-between;
   font-size: 0.95rem;
+  gap: 8px;
+}
+
+.setting-row > span {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Version Changelog Box in Settings Modal (C-STORY-028) */
@@ -1670,10 +1832,12 @@ body {
   display: flex;
   justify-content: center;
   gap: 12px;
-  padding: 8px 16px;
-  background: rgba(15, 23, 42, 0.85);
+  padding: 6px 16px;
+  background: rgba(15, 23, 42, 0.95);
   border-top: 1px solid var(--border-card);
-  margin-top: 4px;
+  margin-top: 0;
+  flex-shrink: 0;
+  z-index: 15;
 }
 
 .btn-item-slot {
@@ -2139,7 +2303,7 @@ body {
 }
 
 .setting-select {
-  padding: 6px 10px;
+  padding: 6px 28px 6px 10px;
   background-color: #0f172a;
   color: #38bdf8;
   border: 1px solid #334155;
@@ -2148,6 +2312,10 @@ body {
   font-weight: 700;
   outline: none;
   cursor: pointer;
+  max-width: 190px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .setting-select option {
@@ -2155,42 +2323,212 @@ body {
   color: #f8fafc;
 }
 
-/* ================= THEME SKINS FOR TILES (C-STORY-010) ================= */
+/* ================= THEME SKINS & BOARD THEMES (C-STORY-010 & C-STORY-043) ================= */
+.tile.theme-cyber,
 .tile.skin-cyber {
   box-shadow: 0 0 10px rgba(0, 242, 254, 0.25), inset 0 0 6px rgba(255, 255, 255, 0.1);
   font-family: "Courier New", Courier, monospace;
   letter-spacing: 0.5px;
 }
 
+.tile.theme-retro,
 .tile.skin-retro {
   border-radius: 4px !important;
   border-width: 3px !important;
   box-shadow: inset -2px -2px 0px rgba(0, 0, 0, 0.5), inset 2px 2px 0px rgba(255, 255, 255, 0.3) !important;
 }
 
+.tile.theme-minimal,
 .tile.skin-minimal {
   border-radius: 12px !important;
   border-width: 1px !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
 }
 
-/* ================= ICON FOCUS SKIN (C-STORY-012) ================= */
+/* Board Themes (Board Frame & Grid Cell Backgrounds) */
+.board-grid.theme-kingdom {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+.board-grid.theme-kingdom .grid-cell {
+  background: rgba(30, 41, 59, 0.6) !important;
+}
+
+.board-grid.theme-cyber {
+  background: #030712 !important;
+  border-color: #06b6d4 !important;
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.35), inset 0 2px 10px rgba(0, 0, 0, 0.8) !important;
+}
+.board-grid.theme-cyber .grid-cell {
+  background: rgba(15, 23, 42, 0.85) !important;
+  border: 1px solid rgba(6, 182, 212, 0.25) !important;
+}
+
+.board-grid.theme-retro {
+  background: #1c1917 !important;
+  border-color: #78716c !important;
+  border-width: 3px !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.9) !important;
+}
+.board-grid.theme-retro .grid-cell {
+  background: #292524 !important;
+  border-radius: 4px !important;
+}
+
+.board-grid.theme-minimal {
+  background: #000000 !important;
+  border-color: #27272a !important;
+  border-radius: 14px !important;
+}
+.board-grid.theme-minimal .grid-cell {
+  background: #18181b !important;
+  border-radius: 8px !important;
+}
+
+/* ================= 4 TILE LAYOUTS (C-STORY-043 DECOUPLED MATRIX) ================= */
+
+/* 1. 新版純圖 (Modern Pure Icon): 放大數字、飽滿圖標、隱藏文字名稱 */
+.tile.layout_modern_pure .tile-name {
+  display: none !important;
+}
+.tile.layout_modern_pure .tile-badge {
+  font-size: 1.8rem;
+  margin-bottom: 2px;
+  transform: translateY(-1px);
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
+}
+.tile.layout_modern_pure .tile-badge.has-tile-img {
+  width: 100%;
+  height: 60%;
+  margin-bottom: -6px;
+}
+.tile.layout_modern_pure .tile-icon-img {
+  max-width: 92%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.tile.layout_modern_pure .tile-value {
+  font-size: 1.45rem;
+  font-weight: 950;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85);
+}
+
+/* 2. 舊版純圖 (Classic Pure Icon - 參照圖3): 舒適呼吸空間、中型數字、適度Emoji */
+.tile.layout_classic_pure .tile-name {
+  display: none !important;
+}
+.tile.layout_classic_pure .tile-badge {
+  font-size: 1.4rem;
+  margin-bottom: 2px;
+  transform: none;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
+.tile.layout_classic_pure .tile-badge.has-tile-img {
+  width: 100%;
+  height: 32px;
+  margin-bottom: 0px;
+}
+.tile.layout_classic_pure .tile-icon-img {
+  max-width: 80%;
+  max-height: 32px;
+}
+.tile.layout_classic_pure .tile-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+/* 3. 新版圖文 (Modern Icon + Text - 徹底解決圖2截斷問題): 三合一黃金緊湊排版 */
+.tile.layout_modern_text {
+  padding: 3px 2px !important;
+  justify-content: space-between !important;
+}
+.tile.layout_modern_text .tile-badge {
+  font-size: 1.15rem;
+  min-height: 18px;
+  margin-bottom: 0;
+  transform: none;
+  line-height: 1;
+}
+.tile.layout_modern_text .tile-badge.has-tile-img {
+  width: 100%;
+  height: 24px;
+  margin-bottom: 0;
+}
+.tile.layout_modern_text .tile-icon-img {
+  max-width: 78%;
+  max-height: 24px;
+}
+.tile.layout_modern_text .tile-value {
+  font-size: 0.98rem;
+  font-weight: 900;
+  line-height: 1;
+  margin-top: 1px;
+  margin-bottom: 1px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+.tile.layout_modern_text .tile-name {
+  display: block !important;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 96%;
+  opacity: 0.95;
+  padding: 1px 2px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* 4. 舊版圖文 (Classic Icon + Text): 經典原版排版 */
+.tile.layout_classic_text {
+  padding: 2px !important;
+  justify-content: center !important;
+}
+.tile.layout_classic_text .tile-badge {
+  font-size: 1.3rem;
+  min-height: 22px;
+  margin-bottom: 0;
+}
+.tile.layout_classic_text .tile-badge.has-tile-img {
+  width: 100%;
+  height: 28px;
+  margin-bottom: 0;
+}
+.tile.layout_classic_text .tile-icon-img {
+  max-width: 85%;
+  max-height: 28px;
+}
+.tile.layout_classic_text .tile-value {
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.05;
+}
+.tile.layout_classic_text .tile-name {
+  display: block !important;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 95%;
+}
+
+/* Backward compatibility for skin-icon_focus */
 .tile.skin-icon_focus .tile-name {
   display: none !important;
 }
-
 .tile.skin-icon_focus .tile-badge {
-  font-size: 2.3rem;
-  margin-bottom: 2px;
-  transform: translateY(-2px);
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
+  font-size: 1.8rem;
 }
-
 .tile.skin-icon_focus .tile-value {
   font-size: 1.45rem;
   font-weight: 900;
-  letter-spacing: -0.5px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85);
 }
 
 /* ================= SLIDING DISPLACEMENT 0.12s (C-STORY-013) ================= */
@@ -3144,5 +3482,23 @@ body {
   transform: scale(0.97);
 }
 
-
-
+/* Quick Skin Toggle Button in Combat Top Bar */
+.btn-combat-skin {
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid #38bdf8;
+  color: #38bdf8;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-combat-skin:active {
+  transform: scale(0.92);
+}

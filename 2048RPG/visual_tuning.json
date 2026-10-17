@@ -1,0 +1,18 @@
+{
+  "hero": {
+    "scale": 1.5,
+    "transY": 3,
+    "outline": "white",
+    "spotlight": "on"
+  },
+  "equip": {
+    "scale": 1.4,
+    "transY": 2,
+    "shadow": "sharp"
+  },
+  "monster": {
+    "scale": 1.5,
+    "transY": 3,
+    "aura": "purple"
+  }
+}

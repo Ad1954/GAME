@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>《2048 RPG：王國遠征》專屬裝備進化展廳 (Style B & Style E)</title>
+  <style>
+    :root {
+      --bg-main: #090d16;
+      --bg-card: #131c2e;
+      --border-card: #22324e;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --tile-bg-active: #ca8a04;
+      --tile-border-color: #fef08a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif;
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    header {
+      max-width: 1200px;
+      margin: 0 auto 20px auto;
+      text-align: center;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+
+    /* Controls Toolbar */
+    .toolbar {
+      max-width: 1200px;
+      margin: 0 auto 28px auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 16px;
+      z-index: 100;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      backdrop-filter: blur(10px);
+    }
+    .tool-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .tool-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .btn-group {
+      display: flex;
+      gap: 6px;
+    }
+    .btn-color {
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-color:hover {
+      transform: translateY(-2px);
+    }
+    .btn-color.active {
+      outline: 2px solid #38bdf8;
+      box-shadow: 0 0 12px #38bdf8;
+    }
+
+    /* Style Switcher */
+    .style-switch-bar {
+      max-width: 1200px;
+      margin: 0 auto 24px auto;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+    .switch-btn {
+      background: #1e293b;
+      border: 2px solid #334155;
+      color: #94a3b8;
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .switch-btn:hover {
+      border-color: #38bdf8;
+      color: #fff;
+    }
+    .switch-btn.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #fff;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+    }
+
+    /* Section Cards */
+    .content-area {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .tier-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 32px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.3);
+    }
+    .tier-section-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .tier-section-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    /* Grid of Tiles */
+    .tiles-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+    @media (max-width: 800px) {
+      .tiles-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .tile-card {
+      background: #0b111e;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .tile-card:hover {
+      border-color: #38bdf8;
+      transform: translateY(-4px);
+    }
+
+    /* The exact game vertical rectangle tile */
+    .game-tile {
+      width: 76px;
+      height: 92px;
+      border-radius: 10px;
+      background: var(--tile-bg-active);
+      border: 2px solid var(--tile-border-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.6);
+      padding: 4px 2px 3px 2px;
+      box-sizing: border-box;
+      position: relative;
+    }
+    .game-tile-imgbox {
+      width: 100%;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .game-tile-imgbox img {
+      max-width: 96%;
+      max-height: 50px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.7));
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
+    .game-tile-footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1;
+      margin-top: -2px;
+    }
+    .game-tile-val {
+      font-size: 1.55rem;
+      font-weight: 950;
+      color: #ffffff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.95);
+      letter-spacing: -0.5px;
+    }
+    .game-tile-name {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #fef08a;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+
+    .raw-preview {
+      width: 110px;
+      height: 110px;
+      background: #0f172a;
+      border: 1px dashed #334155;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+    }
+    .raw-preview img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      background: var(--tile-bg-active);
+      border-radius: 6px;
+    }
+
+    .tile-meta {
+      text-align: center;
+    }
+    .meta-tier {
+      font-size: 12px;
+      font-weight: 800;
+      color: #38bdf8;
+      background: #082f49;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      display: inline-block;
+      margin-bottom: 4px;
+    }
+    .meta-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .meta-combo {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .info-alert {
+      background: rgba(56, 189, 248, 0.1);
+      border-left: 4px solid #38bdf8;
+      border-radius: 0 8px 8px 0;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #cbd5e1;
+      margin-bottom: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>⚔️《2048 RPG：王國遠征》專屬裝備進化展廳</h1>
+    <p class="subtitle">45° 飽滿對角構圖 × 實體長方形戰鬥方塊鑲嵌 × 兩兩輪替視覺階梯驗收</p>
+  </header>
+
+  <!-- Style Switcher -->
+  <div class="style-switch-bar">
+    <button class="switch-btn active" id="btn-style-b" onclick="switchStyle('b')">
+      🌟 Style B：3D 立體 Emoji / 向量粗框 Q 版 (T01 ~ T08 完整產出)
+    </button>
+    <button class="switch-btn" id="btn-style-e" onclick="switchStyle('e')">
+      🎨 Style E：實體桌遊微縮模型 / 黏土浮雕風 (T01 ~ T04 完整產出)
+    </button>
+  </div>
+
+  <!-- Controls Toolbar -->
+  <div class="toolbar">
+    <div class="tool-group">
+      <span class="tool-label">🎮 實體方塊底色即時切換：</span>
+      <div class="btn-group">
+        <button class="btn-color active" style="background: #ca8a04;" onclick="setTileBg('#ca8a04', '#fef08a', this)">🟡 裝備金底 (#ca8a04)</button>
+        <button class="btn-color" style="background: #1e40af;" onclick="setTileBg('#1e40af', '#93c5fd', this)">🔵 英雄藍底 (#1e40af)</button>
+        <button class="btn-color" style="background: #991b1b;" onclick="setTileBg('#991b1b', '#fca5a5', this)">🔴 魔物紅底 (#991b1b)</button>
+        <button class="btn-color" style="background: #0f172a;" onclick="setTileBg('#0f172a', '#475569', this)">🌑 暗夜深色 (#0f172a)</button>
+      </div>
+    </div>
+    <div class="tool-group">
+      <span style="font-size: 13px; color: #94a3b8;">✨ 檢測指標：無地面硬黑影・無外圈裝飾框・真去背邊緣平滑</span>
+    </div>
+  </div>
+
+  <div class="content-area">
+
+    <!-- ========================================== -->
+    <!-- STYLE B (T01 ~ T08)                        -->
+    <!-- ========================================== -->
+    <div id="view-style-b">
+      
+      <!-- Black Iron Era (T01 ~ T04) -->
+      <div class="tier-section">
+        <div class="tier-section-title">
+          <span>🛡️ 第一時代：黑鐵與先鋒騎士 (T01 ~ T04 / 數值 2 ~ 16)</span>
+        </div>
+        <p class="tier-section-desc">
+          質樸精鋼闊劍斜跨 45° 對角，依序引出騎士圓盾、鐵甲盾靴與精鋼胸甲戰靴。
+        </p>
+
+        <div class="tiles-grid">
+          <!-- T1 -->
+          <div class="tile-card">
+            <div class="meta-tier">Tier 01</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_b/equip_01.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">2</span><span class="game-tile-name">冒險短劍</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_b/equip_01.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">冒險短劍</div>
+              <div class="meta-combo">【單劍】45° 飽滿對角巨刃</div>
+            </div>
+          </div>
+
+          <!-- T2 -->
+          <div class="tile-card">
+            <div class="meta-tier">Tier 02</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_b/equip_02.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">4</span><span class="game-tile-name">獵戶盾劍</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_b/equip_02.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">獵戶盾劍</div>
+              <div class="meta-combo">【劍+盾】巨劍斜倚木鐵圓盾</div>
+            </div>
+          </div>
+
+          <!-- T3 -->
+          <div class="tile-card">
+            <div class="meta-tier">Tier 03</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_b/equip_03.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">8</span><span class="game-tile-name">衛士套裝</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_b/equip_03.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">衛士套裝</div>
+              <div class="meta-combo">【盾+靴】騎士鐵盾配精鋼重靴</div>
+            </div>
+          </div>
+
+          <!-- T4 -->
+          <div class="tile-card">
+            <div class="meta-tier">Tier 04</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_b/equip_04.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">16</span><span class="game-tile-name">先鋒戰鎧</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_b/equip_04.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">先鋒戰鎧</div>
+              <div class="meta-combo">【靴+鎧】騎士戰靴配亮銀胸甲</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mithril Era (T05 ~ T08) -->
+      <div class="tier-section">
+        <div class="tier-section-title">
+          <span>⚔️ 第二時代：秘銀領主與巨龍泰坦 (T05 ~ T08 / 數值 32 ~ 256)</span>
+        </div>
+        <p class="tier-section-desc">
+          冰藍秘銀闊劍散發清亮高光，依序引出皇家金獅盾、赤焰龍鱗戰靴與泰坦玄鐵板甲。
+        </p>
+
+        <div class="tiles-grid">
+          <!-- T5 -->
+          <div class="tile-card">
+            <div class="meta-tier">Tier 05</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_b/equip_05.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">32</span><span class="game-tile-name">秘銀闊劍</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_b/equip_05.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">秘銀闊劍</div>
+              <div class="meta-combo">【單劍】冰藍秘銀雙手闊劍</div>
+            </div>
+          </div>
+
+          <!-- T6 -->
+          <div class="tile-card">
+            <div class="meta-tier">Tier 06</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_b/equip_06.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">64</span><span class="game-tile-name">領主金盾劍</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_b/equip_06.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">領主金盾劍</div>
+              <div class="meta-combo">【劍+盾】秘銀劍配皇家金獅大盾</div>
+            </div>
+          </div>
+
+          <!-- T7 -->
+          <div class="tile-card">
+            <div class="meta-tier">Tier 07</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_b/equip_07.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">128</span><span class="game-tile-name">龍鱗重裝</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_b/equip_07.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">龍鱗重裝</div>
+              <div class="meta-combo">【盾+靴】金獅盾配赤炎龍鱗靴</div>
+            </div>
+          </div>
+
+          <!-- T8 -->
+          <div class="tile-card">
+            <div class="meta-tier">Tier 08</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_b/equip_08.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">256</span><span class="game-tile-name">泰坦重鎧</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_b/equip_08.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">泰坦重鎧</div>
+              <div class="meta-combo">【靴+鎧】龍鱗靴配泰坦金黑胸甲</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- STYLE E (T01 ~ T04)                        -->
+    <!-- ========================================== -->
+    <div id="view-style-e" style="display: none;">
+      
+      <div class="tier-section">
+        <div class="tier-section-title">
+          <span>🎨 實體黏土第一時代：黑鐵手作冒險 (T01 ~ T04 / 數值 2 ~ 16)</span>
+        </div>
+        <p class="tier-section-desc">
+          手工捏塑微縮黏土玩具質感、圓潤厚實倒角、啞光柔和光澤，零地面硬陰影、無外邊框干擾。
+        </p>
+
+        <div class="tiles-grid">
+          <!-- T1 -->
+          <div class="tile-card">
+            <div class="meta-tier">Tier 01</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_01.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">2</span><span class="game-tile-name">泥塑短劍</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_01.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">泥塑短劍</div>
+              <div class="meta-combo">【單劍】圓潤泥刃配金泥護手</div>
+            </div>
+          </div>
+
+          <!-- T2 -->
+          <div class="tile-card">
+            <div class="meta-tier">Tier 02</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_02.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">4</span><span class="game-tile-name">獵戶泥盾劍</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_02.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">獵戶泥盾劍</div>
+              <div class="meta-combo">【劍+盾】泥刃斜跨金藍黏土盾</div>
+            </div>
+          </div>
+
+          <!-- T3 -->
+          <div class="tile-card">
+            <div class="meta-tier">Tier 03</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_03.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">8</span><span class="game-tile-name">衛士泥盾靴</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_03.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">衛士泥盾靴</div>
+              <div class="meta-combo">【盾+靴】金邊獅頭盾配厚實泥靴</div>
+            </div>
+          </div>
+
+          <!-- T4 -->
+          <div class="tile-card">
+            <div class="meta-tier">Tier 04</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_04.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">16</span><span class="game-tile-name">先鋒泥鎧</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_04.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">先鋒泥鎧</div>
+              <div class="meta-combo">【靴+鎧】厚實泥靴配金邊胸甲</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Era 2: T05 ~ T08 -->
+      <div class="tier-section">
+        <div class="tier-section-title">
+          <span>⚔️ 實體黏土第二時代：秘銀泰坦精銳 (T05 ~ T08 / 數值 32 ~ 256)</span>
+        </div>
+        <p class="tier-section-desc">
+          冰藍秘銀冰劍、立體雕刻獅王金盾、赤炎龍鱗靴、黑金泰坦厚重胸甲，層次更顯立體分明。
+        </p>
+        <div class="tiles-grid">
+          <div class="tile-card">
+            <div class="meta-tier">Tier 05</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_05.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">32</span><span class="game-tile-name">秘銀闊劍</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_05.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">秘銀闊劍</div>
+              <div class="meta-combo">【單劍】45° 冰藍秘銀厚刃黏土巨劍</div>
+            </div>
+          </div>
+          <div class="tile-card">
+            <div class="meta-tier">Tier 06</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_06.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">64</span><span class="game-tile-name">領主金盾</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_06.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">領主金盾</div>
+              <div class="meta-combo">【大盾】浮雕獅王微縮黏土大盾</div>
+            </div>
+          </div>
+          <div class="tile-card">
+            <div class="meta-tier">Tier 07</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_07.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">128</span><span class="game-tile-name">龍鱗戰靴</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_07.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">龍鱗戰靴</div>
+              <div class="meta-combo">【重靴】赤紅龍鱗爪紋黏土靴</div>
+            </div>
+          </div>
+          <div class="tile-card">
+            <div class="meta-tier">Tier 08</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_08.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">256</span><span class="game-tile-name">泰坦重鎧</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_08.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">泰坦重鎧</div>
+              <div class="meta-combo">【胸甲】黑金泰坦厚實圓肩戰甲</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Era 3: T09 ~ T12 -->
+      <div class="tier-section">
+        <div class="tier-section-title">
+          <span>👑 實體黏土第三時代：聖殿龍皇榮光 (T09 ~ T12 / 數值 512 ~ 4096)</span>
+        </div>
+        <p class="tier-section-desc">
+          羽翼神聖之劍、天使展翼黏土大盾、太陽金翼護脛、龍皇赤金雕紋胸甲，金白紅典雅大氣。
+        </p>
+        <div class="tiles-grid">
+          <div class="tile-card">
+            <div class="meta-tier">Tier 09</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_09.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">512</span><span class="game-tile-name">聖殿光刃</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_09.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">聖殿光刃</div>
+              <div class="meta-combo">【單劍】羽翼護手鑲藍寶石金劍</div>
+            </div>
+          </div>
+          <div class="tile-card">
+            <div class="meta-tier">Tier 10</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_10.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">1024</span><span class="game-tile-name">天使翼盾</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_10.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">天使翼盾</div>
+              <div class="meta-combo">【大盾】純白雙翼包覆天使黏土盾</div>
+            </div>
+          </div>
+          <div class="tile-card">
+            <div class="meta-tier">Tier 11</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_11.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">2048</span><span class="game-tile-name">日冕戰靴</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_11.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">日冕戰靴</div>
+              <div class="meta-combo">【重靴】金陽芒角羽飾神聖戰靴</div>
+            </div>
+          </div>
+          <div class="tile-card">
+            <div class="meta-tier">Tier 12</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_12.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">4096</span><span class="game-tile-name">龍皇金鎧</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_12.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">龍皇金鎧</div>
+              <div class="meta-combo">【胸甲】黃金赤寶龍首浮雕戰鎧</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Era 4: T13 ~ T16 -->
+      <div class="tier-section">
+        <div class="tier-section-title">
+          <span>🌌 實體黏土第四時代：星辰創世神威 (T13 ~ T16 / 數值 8192 ~ 65536)</span>
+        </div>
+        <p class="tier-section-desc">
+          星雲深紫巨劍、虛空眼晶重盾、彩虹原石神靴、天尊至高金身神像，終極神話終焉。
+        </p>
+        <div class="tiles-grid">
+          <div class="tile-card">
+            <div class="meta-tier">Tier 13</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_13.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">8192</span><span class="game-tile-name">星辰滅刃</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_13.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">星辰滅刃</div>
+              <div class="meta-combo">【單劍】宇宙星斑青晶黏土巨劍</div>
+            </div>
+          </div>
+          <div class="tile-card">
+            <div class="meta-tier">Tier 14</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_14.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">16384</span><span class="game-tile-name">虛空裂盾</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_14.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">虛空裂盾</div>
+              <div class="meta-combo">【大盾】黑曜紫紋三目裂隙黏土盾</div>
+            </div>
+          </div>
+          <div class="tile-card">
+            <div class="meta-tier">Tier 15</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_15.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">32768</span><span class="game-tile-name">創世神靴</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_15.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">創世神靴</div>
+              <div class="meta-combo">【重靴】白金卷雲七彩晶石重靴</div>
+            </div>
+          </div>
+          <div class="tile-card">
+            <div class="meta-tier">Tier 16</div>
+            <div class="game-tile">
+              <div class="game-tile-imgbox"><img src="assets/TEMP/equip_16_style_e/equip_16.png"></div>
+              <div class="game-tile-footer"><span class="game-tile-val">65536</span><span class="game-tile-name">天尊神像</span></div>
+            </div>
+            <div class="raw-preview"><img src="assets/TEMP/equip_16_style_e/equip_16.png"></div>
+            <div class="tile-meta">
+              <div class="meta-name">天尊神像</div>
+              <div class="meta-combo">【神器】微縮手作天尊金身神像</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    function switchStyle(styleKey) {
+      document.querySelectorAll('.switch-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('btn-style-' + styleKey).classList.add('active');
+
+      if (styleKey === 'b') {
+        document.getElementById('view-style-b').style.display = 'block';
+        document.getElementById('view-style-e').style.display = 'none';
+      } else {
+        document.getElementById('view-style-b').style.display = 'none';
+        document.getElementById('view-style-e').style.display = 'block';
+      }
+    }
+
+    function setTileBg(bgColor, borderColor, btn) {
+      document.documentElement.style.setProperty('--tile-bg-active', bgColor);
+      document.documentElement.style.setProperty('--tile-border-color', borderColor || 'rgba(255,255,255,0.2)');
+      document.querySelectorAll('.btn-color').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+  </script>
+</body>
+</html>

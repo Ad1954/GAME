@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>《2048 RPG》數值 512 四風格矩陣對照評估展廳 (Chroma Key 洋紅幕去背驗證)</title>
+  <style>
+    :root {
+      --bg-main: #090d16;
+      --bg-card: #131c2e;
+      --border-card: #22324e;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 2rem 1rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    header h1 {
+      font-size: 2.1rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #38bdf8, #fbbf24, #f43f5e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .badge-bar {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #7dd3fc;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    /* Small tile 64px comparison section */
+    .small-preview-section {
+      background: #111a2e;
+      border: 1px solid #22324e;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .small-preview-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #7dd3fc;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .small-tiles-row {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .small-tile-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .small-tile {
+      width: 64px;
+      height: 64px;
+      background: #1e293b;
+      border: 3px solid #38bdf8;
+      border-radius: 8px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+      overflow: hidden;
+    }
+
+    .small-tile img {
+      width: 90%;
+      height: 90%;
+      object-fit: contain;
+    }
+
+    .small-tile-val {
+      position: absolute;
+      bottom: 2px;
+      font-size: 0.75rem;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 1px 3px #000;
+      z-index: 2;
+    }
+
+    .small-tile-label {
+      font-size: 0.75rem;
+      color: #cbd5e1;
+      font-weight: 700;
+    }
+
+    /* Main cards */
+    .grid-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: #38bdf8;
+    }
+
+    .card-style-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      color: #e2e8f0;
+    }
+
+    .card-val {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(56, 189, 248, 0.2);
+      border: 1px solid #38bdf8;
+      font-size: 0.85rem;
+      font-weight: 900;
+      padding: 2px 8px;
+      border-radius: 6px;
+      color: #38bdf8;
+    }
+
+    /* Checkerboard tile box for verifying alpha & hole transparency */
+    .hero-tile-box {
+      width: 156px;
+      height: 156px;
+      margin-top: 1.75rem;
+      margin-bottom: 1rem;
+      background: #1e293b;
+      border: 4px solid #38bdf8;
+      border-radius: 14px;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.6), inset 0 0 10px rgba(56, 189, 248, 0.3);
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      animation: pulse-halo 2.5s infinite ease-in-out;
+      overflow: hidden;
+      /* Subtle checkerboard to prove hole transparency */
+      background-image: 
+        linear-gradient(45deg, #162032 25%, transparent 25%), 
+        linear-gradient(-45deg, #162032 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #162032 75%), 
+        linear-gradient(-45deg, transparent 75%, #162032 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+
+    @keyframes pulse-halo {
+      0%, 100% {
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.5), inset 0 0 8px rgba(56, 189, 248, 0.2);
+        border-color: #38bdf8;
+      }
+      50% {
+        box-shadow: 0 0 24px rgba(56, 189, 248, 0.9), inset 0 0 14px rgba(56, 189, 248, 0.4);
+        border-color: #7dd3fc;
+      }
+    }
+
+    .hero-img {
+      width: 95%;
+      height: 95%;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+    }
+
+    .card-name {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #f8fafc;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+
+    .card-desc {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-bottom: 12px;
+      text-align: center;
+      line-height: 1.35;
+      min-height: 48px;
+    }
+
+    .pairing-box {
+      width: 100%;
+      background: #0d1525;
+      border: 1px dashed #243552;
+      border-radius: 10px;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: auto;
+    }
+
+    .equip-thumb {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+      background: #1e293b;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      padding: 2px;
+    }
+
+    .pairing-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pairing-title {
+      font-size: 0.72rem;
+      color: #64748b;
+    }
+
+    .pairing-name {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #facc15;
+    }
+
+    footer {
+      text-align: center;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border-card);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>《2048 RPG》數值 512 四風格矩陣對照評估展廳</h1>
+      <p>露臉聖殿騎士 ‧ 手持 T09 聖殿光刃 (羽翼金劍+藍寶石) ‧ 2頭身 Q版 ‧ 洋紅幕 (Chroma Key) 環形孔洞去背</p>
+      <div class="badge-bar">
+        <span class="badge">洋紅幕去背 (手臂與雙腿間隙 100% 鏤空)</span>
+        <span class="badge">眼白與高光 100% 完好</span>
+        <span class="badge">T09 羽翼聖劍裝備共鳴</span>
+        <span class="badge">微動畫動態預備</span>
+      </div>
+    </header>
+
+    <!-- 64px In-game Tile Test -->
+    <div class="small-preview-section">
+      <div class="small-preview-title">🔍 縮小至 64px 遊戲實際方塊尺寸測試（評估五官清晰度、劍身特徵與動態辨識）</div>
+      <div class="small-tiles-row">
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_style_test_512/style_1_clay_static.png" alt="風格 1" />
+            <span class="small-tile-val">512</span>
+          </div>
+          <span class="small-tile-label">1. 黏土制式</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_style_test_512/style_2_clay_dynamic.png" alt="風格 2" />
+            <span class="small-tile-val">512</span>
+          </div>
+          <span class="small-tile-label">2. 黏土動態</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_style_test_512/style_3_emoji_static.png" alt="風格 3" />
+            <span class="small-tile-val">512</span>
+          </div>
+          <span class="small-tile-label">3. Emoji 制式</span>
+        </div>
+        <div class="small-tile-wrap">
+          <div class="small-tile">
+            <img src="assets/images/hero_style_test_512/style_4_emoji_dynamic.png" alt="風格 4" />
+            <span class="small-tile-val">512</span>
+          </div>
+          <span class="small-tile-label">4. Emoji 動態</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 Cards -->
+    <div class="grid-cards">
+      <!-- Style 1 -->
+      <div class="card">
+        <span class="card-style-badge">風格 1 · 黏土制式</span>
+        <span class="card-val">512</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_style_test_512/style_1_clay_static.png" alt="黏土制式" />
+        </div>
+        <div class="card-name">3D 黏土雕塑 · 制式動作</div>
+        <div class="card-desc">實體桌遊公仔質感、厚實塊面。2頭身穩固站姿，雙手左右展開持羽翼金劍與聖光盾。</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_09.png" alt="聖殿光刃" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T09 聖殿光刃</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Style 2 -->
+      <div class="card">
+        <span class="card-style-badge">風格 2 · 黏土動態</span>
+        <span class="card-val">512</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_style_test_512/style_2_clay_dynamic.png" alt="黏土動態" />
+        </div>
+        <div class="card-name">3D 黏土雕塑 · 多樣動態</div>
+        <div class="card-desc">FF經典戰鬥待機姿態。側身微蹲、雙手持劍蓄勢待發、披風向後揚起，充滿力量張力。</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_09.png" alt="聖殿光刃" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T09 聖殿光刃</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Style 3 -->
+      <div class="card">
+        <span class="card-style-badge">風格 3 · Emoji 制式</span>
+        <span class="card-val">512</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_style_test_512/style_3_emoji_static.png" alt="Emoji 制式" />
+        </div>
+        <div class="card-name">3D Emoji · 制式動作</div>
+        <div class="card-desc">平滑高光漸層、經典立體Emoji親和五官。正面持劍盾立正待機，色彩極度明亮清爽。</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_09.png" alt="聖殿光刃" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T09 聖殿光刃</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Style 4 -->
+      <div class="card">
+        <span class="card-style-badge">風格 4 · Emoji 動態</span>
+        <span class="card-val">512</span>
+        <div class="hero-tile-box">
+          <img class="hero-img" src="assets/images/hero_style_test_512/style_4_emoji_dynamic.png" alt="Emoji 動態" />
+        </div>
+        <div class="card-name">3D Emoji · 多樣動態</div>
+        <div class="card-desc">韓系/FF大張力斜切戰姿。金髮飄逸、聖劍斜橫劈砍備戰、盾牌防禦、動態速度感強烈！</div>
+        <div class="pairing-box">
+          <img class="equip-thumb" src="assets/images/equipment_clay/equip_09.png" alt="聖殿光刃" />
+          <div class="pairing-info">
+            <span class="pairing-title">吸收合成之裝備</span>
+            <span class="pairing-name">T09 聖殿光刃</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      《2048 RPG：王國遠征》角色美術風格評估展廳 ‧ Commercial Edition C-STORY-051
+    </footer>
+  </div>
+</body>
+</html>

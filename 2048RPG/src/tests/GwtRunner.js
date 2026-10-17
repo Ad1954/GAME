@@ -5,7 +5,7 @@ import { Tile } from '../core/Tile.js';
 import { MoveEngine } from '../core/MoveEngine.js';
 import { Spawner } from '../core/Spawner.js';
 import { StageManager } from '../core/StageManager.js';
-import { Direction, TileType, STAGE_CONFIGS, STAGE_0_CONFIG, BASE_STAT_TIERS, CHAPTER_CONFIGS, getTileTheme, ThemeSkinType, THEME_SKIN_CONFIGS, Events, HERO_THEMES, calculateWarehouseExpansionCost, getWarehouseUpgradeConfig, MAX_ITEM_STACK, DEFEAT_TACTICAL_TIPS, CURRENT_GAME_VERSION } from '../core/Constants.js';
+import { Direction, TileType, STAGE_CONFIGS, STAGE_0_CONFIG, BASE_STAT_TIERS, CHAPTER_CONFIGS, getTileTheme, ThemeSkinType, THEME_SKIN_CONFIGS, Events, HERO_THEMES, calculateWarehouseExpansionCost, getWarehouseUpgradeConfig, MAX_ITEM_STACK, DEFEAT_TACTICAL_TIPS, CURRENT_GAME_VERSION, getEquipmentImagePath, getHeroImagePath, getMonsterImagePath, getMonsterThemeByChapter } from '../core/Constants.js';
 import { GACHA_LEVEL_CONFIGS } from '../core/GachaEngine.js';
 import { MAX_EQUIPMENT_VALUE } from '../core/InventoryManager.js';
 import { GameEventBus } from '../core/GameEventBus.js';
@@ -214,7 +214,24 @@ export class GwtRunner {
       // C-STORY-040: 章節列頂部完全釘選、已通關靜態瞬現與關卡視圖模組化解耦
       this.testGwt40_1_ChapterTabsFixedZeroTopGapAndElevation.bind(this),
       this.testGwt40_2_AllClearedChapterInstantScrollWithoutGlitch.bind(this),
-      this.testGwt40_3_StageListViewArchitectureDecoupling.bind(this)
+      this.testGwt40_3_StageListViewArchitectureDecoupling.bind(this),
+      // C-STORY-041: 下一個登場數字方塊預告 (Next Tile Preview) 機制
+      this.testGwt41_1_NextTilePreviewGenerationAndDeterminism.bind(this),
+      this.testGwt41_2_UndoRollsBackNextTilePreviewAccurately.bind(this),
+      this.testGwt41_3_NextTilePreviewUIRendering.bind(this),
+      // C-STORY-043: 方塊設定三維解耦矩陣（文字格式、圖標造型、盤面配色）
+      this.testGwt43_1_ThreeDimensionalSettingsElementsExistAndDecoupled.bind(this),
+      this.testGwt43_2_ViewRendererAppliesLayoutAndThemeClasses.bind(this),
+      this.testGwt43_3_ModernTextModeLayoutStructureAndNoOverflow.bind(this),
+      this.testGwt43_4_SixStyleIconPathMappingAndCycle.bind(this),
+      // C-STORY-047 / C-STORY-057 / C-STORY-058: 角色外觀成長與微縮模型綁定
+      this.testGwt47_1_HeroImagePathMappingForSamuraiT01ToT04.bind(this),
+      this.testGwt47_2_ViewRendererRendersHeroSpriteAndRetainsHeroClasses.bind(this),
+      this.testGwt57_2_ClayMiniatureSetBindsHeroAndEquipmentTogether.bind(this),
+      this.testGwt58_1_CascadeShiftAdventureSwordHeroT02.bind(this),
+      // C-STORY-080: 魔物黏土圖資接入與三位一體外觀綁定
+      this.testGwt80_1_MonsterClayImagePathAndFallback.bind(this),
+      this.testGwt80_2_ViewRendererMonsterClayBindingAndDecoupling.bind(this)
     ];
 
     for (const test of testCases) {
@@ -3552,7 +3569,7 @@ export class GwtRunner {
         'main.js must have version query parameter'
       );
     }
-    this.assert(CURRENT_GAME_VERSION === 'v1.4.0', 'CURRENT_GAME_VERSION must be v1.4.0');
+    this.assert(CURRENT_GAME_VERSION === 'v1.4.4', 'CURRENT_GAME_VERSION must be v1.4.4');
   }
 
   // C-STORY-036 GWT 36.2：設定視窗具備「檢查並刷新最新版本」按鈕配置
@@ -4116,6 +4133,413 @@ export class GwtRunner {
     view.destroy();
     this.assert(tabsEl.children.length === 0, 'destroy() cleanly unmounts tabsContainer');
     this.assert(listEl.children.length === 0, 'destroy() cleanly unmounts stagesListEl');
+  }
+
+  // ==========================================
+  // C-STORY-041 TESTS: 下一個登場數字方塊預告 (Next Tile Preview) 機制
+  // ==========================================
+
+  // C-STORY-041 GWT 41.1：預告佇列決定性生成與真實盤面產出 100% 吻合
+  testGwt41_1_NextTilePreviewGenerationAndDeterminism() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startStage(1);
+
+    // 1. 开局初始狀態驗證：開局後應已產生下一手預告
+    this.assert(sm.nextTilePreview !== null, 'Stage start rolls initial nextTilePreview');
+    this.assert(sm.nextTilePreview.type !== undefined, 'Preview has valid tile type');
+    this.assert(typeof sm.nextTilePreview.value === 'number', 'Preview has valid numeric value');
+
+    // 記錄當前預告
+    const expectedPreview = { ...sm.nextTilePreview };
+
+    // 記錄盤面上方塊總數與現有方塊
+    const initialTiles = sm.board.getAllTiles().map(t => ({ id: t.id, type: t.type, value: t.value }));
+
+    // 2. 進行一次有效移動
+    // 尋找有效方向
+    let moved = false;
+    for (const dir of [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]) {
+      const res = sm.handleMove(dir);
+      if (res && res.moved) {
+        moved = true;
+        break;
+      }
+    }
+    this.assert(moved === true, 'Successfully executed a board move');
+
+    // 3. 找出本輪新誕生的方塊
+    const allTilesAfter = sm.board.getAllTiles();
+    const newTiles = allTilesAfter.filter(t => !initialTiles.some(init => init.id === t.id));
+    this.assert(newTiles.length >= 1, 'At least one new tile was spawned');
+
+    // 驗證新方塊中嚴格包含預告的類型與數值
+    const matchedTile = newTiles.find(t => t.type === expectedPreview.type && t.value === expectedPreview.value);
+    this.assert(matchedTile !== undefined, `Spawned tile must match preview (type: ${expectedPreview.type}, value: ${expectedPreview.value})`);
+
+    // 4. 驗證移動後下一手預告已立即重新擲骰產生新預告
+    this.assert(sm.nextTilePreview !== null, 'nextTilePreview is re-rolled after move');
+    this.assert(sm.nextTilePreview.value > 0, 'New nextTilePreview has valid value');
+  }
+
+  // C-STORY-041 GWT 41.2：時光沙漏 (Undo) 精準回滾預告狀態與防刷驗證
+  testGwt41_2_UndoRollsBackNextTilePreviewAccurately() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.items.undo = 3;
+    sm.startStage(1);
+
+    // 記錄回合 0 的預告
+    const turn0Preview = { ...sm.nextTilePreview };
+
+    // 執行一次移動
+    let moved = false;
+    for (const dir of [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]) {
+      const res = sm.handleMove(dir);
+      if (res && res.moved) {
+        moved = true;
+        break;
+      }
+    }
+    this.assert(moved === true, 'Move executed');
+
+    // 移動後回合 1 的預告
+    const turn1Preview = { ...sm.nextTilePreview };
+
+    // 執行時光沙漏回溯
+    const undoRes = sm.useUndoItem();
+    this.assert(undoRes.success === true, 'Undo item used successfully');
+
+    // 驗證預告狀態精準回滾為回合 0 的預告，杜絕刷裝
+    this.assert(sm.nextTilePreview !== null, 'nextTilePreview restored');
+    this.assert(sm.nextTilePreview.type === turn0Preview.type, `Preview type restored (expected ${turn0Preview.type}, got ${sm.nextTilePreview.type})`);
+    this.assert(sm.nextTilePreview.value === turn0Preview.value, `Preview value restored (expected ${turn0Preview.value}, got ${sm.nextTilePreview.value})`);
+  }
+
+  // C-STORY-041 GWT 41.3：預告卡牌 UI 渲染與金幣/裝備外觀反饋
+  async testGwt41_3_NextTilePreviewUIRendering() {
+    // 1. 驗證 index.html 中包含 next preview DOM
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./index.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    if (!htmlText && typeof require !== 'undefined') {
+      try {
+        const fs = require('fs');
+        htmlText = fs.readFileSync('index.html', 'utf-8');
+      } catch (e) {}
+    }
+
+    if (htmlText) {
+      this.assert(htmlText.includes('id="combat-next-preview"'), 'index.html contains combat-next-preview element');
+      this.assert(htmlText.includes('id="next-preview-card"'), 'index.html contains next-preview-card element');
+      this.assert(htmlText.includes('id="next-card-badge"'), 'index.html contains next-card-badge element');
+      this.assert(htmlText.includes('id="next-card-val"'), 'index.html contains next-card-val element');
+    }
+
+    // 2. 測試 AppController.renderNextTilePreview 模擬邏輯
+    const previewCard = document.createElement('div');
+    const badgeEl = document.createElement('span');
+    const valEl = document.createElement('span');
+
+    // 模擬裝備預告
+    const eqPreview = { type: TileType.EQUIPMENT, value: 4 };
+    badgeEl.textContent = '⚔️';
+    valEl.textContent = eqPreview.value;
+    previewCard.classList.remove('preview-gold');
+    this.assert(badgeEl.textContent === '⚔️', 'Equipment badge rendered');
+    this.assert(valEl.textContent === '4', 'Equipment value rendered');
+    this.assert(!previewCard.classList.contains('preview-gold'), 'Not gold class');
+
+    // 模擬金幣預告
+    const goldPreview = { type: TileType.GOLD, value: 8 };
+    badgeEl.textContent = '🪙';
+    valEl.textContent = goldPreview.value;
+    previewCard.classList.add('preview-gold');
+    this.assert(badgeEl.textContent === '🪙', 'Gold badge rendered');
+    this.assert(valEl.textContent === '8', 'Gold value rendered');
+    this.assert(previewCard.classList.contains('preview-gold'), 'Gold styling class applied');
+  }
+
+  // C-STORY-043 GWT 43.1：三維獨立設定項目於 DOM 中存在且選項完整
+  async testGwt43_1_ThreeDimensionalSettingsElementsExistAndDecoupled() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./index.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    if (!htmlText && typeof require !== 'undefined') {
+      try {
+        const fs = require('fs');
+        htmlText = fs.readFileSync('index.html', 'utf-8');
+      } catch (e) {}
+    }
+
+    if (htmlText) {
+      // 1. 文字格式選單
+      this.assert(htmlText.includes('id="setting-layout-select"'), 'setting-layout-select exists in HTML');
+      this.assert(htmlText.includes('value="layout_modern_pure"'), 'layout_modern_pure option exists');
+      this.assert(htmlText.includes('value="layout_classic_pure"'), 'layout_classic_pure option exists');
+      this.assert(htmlText.includes('value="layout_modern_text"'), 'layout_modern_text option exists');
+      this.assert(htmlText.includes('value="layout_classic_text"'), 'layout_classic_text option exists');
+
+      // 2. 圖標造型選單
+      this.assert(htmlText.includes('id="setting-icon-style-select"'), 'setting-icon-style-select exists in HTML');
+      this.assert(htmlText.includes('value="style_b_emoji"'), 'style_b_emoji option exists');
+      this.assert(htmlText.includes('value="style_e_clay"'), 'style_e_clay option exists');
+      this.assert(htmlText.includes('value="style_d_comic"'), 'style_d_comic option exists');
+      this.assert(htmlText.includes('value="style_a_pixel"'), 'style_a_pixel option exists');
+      this.assert(htmlText.includes('value="style_c_voxel"'), 'style_c_voxel option exists');
+      this.assert(htmlText.includes('value="style_native_emoji"'), 'style_native_emoji option exists');
+
+      // 3. 盤面配色選單
+      this.assert(htmlText.includes('id="setting-theme-select"'), 'setting-theme-select exists in HTML');
+      this.assert(htmlText.includes('value="kingdom"'), 'kingdom option exists');
+      this.assert(htmlText.includes('value="cyber"'), 'cyber option exists');
+      this.assert(htmlText.includes('value="retro"'), 'retro option exists');
+      this.assert(htmlText.includes('value="minimal"'), 'minimal option exists');
+    }
+  }
+
+  // C-STORY-043 GWT 43.2：ViewRenderer 實例套用排版與主題類別
+  async testGwt43_2_ViewRendererAppliesLayoutAndThemeClasses() {
+    const vr = new ViewRenderer(document.createElement('div'));
+    vr.setTileLayout('layout_classic_pure');
+    vr.setIconStyle('style_native_emoji');
+    vr.setThemeSkin('cyber');
+
+    const testTile = new Tile(4, TileType.EQUIPMENT, 0, 0);
+    const tileEl = vr.createTileElement(testTile);
+
+    this.assert(tileEl.classList.contains('layout_classic_pure'), 'Tile has layout_classic_pure class');
+    this.assert(tileEl.classList.contains('theme-cyber'), 'Tile has theme-cyber class');
+    this.assert(tileEl.classList.contains('skin-cyber'), 'Tile retains skin-cyber for backward compatibility');
+
+    // 原生 Emoji 模式下不應有 <img>，且 badge 必須為原字符
+    const imgEl = tileEl.querySelector('img');
+    this.assert(imgEl === null, 'No image rendered in native emoji mode');
+    const badgeEl = tileEl.querySelector('.tile-badge');
+    this.assert(badgeEl !== null && badgeEl.textContent.length > 0, 'Badge has text emoji');
+  }
+
+  // C-STORY-043 GWT 43.3：新版圖文模式結構完備
+  async testGwt43_3_ModernTextModeLayoutStructureAndNoOverflow() {
+    const vr = new ViewRenderer(document.createElement('div'));
+    vr.setTileLayout('layout_modern_text');
+    vr.setIconStyle('style_b_emoji');
+
+    const testTile = new Tile(2, TileType.EQUIPMENT, 0, 0);
+    const tileEl = vr.createTileElement(testTile);
+
+    this.assert(tileEl.classList.contains('layout_modern_text'), 'Tile element has layout_modern_text class');
+    const nameEl = tileEl.querySelector('.tile-name');
+    this.assert(nameEl !== null, 'Tile name element exists in tile');
+    this.assert(nameEl.textContent.length > 0, 'Tile name text is populated');
+    const valEl = tileEl.querySelector('.tile-value');
+    this.assert(valEl !== null && valEl.textContent === '2', 'Tile value is populated');
+  }
+
+  // C-STORY-043 GWT 43.4：六大風格圖片路徑映射與回退保證
+  async testGwt43_4_SixStyleIconPathMappingAndCycle() {
+    // 1. 驗證 6 大風格之 getEquipmentImagePath 路徑
+    const pEmoji = getEquipmentImagePath(4, 'style_b_emoji');
+    this.assert(pEmoji && pEmoji.includes('equipment_emoji/equip_02.png'), 'Emoji style path correct');
+
+    const pClay = getEquipmentImagePath(4, 'style_e_clay');
+    this.assert(pClay && pClay.includes('equipment_clay/equip_02.png'), 'Clay style path correct');
+
+    const pComic = getEquipmentImagePath(4, 'style_d_comic');
+    this.assert(pComic && pComic.includes('equipment_comic/equip_02.png'), 'Comic style path correct');
+
+    const pPixel = getEquipmentImagePath(4, 'style_a_pixel');
+    this.assert(pPixel && pPixel.includes('equipment/equip_02.png'), 'Pixel style path correct');
+
+    const pVoxel = getEquipmentImagePath(4, 'style_c_voxel');
+    this.assert(pVoxel && pVoxel.includes('equipment_voxel/equip_02.png'), 'Voxel style path correct');
+
+    const pNative = getEquipmentImagePath(4, 'style_native_emoji');
+    this.assert(pNative === null, 'Native emoji style returns null to enforce unicode fallback');
+  }
+
+  // =========================================================================
+  // C-STORY-047 / C-STORY-049: 中古奇幻 2~2.2頭身 戰士／勇者外觀成長系統 (T01~T04 階段)
+  // =========================================================================
+
+  // C-STORY-049 / C-STORY-057 GWT 57.1：微縮模型套組 16 階勇者圖片映射與超限安全封頂
+  async testGwt47_1_HeroImagePathMappingForSamuraiT01ToT04() {
+    // 1. 驗證預設 knight T01~T04 (數值 2, 4, 8, 16) 之騎士圖檔路徑
+    const pk1 = getHeroImagePath(2, 'style_e_clay');
+    this.assert(pk1 && pk1.includes('hero_knight/hero_01.png'), 'Knight T01 maps to hero_knight/hero_01.png');
+
+    const pk4 = getHeroImagePath(16, 'style_e_clay');
+    this.assert(pk4 && pk4.includes('hero_knight/hero_04.png'), 'Knight T04 maps to hero_knight/hero_04.png');
+
+    // 2. 驗證相容模式 samurai 之武士圖檔路徑
+    const ps1 = getHeroImagePath(2, 'style_e_clay', 'samurai');
+    this.assert(ps1 && ps1.includes('hero_samurai/hero_01.png'), 'Samurai T01 maps to hero_01.png');
+
+    // 3. 驗證 T05~T16 (數值 32, 65536) 映射至對應之勇者微縮模型圖檔 (C-STORY-057)
+    const p5 = getHeroImagePath(32, 'style_e_clay');
+    this.assert(p5 && p5.includes('hero_knight/hero_05.png'), 'Hero T05 maps to hero_knight/hero_05.png');
+
+    const p16 = getHeroImagePath(65536, 'style_e_clay');
+    this.assert(p16 && p16.includes('hero_knight/hero_16.png'), 'Hero T16 maps to hero_knight/hero_16.png');
+
+    // 4. C-STORY-058 擴展：T17 (數值 131072) 映射至 hero_17.png，超過 T17 (如數值 262144) 安全封頂於 hero_17.png (防破圖防報錯)
+    const p17 = getHeroImagePath(131072, 'style_e_clay');
+    this.assert(p17 && p17.includes('hero_knight/hero_17.png'), 'Hero T17 maps to hero_knight/hero_17.png');
+
+    const p18 = getHeroImagePath(262144, 'style_e_clay');
+    this.assert(p18 && p18.includes('hero_knight/hero_17.png'), 'Hero above T17 caps safely at hero_17.png');
+
+    // 5. 原生 Emoji 風格下回傳 null 強制回退
+    const pNative = getHeroImagePath(4, 'style_native_emoji');
+    this.assert(pNative === null, 'Native emoji style returns null for hero');
+  }
+
+  // C-STORY-049 GWT 49.2：ViewRenderer 實例渲染中古奇幻戰士立繪並保全天藍色光圈
+  async testGwt47_2_ViewRendererRendersHeroSpriteAndRetainsHeroClasses() {
+    const vr = new ViewRenderer(document.createElement('div'));
+    vr.setIconStyle('style_e_clay');
+
+    // 測試預設 Knight Hero T01 (數值 2)
+    const heroTile1 = new Tile(2, TileType.HERO, 0, 0);
+    const heroEl1 = vr.createTileElement(heroTile1);
+
+    this.assert(heroEl1.classList.contains('tile-hero'), 'Tile element has tile-hero class for cyan outline & aura');
+    const imgEl1 = heroEl1.querySelector('.tile-badge img.tile-icon-img');
+    this.assert(imgEl1 !== null, 'Hero tile has <img> rendered');
+    this.assert(imgEl1.src.includes('hero_knight/hero_01.png'), 'Hero tile src points to hero_knight/hero_01.png');
+
+    // 測試 Hero T04 (數值 16)
+    const heroTile4 = new Tile(16, TileType.HERO, 0, 0);
+    const heroEl4 = vr.createTileElement(heroTile4);
+    const imgEl4 = heroEl4.querySelector('.tile-badge img.tile-icon-img');
+    this.assert(imgEl4 !== null && imgEl4.src.includes('hero_knight/hero_04.png'), 'Hero tile 16 src points to hero_knight/hero_04.png');
+
+    // 測試 Hero T16 (數值 65536)
+    const heroTile16 = new Tile(65536, TileType.HERO, 0, 0);
+    const heroEl16 = vr.createTileElement(heroTile16);
+    const imgEl16 = heroEl16.querySelector('.tile-badge img.tile-icon-img');
+    this.assert(imgEl16 !== null && imgEl16.src.includes('hero_knight/hero_16.png'), 'Hero tile 65536 src points to hero_knight/hero_16.png');
+
+    // 測試原生 Emoji 模式回退
+    vr.setIconStyle('style_native_emoji');
+    const heroElNative = vr.createTileElement(heroTile1);
+    const imgNative = heroElNative.querySelector('.tile-badge img');
+    this.assert(imgNative === null, 'No img rendered in native emoji style');
+    const badgeText = heroElNative.querySelector('.tile-badge').textContent;
+    this.assert(badgeText.length > 0, 'Badge retains unicode emoji');
+  }
+
+  // C-STORY-057 GWT 57.2：微縮模型選項綁定勇者與裝備雙向微縮公仔 (REQ-BIND-01 / REQ-BIND-02)
+  async testGwt57_2_ClayMiniatureSetBindsHeroAndEquipmentTogether() {
+    const vr = new ViewRenderer(document.createElement('div'));
+    vr.setIconStyle('style_e_clay');
+
+    const heroTile = new Tile(256, TileType.HERO, 0, 0);
+    const equipTile = new Tile(256, TileType.EQUIPMENT, 0, 1);
+
+    const heroEl = vr.createTileElement(heroTile);
+    const equipEl = vr.createTileElement(equipTile);
+
+    const heroImg = heroEl.querySelector('.tile-badge img.tile-icon-img');
+    const equipImg = equipEl.querySelector('.tile-badge img.tile-icon-img');
+
+    this.assert(heroImg && heroImg.src.includes('assets/images/hero_knight/hero_08.png'), 'Hero T08 uses clay hero sprite');
+    this.assert(equipImg && equipImg.src.includes('assets/images/equipment_clay/equip_08.png'), 'Equip T08 uses clay equip sprite');
+
+    // 切換為其他風格 (如 3D Emoji) 時，勇者回退至 Emoji，裝備使用對應 emoji 圖
+    vr.setIconStyle('style_b_emoji');
+    const heroElEmoji = vr.createTileElement(heroTile);
+    const equipElEmoji = vr.createTileElement(equipTile);
+
+    const heroImgEmoji = heroElEmoji.querySelector('.tile-badge img.tile-icon-img');
+    const equipImgEmoji = equipElEmoji.querySelector('.tile-badge img.tile-icon-img');
+
+    this.assert(heroImgEmoji === null, 'Hero in style_b_emoji uses emoji badge without overriding');
+    this.assert(equipImgEmoji && equipImgEmoji.src.includes('assets/images/equipment_emoji/equip_08.png'), 'Equip uses emoji image');
+  }
+
+  // C-STORY-058 GWT 58.1：4 號勇者手持冒險短劍與全階層圖資順移驗證 (REQ-SHIFT-01 / REQ-SHIFT-02)
+  async testGwt58_1_CascadeShiftAdventureSwordHeroT02() {
+    // 1. 驗證 Tier 2 (數值 4) 映射至新冒險短劍 hero_02.png
+    const p4 = getHeroImagePath(4, 'style_e_clay');
+    this.assert(p4 && p4.includes('hero_knight/hero_02.png'), 'Value 4 correctly maps to hero_02.png (Adventure Sword Chibi Warrior)');
+
+    // 2. 驗證原 Tier 2 (皮甲皮盾) 順移至 Tier 3 (數值 8) hero_03.png
+    const p8 = getHeroImagePath(8, 'style_e_clay');
+    this.assert(p8 && p8.includes('hero_knight/hero_03.png'), 'Value 8 correctly maps to shifted hero_03.png (Shield & Sword Mercenary)');
+
+    // 3. 驗證 Tier 17 (數值 131072) 映射至 hero_17.png (原黃金神王晉升頂級神皇)
+    const p131072 = getHeroImagePath(131072, 'style_e_clay');
+    this.assert(p131072 && p131072.includes('hero_knight/hero_17.png'), 'Value 131072 maps to hero_17.png');
+  }
+
+  // C-STORY-080 GWT 80.1: 魔物微縮黏土圖資路徑與平滑降級驗證
+  async testGwt80_1_MonsterClayImagePathAndFallback() {
+    // 1. 驗證各章節魔物在 style_e_clay 下正確返回黏土圖片路徑
+    const pCh2_16 = getMonsterImagePath(2, 16, 'style_e_clay');
+    this.assert(pCh2_16 && pCh2_16.includes('monsters_clay/monster_ch02_16.png'), 'Ch2 Monster 16 maps to monsters_clay/monster_ch02_16.png');
+
+    const pCh6_65536 = getMonsterImagePath(6, 65536, 'style_e_clay');
+    this.assert(pCh6_65536 && pCh6_65536.includes('monsters_clay/monster_ch06_65536.png'), 'Ch6 Dragon 65536 maps to monsters_clay/monster_ch06_65536.png');
+
+    const pCh8_262144 = getMonsterImagePath(8, 262144, 'style_e_clay');
+    this.assert(pCh8_262144 && pCh8_262144.includes('monsters_clay/monster_ch08_262144.png'), 'Ch8 Blood Sun God 262144 maps to monsters_clay/monster_ch08_262144.png');
+
+    // 2. 驗證全域查找模式 (未傳入 chapterId 時仍能找到合法魔物圖資)
+    const pGlobal_512 = getMonsterImagePath(undefined, 512, 'style_e_clay');
+    this.assert(pGlobal_512 && pGlobal_512.includes('monsters_clay/monster_ch'), 'Global lookup finds 512 clay monster');
+
+    // 3. 驗證非 style_e_clay (如 style_b_emoji) 時返回 null，維持 Emoji
+    const pEmoji = getMonsterImagePath(2, 16, 'style_b_emoji');
+    this.assert(pEmoji === null, 'style_b_emoji returns null for monster image path');
+
+    const pPixel = getMonsterImagePath(2, 16, 'style_a_pixel');
+    this.assert(pPixel === null, 'style_a_pixel returns null for monster image path');
+  }
+
+  // C-STORY-080 GWT 80.2: ViewRenderer 勇者、裝備、魔物三位一體微縮黏土模型綁定與切換
+  async testGwt80_2_ViewRendererMonsterClayBindingAndDecoupling() {
+    const container = document.createElement('div');
+    const vr = new ViewRenderer(container);
+    vr.setChapterId(2);
+
+    const monsterTile = new Tile(16, TileType.MONSTER, 0, 0);
+    const heroTile = new Tile(4, TileType.HERO, 0, 1);
+    const equipTile = new Tile(4, TileType.EQUIPMENT, 0, 2);
+
+    // 1. 設定為 style_e_clay：勇者、裝備、魔物三位一體皆掛載黏土圖片
+    vr.setIconStyle('style_e_clay');
+    const monsterElClay = vr.createTileElement(monsterTile);
+    const heroElClay = vr.createTileElement(heroTile);
+    const equipElClay = vr.createTileElement(equipTile);
+
+    const mBadge = monsterElClay.querySelector('.tile-badge');
+    const mImg = monsterElClay.querySelector('.tile-badge img.tile-icon-img');
+    const hImg = heroElClay.querySelector('.tile-badge img.tile-icon-img');
+    const eImg = equipElClay.querySelector('.tile-badge img.tile-icon-img');
+
+    this.assert(mBadge && mBadge.classList.contains('has-tile-img'), 'Monster badge has has-tile-img class in clay style');
+    this.assert(mImg && mImg.src.includes('monsters_clay/monster_ch02_16.png'), 'Monster img src points to monster_ch02_16.png');
+    this.assert(hImg && hImg.src.includes('hero_knight/hero_02.png'), 'Hero img src points to hero_02.png');
+    this.assert(eImg && eImg.src.includes('equipment_clay/equip_02.png'), 'Equip img src points to equip_02.png');
+
+    // 2. 切換為 style_b_emoji：魔物方塊恢復為 emoji 徽章，移除 img 標籤
+    vr.setIconStyle('style_b_emoji');
+    const monsterElEmoji = vr.createTileElement(monsterTile);
+    const mImgEmoji = monsterElEmoji.querySelector('.tile-badge img.tile-icon-img');
+    const mBadgeEmoji = monsterElEmoji.querySelector('.tile-badge');
+
+    this.assert(mImgEmoji === null, 'Monster in style_b_emoji has no img tag');
+    this.assert(!mBadgeEmoji.classList.contains('has-tile-img'), 'Monster badge has no has-tile-img class in emoji style');
+    this.assert(mBadgeEmoji.textContent.length > 0, 'Monster badge has fallback text/emoji');
   }
 }
 

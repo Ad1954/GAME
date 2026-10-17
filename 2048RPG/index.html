@@ -7,7 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>2048 RPG：王國遠征 (Commercial Edition)</title>
-  <link rel="stylesheet" href="style.css?v=1.4.0">
+  <link rel="stylesheet" href="style.css?v=1.4.4">
+  <link rel="stylesheet" href="visual_tuning.css">
 </head>
 <body>
 
@@ -31,7 +32,7 @@
           <span class="btn-start-icon">⚔️</span>
           <span class="btn-start-text">開始遊戲</span>
         </button>
-        <div class="title-version">v1.4.0 · 350 Stages Commercial Version</div>
+        <div class="title-version">v5.2.0 · 350 Stages Commercial Version</div>
       </div>
     </div>
 
@@ -384,13 +385,30 @@
         </div>
         <div class="combat-monsters-info">
           <span class="combat-monster-icon">👾</span>
-          <span class="combat-monster-val" id="combat-monsters-val">1</span>
+          <span class="combat-monsters-val" id="combat-monsters-val">1</span>
         </div>
+        <button class="btn-combat-skin" id="btn-combat-skin" title="點擊切換裝備風格 (3D Emoji / 黏土 / 像素)">
+          <span id="combat-skin-label">🎭 3D立體</span>
+        </button>
       </header>
 
-      <!-- 5x5 Grid Board Area -->
-      <div class="board-wrapper">
-        <div class="board-grid" id="battle-board"></div>
+      <!-- Combat Main Zone (Preview Shelf + Board Grid in unified flex container) -->
+      <div class="combat-main-zone">
+        <!-- Dedicated Next Tile Preview Shelf (C-STORY-041-LAYOUT & DYNAMIC-ALIGN) -->
+        <div class="combat-preview-shelf" id="combat-preview-shelf">
+          <div class="combat-next-preview" id="combat-next-preview" title="下一手登場方塊預告">
+            <span class="next-preview-label">NEXT</span>
+            <div class="next-preview-card" id="next-preview-card">
+              <span class="next-card-badge" id="next-card-badge">⚔️</span>
+              <span class="next-card-val" id="next-card-val">2</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5x5 Grid Board Area -->
+        <div class="board-wrapper">
+          <div class="board-grid" id="battle-board"></div>
+        </div>
       </div>
 
       <!-- Targeting Banner (C-STORY-007) -->
@@ -467,23 +485,176 @@
             <input type="checkbox" id="setting-sound-toggle" checked>
           </div>
           <div class="setting-row" style="margin-top: 10px;">
-            <span>🎨 數值外觀風格</span>
+            <span>📐 方塊文字格式</span>
+            <select id="setting-layout-select" class="setting-select">
+              <option value="layout_modern_pure">🖼️ 新版純圖 (數字放大、無文字)</option>
+              <option value="layout_classic_pure">📐 舊版純圖 (經典精緻、呼吸感)</option>
+              <option value="layout_modern_text">🏷️ 新版圖文 (緊湊比例、防截斷)</option>
+              <option value="layout_classic_text">📜 舊版圖文 (原版經典圖文)</option>
+            </select>
+          </div>
+          <div class="setting-row" style="margin-top: 10px;">
+            <span>🖼️ 方塊圖標造型</span>
+            <select id="setting-icon-style-select" class="setting-select">
+              <option value="style_b_emoji">🎭 立體 Emoji (3D Q版寬刃)</option>
+              <option value="style_e_clay">🗿 微縮模型 (黏土浮雕風)</option>
+              <option value="style_d_comic">🎨 賽璐璐 (美漫厚塗風)</option>
+              <option value="style_a_pixel">👾 點陣風 (16-Bit像素)</option>
+              <option value="style_c_voxel">🧱 體素方塊 (3D體素方塊)</option>
+              <option value="style_native_emoji">🔤 經典原生 Emoji (純文字)</option>
+            </select>
+          </div>
+          <div class="setting-row" style="margin-top: 10px;">
+            <span>🎨 盤面底板配色</span>
             <select id="setting-theme-select" class="setting-select">
-              <option value="kingdom">🌟 王國奇幻 (預設高對比)</option>
-              <option value="cyber">🌆 賽博霓虹 (Cyber Neon)</option>
-              <option value="retro">🕹️ 復古街機 (Retro 8-Bit)</option>
-              <option value="minimal">🧊 幾何極簡 (Minimalist)</option>
-              <option value="icon_focus">👑 純粹圖標模式 (大圖標+大數字)</option>
+              <option value="kingdom">🏰 王國遠征 (深藍暗夜石板)</option>
+              <option value="cyber">🌌 賽博霓虹 (Cyber Neon)</option>
+              <option value="retro">🕹️ 復古點陣 (Retro 8-Bit)</option>
+              <option value="minimal">⬛ 極簡極黑 (Minimal Dark)</option>
             </select>
           </div>
           <hr style="border: 0; border-top: 1px solid #334155; margin: 12px 0;">
           <div class="setting-section-header" style="margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
             <span style="font-size: 0.92rem; font-weight: 800; color: #38bdf8;">📜 版本更新履歷</span>
-            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v1.4.0</span>
+            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v5.2.0</span>
           </div>
           <div class="version-changelog-box" id="version-changelog-box">
+            <!-- C-STORY-086 -->
             <div class="changelog-item">
-              <div class="changelog-badge">🌟 C-STORY-040 (最新)</div>
+              <div class="changelog-badge">🌟 C-STORY-086 (最新)</div>
+              <div class="changelog-title">黏土魔物穿透圖資優化 ＆ 自適應 60% 容器縮放置中對齊</div>
+              <ul class="changelog-list">
+                <li>✨ 白底接觸陰影完全透空：第 III 章 1024 山嶺巨人與第 IV 章 256~2048 荒漠全系毒蛛徹底消滅白色硬色塊，腳底透明度 100% 自然平滑</li>
+                <li>🛡️ 特殊色重構修復破洞：第 I 章 32 督軍改採純桃紅幕 (#FF00FF) 重新生成與去背，完美修復誤挖獠牙、斧頭簍空與膝蓋破洞</li>
+                <li>📐 棋盤自適應百分比容器：廢除固定死值寬高，全面改為 60% 自適應彈性容器，勇者/裝備/魔物統一錨點居中縮放 (center center)</li>
+                <li>📚 全資產 Prompt 典藏知識庫：建立 CLAY_STYLE_PROMPT_REGISTRY.md (v1.1.0)，納入「手段 A 光照硬隔離」防溢色標準語句與後續重構 Backlog</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-081 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-081</div>
+              <div class="changelog-title">消除魔物雙重縮放 ＆ 棋盤尺寸與展廳示範 100% 精準對齊</div>
+              <ul class="changelog-list">
+                <li>🔍 單次 1.50x 縮放修正：排除父容器雙重 scale(1.5)，盤面魔物體積回歸單次 1.50x，舒適收納於方塊內不再溢出相鄰格</li>
+                <li>🎯 本機樣式表安全聯動：server.py 與 visual_tuning.css 全面同步保護，杜絕調校參數飄移</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-080 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-080</div>
+              <div class="changelog-title">勇者、裝備、魔物三位一體外觀綁定 ＆ 沉浸桌遊體驗</div>
+              <ul class="changelog-list">
+                <li>🎲 三位一體微縮模型：設定選單切換至「微縮模型 (黏土浮雕風)」時，盤面魔物即刻實裝 40 階穿透黏土圖資</li>
+                <li>🔄 乾淨平滑切換：切換至點陣風或原生 Emoji 時，魔物圖資乾淨移除平滑退回對應圖標，無殘留標籤</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-078 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-078</div>
+              <div class="changelog-title">第 VIII 章終焉神域「黑曜天罰與血月日蝕」敵對視覺重構</div>
+              <ul class="changelog-list">
+                <li>⚔️ 極致陣營反差：最終章 3 隻神祇全面換裝「黑曜玄甲 ＋ 猩紅天罰光冕 ＋ 暗金神紋」，徹底消除與玩家白色勇者的視覺混淆</li>
+                <li>👑 終局神皇震撼壓迫：黑羽審判使者 (65536)、黑洞滅世智腦 (131072)、日蝕血月六翼神皇 (262144) 敵對威壓拉滿</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-075 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-075</div>
+              <div class="changelog-title">全 8 大章節 40 階微縮黏土魔物 100% 圓滿閉環</div>
+              <ul class="changelog-list">
+                <li>🏰 全生態池無縫實裝：第 I 章林地至第 VIII 章終焉神域，40 隻魔物全數具備微縮黏土圖資與長方形穿透方塊</li>
+                <li>🧪 零死灰硬塊：全章節圖資內嵌孔洞 100% 穿透透空，達成商業製品級視覺標準</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-064 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-064</div>
+              <div class="changelog-title">全要素可視化調校工作室 ＆ 本機樣式解耦安全一鍵同步</div>
+              <ul class="changelog-list">
+                <li>🎨 要素分類獨立調校：勇者 (0.8~2.0x)、裝備 (0.8~1.8x)、魔物 (0.8~2.0x) 分頁獨立控制，徹底解決不同物件縮放干擾問題</li>
+                <li>💾 一鍵套用至遊戲本體：展廳內可視化調校完成後，點擊一鍵儲存，由本機伺服器安全寫入 visual_tuning.css，遊戲即刻同步生效</li>
+                <li>🛡️ 樣式表解耦安全防護：獨立隔離 visual_tuning.css 樣式表，核心 style.css 零污染，支援隨時一鍵還原預設值</li>
+                <li>🩸 魔物專屬氣場光暈：支援血煞紅光、深淵幽紫、劇毒幽綠與冷白銳利，大幅提升深色底板辨識度</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-063 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-063</div>
+              <div class="changelog-title">實戰長方形 5:6 比例 100% 復刻 ＆ 展廳防溢出捲軸/換行排版</div>
+              <ul class="changelog-list">
+                <li>📐 實戰 5:6 直向長方形比例：比照正式棋盤 (aspect-ratio: 5/6) 規格，將展廳正方形方格全面更正為 58x70px 直向長方形</li>
+                <li>🔢 戰力數值底端疊合排版：數字恢復 1.45rem 飽滿粗體並微覆於角色下緣，完美還原實戰棋盤佈局</li>
+                <li>📑 雙排版模式切換：展廳新增「👉 水平滑動」天藍平滑捲動軸與「📐 自動折行」開關，徹底防堵卡片超出視窗邊緣</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-061 & 062 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-062</div>
+              <div class="changelog-title">全要素色調矩陣展廳 ＆ 雙軌獨立本機伺服器架構</div>
+              <ul class="changelog-list">
+                <li>👑 全要素王國遠征矩陣：T01~T17 同台展示勇者角色、微縮裝備、地牢魔物與金幣色調底板，直觀驗證階梯色彩共鳴</li>
+                <li>🚀 雙軌獨立啟動批次檔：切分「啟動遊戲本體.bat (Port 8081)」與「啟動全要素展廳.bat (Port 8082)」，採用 ANSI (CP950) 編碼杜絕亂碼</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-060 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-060</div>
+              <div class="changelog-title">微縮模型勇者上半身 1.4x 特寫鏡頭 ＆ 亮白高光貼紙描邊</div>
+              <ul class="changelog-list">
+                <li>🔍 鏡頭放大 1.40 倍特寫：聚焦勇者大頭表情與武器刃部，頭部視覺面積大幅躍升 200%</li>
+                <li>✨ 高反差高光白邊：外加 drop-shadow 雙層貼紙描邊與柔和背後聚光燈，解決烈焰戰狂 (128) 等深色勇者與深色底板融合問題</li>
+              </ul>
+            </div>
+
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-058</div>
+              <div class="changelog-title">4 號勇者冒險短劍因果修正與全階層圖資順移</div>
+              <ul class="changelog-list">
+                <li>⚔️ 合成因果精準對齊：侍從 (2) ＋ 冒險短劍 (2) ＝ 見習戰士 (4)，手持寬刃鋼鐵冒險短劍、身披縫線皮革胸甲，杜絕跳階</li>
+                <li>📦 全階層平滑順移：原 4 號順延為 8 號（低伏架盾），其餘各階向後平移遞延；原 16 階黃金神王晉升為 17 階 (131072) 頂級神皇</li>
+                <li>🛡️ 頂級神祇封頂保護：131,072 與 262,144 自動安全封頂於 17 階神皇模型，杜絕 404 破圖</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-057</div>
+              <div class="changelog-title">全 16 階 2.0 頭身黏土勇者角色與微縮模型裝備雙向綁定</div>
+              <ul class="changelog-list">
+                <li>🗿 微縮模型風格一鍵啟用：設定選單「微縮模型」樣式同步套用 3D 黏土勇者與裝備，打造極致沉浸桌遊公仔質感</li>
+                <li>👀 100% 露臉無閉面盔：全階層嚴格 2.0 頭身 Q 版大頭，生動五官、明亮眼眸與飛揚髮型完全外露</li>
+                <li>⚔️ 舉武器備戰待機架式：全 16 階剪影零重複，告別揮砍殘影，雙腳踏地保持隨時出擊的呼吸待命姿態</li>
+                <li>✨ 洋紅幕智慧 Chroma Key：四肢夾縫孔洞 100% 鏤空，眼白與純白鎧甲高光 100% 零誤傷</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-042</div>
+              <div class="changelog-title">底色圖標雙軌獨立切換、ABCD四風格與大字體重疊排版</div>
+              <ul class="changelog-list">
+                <li>🎨 底色與圖標分離：盤面底板配色與圖標美術風格完全解耦獨立設定，支援任意交叉自由混搭</li>
+                <li>🖼️ 四大美術風格架構：完整支援風格 A(像素點陣)、風格 B(立體Emoji)、風格 C(體素方塊)、風格 D(經典原生Emoji)</li>
+                <li>🔢 數字超大字體保護：戰力文字恢復 1.35rem 飽滿粗體，優先突出數值辨識，圖案垂直置中微透底層</li>
+                <li>⚔️ 16 階暫代武器鑲入：棋盤與 NEXT 預告欄位實裝 256x256 去背裝備立繪，未出圖時自動平滑 Fallback</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-041</div>
+              <div class="changelog-title">下一個登場數字方塊預告 (Next Tile Preview) 機制</div>
+              <ul class="changelog-list">
+                <li>🔮 戰鬥頂端預告視窗：頂端資訊列新增 NEXT 專屬迷你卡牌，即時透視下一手將登場的裝備等級或金幣</li>
+                <li>🎯 決定性精準生成：滑動結算嚴格遵循上一回合預告之裝備階級或金幣生成，告別不確定盲猜</li>
+                <li>⏳ 時光沙漏防刷回溯：使用 Undo 道具時，預告佇列精準回溯至歷史快照狀態，防堵洗牌刷裝</li>
+                <li>✨ 登場翻牌動畫：每次生成後預告卡牌同步翻牌彈跳，金幣黃金流光與裝備外觀生動反饋</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-040</div>
               <div class="changelog-title">章節列頂部完全釘選、已通關靜態瞬現與關卡視圖模組化解耦</div>
               <ul class="changelog-list">
                 <li>📌 章節列完全釘選：消除頂部間隙並提高層級，向下滾動時章節切換欄 100% 牢固置頂</li>
@@ -817,7 +988,7 @@
         </div>
         <div class="ad-sim-body" style="padding: 24px 16px; background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);">
           <div style="font-size: 3rem; margin-bottom: 10px;">🏰⚔️💎</div>
-          <h3 style="font-size: 1.15rem; color: #e0e7ff; margin-bottom: 6px;">《機械之星：王國遠征》</h3>
+          <h3 style="font-size: 1.15rem; color: #e0e7ff; margin-bottom: 6px;">《2048 RPG：王國遠征》</h3>
           <p style="font-size: 0.82rem; color: #94a3b8; line-height: 1.5; margin-bottom: 16px;">
             滑動合成神級軍備，征討 350 大地牢關卡！<br>
             解鎖終身免廣告 PASS，尊榮特權直接跳過宣傳！
@@ -834,6 +1005,6 @@
 
   </div>
 
-  <script type="module" src="main.js?v=1.4.0"></script>
+  <script type="module" src="main.js?v=1.4.4"></script>
 </body>
 </html>

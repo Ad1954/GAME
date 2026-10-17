@@ -20,7 +20,8 @@ import {
   INTERSTITIAL_AD_INTERVAL,
   DAILY_AD_GOLD_REWARD,
   DAILY_AD_MAX_COUNT,
-  CURRENT_GAME_VERSION
+  CURRENT_GAME_VERSION,
+  TileType
 } from './Constants.js';
 
 const SAVE_KEY = '2048RPG_Commercial_Save_v1';
@@ -72,9 +73,37 @@ export class StageManager {
     this.isGameOver = false;
     this.turnCount = 0;
     this.monstersKilled = 0;
+    this.nextTilePreview = null; // C-STORY-041: Next Tile Preview { type, value }
 
     // Load persistent profile
     this.loadSaveData();
+  }
+
+  // C-STORY-041: Compute upcoming tile type and value for next turn
+  rollNextTilePreview() {
+    if (!this.isInBattle) {
+      this.nextTilePreview = null;
+      return null;
+    }
+    const nextTurn = this.turnCount + 1;
+    // Check if next turn is scheduled for a Gold Drop
+    if (nextTurn === this.nextGoldDropTurn) {
+      let spawnVal = 0;
+      if (this.remainingGoldBudget >= this.currentGoldValue) {
+        spawnVal = this.currentGoldValue;
+      } else if (this.remainingGoldBudget >= 4) {
+        spawnVal = 4;
+      }
+      if (spawnVal > 0) {
+        this.nextTilePreview = { type: TileType.GOLD, value: spawnVal };
+        return this.nextTilePreview;
+      }
+    }
+    // Otherwise it will be Equipment based on Base Stat Tier
+    const tierConfig = this.getBaseTierConfig();
+    const eqVal = this.spawner ? this.spawner.calculateTurnEquipmentValue(tierConfig) : 2;
+    this.nextTilePreview = { type: TileType.EQUIPMENT, value: eqVal };
+    return this.nextTilePreview;
   }
 
   // Load from localStorage
@@ -600,6 +629,9 @@ export class StageManager {
       });
     }
 
+    // 4. Initial Next Tile Preview (C-STORY-041)
+    this.rollNextTilePreview();
+
     this.emitState();
     return config;
   }
@@ -865,41 +897,52 @@ export class StageManager {
         }
       }
 
-      // Gold pacing (Two-stage rich + trickle budget) & Base Tech Tier Equipment Drop (C-STORY-017)
-      const tierConfig = this.getBaseTierConfig();
-
-      if (this.turnCount > 0 && this.turnCount === this.nextGoldDropTurn) {
+      // C-STORY-041: Spawn tile strictly according to nextTilePreview
+      let currentDrop = this.nextTilePreview;
+      
+      // Safety synchronization: if this turn is the scheduled gold drop turn and preview wasn't rolled as gold
+      if (this.turnCount > 0 && this.turnCount === this.nextGoldDropTurn && (!currentDrop || currentDrop.type !== TileType.GOLD)) {
         let spawnVal = 0;
         if (this.remainingGoldBudget >= this.currentGoldValue) {
           spawnVal = this.currentGoldValue;
         } else if (this.remainingGoldBudget >= 4) {
           spawnVal = 4;
         }
-
         if (spawnVal > 0) {
-          this.spawner.spawnGold(spawnVal);
-          this.remainingGoldBudget -= spawnVal;
-          this.goldDropsCount++;
+          currentDrop = { type: TileType.GOLD, value: spawnVal };
+        }
+      }
 
-          // Rich vein decay: Every 4 drops, drop 1 tier (halve value down to min 4) (C-STORY-019 / C-STORY-029)
-          if (this.goldDropsCount % 4 === 0) {
-            this.currentGoldValue = Math.max(4, Math.floor(this.currentGoldValue / 2));
-          }
+      if (!currentDrop) {
+        currentDrop = { type: TileType.EQUIPMENT, value: 2 };
+      }
 
-          // Dynamic pacing: After initial 8 rich drops, each drop increases interval by 2 turns (capped at 16) (C-STORY-029)
-          if (this.goldDropsCount >= 8) {
-            this.goldDropInterval = Math.min(16, this.goldDropInterval + 2);
-          }
-          this.nextGoldDropTurn = this.turnCount + this.goldDropInterval;
-        } else {
-          // Budget exhausted or insufficient for min 4 gold: spawn tier equipment & stop gold scheduling
-          this.spawner.spawnTurnEquipment(tierConfig);
+      if (currentDrop.type === TileType.GOLD) {
+        this.spawner.spawnGold(currentDrop.value);
+        this.remainingGoldBudget -= currentDrop.value;
+        this.goldDropsCount++;
+
+        // Rich vein decay: Every 4 drops, drop 1 tier (halve value down to min 4) (C-STORY-019 / C-STORY-029)
+        if (this.goldDropsCount % 4 === 0) {
+          this.currentGoldValue = Math.max(4, Math.floor(this.currentGoldValue / 2));
+        }
+
+        // Dynamic pacing: After initial 8 rich drops, each drop increases interval by 2 turns (capped at 16) (C-STORY-029)
+        if (this.goldDropsCount >= 8) {
+          this.goldDropInterval = Math.min(16, this.goldDropInterval + 2);
+        }
+        this.nextGoldDropTurn = this.turnCount + this.goldDropInterval;
+      } else {
+        // Spawn equipment strictly using the preview value
+        this.spawner.spawnEquipment(currentDrop.value);
+        if (this.turnCount > 0 && this.turnCount === this.nextGoldDropTurn) {
+          // If gold was scheduled but budget was exhausted or skipped
           this.nextGoldDropTurn = Infinity;
         }
-      } else {
-        // Spawn normal equipment according to Base Tech Tier (1~24)
-        this.spawner.spawnTurnEquipment(tierConfig);
       }
+
+      // Roll upcoming tile preview for the next turn
+      this.rollNextTilePreview();
 
       // Check Defeat Condition: Deadlock
       if (!this.moveEngine.canMove()) {
@@ -953,7 +996,8 @@ export class StageManager {
       currentGoldValue: this.currentGoldValue,
       goldDropsCount: this.goldDropsCount,
       goldDropInterval: this.goldDropInterval,
-      nextGoldDropTurn: this.nextGoldDropTurn
+      nextGoldDropTurn: this.nextGoldDropTurn,
+      nextTilePreview: this.nextTilePreview ? { ...this.nextTilePreview } : null // C-STORY-041
     };
   }
 
@@ -984,6 +1028,7 @@ export class StageManager {
     this.goldDropsCount = snapshot.goldDropsCount !== undefined ? snapshot.goldDropsCount : this.goldDropsCount;
     this.goldDropInterval = snapshot.goldDropInterval !== undefined ? snapshot.goldDropInterval : this.goldDropInterval;
     this.nextGoldDropTurn = snapshot.nextGoldDropTurn !== undefined ? snapshot.nextGoldDropTurn : this.nextGoldDropTurn;
+    this.nextTilePreview = snapshot.nextTilePreview ? { ...snapshot.nextTilePreview } : null; // C-STORY-041
 
     this.saveData();
     this.eventBus.emit(Events.ITEMS_CHANGED, { items: this.items });
@@ -1191,6 +1236,7 @@ export class StageManager {
       baseTierConfig: this.getBaseTierConfig(),
       stageGoldEarned: this.stageGoldEarned,
       goldCap: cap,
+      nextTilePreview: this.nextTilePreview || null, // C-STORY-041
       moves: extra.moves || null,
       vfxEvents: extra.vfxEvents || null
     });

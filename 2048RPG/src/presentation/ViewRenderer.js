@@ -1,20 +1,39 @@
-// ViewRenderer.js: 5x5 Portrait Board DOM Renderer for Commercial Edition
-
-import { getTileTheme, TileType } from '../core/Constants.js';
-
+import { getTileTheme, TileType, getEquipmentImagePath, getHeroImagePath, getMonsterImagePath, getMonsterThemeByChapter } from '../core/Constants.js';
+ 
 export class ViewRenderer {
   constructor(boardElement) {
     this.boardElement = boardElement;
     this.activeSkin = 'kingdom';
+    this.activeIconStyle = 'style_b_emoji';
+    this.activeLayout = 'layout_modern_pure';
+    this.activeHeroClass = 'knight';
+    this.activeChapterId = undefined;
   }
 
   setThemeSkin(skin) {
     this.activeSkin = skin || 'kingdom';
   }
 
+  setIconStyle(style) {
+    this.activeIconStyle = style || 'style_b_emoji';
+  }
+
+  setTileLayout(layout) {
+    this.activeLayout = layout || 'layout_modern_pure';
+  }
+
+  setHeroClass(heroClass) {
+    this.activeHeroClass = heroClass || 'knight';
+  }
+
+  setChapterId(chapterId) {
+    this.activeChapterId = chapterId;
+  }
+
   renderBoard(board) {
     if (!this.boardElement) return;
     this.boardElement.innerHTML = '';
+    this.boardElement.className = `board-grid theme-${this.activeSkin} ${this.activeLayout}`;
 
     // C-STORY-038: Danger Flash on Board when 1 cell or 0 cells remain
     if (board && typeof board.getEmptyCells === 'function') {
@@ -47,11 +66,17 @@ export class ViewRenderer {
 
   createTileElement(tile) {
     const el = document.createElement('div');
-    el.className = `tile tile-${tile.type.toLowerCase()} skin-${this.activeSkin}`;
+    el.className = `tile tile-${tile.type.toLowerCase()} skin-${this.activeSkin} theme-${this.activeSkin} ${this.activeLayout}`;
     el.dataset.id = tile.id;
     el.dataset.value = tile.value;
 
-    const theme = getTileTheme(tile.type, tile.value, this.activeSkin);
+    let theme = getTileTheme(tile.type, tile.value, this.activeSkin);
+    if (tile.isMonster()) {
+      const chTheme = getMonsterThemeByChapter(this.activeChapterId, tile.value);
+      if (chTheme) {
+        theme = { ...theme, ...chTheme };
+      }
+    }
 
     if (theme) {
       el.style.backgroundColor = theme.bg;
@@ -62,10 +87,40 @@ export class ViewRenderer {
       }
     }
 
-    // Badge icon
+    // Badge icon layer (C-STORY-042: Image vs Emoji Decoupling & C-STORY-047: Hero Sprite)
     const badgeSpan = document.createElement('div');
     badgeSpan.className = 'tile-badge';
-    badgeSpan.textContent = theme ? theme.badge : '';
+
+    let tileImgPath = null;
+    let imgAlt = 'tile';
+
+    if (tile.isEquipment()) {
+      tileImgPath = getEquipmentImagePath(tile.value, this.activeIconStyle);
+      imgAlt = theme ? theme.name : 'equip';
+    } else if (tile.isHero()) {
+      tileImgPath = getHeroImagePath(tile.value, this.activeIconStyle, this.activeHeroClass || 'knight');
+      imgAlt = theme ? theme.name : 'hero';
+    } else if (tile.isMonster()) {
+      tileImgPath = getMonsterImagePath(this.activeChapterId, tile.value, this.activeIconStyle);
+      imgAlt = theme ? theme.name : 'monster';
+    }
+
+    if (tileImgPath) {
+      badgeSpan.classList.add('has-tile-img');
+      const img = document.createElement('img');
+      img.className = 'tile-icon-img';
+      img.src = tileImgPath;
+      img.alt = imgAlt;
+      // Fallback to text emoji if image fails to load
+      img.onerror = () => {
+        img.remove();
+        badgeSpan.classList.remove('has-tile-img');
+        badgeSpan.textContent = theme ? theme.badge : '';
+      };
+      badgeSpan.appendChild(img);
+    } else {
+      badgeSpan.textContent = theme ? theme.badge : '';
+    }
 
     // Value text
     const valueSpan = document.createElement('div');
