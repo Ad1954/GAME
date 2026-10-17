@@ -67,10 +67,12 @@
 
 ## ☁️ 5. 雲端發布與上傳規範
 
-- **雲端上傳資料夾**：
-  直接使用製品版目錄下的 **`Commercial_Edition/2048RPG`**。
+- **GitHub Desktop 本地發布路徑**：
+  - 本地倉庫位置：**`C:\GitHub\GAME\2048RPG`**
+  - 發布方式：由自動同步腳本或手動複製覆蓋後，開啟 **GitHub Desktop** 軟體，點擊 `Commit` ➜ `Push origin` 即可一鍵秒級推上雲端，不受網頁端 100 檔案上限約束。
+- **純淨發布資料夾**：
+  - 本地純淨鏡像：`c:\Antigravity\2048RPG\Commercial_Edition\2048RPG`
   - 該目錄已過濾掉 `__pycache__`、`.tmp`、`test_results.json` 等臨時開發快取。
-  - 包含最新代碼、全套 40 隻魔物圖資、文檔與啟動捷徑，上傳雲端即可一鍵開跑。
 - **歷史備份位置**：
   - 根目錄備份池：`c:\Antigravity\2048RPG\Backup\C-STORY-085_Commercial_Edition_Stable`
   - 製品版內部備份池：`c:\Antigravity\2048RPG\Commercial_Edition\backup\C-STORY-085_Stable_魔物圖資修復與縮放錨點對齊`

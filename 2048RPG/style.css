@@ -30,6 +30,7 @@ body {
   background-color: #030712;
   color: var(--text-main);
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   display: flex;
@@ -43,6 +44,7 @@ body {
   max-width: 480px;
   height: 100%;
   max-height: 100vh;
+  max-height: 100dvh;
   background: linear-gradient(180deg, #0f172a 0%, #0b1120 100%);
   display: flex;
   flex-direction: column;
@@ -582,7 +584,7 @@ body {
 
 .board-grid {
   /* Dynamically bounded by viewport height and max width to guarantee zero overlap */
-  width: min(100%, calc((100vh - 250px) * 5 / 6), 420px);
+  width: min(100%, calc((100dvh - 250px) * 5 / 6), calc((100vh - 250px) * 5 / 6), 420px);
   aspect-ratio: 5 / 6;
   max-height: 100%;
   background: #0f172a;
@@ -3502,3 +3504,73 @@ body {
 .btn-combat-skin:active {
   transform: scale(0.92);
 }
+
+/* ===================================================================
+   CROSS-DEVICE RESPONSIVE ADAPTATION (C-STORY-088)
+   1. iOS Dynamic Island & Notch Safe Area Inset (iPhone 14 / 15)
+   2. iPad Pro & Foldable Tablet Balanced Layout
+   3. Android Navigation Bar & Notch Safe Area
+   4. Strict PC Desktop Simulation Isolation
+   =================================================================== */
+
+/* 1. iOS Specific Safe-Area Inset Handling (iPhone 14 / Dynamic Island / Notch) */
+@supports (-webkit-touch-callout: none) {
+  .combat-top-bar {
+    /* Guarantee at least 48px on iOS to strictly clear Dynamic Island and top status bar */
+    padding-top: max(48px, env(safe-area-inset-top, 48px));
+    min-height: calc(52px + max(36px, env(safe-area-inset-top, 36px)));
+    align-items: flex-end;
+    padding-bottom: 8px;
+  }
+
+  .top-bar {
+    padding-top: max(48px, env(safe-area-inset-top, 48px));
+    height: calc(var(--top-height) + max(36px, env(safe-area-inset-top, 36px)));
+    align-items: flex-end;
+    padding-bottom: 8px;
+  }
+
+  .combat-footer {
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  }
+
+  .bottom-nav {
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  }
+}
+
+/* 2. Tablet & Large Screen Touch Devices (iPad Pro, Android Tablets, Foldables) */
+@media screen and (min-width: 600px) and (min-height: 800px) and (pointer: coarse) and (hover: none) {
+  .app-container {
+    max-width: 600px;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85);
+  }
+
+  .board-grid {
+    width: min(92%, calc((100dvh - 280px) * 5 / 6), 530px);
+    max-width: 530px;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .combat-main-zone {
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .combat-preview-shelf {
+    margin: 8px 0 4px 0;
+  }
+
+  .combat-item-bar {
+    padding: 10px 24px;
+    gap: 18px;
+  }
+
+  .btn-item-slot {
+    max-width: 120px;
+    padding: 8px 12px;
+  }
+}
+
