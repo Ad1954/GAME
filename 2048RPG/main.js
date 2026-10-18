@@ -19,8 +19,8 @@ class AppController {
 
     // DOM Elements
     this.boardGridEl = document.getElementById('battle-board');
-    this.activeThemeSkin = localStorage.getItem('rpg_2048_theme_skin') || 'icon_focus';
-    this.activeIconStyle = localStorage.getItem('rpg_2048_icon_style') || 'style_b_emoji';
+    this.activeThemeSkin = localStorage.getItem('rpg_2048_theme_skin') || 'kingdom';
+    this.activeIconStyle = localStorage.getItem('rpg_2048_icon_style') || 'style_e_clay';
     this.viewRenderer = new ViewRenderer(this.boardGridEl);
     this.viewRenderer.setThemeSkin(this.activeThemeSkin);
     this.viewRenderer.setIconStyle(this.activeIconStyle);
@@ -100,7 +100,7 @@ class AppController {
     this.settingIconStyleSelect = document.getElementById('setting-icon-style-select');
     this.settingThemeSelect = document.getElementById('setting-theme-select');
     this.activeTileLayout = localStorage.getItem('rpg_2048_tile_layout') || 'layout_modern_pure';
-    this.activeIconStyle = localStorage.getItem('rpg_2048_icon_style') || 'style_b_emoji';
+    this.activeIconStyle = localStorage.getItem('rpg_2048_icon_style') || 'style_e_clay';
     this.activeThemeSkin = localStorage.getItem('rpg_2048_theme_skin') || 'kingdom';
     this.viewRenderer.setTileLayout(this.activeTileLayout);
     this.viewRenderer.setIconStyle(this.activeIconStyle);

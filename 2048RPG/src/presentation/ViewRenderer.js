@@ -4,7 +4,7 @@ export class ViewRenderer {
   constructor(boardElement) {
     this.boardElement = boardElement;
     this.activeSkin = 'kingdom';
-    this.activeIconStyle = 'style_b_emoji';
+    this.activeIconStyle = 'style_e_clay';
     this.activeLayout = 'layout_modern_pure';
     this.activeHeroClass = 'knight';
     this.activeChapterId = undefined;
@@ -15,7 +15,7 @@ export class ViewRenderer {
   }
 
   setIconStyle(style) {
-    this.activeIconStyle = style || 'style_b_emoji';
+    this.activeIconStyle = style || 'style_e_clay';
   }
 
   setTileLayout(layout) {

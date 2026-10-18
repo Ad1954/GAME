@@ -1231,6 +1231,29 @@
   * **When**: 執行同步。
   * **Then**: 即時同步至 `C:\GitHub\GAME\2048RPG`，方便透過 GitHub Desktop 一鍵發布實機驗證。
 
+---
+
+## 🌟 C-STORY-089：遊戲開局預設外觀調整（文字：新版純圖、圖標：微縮模型、底色：王國遠征）(Active)
+
+* **身分 (As a)**: 《2048 RPG：王國遠征》的遊戲主策劃與視覺負責人
+* **想要 (I want to)**: 將遊戲方塊文字格式預設為 `layout_modern_pure`（新版純圖）、圖標造型預設為 `style_e_clay`（微縮模型：黏土浮雕風）、盤面底板預設為 `kingdom`（王國遠征：深藍暗夜石板），並同步 `index.html` 下拉選單預設選中狀態
+* **以便 (So that)**: 新玩家或訪客在首次開啟遊戲時，無需手動設定即可直接沉浸於全套精緻 3D 黏土微縮公仔與暗夜石板的招牌桌遊視覺體驗。
+
+### 驗收標準 (Acceptance Criteria / GWT Specification)
+* **【GWT 89.1：預設外觀常數與初始化對齊】**
+  * **Given**: 首次開啟遊戲或無 `localStorage` 狀態。
+  * **When**: 初始化控制器 (`main.js`) 與畫面渲染器 (`ViewRenderer.js`)。
+  * **Then**: `this.activeTileLayout` 預設為 `layout_modern_pure`，`this.activeIconStyle` 預設為 `style_e_clay`，`this.activeThemeSkin` 預設為 `kingdom`；設定彈窗下拉選單初始選中對應項目。
+* **【GWT 89.2：開局直接呈現三位一體微縮黏土棋盤】**
+  * **Given**: 進入戰鬥畫面。
+  * **When**: 渲染盤面方塊與登場預告方塊。
+  * **Then**: 勇者、裝備、魔物全面自動掛載 3D 黏土模型圖資，且戰力數值飽滿居中覆於圖片下緣，呈現純圖無字大氣風格。
+* **【GWT 89.3：全回歸測試 100% PASS 與 GitHub 倉庫同步】**
+  * **Given**: 完成代碼更新。
+  * **When**: 運行 `python run_gwt_tests.py`。
+  * **Then**: 162/162 項全規格斷言維持 100% PASS 綠燈，並自動同步至 `C:\GitHub\GAME\2048RPG` 與雲端發布目錄。
+
+
 
 
 
