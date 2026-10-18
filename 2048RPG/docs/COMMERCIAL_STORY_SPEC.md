@@ -1297,6 +1297,44 @@
   * **When**: 運行 `run_gwt_tests.py`。
   * **Then**: 測試維持 162/162 綠燈通過，並同步至 `Commercial_Edition/2048RPG`、`C:\GitHub\GAME\2048RPG` 與雙軌備份池。
 
+---
+
+## 🌟 C-STORY-092：正式對外商業發布前置清理清單與過渡代碼封存規範 (Completed)
+
+* **身分 (As a)**: 專案架構與商業發布工程師
+* **想要 (I want to)**: 在核心規格文件中正式建立《正式對外商業發布前置清理清單 (Pre-Launch Cleanup Checklist)》，明確列管「移除 C-STORY-090 暫時性遷移代碼」與各項測試專用模組的封存步驟
+* **以便 (So that)**: 在產品未來正式上線公開營運時，有一套可嚴格照表操課的乾淨拔除程序，確保正式版代碼零技術債、新玩家體驗完全純淨，且絕無任何覆蓋玩家設定的風險。
+
+### 驗收標準 (Acceptance Criteria / GWT Specification)
+* **【GWT 92.1：建立正式發布清理清單規範】**
+  * **Given**: 查閱專案核心規格文件 `COMMERCIAL_STORY_SPEC.md`。
+  * **When**: 滾動至最新章節。
+  * **Then**: 完整記錄 C-STORY-092 與《商業版正式發布前置清理清單》，條列包含：
+    1. 拔除 `main.js` 的 `APPEARANCE_MIGRATION_KEY` 測試期過渡邏輯。
+    2. 驗證底層 Fallback 預設值（黏土 ＋ 王國 ＋ 純圖）的絕對純淨度。
+    3. 停用營地測試調試物資區（10,000G、救急道具箱、快速跳轉關卡）或轉為 Debug 模式隱藏。
+* **【GWT 92.2：三位一體同步與測試 100% 通過】**
+  * **Given**: 清理清單文件更新完成。
+  * **When**: 執行全套 GWT 自動化回歸測試與同步管線。
+  * **Then**: 測試維持 162/162 PASS，並同步更新至 GitHub 倉庫與遊戲內履歷。
+
+### 📋 商業版正式對外發布前置清理清單 (Pre-Launch Cleanup Checklist)
+> **執行時機**：進入 1.0 正式公開營運或上架前夕，由發布工程師依照本清單逐項執行並確認。
+
+1. **[ ] 拔除 `main.js` 測試期外觀單次遷移代碼 (C-STORY-090)**
+   - **目標**：清除 `APPEARANCE_MIGRATION_KEY = 'rpg_2048_appearance_migrated_v52'` 相關區塊。
+   - **原因**：正式版新玩家在無存檔狀態下，直接透過 fallback 即可獲得最佳黏土視覺；拔除過渡代碼以確保生產環境代碼 100% 簡潔無冗餘。
+2. **[ ] 查驗純淨 Fallback 預設值**
+   - **目標**：確保 `main.js` 與 `ViewRenderer.js` 中 `localStorage.getItem(...) || 'fallback'` 的 fallback 值為：
+     - `rpg_2048_icon_style`: `'style_e_clay'`
+     - `rpg_2048_theme_skin`: `'kingdom'`
+     - `rpg_2048_tile_layout`: `'layout_modern_pure'`
+3. **[ ] 隱藏或切除營地「測試調試物資專區」**
+   - **目標**：將 `index.html` 中的 `<div class="camp-debug-section">`（包含 10,000 金幣包、救急道具箱、進度快速跳轉）設置為生產環境關閉，或僅在特定 debug 參數下顯示。
+4. **[ ] 驗收端對端新玩家開局流程**
+   - **目標**：在全新乾淨的瀏覽器環境下，驗證 Stage 0 教學、初始外觀、首通獎勵等完全正常。
+
+
 
 
 

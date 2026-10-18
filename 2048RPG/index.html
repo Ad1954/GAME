@@ -32,7 +32,7 @@
           <span class="btn-start-icon">⚔️</span>
           <span class="btn-start-text">開始遊戲</span>
         </button>
-        <div class="title-version">v5.2.1 · 350 Stages Commercial Version</div>
+        <div class="title-version">v5.2.2 · 350 Stages Commercial Version</div>
       </div>
     </div>
 
@@ -516,12 +516,23 @@
           <hr style="border: 0; border-top: 1px solid #334155; margin: 12px 0;">
           <div class="setting-section-header" style="margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
             <span style="font-size: 0.92rem; font-weight: 800; color: #38bdf8;">📜 版本更新履歷</span>
-            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v5.2.1</span>
+            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v5.2.2</span>
           </div>
           <div class="version-changelog-box" id="version-changelog-box">
+            <!-- C-STORY-092 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-092 (最新)</div>
+              <div class="changelog-title">正式對外商業發布前置清理清單與過渡代碼封存規範</div>
+              <ul class="changelog-list">
+                <li>📋 正式發布清理清單立案：建立發布工程師專用 Pre-Launch Checklist，列管拔除測試期過渡邏輯</li>
+                <li>🛡️ 測試代碼零殘留保護：明確規定正式版拔除 C-STORY-090 單次遷移代碼，依賴純淨 Fallback 確保玩家自訂設定永不被覆蓋</li>
+                <li>🛠️ 物資調試專區管制：規範營地測試物資於公開營運環境切換為隱藏，維護商業數值健全</li>
+              </ul>
+            </div>
+
             <!-- C-STORY-091 -->
             <div class="changelog-item">
-              <div class="changelog-badge">🌟 C-STORY-091 (最新)</div>
+              <div class="changelog-badge">🌟 C-STORY-091</div>
               <div class="changelog-title">版本更新履歷即時聯動 ＆ 三位一體同步機制建立</div>
               <ul class="changelog-list">
                 <li>📜 履歷全面同步實裝：設定彈窗完整補齊 C-STORY-087 ~ C-STORY-090 更新履歷，徹底消除「新舊不符」現象</li>
