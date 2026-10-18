@@ -1253,6 +1253,52 @@
   * **When**: 運行 `python run_gwt_tests.py`。
   * **Then**: 162/162 項全規格斷言維持 100% PASS 綠燈，並自動同步至 `C:\GitHub\GAME\2048RPG` 與雲端發布目錄。
 
+---
+
+## 🌟 C-STORY-090：舊玩家存檔外觀自動遷移升級至 v5.2 黏土視覺標準 (Completed)
+
+* **身分 (As a)**: 《2048 RPG：王國遠征》的前端架構工程師
+* **想要 (I want to)**: 在 `main.js` 初始化邏輯中加入 `rpg_2048_appearance_migrated_v52` 檢查機制，針對本地仍殘留舊版外觀設定的既有設備，自動執行單次無痛平滑升級，將外觀刷新為最新標準（`style_e_clay`、`kingdom`、`layout_modern_pure`）
+* **以便 (So that)**: 包含使用者手邊的 iPhone、iPad 在內的所有舊設備與訪客，只要一開網頁就能全自動換裝為最新的 3D 微縮黏土與王國石板，徹底告別手動清理快取或重置存檔的困擾。
+
+### 驗收標準 (Acceptance Criteria / GWT Specification)
+* **【GWT 90.1：既有舊設定無痛自動升級】**
+  * **Given**: 某台手機 `localStorage` 內殘留舊版 `rpg_2048_icon_style = 'style_b_emoji'`。
+  * **When**: 開啟遊戲載入 `main.js`。
+  * **Then**: 系統自動將其升級為 `style_e_clay`（微縮模型）、`kingdom`（王國遠征）、`layout_modern_pure`（新版純圖），並寫入已遷移標記 `rpg_2048_appearance_migrated_v52 = 'true'`。
+* **【GWT 90.2：尊重玩家未來的自主切換】**
+  * **Given**: 已經升級完成的玩家。
+  * **When**: 日後在設定選單中手動改選為「點陣風」或「賽博霓虹」。
+  * **Then**: 正常保存其自訂偏好，不再被重複覆蓋。
+* **【GWT 90.3：全套測試 100% 通過與發布同步】**
+  * **Given**: 代碼更新完成。
+  * **When**: 運行 `run_gwt_tests.py`。
+  * **Then**: 測試保持 162/162 PASS，並即時同步至 `C:\GitHub\GAME\2048RPG`。
+
+---
+
+## 🌟 C-STORY-091：遊戲內「版本更新履歷」全面補齊與每次更新聯動同步規範 (Completed)
+
+* **身分 (As a)**: 遊戲玩家與專案維護者
+* **想要 (I want to)**: 在遊戲內設定彈窗的「📜 版本更新履歷」中，能即時看到最新發布的完整更新清單，並在未來的每次更新中，把「更新遊戲內履歷」列為不可或缺的強制聯動步驟
+* **以便 (So that)**: 玩家在遊戲內查看版本資訊時，履歷清單能與真實遊戲內容與最新修復完全一致，徹底告別「新舊不符」的資訊脫節。
+
+### 驗收標準 (Acceptance Criteria / GWT Specification)
+* **【GWT 91.1：遊戲內版本更新履歷補齊】**
+  * **Given**: 玩家在遊戲內開啟「⚙️ 設定」彈窗並滑動至「📜 版本更新履歷」。
+  * **When**: 檢視版本標籤與最新更新卡片。
+  * **Then**: 版本號標註升級為 `v5.2.1`，最新第一項為 `C-STORY-091 (最新)`，並完整呈現 C-STORY-087 至 C-STORY-090 之詳細更新說明。
+* **【GWT 91.2：三位一體聯動同步規範確立】**
+  * **Given**: 往後進行任何修復或新功能開發時。
+  * **When**: 準備執行驗收與同步。
+  * **Then**: 強制同時更新 `COMMERCIAL_STORY_SPEC.md`、`index.html` 之 `version-changelog-box` 與多端倉庫。
+* **【GWT 91.3：全套測試 100% PASS 與同步發布】**
+  * **Given**: 更新完成。
+  * **When**: 運行 `run_gwt_tests.py`。
+  * **Then**: 測試維持 162/162 綠燈通過，並同步至 `Commercial_Edition/2048RPG`、`C:\GitHub\GAME\2048RPG` 與雙軌備份池。
+
+
+
 
 
 

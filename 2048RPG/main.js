@@ -19,6 +19,16 @@ class AppController {
 
     // DOM Elements
     this.boardGridEl = document.getElementById('battle-board');
+
+    // One-time Appearance Migration to v5.2 Standards (C-STORY-090)
+    const APPEARANCE_MIGRATION_KEY = 'rpg_2048_appearance_migrated_v52';
+    if (!localStorage.getItem(APPEARANCE_MIGRATION_KEY)) {
+      localStorage.setItem('rpg_2048_icon_style', 'style_e_clay');
+      localStorage.setItem('rpg_2048_theme_skin', 'kingdom');
+      localStorage.setItem('rpg_2048_tile_layout', 'layout_modern_pure');
+      localStorage.setItem(APPEARANCE_MIGRATION_KEY, 'true');
+    }
+
     this.activeThemeSkin = localStorage.getItem('rpg_2048_theme_skin') || 'kingdom';
     this.activeIconStyle = localStorage.getItem('rpg_2048_icon_style') || 'style_e_clay';
     this.viewRenderer = new ViewRenderer(this.boardGridEl);
