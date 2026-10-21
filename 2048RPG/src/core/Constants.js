@@ -41,12 +41,59 @@ export const Events = {
   AD_TRIGGERED: 'AD_TRIGGERED',
   TUTORIAL_STEP_CHANGED: 'TUTORIAL_STEP_CHANGED',
   TUTORIAL_COMPLETED: 'TUTORIAL_COMPLETED',
-  NEXT_TILE_CHANGED: 'NEXT_TILE_CHANGED'
+  NEXT_TILE_CHANGED: 'NEXT_TILE_CHANGED',
+  CHARACTER_CHANGED: 'CHARACTER_CHANGED',
+  SKILL_USED: 'SKILL_USED',
+  SKILL_CHARGE_CHANGED: 'SKILL_CHARGE_CHANGED',
+  SKILL_UPGRADED: 'SKILL_UPGRADED'
 };
 
 export const CURRENT_GAME_VERSION = 'v1.4.4';
 
 export const MAX_ITEM_STACK = 999;
+
+// C-STORY-093: CHARACTER CLASS & SKILL CONSTANTS
+export const CharacterClass = {
+  WARRIOR: 'warrior',
+  ARCHER: 'archer',
+  MERCHANT: 'merchant'
+};
+
+export const CHARACTER_SKILL_CONFIGS = {
+  warrior: {
+    id: 'warrior',
+    name: '戰士',
+    avatar: '🗡️',
+    skillName: '十字碎裂',
+    tag: '主動 / 滿盤被動保命',
+    desc: '以英雄為中心粉碎上下左右4格內的裝備與金幣（不傷魔物），滿盤瀕危時自動觸發保命。',
+    passiveRescue: true,
+    costs: [0, 5000, 15000, 40000, 100000],
+    cooldowns: [500, 400, 300, 200, 100] // Level 0 to 4
+  },
+  archer: {
+    id: 'archer',
+    name: '精靈弓箭手',
+    avatar: '🏹',
+    skillName: '破甲重矢',
+    tag: '純主動大招 (無被動保命)',
+    desc: '鎖定全場數值最大的魔物：若大於等於4則數值折半；若為2則直接射殺。純主動進攻，無被動保命。',
+    passiveRescue: false,
+    costs: [0, 5000, 15000, 40000, 100000],
+    cooldowns: [500, 400, 300, 200, 100]
+  },
+  merchant: {
+    id: 'merchant',
+    name: '皇家商人',
+    avatar: '🪙',
+    skillName: '黃金急召',
+    tag: '主動 / 滿盤被動保命',
+    desc: '瞬間強制回收盤面上所有的金幣方塊並直接折現入袋，騰出空格；滿盤瀕危時自動觸發保命。',
+    passiveRescue: true,
+    costs: [0, 5000, 15000, 40000, 100000],
+    cooldowns: [500, 400, 300, 200, 100]
+  }
+};
 
 // C-STORY-026: STAMINA & AD MONETIZATION CONSTANTS
 export const MAX_STAMINA = 5;
@@ -80,7 +127,7 @@ export const ITEM_CONFIGS = {
     id: 'snipe',
     name: '精準重弩',
     icon: '🏹',
-    desc: '遠程無損射殺 1 隻戰力嚴格小於勇者的魔物',
+    desc: '遠程射殺場上指定的任意 1 隻魔物（無視戰力大小）',
     defaultCount: 0
   }
 };

@@ -32,7 +32,7 @@
           <span class="btn-start-icon">⚔️</span>
           <span class="btn-start-text">開始遊戲</span>
         </button>
-        <div class="title-version">v5.2.2 · 350 Stages Commercial Version</div>
+        <div class="title-version">v5.7.1 · 350 Stages Commercial Version</div>
       </div>
     </div>
 
@@ -82,8 +82,57 @@
         </div>
       </section>
 
-      <!-- ================= TAB 2: ARMORY / HERO (C-STORY-005) ================= -->
+      <!-- ================= TAB 2: ARMORY / HERO (C-STORY-005 & C-STORY-093) ================= -->
       <section class="tab-view" id="view-armory">
+        <!-- 0. Character Class Selector & Skill Tech Card (C-STORY-093) -->
+        <div class="character-class-card" id="character-class-card">
+          <div class="class-card-header">
+            <h3 class="class-card-title">👑 遠征職業與特殊能力</h3>
+            <span class="class-card-badge" id="class-active-badge">戰士出戰中</span>
+          </div>
+
+          <!-- Class Selector Tabs -->
+          <div class="class-tabs-row">
+            <button class="btn-class-tab active" data-class="warrior" id="tab-class-warrior">
+              <span class="class-tab-icon">🗡️</span>
+              <span class="class-tab-name">戰士</span>
+            </button>
+            <button class="btn-class-tab" data-class="archer" id="tab-class-archer">
+              <span class="class-tab-icon">🏹</span>
+              <span class="class-tab-name">弓箭手</span>
+            </button>
+            <button class="btn-class-tab" data-class="merchant" id="tab-class-merchant">
+              <span class="class-tab-icon">🪙</span>
+              <span class="class-tab-name">商人</span>
+            </button>
+          </div>
+
+          <!-- Class Details & Skill Upgrade Area -->
+          <div class="class-details-box" id="class-details-box">
+            <div class="skill-header-row">
+              <div class="skill-title-group">
+                <span class="skill-badge-tag" id="detail-skill-tag">主動 / 滿盤被動保命</span>
+                <h4 class="skill-display-name" id="detail-skill-name">十字碎裂</h4>
+              </div>
+              <span class="skill-level-text" id="detail-skill-level">Lv.0</span>
+            </div>
+            <p class="skill-desc-text" id="detail-skill-desc">以英雄為中心粉碎上下左右4格內的裝備與金幣（不傷魔物），滿盤瀕危時自動觸發保命。</p>
+            <div class="skill-stats-row">
+              <span class="stat-label">充能冷卻：</span>
+              <b class="stat-cd-val" id="detail-cd-val">500 回合</b>
+              <span class="cd-arrow" id="detail-cd-arrow">➔</span>
+              <b class="stat-next-cd-val" id="detail-next-cd-val">400 回合</b>
+            </div>
+            <div class="class-actions-row">
+              <button class="btn-class-select" id="btn-select-class">✔ 選擇此職業出戰</button>
+              <button class="btn-upgrade-skill" id="btn-upgrade-skill">
+                <span class="upgrade-action">縮短冷卻 (100回合)</span>
+                <span class="upgrade-cost" id="detail-upgrade-cost">🪙 5,000</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- 1. Hero Loadout Banner -->
         <div class="hero-loadout-card">
           <div class="loadout-avatar-area">
@@ -394,8 +443,24 @@
 
       <!-- Combat Main Zone (Preview Shelf + Board Grid in unified flex container) -->
       <div class="combat-main-zone">
-        <!-- Dedicated Next Tile Preview Shelf (C-STORY-041-LAYOUT & DYNAMIC-ALIGN) -->
+        <!-- Dedicated Next Tile Preview Shelf & Character Skill Badge (C-STORY-041 & C-STORY-093) -->
         <div class="combat-preview-shelf" id="combat-preview-shelf">
+          <!-- Character Skill Badge & Charge Ring (C-STORY-093) -->
+          <div class="combat-skill-wrapper" id="combat-skill-wrapper" title="職業特殊技能（點擊施放）">
+            <button class="skill-badge-btn" id="skill-badge-btn" disabled>
+              <svg class="skill-ring-svg" viewBox="0 0 44 44">
+                <circle class="skill-ring-bg" cx="22" cy="22" r="18" />
+                <circle class="skill-ring-progress" id="skill-ring-progress" cx="22" cy="22" r="18" stroke-dasharray="113.1" stroke-dashoffset="113.1" />
+              </svg>
+              <span class="skill-badge-icon" id="skill-badge-icon">🗡️</span>
+              <span class="skill-ready-glow" id="skill-ready-glow"></span>
+            </button>
+            <div class="skill-meta-info">
+              <span class="skill-name-label" id="skill-name-label">十字碎裂</span>
+              <span class="skill-turn-label" id="skill-turn-label">0/500</span>
+            </div>
+          </div>
+
           <div class="combat-next-preview" id="combat-next-preview" title="下一手登場方塊預告">
             <span class="next-preview-label">NEXT</span>
             <div class="next-preview-card" id="next-preview-card">
@@ -408,6 +473,17 @@
         <!-- 5x5 Grid Board Area -->
         <div class="board-wrapper">
           <div class="board-grid" id="battle-board"></div>
+          <!-- C-STORY-096: High-Performance Canvas 2D Physics Lighting VFX Engine -->
+          <canvas id="combat-vfx-canvas" class="combat-vfx-canvas"></canvas>
+          <!-- C-STORY-095: Ultimate Skill Cut-in & Board VFX Layers -->
+          <div class="skill-cutin-layer" id="skill-cutin-layer" style="display: none;">
+            <div class="skill-cutin-backdrop"></div>
+            <div class="skill-cutin-box">
+              <img class="skill-cutin-avatar" id="skill-cutin-avatar" src="assets/images/cutin_hero_clay_ultimate.png" alt="Cut-in Hero" />
+              <div class="skill-cutin-flame-rings"></div>
+            </div>
+          </div>
+          <div class="skill-board-vfx-layer" id="skill-board-vfx-layer"></div>
         </div>
       </div>
 
@@ -513,15 +589,107 @@
               <option value="minimal">⬛ 極簡極黑 (Minimal Dark)</option>
             </select>
           </div>
+          <div class="setting-row" style="margin-top: 10px; background: rgba(56, 189, 248, 0.08); padding: 8px 10px; border-radius: 8px; border: 1px dashed rgba(56, 189, 248, 0.3);">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-weight: 700; color: #38bdf8;">🛠️ [測試] 技能開場即就緒</span>
+              <span style="font-size: 0.72rem; color: #94a3b8;">進入戰鬥技能充能即為 100% 滿額</span>
+            </div>
+            <input type="checkbox" id="setting-instant-skill">
+          </div>
           <hr style="border: 0; border-top: 1px solid #334155; margin: 12px 0;">
           <div class="setting-section-header" style="margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
             <span style="font-size: 0.92rem; font-weight: 800; color: #38bdf8;">📜 版本更新履歷</span>
-            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v5.2.2</span>
+            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v5.7.1</span>
           </div>
           <div class="version-changelog-box" id="version-changelog-box">
+            <!-- C-STORY-100 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-100 (最新)</div>
+              <div class="changelog-title">商人技能無金幣前置安全攔截 ＆ 破甲重矢 18 片輕量化 ＆ 三大職業專屬必殺音效實裝</div>
+              <ul class="changelog-list">
+                <li>🪙 商人急召無金幣前置攔截：盤面無金幣時主動施放技能，跳出「⚠️ 盤面無金幣可供回收！」警示漂字並立即安全返回，杜絕虛假觸發演出與空放問題，充能完整保留。</li>
+                <li>🏹 破甲重矢 18 片岩石碎片輕量化：命中魔物瞬間的碎片粒子嚴格精簡為 18 片，並移除耗能軟體高斯模糊，徹底消除爆片瞬間 0.4~0.8 秒真實繪圖負擔導致的卡頓。</li>
+                <li>🎵 三大職業專屬 Web Audio 合成音效：徹底移除誤用的戰敗音效，戰士配備「重低音震波裂地音」、弓箭手配備「破空尖嘯貫穿音」、商人配備「五度純金連續琶音」，打擊感與辨識度大幅提升。</li>
+              </ul>
+            </div>
+            <!-- C-STORY-099 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-099</div>
+              <div class="changelog-title">瀕死被動自救有效性智慧判定 ＆ 完整必殺技動態特效聯動</div>
+              <ul class="changelog-list">
+                <li>🏹 弓箭手自救智慧門檻：最強魔物為數字 2（可一擊秒殺消塊騰出空位）時才觸發破甲重矢自救；若大於 2 則保留 100% 充能不白白浪費，徹底杜絕大招演完依然戰敗的負面體驗</li>
+                <li>⚔️ 戰士與商人自救前置檢核：戰士十字周邊必須存在裝備或金幣、商人盤面必須存在金幣時才觸發自救，確保每一次自救必定實質開闢生路</li>
+                <li>💥 絕處逢生動態特效完整派發：瀕死自救成功時全面調用 CombatVfxEngine，完整播放 120px 激光十字岩崩、天頂極光流星秒殺或 3D 金幣狂潮物理特效，逆轉絕境體驗拉滿</li>
+              </ul>
+            </div>
+            <!-- C-STORY-098 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-098</div>
+              <div class="changelog-title">必殺技畫布動態網格錨定修復 ＆ 生命週期防死鎖防護</div>
+              <ul class="changelog-list">
+                <li>🎯 消除左上偏移：畫布自動計算網格相對於父容器的真實 Offset，消滅 Flex 置中導致的 20~40px 左上位移；並支援 data-r 與 data-row 雙重選擇器，100% 精準錨定於英雄角色方塊中心</li>
+                <li>🛡️ 阻斷性死鎖根除：修復 vfxLayer 未定義拋出例外中斷解鎖的缺陷，全面實裝 try...finally 強制解鎖保證，並於關卡進入與退關流程中加入防禦性操作鎖重置，徹底告別操作卡死</li>
+              </ul>
+            </div>
+            <!-- C-STORY-097 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-097</div>
+              <div class="changelog-title">三大職業必殺技高階視覺特效同步移植（大地岩崩、零延遲流星、3D立體翻轉金幣）</div>
+              <ul class="changelog-list">
+                <li>⚔️ 戰士十字碎裂大地岩崩：貫穿十字激光精準定版 120px，粉碎演出全面升級為赭石棕、焦褐、土黃色系之三角形岩崩碎石，盤面邊緣自動截斷光束且不產生無效邊界外爆炸</li>
+                <li>🏹 弓箭手破甲重矢精準離弦：修正初始尾跡溢出錯覺，巨矢自英雄方塊核心沖天，配合 450ms 天頂滯空蓄力感與零延遲碰撞引爆機制，跨盤面打擊感毫秒級精準同步</li>
+                <li>🪙 商人黃金急召3D純金狂潮：告別抽象星光，全面實裝 3D Cel-Shaded 翻轉自旋立體金幣（Tumbling Coins），自帶雙層金屬反光厚度，向上噴發並以拋物弧線奔湧吸入頂部錢包</li>
+              </ul>
+            </div>
+            <!-- C-STORY-096 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-096</div>
+              <div class="changelog-title">Canvas 2D 物理光影與能量爆破引擎（告別 Demo 級特效）</div>
+              <ul class="changelog-list">
+                <li>✨ Canvas 60FPS 物理引擎：建構專屬 CombatVfxEngine，徹底淘汰 Emoji 與陽春細線，實現商業級打擊光效</li>
+                <li>⚔️ 十字碎裂月牙光刃：英雄中心瞬間爆發 4 道帶有金紅光暈（Bloom Glow）的月牙巨氣刃，命中格子引發震盪波與 35 顆衰減碎石火花</li>
+                <li>🏹 破甲重矢魔法流星：高能翡翠光束沖天再疾速墜擊魔物，命中爆發雙重衝擊波圈與 55 顆烈焰光塵粒子，強光覆蓋時折半數字</li>
+                <li>🪙 黃金急召金幣吸入：全場金幣彈跳觸發圓形震波，化為燦金光球群沿物理弧線吸入頂部錢包</li>
+              </ul>
+            </div>
+            <!-- C-STORY-095 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-095</div>
+              <div class="changelog-title">超必殺 Cut-in 特寫演出 ＆ 三大職業方塊動態爆破系統</div>
+              <ul class="changelog-list">
+                <li>🔥 口袋快打風超燃 Cut-in：發動大招時切入 2 頭身黏土高舉神兵去背立繪與燃燒氣芒，半透明背景不遮蔽盤面</li>
+                <li>⚔️ 十字碎裂刀氣四射：英雄中心射出四向金紅刀氣波，命中裝備與金幣引發劇烈震顫爆破後清空</li>
+                <li>🏹 破甲重矢天頂墜砸：魔法巨矢沖天射出、自畫面外垂直砸落目標魔物，趁濃煙火光遮擋瞬間折半數值</li>
+                <li>🪙 黃金急召金幣彈跳：全盤金幣方塊向上彈跳躍起，化為金色流光粒子吸入錢包，跳錢折現</li>
+              </ul>
+            </div>
+            <!-- C-STORY-094 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-094</div>
+              <div class="changelog-title">測試輔助開關：技能開場即滿額就緒 ＆ 正式版撤除列管</div>
+              <ul class="changelog-list">
+                <li>🛠️ 測試專用開關：於設定彈窗提供【技能開場即就緒】切換開關，狀態即時儲存於本機</li>
+                <li>⚡ 開局能量全滿：開啟後進入任何關卡，隊長技能立即充飽 100% 能量並啟動金光呼吸，開場第一步即可手動施放大招</li>
+                <li>📋 正式版撤除列管：已將此測試開關登錄至《商業版正式發布前置清理清單》，確保正式對外版本純淨拔除</li>
+              </ul>
+            </div>
+            <!-- C-STORY-093 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-093</div>
+              <div class="changelog-title">角色特殊能力系統 ＆ 三大職業流派與冷卻步數科技</div>
+              <ul class="changelog-list">
+                <li>👑 三大職業自由切換：大廳「角色」專區實裝戰士、精靈弓箭手、皇家商人三大經典流派自由切換</li>
+                <li>🗡️ 戰士【十字碎裂】：以英雄為中心粉碎上下左右4格裝備與金幣（不傷魔物），滿盤瀕危時自動觸發保命</li>
+                <li>🏹 弓箭手【破甲重矢】：鎖定全場最強 Boss 重創折半（=2 則直接秒殺），純主動進攻大招，無被動保命</li>
+                <li>🪙 商人【黃金急召】：瞬間強制回收盤面所有金幣折現入袋，騰出空格；滿盤瀕危時自動觸發保命</li>
+                <li>⏳ 高階金幣冷卻科技：技能開局從 0 步累積，基礎需 500 回合，可消耗巨額金幣逐步縮減至 100 回合</li>
+                <li>🎯 重弩道具全面調優：無視魔物數值大小直接射殺任意指定魔物，確立跳關殺手鐧地位</li>
+              </ul>
+            </div>
+
             <!-- C-STORY-092 -->
             <div class="changelog-item">
-              <div class="changelog-badge">🌟 C-STORY-092 (最新)</div>
+              <div class="changelog-badge">🌟 C-STORY-092</div>
               <div class="changelog-title">正式對外商業發布前置清理清單與過渡代碼封存規範</div>
               <ul class="changelog-list">
                 <li>📋 正式發布清理清單立案：建立發布工程師專用 Pre-Launch Checklist，列管拔除測試期過渡邏輯</li>

@@ -6,8 +6,9 @@ import { ViewRenderer } from './src/presentation/ViewRenderer.js';
 import { AudioEffects } from './src/presentation/AudioEffects.js';
 import { TutorialOverlay } from './src/presentation/TutorialOverlay.js';
 import { StageListView } from './src/presentation/StageListView.js';
-import { Direction, TileType, STAGE_CONFIGS, STAGE_0_CONFIG, Events, MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS, DEFEAT_TACTICAL_TIPS, getEquipmentImagePath, getMonsterImagePath, getHeroImagePath, getMonsterThemeByChapter } from './src/core/Constants.js';
+import { Direction, TileType, STAGE_CONFIGS, STAGE_0_CONFIG, Events, MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS, DEFEAT_TACTICAL_TIPS, getEquipmentImagePath, getMonsterImagePath, getHeroImagePath, getMonsterThemeByChapter, CharacterClass, CHARACTER_SKILL_CONFIGS } from './src/core/Constants.js';
 import { GwtRunner } from './src/tests/GwtRunner.js';
+import { CombatVfxEngine } from './src/presentation/CombatVfxEngine.js';
 
 class AppController {
   constructor() {
@@ -19,6 +20,8 @@ class AppController {
 
     // DOM Elements
     this.boardGridEl = document.getElementById('battle-board');
+    const vfxCanvas = document.getElementById('combat-vfx-canvas');
+    this.vfxEngine = new CombatVfxEngine(vfxCanvas, this.boardGridEl);
 
     // One-time Appearance Migration to v5.2 Standards (C-STORY-090)
     const APPEARANCE_MIGRATION_KEY = 'rpg_2048_appearance_migrated_v52';
@@ -151,6 +154,7 @@ class AppController {
     this.selectedStageId = 1;
     this.touchStartX = 0;
     this.touchStartY = 0;
+    this.viewedClassTab = this.stageManager.getSelectedCharacter();
 
     this.init();
   }
@@ -162,6 +166,8 @@ class AppController {
     this.bindControls();
     this.bindShopEvents();
     this.bindArmoryEvents();
+    this.bindCharacterClassEvents();
+    this.bindCombatSkillEvents();
     this.bindCombatItemEvents();
     this.bindStaminaAndAdEvents();
     this.bindTitleScreen();
@@ -256,6 +262,16 @@ class AppController {
       this.renderGachaMachine();
     });
 
+    this.eventBus.on(Events.CHARACTER_CHANGED, () => {
+      this.renderArmory();
+      this.updateCombatSkillUI();
+    });
+
+    this.eventBus.on(Events.SKILL_UPGRADED, () => {
+      this.renderArmory();
+      this.updateCombatSkillUI();
+    });
+
     this.eventBus.on(Events.BOARD_CHANGED, state => {
       if (this.stageManager && this.stageManager.currentStageConfig) {
         this.viewRenderer.setChapterId(this.stageManager.currentStageConfig.chapter);
@@ -263,6 +279,12 @@ class AppController {
       if (this.combatTurnValEl) this.combatTurnValEl.textContent = state.turnCount;
       if (this.combatMonstersValEl) this.combatMonstersValEl.textContent = state.monstersRemaining;
       this.renderNextTilePreview(state.nextTilePreview);
+      this.updateCombatSkillUI({
+        character: state.selectedCharacter,
+        chargeTurns: state.skillChargeTurns,
+        maxTurns: state.skillMaxTurns,
+        isReady: state.isSkillReady
+      });
 
       if (state.moves && state.moves.length > 0) {
         this.isSliding = true;
@@ -492,6 +514,23 @@ class AppController {
           this.renderNextTilePreview(this.stageManager.nextTilePreview);
         }
         this.renderArmory();
+      });
+    }
+
+    // C-STORY-094: Instant Skill Ready Debug Setting
+    const settingInstantSkill = document.getElementById('setting-instant-skill');
+    if (settingInstantSkill) {
+      settingInstantSkill.checked = (localStorage.getItem('rpg_2048_instant_skill_ready') === 'true');
+      settingInstantSkill.addEventListener('change', (e) => {
+        this.audio.playClick();
+        const isEnabled = e.target.checked;
+        localStorage.setItem('rpg_2048_instant_skill_ready', isEnabled.toString());
+        if (this.showFloatingCombatText) {
+          this.showFloatingCombatText(
+            isEnabled ? '⚡ [測試] 技能開場即就緒 已啟用' : '🔒 [測試] 技能開場即就緒 已關閉',
+            isEnabled ? '#38bdf8' : '#94a3b8'
+          );
+        }
       });
     }
 
@@ -867,7 +906,7 @@ class AppController {
   }
 
   handleMove(dir) {
-    if (this.isSliding) return;
+    if (this.isSliding || this.isSkillExecuting) return;
     if (this.currentAimingItem) {
       this.setAimingMode(null);
     }
@@ -1253,6 +1292,429 @@ class AppController {
 
     this.renderTechTierCard();
     this.renderWarehouseCard();
+    this.renderCharacterClassCard();
+  }
+
+  // C-STORY-093: Render Character Class Card & Skill Upgrade UI
+  renderCharacterClassCard() {
+    const activeClass = this.stageManager.getSelectedCharacter();
+    const viewedClass = this.viewedClassTab || activeClass;
+    const cfg = CHARACTER_SKILL_CONFIGS[viewedClass];
+    if (!cfg) return;
+
+    const level = this.stageManager.getCharacterSkillLevel(viewedClass);
+    const cooldown = this.stageManager.getCharacterSkillCooldown(viewedClass);
+
+    // Update active badge
+    const activeBadge = document.getElementById('class-active-badge');
+    if (activeBadge) {
+      const activeCfg = CHARACTER_SKILL_CONFIGS[activeClass];
+      activeBadge.textContent = `${activeCfg ? activeCfg.name : '戰士'}出戰中`;
+    }
+
+    // Update class tabs active class
+    const tabs = document.querySelectorAll('.btn-class-tab');
+    tabs.forEach(tab => {
+      const cls = tab.getAttribute('data-class');
+      if (cls === viewedClass) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
+
+    // Update details
+    const tagEl = document.getElementById('detail-skill-tag');
+    const nameEl = document.getElementById('detail-skill-name');
+    const levelEl = document.getElementById('detail-skill-level');
+    const descEl = document.getElementById('detail-skill-desc');
+    const cdValEl = document.getElementById('detail-cd-val');
+    const arrowEl = document.getElementById('detail-cd-arrow');
+    const nextCdValEl = document.getElementById('detail-next-cd-val');
+    const btnSelect = document.getElementById('btn-select-class');
+    const btnUpgrade = document.getElementById('btn-upgrade-skill');
+
+    if (tagEl) tagEl.textContent = cfg.tag;
+    if (nameEl) nameEl.textContent = cfg.skillName;
+    if (levelEl) levelEl.textContent = `Lv.${level}`;
+    if (descEl) descEl.textContent = cfg.desc;
+    if (cdValEl) cdValEl.textContent = `${cooldown} 回合`;
+
+    if (level >= 4) {
+      if (arrowEl) arrowEl.style.display = 'none';
+      if (nextCdValEl) nextCdValEl.style.display = 'none';
+      if (btnUpgrade) {
+        btnUpgrade.disabled = true;
+        btnUpgrade.innerHTML = `<span class="upgrade-action">已達頂級 MAX</span><span class="upgrade-cost">--</span>`;
+      }
+    } else {
+      const nextLevel = level + 1;
+      const nextCooldown = cfg.cooldowns[nextLevel];
+      const cost = cfg.costs[nextLevel];
+      if (arrowEl) arrowEl.style.display = 'inline';
+      if (nextCdValEl) {
+        nextCdValEl.style.display = 'inline';
+        nextCdValEl.textContent = `${nextCooldown} 回合`;
+      }
+      if (btnUpgrade) {
+        btnUpgrade.disabled = this.stageManager.gold < cost;
+        btnUpgrade.innerHTML = `<span class="upgrade-action">縮短冷卻 (100回合)</span><span class="upgrade-cost" id="detail-upgrade-cost">🪙 ${cost.toLocaleString()}</span>`;
+      }
+    }
+
+    if (btnSelect) {
+      if (viewedClass === activeClass) {
+        btnSelect.textContent = '✔ 出戰中';
+        btnSelect.classList.add('active-selected');
+        btnSelect.disabled = true;
+      } else {
+        btnSelect.textContent = '✔ 選擇此職業出戰';
+        btnSelect.classList.remove('active-selected');
+        btnSelect.disabled = false;
+      }
+    }
+  }
+
+  // C-STORY-093: Character Class Tab & Skill Upgrade Events
+  bindCharacterClassEvents() {
+    const tabs = document.querySelectorAll('.btn-class-tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const cls = tab.getAttribute('data-class');
+        if (cls && CHARACTER_SKILL_CONFIGS[cls]) {
+          this.viewedClassTab = cls;
+          this.audio.playClick();
+          this.renderCharacterClassCard();
+        }
+      });
+    });
+
+    const btnSelect = document.getElementById('btn-select-class');
+    if (btnSelect) {
+      btnSelect.addEventListener('click', () => {
+        const viewedClass = this.viewedClassTab || this.stageManager.getSelectedCharacter();
+        const res = this.stageManager.selectCharacter(viewedClass);
+        if (res.success) {
+          this.audio.playSlide();
+          this.renderCharacterClassCard();
+          this.updateCombatSkillUI();
+        }
+      });
+    }
+
+    const btnUpgrade = document.getElementById('btn-upgrade-skill');
+    if (btnUpgrade) {
+      btnUpgrade.addEventListener('click', () => {
+        const viewedClass = this.viewedClassTab || this.stageManager.getSelectedCharacter();
+        const res = this.stageManager.upgradeCharacterSkill(viewedClass);
+        if (res.success) {
+          this.audio.playMerge();
+          this.renderCharacterClassCard();
+          this.updateCombatSkillUI();
+        } else {
+          alert(res.reason);
+        }
+      });
+    }
+  }
+
+  // C-STORY-093 & C-STORY-095: Combat Skill Execution & Cut-in VFX Sequence
+  bindCombatSkillEvents() {
+    const skillBtn = document.getElementById('skill-badge-btn');
+    if (skillBtn) {
+      skillBtn.addEventListener('click', () => {
+        if (!this.stageManager.isSkillReady || this.isSkillExecuting) return;
+        this.triggerSkillWithVfx(false);
+      });
+    }
+
+    this.eventBus.on(Events.SKILL_CHARGE_CHANGED, (payload) => {
+      this.updateCombatSkillUI(payload);
+    });
+
+    this.eventBus.on(Events.SKILL_USED, (payload) => {
+      this.updateCombatSkillUI();
+      // If triggered as auto-rescue from dead end, play cutin flash
+      if (payload && payload.isAutoRescue && !this.isSkillExecuting) {
+        this.playAutoRescueCutin(payload);
+      }
+    });
+  }
+
+  // C-STORY-095 & C-STORY-099: Auto Rescue Cut-in & Full Canvas 2D Physics VFX Execution
+  async playAutoRescueCutin(payload) {
+    if (this.isSkillExecuting) return;
+    this.isSkillExecuting = true;
+
+    try {
+      // Step 1: Cut-in Flash
+      const cutinLayer = document.getElementById('skill-cutin-layer');
+      const cutinAvatar = document.getElementById('skill-cutin-avatar');
+      if (cutinLayer && cutinAvatar) {
+        cutinAvatar.className = 'skill-cutin-avatar';
+        if (payload.classId === CharacterClass.WARRIOR) cutinAvatar.classList.add('aura-warrior');
+        if (payload.classId === CharacterClass.ARCHER) cutinAvatar.classList.add('aura-archer');
+        if (payload.classId === CharacterClass.MERCHANT) cutinAvatar.classList.add('aura-merchant');
+        cutinLayer.style.display = 'flex';
+        this.showFloatingCombatText('🛡️ 絕處逢生！瀕死自動觸發技能自救！', '#38bdf8');
+        if (this.audio && this.audio.playVictory) this.audio.playVictory();
+        await new Promise(r => setTimeout(r, 450));
+        cutinLayer.style.display = 'none';
+      }
+
+      // Step 2: C-STORY-099 Full Canvas 2D Physics VFX Execution for Auto Rescue
+      if (this.vfxEngine) {
+        const hero = this.stageManager.board.getHero();
+        const hr = hero ? ((hero.r !== undefined) ? hero.r : hero.row) : 2;
+        const hc = hero ? ((hero.c !== undefined) ? hero.c : hero.col) : 2;
+
+        if (payload.classId === CharacterClass.WARRIOR) {
+          const targets = payload.destroyedTiles || [];
+          await this.vfxEngine.playCrossBreaker(hr, hc, targets);
+          if (this.audio && this.audio.playSkillCrossCleave) this.audio.playSkillCrossCleave();
+          this.showFloatingCombatText(`💥 絕處逢生·十字碎裂！大地岩崩粉碎 ${targets.length} 個方塊脫困！`);
+
+        } else if (payload.classId === CharacterClass.ARCHER) {
+          const tm = payload.targetMonster;
+          if (tm) {
+            const mr = (tm.r !== undefined) ? tm.r : tm.row;
+            const mc = (tm.c !== undefined) ? tm.c : tm.col;
+            await this.vfxEngine.playArmorPiercingArrow(hr, hc, mr, mc);
+            if (this.audio && this.audio.playSkillArmorPiercingArrow) this.audio.playSkillArmorPiercingArrow();
+            this.showFloatingCombatText(`🏹 絕處逢生·破甲重矢！極光流星一擊秒殺魔物脫困！`);
+          }
+
+        } else if (payload.classId === CharacterClass.MERCHANT) {
+          const goldCoords = payload.cashedCoords || [];
+          await this.vfxEngine.playGoldenEmergency(goldCoords);
+          if (this.audio && this.audio.playSkillGoldenEmergency) this.audio.playSkillGoldenEmergency();
+          this.showFloatingCombatText(`🪙 絕處逢生·黃金急召！純金金幣狂潮回收 ${payload.totalCashed} 金幣脫困！`);
+        }
+      }
+    } catch (err) {
+      console.error('Error during playAutoRescueCutin:', err);
+    } finally {
+      const vfxLayer = document.getElementById('skill-board-vfx-layer');
+      if (vfxLayer) {
+        vfxLayer.innerHTML = '';
+      }
+      this.updateCombatSkillUI();
+      this.isSkillExecuting = false;
+    }
+  }
+
+  // C-STORY-095 & C-STORY-098 & C-STORY-100: Ultimate Skill Cut-in & Board Dynamic VFX Flow (with Robust Error Shield)
+  async triggerSkillWithVfx(isAutoRescue = false) {
+    if (this.isSkillExecuting) return;
+    if (!this.stageManager.isSkillReady) return;
+
+    this.isSkillExecuting = true;
+    try {
+      const classId = this.stageManager.getSelectedCharacter();
+
+      // C-STORY-100: 商人無金幣前置攔截，避免虛假觸發
+      if (classId === CharacterClass.MERCHANT) {
+        let hasGold = false;
+        for (let r = 0; r < 5; r++) {
+          for (let c = 0; c < 5; c++) {
+            const t = this.stageManager.board.getTile(r, c);
+            if (t && t.isGold()) {
+              hasGold = true;
+              break;
+            }
+          }
+          if (hasGold) break;
+        }
+        if (!hasGold) {
+          this.showFloatingCombatText('⚠️ 盤面無金幣可供回收！', '#f59e0b');
+          this.isSkillExecuting = false;
+          return;
+        }
+      }
+
+      // Step 1: Cut-in Presentation (Pocket Fighter Style Chibi Clay)
+      const cutinLayer = document.getElementById('skill-cutin-layer');
+      const cutinAvatar = document.getElementById('skill-cutin-avatar');
+      if (cutinLayer && cutinAvatar) {
+        cutinAvatar.className = 'skill-cutin-avatar';
+        if (classId === CharacterClass.WARRIOR) {
+          cutinAvatar.classList.add('aura-warrior');
+        } else if (classId === CharacterClass.ARCHER) {
+          cutinAvatar.classList.add('aura-archer');
+        } else if (classId === CharacterClass.MERCHANT) {
+          cutinAvatar.classList.add('aura-merchant');
+        }
+        cutinLayer.style.display = 'flex';
+        if (this.audio && this.audio.playVictory) this.audio.playVictory();
+
+        // Cut-in stays for 450ms
+        await new Promise(resolve => setTimeout(resolve, 450));
+        cutinLayer.style.display = 'none';
+      }
+
+      // Step 2: Canvas 2D High-Performance Physics VFX Execution (C-STORY-096 & 097 & 100)
+      if (this.vfxEngine) {
+        if (classId === CharacterClass.WARRIOR) {
+          const hero = this.stageManager.board.getHero();
+          if (hero) {
+            const hr = (hero.r !== undefined) ? hero.r : hero.row;
+            const hc = (hero.c !== undefined) ? hero.c : hero.col;
+            const crossOffsets = [{ r: -1, c: 0 }, { r: 1, c: 0 }, { r: 0, c: -1 }, { r: 0, c: 1 }];
+            const targetCoords = [];
+            crossOffsets.forEach(off => {
+              const nr = hr + off.r;
+              const nc = hc + off.c;
+              if (nr >= 0 && nr < 5 && nc >= 0 && nc < 5) {
+                const t = this.stageManager.board.getTile(nr, nc);
+                if (t && (t.isEquipment() || t.isGold())) {
+                  targetCoords.push({ r: nr, c: nc });
+                }
+              }
+            });
+
+            await this.vfxEngine.playCrossBreaker(hr, hc, targetCoords, () => {
+              const res = this.stageManager.triggerCharacterSkill(isAutoRescue);
+              if (this.audio && this.audio.playSkillCrossCleave) {
+                this.audio.playSkillCrossCleave();
+              } else if (this.audio && this.audio.playMerge) {
+                this.audio.playMerge();
+              }
+              if (res.success) {
+                this.showFloatingCombatText(`💥 十字碎裂！大地岩崩粉碎周邊 ${res.destroyedTiles.length} 個方塊！`);
+              }
+            });
+          } else {
+            this.stageManager.triggerCharacterSkill(isAutoRescue);
+          }
+
+        } else if (classId === CharacterClass.ARCHER) {
+          const hero = this.stageManager.board.getHero();
+          const monsters = this.stageManager.board.getMonsters();
+          let maxVal = -1;
+          monsters.forEach(m => { if (m.value > maxVal) maxVal = m.value; });
+          const candidates = monsters.filter(m => m.value === maxVal);
+          const targetMonster = candidates[0];
+
+          if (hero && targetMonster) {
+            const hr = (hero.r !== undefined) ? hero.r : hero.row;
+            const hc = (hero.c !== undefined) ? hero.c : hero.col;
+            const mr = (targetMonster.r !== undefined) ? targetMonster.r : targetMonster.row;
+            const mc = (targetMonster.c !== undefined) ? targetMonster.c : targetMonster.col;
+
+            await this.vfxEngine.playArmorPiercingArrow(hr, hc, mr, mc, () => {
+              const res = this.stageManager.triggerCharacterSkill(isAutoRescue);
+              if (this.audio && this.audio.playSkillArmorPiercingArrow) {
+                this.audio.playSkillArmorPiercingArrow();
+              } else if (this.audio && this.audio.playMerge) {
+                this.audio.playMerge();
+              }
+              if (res.success) {
+                if (res.action === 'slain') {
+                  this.showFloatingCombatText(`🏹 破甲重矢！極光流星一擊秒殺魔物！`);
+                } else {
+                  this.showFloatingCombatText(`🏹 破甲重矢！流星重擊破甲折半（${res.originalVal} ➔ ${res.newVal}）！`);
+                }
+              }
+            });
+          } else {
+            this.stageManager.triggerCharacterSkill(isAutoRescue);
+          }
+
+        } else if (classId === CharacterClass.MERCHANT) {
+          const goldCoords = [];
+          for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
+              const t = this.stageManager.board.getTile(r, c);
+              if (t && t.isGold()) {
+                goldCoords.push({ r, c });
+              }
+            }
+          }
+
+          await this.vfxEngine.playGoldenEmergency(goldCoords, () => {
+            const res = this.stageManager.triggerCharacterSkill(isAutoRescue);
+            if (this.audio && this.audio.playSkillGoldenEmergency) {
+              this.audio.playSkillGoldenEmergency();
+            } else if (this.audio && this.audio.playMerge) {
+              this.audio.playMerge();
+            }
+            if (res.success) {
+              this.showFloatingCombatText(`🪙 黃金急召！純金金幣狂潮瞬間回收 ${res.totalCashed} 金幣！`);
+            }
+          });
+        }
+      } else {
+        this.stageManager.triggerCharacterSkill(isAutoRescue);
+      }
+    } catch (err) {
+      console.error('Error during triggerSkillWithVfx:', err);
+    } finally {
+      const vfxLayer = document.getElementById('skill-board-vfx-layer');
+      if (vfxLayer) {
+        vfxLayer.innerHTML = '';
+      }
+      this.updateCombatSkillUI();
+      this.isSkillExecuting = false;
+    }
+  }
+
+  updateCombatSkillUI(payload) {
+    const skillBtn = document.getElementById('skill-badge-btn');
+    const ringProgress = document.getElementById('skill-ring-progress');
+    const iconEl = document.getElementById('skill-badge-icon');
+    const nameLabel = document.getElementById('skill-name-label');
+    const turnLabel = document.getElementById('skill-turn-label');
+
+    const character = (payload && payload.character) ? payload.character : this.stageManager.getSelectedCharacter();
+    const chargeTurns = (payload && payload.chargeTurns !== undefined) ? payload.chargeTurns : this.stageManager.skillChargeTurns;
+    const maxTurns = (payload && payload.maxTurns !== undefined) ? payload.maxTurns : this.stageManager.getCharacterSkillCooldown();
+    const isReady = (payload && payload.isReady !== undefined) ? payload.isReady : this.stageManager.isSkillReady;
+
+    const cfg = CHARACTER_SKILL_CONFIGS[character] || CHARACTER_SKILL_CONFIGS.warrior;
+
+    if (iconEl) iconEl.textContent = cfg.avatar;
+    if (nameLabel) nameLabel.textContent = cfg.skillName;
+    if (turnLabel) turnLabel.textContent = isReady ? '就緒！點擊施放' : `${chargeTurns}/${maxTurns}`;
+
+    if (ringProgress) {
+      const circ = 113.1;
+      const progress = maxTurns > 0 ? Math.min(1, chargeTurns / maxTurns) : 1;
+      const offset = circ * (1 - progress);
+      ringProgress.style.strokeDashoffset = offset;
+    }
+
+    if (skillBtn) {
+      if (isReady) {
+        skillBtn.classList.add('ready');
+        skillBtn.disabled = false;
+      } else {
+        skillBtn.classList.remove('ready');
+        skillBtn.disabled = true;
+      }
+    }
+  }
+
+  showFloatingCombatText(text) {
+    const floatEl = document.createElement('div');
+    floatEl.style.position = 'fixed';
+    floatEl.style.top = '120px';
+    floatEl.style.left = '50%';
+    floatEl.style.transform = 'translateX(-50%)';
+    floatEl.style.background = 'rgba(15, 23, 42, 0.95)';
+    floatEl.style.border = '1px solid #facc15';
+    floatEl.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.6)';
+    floatEl.style.color = '#facc15';
+    floatEl.style.fontWeight = '900';
+    floatEl.style.fontSize = '0.9rem';
+    floatEl.style.padding = '8px 16px';
+    floatEl.style.borderRadius = '20px';
+    floatEl.style.zIndex = '9999';
+    floatEl.style.pointerEvents = 'none';
+    floatEl.textContent = text;
+    document.body.appendChild(floatEl);
+    setTimeout(() => {
+      if (floatEl.parentNode) floatEl.parentNode.removeChild(floatEl);
+    }, 1800);
   }
 
   renderTechTierCard() {
@@ -1689,6 +2151,12 @@ class AppController {
   }
 
   startCombat(stageId) {
+    this.isSkillExecuting = false;
+    this.isSliding = false;
+    if (this.vfxEngine) {
+      this.vfxEngine.clear();
+      this.vfxEngine.resize();
+    }
     if (stageId === 0) {
       this.startTutorialCombat();
       return;
@@ -1707,10 +2175,20 @@ class AppController {
     this.combatStageNameEl.textContent = config.name;
     this.viewRenderer.setChapterId(config.chapter);
     this.combatOverlayEl.style.display = 'flex';
+    // Re-anchor canvas once overlay is visible
+    requestAnimationFrame(() => {
+      if (this.vfxEngine) this.vfxEngine.resize();
+    });
   }
 
   // Start Stage 0 Tutorial Combat (C-STORY-030)
   startTutorialCombat() {
+    this.isSkillExecuting = false;
+    this.isSliding = false;
+    if (this.vfxEngine) {
+      this.vfxEngine.clear();
+      this.vfxEngine.resize();
+    }
     this.setAimingMode(null);
     this.updateItemCounts();
     const config = this.stageManager.startTutorialStage();
@@ -1719,10 +2197,16 @@ class AppController {
     this.combatStageNameEl.textContent = config.name;
     this.viewRenderer.setChapterId(config.chapter);
     this.combatOverlayEl.style.display = 'flex';
+    requestAnimationFrame(() => {
+      if (this.vfxEngine) this.vfxEngine.resize();
+    });
   }
 
   exitCombat() {
     this.setAimingMode(null);
+    this.isSkillExecuting = false;
+    this.isSliding = false;
+    if (this.vfxEngine) this.vfxEngine.clear();
     if (this.tutorialOverlay) {
       this.tutorialOverlay.hide();
     }

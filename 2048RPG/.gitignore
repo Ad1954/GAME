@@ -1,0 +1,16 @@
+# 2048 RPG - Standard Git Ignore
+# 排除本機實體備份目錄
+backup/
+Backup/
+
+# 排除未採用之草稿素材與巨大原始檔 (PSD / ATN)
+assets/TEMP/
+*.psd
+*.atn
+
+# 排除快取與暫存檔
+__pycache__/
+*.pyc
+*.tmp
+.DS_Store
+Thumbs.db

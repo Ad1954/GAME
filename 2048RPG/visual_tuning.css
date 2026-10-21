@@ -4,8 +4,8 @@
    ======================================================== */
 
 :root {
-  --hero-scale: 1.50;
-  --hero-trans-y: 3px;
+  --hero-scale: 2.00;
+  --hero-trans-y: 5px;
   --hero-filter: drop-shadow(0 0 1.5px rgba(255,255,255,0.95)) drop-shadow(0 2px 5px rgba(0,0,0,0.85));
   --hero-spotlight-display: block;
 

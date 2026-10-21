@@ -1,7 +1,7 @@
 {
   "hero": {
-    "scale": 1.5,
-    "transY": 3,
+    "scale": 2.0,
+    "transY": 5,
     "outline": "white",
     "spotlight": "on"
   },

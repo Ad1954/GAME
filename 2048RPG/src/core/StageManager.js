@@ -21,7 +21,9 @@ import {
   DAILY_AD_GOLD_REWARD,
   DAILY_AD_MAX_COUNT,
   CURRENT_GAME_VERSION,
-  TileType
+  TileType,
+  CharacterClass,
+  CHARACTER_SKILL_CONFIGS
 } from './Constants.js';
 
 const SAVE_KEY = '2048RPG_Commercial_Save_v1';
@@ -65,6 +67,12 @@ export class StageManager {
     // Emergency Items State (C-STORY-007)
     this.items = { undo: 0, hammer: 0, snipe: 0 };
     this.history = []; // Battle state snapshots
+
+    // Character Class & Special Skills (C-STORY-093)
+    this.selectedCharacter = CharacterClass.WARRIOR;
+    this.characterLevels = { warrior: 0, archer: 0, merchant: 0 };
+    this.skillChargeTurns = 0;
+    this.isSkillReady = false;
 
     // Active Combat State
     this.currentStageConfig = null;
@@ -149,6 +157,19 @@ export class StageManager {
         } else {
           this.items = { undo: 0, hammer: 0, snipe: 0 };
         }
+
+        // Character Class & Skills (C-STORY-093)
+        if (parsed.selectedCharacter && CHARACTER_SKILL_CONFIGS[parsed.selectedCharacter]) {
+          this.selectedCharacter = parsed.selectedCharacter;
+        }
+        if (parsed.characterLevels) {
+          this.characterLevels = {
+            warrior: typeof parsed.characterLevels.warrior === 'number' ? parsed.characterLevels.warrior : 0,
+            archer: typeof parsed.characterLevels.archer === 'number' ? parsed.characterLevels.archer : 0,
+            merchant: typeof parsed.characterLevels.merchant === 'number' ? parsed.characterLevels.merchant : 0
+          };
+        }
+
         if (parsed.inventory) {
           this.inventory.deserialize(parsed.inventory);
         }
@@ -174,6 +195,8 @@ export class StageManager {
         items: this.items,
         baseTier: this.baseTier,
         warehouseExpansionLevel: this.warehouseExpansionLevel,
+        selectedCharacter: this.selectedCharacter,
+        characterLevels: this.characterLevels,
         stamina: this.stamina,
         lastStaminaRecoverTime: this.lastStaminaRecoverTime,
         hasNoAdsPass: this.hasNoAdsPass,
@@ -199,6 +222,10 @@ export class StageManager {
     this.gachaLevel = 1;
     this.baseTier = 1;
     this.warehouseExpansionLevel = 0;
+    this.selectedCharacter = CharacterClass.WARRIOR;
+    this.characterLevels = { warrior: 0, archer: 0, merchant: 0 };
+    this.skillChargeTurns = 0;
+    this.isSkillReady = false;
     this.stamina = MAX_STAMINA;
     this.maxStamina = MAX_STAMINA;
     this.lastStaminaRecoverTime = Date.now();
@@ -632,6 +659,30 @@ export class StageManager {
     // 4. Initial Next Tile Preview (C-STORY-041)
     this.rollNextTilePreview();
 
+    // 5. Initial Character Skill Charge State (C-STORY-093, C-STORY-094 Debug Instant Ready)
+    const maxCd = this.getCharacterSkillCooldown();
+    let instantReady = false;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        instantReady = (localStorage.getItem('rpg_2048_instant_skill_ready') === 'true');
+      } catch (e) {}
+    }
+
+    if (instantReady) {
+      this.skillChargeTurns = maxCd;
+      this.isSkillReady = true;
+    } else {
+      this.skillChargeTurns = 0;
+      this.isSkillReady = false;
+    }
+
+    this.eventBus.emit(Events.SKILL_CHARGE_CHANGED, {
+      character: this.selectedCharacter,
+      chargeTurns: this.skillChargeTurns,
+      maxTurns: maxCd,
+      isReady: this.isSkillReady
+    });
+
     this.emitState();
     return config;
   }
@@ -835,6 +886,22 @@ export class StageManager {
       }
       this.history.push(snapshot);
       this.turnCount++;
+
+      // Advance Character Skill Charge (C-STORY-093)
+      if (!this.isSkillReady) {
+        this.skillChargeTurns++;
+        const maxCd = this.getCharacterSkillCooldown();
+        if (this.skillChargeTurns >= maxCd) {
+          this.skillChargeTurns = maxCd;
+          this.isSkillReady = true;
+        }
+        this.eventBus.emit(Events.SKILL_CHARGE_CHANGED, {
+          character: this.selectedCharacter,
+          chargeTurns: this.skillChargeTurns,
+          maxTurns: maxCd,
+          isReady: this.isSkillReady
+        });
+      }
       if (result.kills > 0) {
         this.monstersKilled += result.kills;
         this.eventBus.emit(Events.MONSTER_KILLED, { kills: result.kills });
@@ -946,6 +1013,14 @@ export class StageManager {
 
       // Check Defeat Condition: Deadlock
       if (!this.moveEngine.canMove()) {
+        const skillCfg = CHARACTER_SKILL_CONFIGS[this.selectedCharacter];
+        if (this.isSkillReady && skillCfg && skillCfg.passiveRescue && this.canEffectivelyPassiveRescue()) {
+          const rescueRes = this.triggerCharacterSkill(true);
+          if (rescueRes.success && this.moveEngine.canMove()) {
+            this.emitState({ moves: result.moves, vfxEvents: result.vfxEvents, autoRescue: true });
+            return result;
+          }
+        }
         this.handleDefeat();
         return result;
       }
@@ -997,7 +1072,9 @@ export class StageManager {
       goldDropsCount: this.goldDropsCount,
       goldDropInterval: this.goldDropInterval,
       nextGoldDropTurn: this.nextGoldDropTurn,
-      nextTilePreview: this.nextTilePreview ? { ...this.nextTilePreview } : null // C-STORY-041
+      nextTilePreview: this.nextTilePreview ? { ...this.nextTilePreview } : null, // C-STORY-041
+      skillChargeTurns: this.skillChargeTurns,
+      isSkillReady: this.isSkillReady
     };
   }
 
@@ -1029,11 +1106,19 @@ export class StageManager {
     this.goldDropInterval = snapshot.goldDropInterval !== undefined ? snapshot.goldDropInterval : this.goldDropInterval;
     this.nextGoldDropTurn = snapshot.nextGoldDropTurn !== undefined ? snapshot.nextGoldDropTurn : this.nextGoldDropTurn;
     this.nextTilePreview = snapshot.nextTilePreview ? { ...snapshot.nextTilePreview } : null; // C-STORY-041
+    this.skillChargeTurns = snapshot.skillChargeTurns !== undefined ? snapshot.skillChargeTurns : this.skillChargeTurns;
+    this.isSkillReady = snapshot.isSkillReady !== undefined ? snapshot.isSkillReady : this.isSkillReady;
 
     this.saveData();
     this.eventBus.emit(Events.ITEMS_CHANGED, { items: this.items });
     this.eventBus.emit(Events.ITEM_USED, { itemType: 'undo' });
     this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
+    this.eventBus.emit(Events.SKILL_CHARGE_CHANGED, {
+      character: this.selectedCharacter,
+      chargeTurns: this.skillChargeTurns,
+      maxTurns: this.getCharacterSkillCooldown(),
+      isReady: this.isSkillReady
+    });
     this.emitState();
 
     return { success: true, remaining: this.items.undo };
@@ -1091,12 +1176,6 @@ export class StageManager {
     const hero = this.board.getHero();
     if (!hero) {
       return { success: false, reason: '場上無勇者方塊' };
-    }
-    if (tile.value >= hero.value) {
-      return {
-        success: false,
-        reason: `魔物戰力 (${tile.value}) 大於或等於勇者 (${hero.value})，無法使用重弩狙殺！（必須英雄戰力嚴格大於魔物）`
-      };
     }
 
     this.items.snipe--;
@@ -1219,6 +1298,313 @@ export class StageManager {
     }
   }
 
+  // C-STORY-093: Character Class & Special Skills Management
+  getSelectedCharacter() {
+    return this.selectedCharacter || CharacterClass.WARRIOR;
+  }
+
+  selectCharacter(classId) {
+    if (!CHARACTER_SKILL_CONFIGS[classId]) {
+      return { success: false, reason: '未知的職業類型' };
+    }
+    this.selectedCharacter = classId;
+    this.saveData();
+    this.eventBus.emit(Events.CHARACTER_CHANGED, {
+      selectedCharacter: this.selectedCharacter,
+      config: CHARACTER_SKILL_CONFIGS[this.selectedCharacter],
+      level: this.getCharacterSkillLevel()
+    });
+    return { success: true, selectedCharacter: this.selectedCharacter };
+  }
+
+  getCharacterSkillLevel(classId = this.selectedCharacter) {
+    if (!this.characterLevels) this.characterLevels = { warrior: 0, archer: 0, merchant: 0 };
+    return typeof this.characterLevels[classId] === 'number' ? this.characterLevels[classId] : 0;
+  }
+
+  getCharacterSkillCooldown(classId = this.selectedCharacter) {
+    const cfg = CHARACTER_SKILL_CONFIGS[classId];
+    if (!cfg) return 500;
+    const lvl = this.getCharacterSkillLevel(classId);
+    return cfg.cooldowns[Math.min(lvl, cfg.cooldowns.length - 1)] || 500;
+  }
+
+  upgradeCharacterSkill(classId = this.selectedCharacter) {
+    const cfg = CHARACTER_SKILL_CONFIGS[classId];
+    if (!cfg) return { success: false, reason: '未知的職業類型' };
+    const curLevel = this.getCharacterSkillLevel(classId);
+    if (curLevel >= 4) {
+      return { success: false, reason: '此職業技能已達最高等級 (Lv.4)' };
+    }
+    const nextLevel = curLevel + 1;
+    const cost = cfg.costs[nextLevel];
+    if (this.gold < cost) {
+      return { success: false, reason: `金幣不足！升級至 Lv.${nextLevel} 需要 ${cost.toLocaleString()} 金幣` };
+    }
+
+    this.gold -= cost;
+    this.characterLevels[classId] = nextLevel;
+    this.saveData();
+
+    this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
+    this.eventBus.emit(Events.SKILL_UPGRADED, {
+      classId,
+      level: nextLevel,
+      cooldown: cfg.cooldowns[nextLevel],
+      remainingGold: this.gold
+    });
+
+    return {
+      success: true,
+      classId,
+      level: nextLevel,
+      cooldown: cfg.cooldowns[nextLevel],
+      remainingGold: this.gold
+    };
+  }
+
+  // C-STORY-099: Smart Passive Rescue Pre-condition Check (Only trigger when effective tile clearance is guaranteed)
+  canEffectivelyPassiveRescue() {
+    const classId = this.selectedCharacter;
+    if (!this.board) return false;
+
+    if (classId === CharacterClass.WARRIOR) {
+      const hero = this.board.getHero();
+      if (!hero) return false;
+      const hr = (hero.r !== undefined) ? hero.r : hero.row;
+      const hc = (hero.c !== undefined) ? hero.c : hero.col;
+      const crossOffsets = [{ r: -1, c: 0 }, { r: 1, c: 0 }, { r: 0, c: -1 }, { r: 0, c: 1 }];
+      let canDestroyAny = false;
+      crossOffsets.forEach(off => {
+        const nr = hr + off.r;
+        const nc = hc + off.c;
+        if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
+          const t = this.board.getTile(nr, nc);
+          if (t && (t.isEquipment() || t.isGold())) {
+            canDestroyAny = true;
+          }
+        }
+      });
+      return canDestroyAny;
+    }
+
+    if (classId === CharacterClass.ARCHER) {
+      const monsters = this.board.getMonsters();
+      if (!monsters || monsters.length === 0) return false;
+      let maxVal = -1;
+      monsters.forEach(m => { if (m.value > maxVal) maxVal = m.value; });
+      // 弓箭手瀕死自救智慧門檻：僅在最強魔物為數字 2（可一擊秒殺騰空格子）時觸發；大於 2 則保留能量
+      return maxVal === 2;
+    }
+
+    if (classId === CharacterClass.MERCHANT) {
+      let hasGold = false;
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+          const t = this.board.getTile(r, c);
+          if (t && t.isGold()) {
+            hasGold = true;
+            break;
+          }
+        }
+        if (hasGold) break;
+      }
+      return hasGold;
+    }
+
+    return false;
+  }
+
+  triggerCharacterSkill(isAutoRescue = false) {
+    if (!this.isInBattle || this.isVictory || this.isGameOver) {
+      return { success: false, reason: '戰鬥已結束或未在戰鬥中' };
+    }
+    if (!this.isSkillReady) {
+      return { success: false, reason: '技能尚未充能完畢' };
+    }
+
+    const classId = this.selectedCharacter;
+    const cfg = CHARACTER_SKILL_CONFIGS[classId];
+    if (!cfg) {
+      return { success: false, reason: '無效的職業設定' };
+    }
+
+    // 1. WARRIOR: Cross Breaker
+    if (classId === CharacterClass.WARRIOR) {
+      const hero = this.board.getHero();
+      if (!hero) {
+        return { success: false, reason: '場上無勇者方塊' };
+      }
+      const destroyedTiles = [];
+      const crossOffsets = [
+        { r: -1, c: 0 },
+        { r: 1, c: 0 },
+        { r: 0, c: -1 },
+        { r: 0, c: 1 }
+      ];
+
+      const hr = (hero.r !== undefined) ? hero.r : hero.row;
+      const hc = (hero.c !== undefined) ? hero.c : hero.col;
+
+      crossOffsets.forEach(off => {
+        const nr = hr + off.r;
+        const nc = hc + off.c;
+        if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
+          const t = this.board.getTile(nr, nc);
+          // Destroys equipment and gold, does NOT destroy monsters
+          if (t && (t.isEquipment() || t.isGold())) {
+            const removed = this.board.removeTile(nr, nc);
+            destroyedTiles.push(removed);
+          }
+        }
+      });
+
+      this.skillChargeTurns = 0;
+      this.isSkillReady = false;
+      this.emitState();
+      this.eventBus.emit(Events.SKILL_USED, {
+        classId,
+        skillName: cfg.skillName,
+        destroyedTiles,
+        isAutoRescue
+      });
+      this.eventBus.emit(Events.SKILL_CHARGE_CHANGED, {
+        character: this.selectedCharacter,
+        chargeTurns: 0,
+        maxTurns: this.getCharacterSkillCooldown(),
+        isReady: false
+      });
+      return { success: true, classId, skillName: cfg.skillName, destroyedTiles };
+    }
+
+    // 2. ARCHER: Armor Piercing Arrow
+    if (classId === CharacterClass.ARCHER) {
+      const monsters = this.board.getMonsters();
+      if (!monsters || monsters.length === 0) {
+        return { success: false, reason: '場上無魔物目標' };
+      }
+
+      // Find max monster value
+      let maxVal = -1;
+      monsters.forEach(m => {
+        if (m.value > maxVal) maxVal = m.value;
+      });
+      const candidates = monsters.filter(m => m.value === maxVal);
+      const targetMonster = candidates[Math.floor(Math.random() * candidates.length)];
+
+      let action = 'halved';
+      let originalVal = targetMonster.value;
+      let newVal = originalVal;
+
+      if (originalVal >= 4) {
+        newVal = Math.floor(originalVal / 2);
+        targetMonster.value = newVal;
+        action = 'halved';
+      } else if (originalVal === 2) {
+        const mr = (targetMonster.r !== undefined) ? targetMonster.r : targetMonster.row;
+        const mc = (targetMonster.c !== undefined) ? targetMonster.c : targetMonster.col;
+        this.board.removeTile(mr, mc);
+        this.monstersKilled++;
+        this.eventBus.emit(Events.MONSTER_KILLED, { kills: 1 });
+        action = 'slain';
+        newVal = 0;
+      }
+
+      this.skillChargeTurns = 0;
+      this.isSkillReady = false;
+
+      const remainingMonsters = this.board.getMonsters();
+      if (remainingMonsters.length === 0) {
+        if (this.pendingWaves && this.pendingWaves.length > 0) {
+          const nextWave = this.pendingWaves.shift();
+          this.spawnWaveMonsters(nextWave.monsters || nextWave);
+          this.emitState();
+        } else {
+          this.handleVictory();
+        }
+      } else {
+        this.emitState();
+      }
+
+      this.eventBus.emit(Events.SKILL_USED, {
+        classId,
+        skillName: cfg.skillName,
+        targetMonster,
+        originalVal,
+        newVal,
+        action,
+        isAutoRescue
+      });
+      this.eventBus.emit(Events.SKILL_CHARGE_CHANGED, {
+        character: this.selectedCharacter,
+        chargeTurns: 0,
+        maxTurns: this.getCharacterSkillCooldown(),
+        isReady: false
+      });
+
+      return { success: true, classId, skillName: cfg.skillName, targetMonster, action, originalVal, newVal };
+    }
+
+    // 3. MERCHANT: Golden Emergency
+    if (classId === CharacterClass.MERCHANT) {
+      const goldTiles = [];
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+          const t = this.board.getTile(r, c);
+          if (t && t.isGold()) {
+            goldTiles.push({ r, c, tile: t });
+          }
+        }
+      }
+
+      if (goldTiles.length === 0) {
+        return { success: false, reason: '場上無金幣可供回收' };
+      }
+
+      let totalCashed = 0;
+      goldTiles.forEach(item => {
+        const removed = this.board.removeTile(item.r, item.c);
+        totalCashed += removed.value;
+      });
+
+      this.stageGoldEarned += totalCashed;
+      this.inBattleGold = (this.inBattleGold || 0) + totalCashed;
+      this.gold += totalCashed;
+      this.saveData();
+
+      this.skillChargeTurns = 0;
+      this.isSkillReady = false;
+
+      this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
+      this.eventBus.emit(Events.GOLD_CASHED_OUT, {
+        amount: totalCashed,
+        totalGold: this.gold,
+        stageGoldEarned: this.stageGoldEarned
+      });
+
+      this.emitState();
+
+      const cashedCoords = goldTiles.map(item => ({ r: item.r, c: item.c }));
+      this.eventBus.emit(Events.SKILL_USED, {
+        classId,
+        skillName: cfg.skillName,
+        totalCashed,
+        cashedCoords,
+        isAutoRescue
+      });
+      this.eventBus.emit(Events.SKILL_CHARGE_CHANGED, {
+        character: this.selectedCharacter,
+        chargeTurns: 0,
+        maxTurns: this.getCharacterSkillCooldown(),
+        isReady: false
+      });
+
+      return { success: true, classId, skillName: cfg.skillName, totalCashed };
+    }
+
+    return { success: false, reason: '未知的技能類型' };
+  }
+
   emitState(extra = {}) {
     const cap = (this.currentStageConfig && this.currentStageConfig.goldCap) ? this.currentStageConfig.goldCap : 0;
     this.eventBus.emit(Events.BOARD_CHANGED, {
@@ -1237,6 +1623,10 @@ export class StageManager {
       stageGoldEarned: this.stageGoldEarned,
       goldCap: cap,
       nextTilePreview: this.nextTilePreview || null, // C-STORY-041
+      selectedCharacter: this.selectedCharacter,
+      skillChargeTurns: this.skillChargeTurns,
+      skillMaxTurns: this.getCharacterSkillCooldown(),
+      isSkillReady: this.isSkillReady,
       moves: extra.moves || null,
       vfxEvents: extra.vfxEvents || null
     });
