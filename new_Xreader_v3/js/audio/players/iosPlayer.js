@@ -24,6 +24,11 @@ export class IosVoicePlayer {
     this.isProactiveEvade = false;
     this.isPausedByUser = false;
 
+    // Mutex & Re-entrancy guards to prevent duplicate audio tracks
+    this.instanceId = 'xreader_ios_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    this.playbackToken = 0;
+    this.mutexChannel = null;
+
     // Background Keep-Alive Audio Element (Story 4, GWT 4.1)
     this.silentAudio = null;
     this.isAudioSessionActive = false;
@@ -34,10 +39,44 @@ export class IosVoicePlayer {
     this.loadVoices();
     this.setupMediaSession();
     this.setupVisibilitySync();
+    this.setupMutexChannel();
+    this.setupLifecycleCleanup();
 
     if (this.synth.onvoiceschanged !== undefined) {
       this.synth.onvoiceschanged = () => this.loadVoices();
     }
+  }
+
+  setupMutexChannel() {
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        this.mutexChannel = new BroadcastChannel('xreader_audio_mutex');
+        this.mutexChannel.onmessage = (event) => {
+          if (event.data && event.data.type === 'CLAIM_PLAYBACK') {
+            if (event.data.instanceId !== this.instanceId && this.isPlaying) {
+              logger.info('iOS Mutex', '偵測到其他分頁/視窗發起播放，本實例主動停止釋放音訊');
+              this.stop(true);
+            }
+          }
+        };
+      } catch (e) {
+        console.warn('[iOS Player] BroadcastChannel not supported:', e);
+      }
+    }
+  }
+
+  setupLifecycleCleanup() {
+    // 當關閉分頁、清除網頁或切換離開時，強制終止系統級語音服務，杜絕孤兒音軌
+    const forceCleanup = () => {
+      try {
+        this.stop(true);
+        if (this.synth) {
+          this.synth.cancel();
+        }
+      } catch (e) {}
+    };
+    window.addEventListener('pagehide', forceCleanup);
+    window.addEventListener('beforeunload', forceCleanup);
   }
 
   setupSilentAudio() {
@@ -158,8 +197,20 @@ export class IosVoicePlayer {
     return allVoices;
   }
 
-  loadChapter(chapter, startSentenceIndex = 0, bookTitle = 'Xreader') {
-    this.stop(false);
+  loadChapter(chapter, startSentenceIndex = 0, bookTitle = 'Xreader', isContinuousTransition = false) {
+    this.playbackToken++;
+
+    if (isContinuousTransition) {
+      // 跨章連續播放：不暫停保活音訊，僅重設語音 Evade
+      this.isProactiveEvade = true;
+      if (this.synth.speaking || this.synth.pending) {
+        try { this.synth.cancel(); } catch (e) {}
+      }
+      setTimeout(() => { this.isProactiveEvade = false; }, 60);
+    } else {
+      this.stop(false);
+    }
+
     this.isPausedByUser = false;
     this.currentChapter = chapter;
     this.bookTitle = bookTitle;
@@ -185,6 +236,19 @@ export class IosVoicePlayer {
       return;
     }
 
+    // 防重入檢查：若已在播放中且非使用者暫停狀態，絕不重複啟動迴圈，根絕雙音軌
+    if (this.isPlaying && !this.isPausedByUser) {
+      logger.info('iOS Player', 'play() 略過: 已在播放中，防止重入產生雙音軌');
+      return;
+    }
+
+    // 跨實例搶佔廣播：通知其他分頁或視窗立即停止播放
+    if (this.mutexChannel) {
+      try {
+        this.mutexChannel.postMessage({ type: 'CLAIM_PLAYBACK', instanceId: this.instanceId });
+      } catch (e) {}
+    }
+
     this.startKeepAlive();
     this.isPlaying = true;
 
@@ -198,7 +262,7 @@ export class IosVoicePlayer {
     } else {
       this.isPausedByUser = false;
       // If synth had a stuck paused state from WebKit bug, cancel it cleanly
-      if (this.synth.paused) {
+      if (this.synth.paused || this.synth.speaking) {
         try { this.synth.cancel(); } catch(e) {}
       }
       logger.info('iOS Player', `開始朗讀 (第 ${this.currentIndex + 1}/${this.flatSentences.length} 句)`);
@@ -211,16 +275,25 @@ export class IosVoicePlayer {
   speakCurrentSentence() {
     if (!this.isPlaying || this.currentIndex >= this.flatSentences.length) {
       if (this.currentIndex >= this.flatSentences.length && this.isPlaying) {
-        this.isPlaying = false;
-        logger.info('iOS Player', `本章全數朗讀完成 (共 ${this.flatSentences.length} 句)，排程 150ms 觸發 audio:chapterEnd`);
-        this.notifyStateChange();
-        this.updateMediaSessionMetadata();
-        // 150ms buffer before triggering next chapter (Story 6, GWT 6.1)
-        setTimeout(() => {
-          eventBus.emit('audio:chapterEnd', { chapterIndex: this.currentChapter ? this.currentChapter.index : 0 });
-        }, 150);
+        logger.info('iOS Player', `本章全數朗讀完成 (共 ${this.flatSentences.length} 句)，維持保活音訊不斷流並立即無縫銜接跨章`);
+        // 關鍵修復：絕不將 this.isPlaying 設為 false，絕不暫停 silentAudio！
+        // 保持 MediaSession 處於 playing，防止 iOS Standalone PWA 判定為暫停而立即凍結背景行程
+        eventBus.emit('audio:chapterEnd', {
+          chapterIndex: this.currentChapter ? this.currentChapter.index : 0,
+          isAutoTransition: true
+        });
       }
       return;
+    }
+
+    // 產生當前句朗讀的世代防護計數 Token
+    const currentToken = ++this.playbackToken;
+
+    // 清理前一個 utterance 的回調，防止任何滯後引發的二次調用
+    if (this.currentUtterance) {
+      this.currentUtterance.onstart = null;
+      this.currentUtterance.onend = null;
+      this.currentUtterance.onerror = null;
     }
 
     const text = this.flatSentences[this.currentIndex];
@@ -236,6 +309,7 @@ export class IosVoicePlayer {
     // GWT 20.1: Millisecond-accurate audio-visual synchronization (onstart trigger)
     let hasTriggeredStart = false;
     const triggerStart = () => {
+      if (this.playbackToken !== currentToken) return;
       if (hasTriggeredStart || this.isProactiveEvade || !this.isPlaying) return;
       hasTriggeredStart = true;
       this.notifySentenceChange();
@@ -247,12 +321,14 @@ export class IosVoicePlayer {
     setTimeout(triggerStart, 250);
 
     this.currentUtterance.onend = () => {
+      if (this.playbackToken !== currentToken) return;
       if (this.isProactiveEvade || !this.isPlaying) return;
       this.currentIndex++;
       this.speakCurrentSentence();
     };
 
     this.currentUtterance.onerror = (e) => {
+      if (this.playbackToken !== currentToken) return;
       if (this.isProactiveEvade || !this.isPlaying || e.error === 'interrupted' || e.error === 'canceled') return;
       console.warn('[iOS Player] Utterance error, advancing:', e.error);
       logger.error('iOS Player', `Utterance 朗讀錯誤: ${e.error} (停於第 ${this.currentIndex + 1} 句)`);
@@ -264,6 +340,7 @@ export class IosVoicePlayer {
   }
 
   pause() {
+    this.playbackToken++;
     this.isPlaying = false;
     this.isPausedByUser = true;
     logger.info('iOS Player', `使用者暫停 (停於第 ${this.currentIndex + 1} 句)`);
@@ -277,10 +354,11 @@ export class IosVoicePlayer {
   }
 
   stop(forceDestroy = false) {
+    this.playbackToken++;
     this.isPlaying = false;
     this.isPausedByUser = false;
     this.isProactiveEvade = true;
-    this.synth.cancel();
+    try { this.synth.cancel(); } catch (e) {}
     setTimeout(() => { this.isProactiveEvade = false; }, 80);
 
     this.stopKeepAlive(forceDestroy);
@@ -289,10 +367,11 @@ export class IosVoicePlayer {
   }
 
   seekSentence(sentenceIndex) {
+    this.playbackToken++;
     const wasPlaying = this.isPlaying;
     this.isProactiveEvade = true;
     this.isPausedByUser = false; // GWT 20.2: Reset paused flag so it never resumes empty queue!
-    this.synth.cancel();
+    try { this.synth.cancel(); } catch (e) {}
 
     this.currentIndex = Math.max(0, Math.min(sentenceIndex, this.flatSentences.length - 1));
     this.notifySentenceChange();
@@ -306,10 +385,11 @@ export class IosVoicePlayer {
   }
 
   setRate(rate) {
+    this.playbackToken++;
     const wasPlaying = this.isPlaying;
     this.isProactiveEvade = true;
     this.isPausedByUser = false;
-    this.synth.cancel();
+    try { this.synth.cancel(); } catch (e) {}
     this.rate = rate;
 
     setTimeout(() => {

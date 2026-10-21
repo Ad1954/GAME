@@ -16,17 +16,30 @@ export async function sendServerLog(tag, message, level = 'info') {
 }
 
 const DB_NAME = 'NewXreaderDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 class StorageModule {
   constructor() {
     this.db = null;
+    this.initPromise = null;
+
+    if (typeof window !== 'undefined') {
+      const closeHandler = () => {
+        if (this.db) {
+          try { this.db.close(); } catch (e) {}
+          this.db = null;
+        }
+      };
+      window.addEventListener('beforeunload', closeHandler);
+      window.addEventListener('pagehide', closeHandler);
+    }
   }
 
   async init() {
     if (this.db) return this.db;
+    if (this.initPromise) return this.initPromise;
 
-    return new Promise((resolve, reject) => {
+    this.initPromise = new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onupgradeneeded = (event) => {
@@ -44,32 +57,98 @@ class StorageModule {
           chapStore.createIndex('bookId', 'bookId', { unique: false });
           chapStore.createIndex('bookId_index', ['bookId', 'index'], { unique: true });
         }
+
+        // Batch Replace Backups Store (Story 47: 精準單次差異快照，不佔空間)
+        if (!db.objectStoreNames.contains('batch_backups')) {
+          db.createObjectStore('batch_backups', { keyPath: 'bookId' });
+        }
+      };
+ 
+      let blockedTimer = null;
+      request.onblocked = (event) => {
+        console.warn('[Storage] Database upgrade blocked by another open connection. Waiting for unblock...');
+        sendServerLog('Storage', 'Database upgrade blocked by another open connection', 'warn');
+        if (!blockedTimer && typeof window !== 'undefined') {
+          blockedTimer = setTimeout(() => {
+            alert('⚠️ 檢測到其他瀏覽器分頁正在佔用舊版資料庫連線，導致資料庫無法完成載入！\n\n請關閉其他 Xreader 相關分頁，然後重新整理本頁面即可恢復正常。');
+          }, 3000);
+        }
       };
 
       request.onsuccess = (event) => {
+        if (blockedTimer) {
+          clearTimeout(blockedTimer);
+          blockedTimer = null;
+        }
         this.db = event.target.result;
+        this.db.onversionchange = () => {
+          console.warn('[Storage] DB version changed elsewhere, closing connection immediately.');
+          if (this.db) {
+            try { this.db.close(); } catch (e) {}
+            this.db = null;
+          }
+        };
+        this.initPromise = null;
         console.log('[Storage] NewXreaderDB initialized successfully.');
         resolve(this.db);
       };
 
       request.onerror = (event) => {
+        if (blockedTimer) {
+          clearTimeout(blockedTimer);
+          blockedTimer = null;
+        }
         console.error('[Storage] IndexedDB initialization failed:', event.target.error);
+        this.initPromise = null;
         reject(event.target.error);
       };
     });
+
+    return this.initPromise;
   }
 
   async saveBook(book) {
     await this.init();
+    if (!book.id) {
+      book.id = `book_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    }
     return new Promise((resolve, reject) => {
       const tx = this.db.transaction(['books'], 'readwrite');
       const store = tx.objectStore('books');
       book.updatedAt = Date.now();
       if (!book.createdAt) book.createdAt = Date.now();
       const req = store.put(book);
-      req.onsuccess = () => resolve(book);
+      req.onsuccess = () => resolve(book.id);
       req.onerror = () => reject(req.error);
     });
+  }
+
+  /**
+   * 變更書籍名稱，並保持原始 sourceUrl 與爬蟲歷史關聯不變 (Story 46)
+   * @param {string} bookId 
+   * @param {string} newTitle 
+   * @returns {Promise<Object>} 更新後的書籍物件
+   */
+  async updateBookTitle(bookId, newTitle) {
+    await this.init();
+    const cleanTitle = (newTitle || '').trim();
+    if (!cleanTitle) throw new Error('書名不得為空！');
+
+    const book = await this.getBook(bookId);
+    if (!book) throw new Error(`找不到書籍 ${bookId}`);
+
+    book.title = cleanTitle;
+    book.updatedAt = Date.now();
+    await this.saveBook(book);
+
+    // 同步更新關聯之爬蟲歷史紀錄書名，來源網址 (sourceUrl) 保持原樣不變
+    const rec = this.getCrawlerRecordByBookId(bookId);
+    if (rec) {
+      rec.bookTitle = cleanTitle;
+      this.saveCrawlerRecord(rec);
+    }
+
+    return book;
   }
 
   async getBook(bookId) {
@@ -182,10 +261,54 @@ class StorageModule {
     if (!book) throw new Error('找不到書籍');
     const chapters = await this.getChaptersByBook(bookId);
 
-    let textContent = `${book.title}\n作者: ${book.author || '未知'}\n\n`;
-    for (const chap of chapters) {
-      textContent += `\n\n====================\n${chap.title}\n====================\n\n`;
-      textContent += chap.content || '';
+    // Story 57: 匯出預先癒合防護——若資料庫歷史遺留連續同名且句子數 <= 5 的殘片，預先合併
+    const normTitle = (t) => (t || '').replace(/[\s\-_=—【】《》「」『』()（）]/g, '').toLowerCase();
+    const isDividerLine = (str) => /^\s*[=\-_*]{4,}\s*$/.test(str);
+    const healedChapters = [];
+
+    for (let i = 0; i < chapters.length; i++) {
+      const chap = { ...chapters[i] };
+      if (i + 1 < chapters.length) {
+        const nextChap = chapters[i + 1];
+        const isSameTitle = normTitle(chap.title) === normTitle(nextChap.title);
+        const cleanContent = (chap.content || '')
+          .split(/\r?\n/)
+          .filter(l => !isDividerLine(l))
+          .join('\n')
+          .trim();
+        const seg = TextSegmenter.segment(cleanContent);
+        const sentencesCount = seg.flatSentences.length;
+
+        if (isSameTitle && (sentencesCount <= 5 || cleanContent.length < 50)) {
+          // Merge content into nextChap
+          const titleLine = (chap.title || '').trim();
+          const extraLines = cleanContent
+            .split(/\r?\n/)
+            .map(l => l.trim())
+            .filter(l => l && l !== titleLine && !isDividerLine(l));
+
+          if (extraLines.length > 0) {
+            nextChap.content = extraLines.join('\n') + '\n\n' + (nextChap.content || '');
+          }
+          continue; // Skip this fragment in export!
+        }
+      }
+      healedChapters.push(chap);
+    }
+
+    // 寫入標準書籍檔頭中繼資料
+    let textContent = `《${book.title}》\n作者: ${book.author || '未知'}\n`;
+    if (book.sourceUrl) {
+      textContent += `來源: ${book.sourceUrl}\n`;
+    }
+    textContent += `章節數: ${healedChapters.length}\n`;
+    textContent += `匯出工具: Xreader\n\n`;
+
+    for (const chap of healedChapters) {
+      textContent += `\n================================================================\n`;
+      textContent += `[XREADER_CHAPTER] ${chap.title}\n`;
+      textContent += `================================================================\n\n`;
+      textContent += (chap.content || '').trim() + '\n';
     }
 
     const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
@@ -458,6 +581,381 @@ class StorageModule {
   }
 
   /**
+   * 勾選章節分割至新書籍 (Story 25, GWT 25.1, 25.2, 25.3)
+   * @param {string} sourceBookId - 原書籍 ID
+   * @param {string[]} chapterIds - 欲分割抽出的章節 ID 陣列
+   * @param {string} newBookTitle - 新書籍標題
+   * @param {Object} options - { removeFromSource: true } (true 為剪下移轉，false 為複製)
+   * @returns {Promise<{ newBook: Object, remainingChapters: Array }>}
+   */
+  async splitChaptersToNewBook(sourceBookId, chapterIds, newBookTitle, options = { removeFromSource: true }) {
+    await this.init();
+    const sourceBook = await this.getBook(sourceBookId);
+    if (!sourceBook) throw new Error('找不到來源書籍');
+
+    const allChaps = await this.getChaptersByBook(sourceBookId);
+    const targetIdSet = new Set(chapterIds);
+
+    const selectedChaps = allChaps.filter(c => targetIdSet.has(c.id));
+    const remainingChaps = allChaps.filter(c => !targetIdSet.has(c.id));
+
+    if (selectedChaps.length === 0) {
+      throw new Error('未選取任何欲分割的章節！');
+    }
+
+    const title = (newBookTitle || '').trim() || `${sourceBook.title} - 分割作品`;
+    const newBookId = `book_split_${Date.now()}`;
+    const newBook = {
+      id: newBookId,
+      title,
+      author: sourceBook.author,
+      sourceType: sourceBook.sourceType || 'local',
+      sourceUrl: sourceBook.sourceUrl || '',
+      totalChapters: selectedChaps.length,
+      downloadedChaptersCount: selectedChaps.length,
+      lastChapterIndex: 0,
+      lastSentenceIndex: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    // 1. 建立並儲存新書籍主記錄
+    await this.saveBook(newBook);
+
+    // 2. 將選取的章節以全新 ID 與連續序號 (0, 1, 2...) 寫入新書籍
+    await new Promise((resolve, reject) => {
+      const tx = this.db.transaction(['chapters'], 'readwrite');
+      const store = tx.objectStore('chapters');
+      selectedChaps.forEach((chap, i) => {
+        const newChap = {
+          ...chap,
+          id: `chap_${newBookId}_${i}`,
+          bookId: newBookId,
+          index: i
+        };
+        store.put(newChap);
+      });
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+    });
+
+    // 3. 若為「剪下移轉」模式，自原書籍中刪除已分割章節並平滑遞補原書序號
+    if (options.removeFromSource) {
+      // 3.1 刪除原章節記錄
+      await new Promise((resolve, reject) => {
+        const tx = this.db.transaction(['chapters'], 'readwrite');
+        const store = tx.objectStore('chapters');
+        selectedChaps.forEach(c => store.delete(c.id));
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+
+      // 3.2 剩餘章節兩階段平滑重排 (避免索引衝突)
+      // 階段 A: 負數過渡
+      await new Promise((resolve, reject) => {
+        const tx = this.db.transaction(['chapters'], 'readwrite');
+        const store = tx.objectStore('chapters');
+        remainingChaps.forEach((chap, i) => {
+          chap.index = -1000 - i;
+          store.put(chap);
+        });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+
+      // 階段 B: 平滑序號 0, 1, 2...
+      await new Promise((resolve, reject) => {
+        const tx = this.db.transaction(['chapters'], 'readwrite');
+        const store = tx.objectStore('chapters');
+        remainingChaps.forEach((chap, i) => {
+          chap.index = i;
+          store.put(chap);
+        });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+
+      // 3.3 更新原書籍總章數與進度守衛
+      sourceBook.totalChapters = remainingChaps.length;
+      sourceBook.downloadedChaptersCount = remainingChaps.length;
+      sourceBook.lastChapterIndex = Math.min(sourceBook.lastChapterIndex || 0, Math.max(0, remainingChaps.length - 1));
+      sourceBook.updatedAt = Date.now();
+      await this.saveBook(sourceBook);
+    }
+
+    return {
+      newBook,
+      remainingChapters: options.removeFromSource ? remainingChaps : allChaps
+    };
+  }
+
+  /**
+   * 勾選章節移轉/追加至既有書籍 (Story 26, GWT 26.1, 26.2, 26.3)
+   * @param {string} sourceBookId - 來源書籍 ID
+   * @param {string} targetBookId - 目標既有書籍 ID
+   * @param {string[]} chapterIds - 欲移轉的章節 ID 陣列
+   * @param {'start'|'end'} position - 'start' 插入至開頭，'end' 追加至末尾
+   * @param {Object} options - { removeFromSource: true } (true 為剪下移轉，false 為複製)
+   * @returns {Promise<{ targetBook: Object, remainingChapters: Array }>}
+   */
+  async transferChaptersToExistingBook(sourceBookId, targetBookId, chapterIds, position = 'end', options = { removeFromSource: true }) {
+    await this.init();
+    if (sourceBookId === targetBookId) {
+      throw new Error('來源書籍與目標書籍不能為同一本書！');
+    }
+
+    const sourceBook = await this.getBook(sourceBookId);
+    if (!sourceBook) throw new Error('找不到來源書籍');
+
+    const targetBook = await this.getBook(targetBookId);
+    if (!targetBook) throw new Error('找不到目標書籍');
+
+    const sourceChaps = await this.getChaptersByBook(sourceBookId);
+    const targetChaps = await this.getChaptersByBook(targetBookId);
+    const targetIdSet = new Set(chapterIds);
+
+    const selectedChaps = sourceChaps.filter(c => targetIdSet.has(c.id));
+    const remainingSourceChaps = sourceChaps.filter(c => !targetIdSet.has(c.id));
+
+    if (selectedChaps.length === 0) {
+      throw new Error('未選取任何欲移轉的章節！');
+    }
+
+    const timestamp = Date.now();
+
+    // 1. 處理目標書籍章節注入
+    if (position === 'start') {
+      // 1.1 插入至開頭：新章節排在前面 (0 .. selected.length - 1)，原目標篇章往後順延
+      const newChaps = selectedChaps.map((c, i) => ({
+        ...c,
+        id: `chap_${targetBookId}_${timestamp}_${i}`,
+        bookId: targetBookId,
+        index: i
+      }));
+
+      const combined = [...newChaps, ...targetChaps];
+
+      // 階段 A: 負數過渡
+      await new Promise((resolve, reject) => {
+        const tx = this.db.transaction(['chapters'], 'readwrite');
+        const store = tx.objectStore('chapters');
+        combined.forEach((chap, i) => {
+          chap.index = -1000 - i;
+          store.put(chap);
+        });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+
+      // 階段 B: 平滑序號 0, 1, 2...
+      await new Promise((resolve, reject) => {
+        const tx = this.db.transaction(['chapters'], 'readwrite');
+        const store = tx.objectStore('chapters');
+        combined.forEach((chap, i) => {
+          chap.index = i;
+          store.put(chap);
+        });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+
+      // 目標書籍進度若指向原本的章節，往後平移
+      if (targetBook.lastChapterIndex !== undefined && targetBook.lastChapterIndex !== null) {
+        targetBook.lastChapterIndex += selectedChaps.length;
+      }
+      targetBook.totalChapters = combined.length;
+      targetBook.downloadedChaptersCount = combined.length;
+    } else {
+      // 1.2 追加至末尾：新章節依序接續在 targetChaps 後面
+      const startIdx = targetChaps.length;
+      const newChaps = selectedChaps.map((c, i) => ({
+        ...c,
+        id: `chap_${targetBookId}_${timestamp}_${i}`,
+        bookId: targetBookId,
+        index: startIdx + i
+      }));
+
+      await new Promise((resolve, reject) => {
+        const tx = this.db.transaction(['chapters'], 'readwrite');
+        const store = tx.objectStore('chapters');
+        newChaps.forEach(c => store.put(c));
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+
+      targetBook.totalChapters = targetChaps.length + newChaps.length;
+      targetBook.downloadedChaptersCount = targetChaps.length + newChaps.length;
+    }
+
+    targetBook.updatedAt = timestamp;
+    await this.saveBook(targetBook);
+
+    // 2. 處理來源書籍（若為剪下移轉）
+    if (options.removeFromSource) {
+      // 2.1 刪除來源章節
+      await new Promise((resolve, reject) => {
+        const tx = this.db.transaction(['chapters'], 'readwrite');
+        const store = tx.objectStore('chapters');
+        selectedChaps.forEach(c => store.delete(c.id));
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+
+      // 2.2 剩餘章節兩階段平滑重排
+      await new Promise((resolve, reject) => {
+        const tx = this.db.transaction(['chapters'], 'readwrite');
+        const store = tx.objectStore('chapters');
+        remainingSourceChaps.forEach((chap, i) => {
+          chap.index = -1000 - i;
+          store.put(chap);
+        });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+
+      await new Promise((resolve, reject) => {
+        const tx = this.db.transaction(['chapters'], 'readwrite');
+        const store = tx.objectStore('chapters');
+        remainingSourceChaps.forEach((chap, i) => {
+          chap.index = i;
+          store.put(chap);
+        });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+
+      // 2.3 更新來源書籍
+      sourceBook.totalChapters = remainingSourceChaps.length;
+      sourceBook.downloadedChaptersCount = remainingSourceChaps.length;
+      sourceBook.lastChapterIndex = Math.min(sourceBook.lastChapterIndex || 0, Math.max(0, remainingSourceChaps.length - 1));
+      sourceBook.updatedAt = timestamp;
+      await this.saveBook(sourceBook);
+    }
+
+    return {
+      targetBook,
+      remainingChapters: options.removeFromSource ? remainingSourceChaps : sourceChaps
+    };
+  }
+
+  /**
+   * 在指定章節的某個句子位置將該章節切分為兩個章節 (Story 34, GWT 34.1, 34.2, 34.3)
+   * @param {string} bookId 
+   * @param {number} chapterIndex - 原章節在書中的索引
+   * @param {number} sentenceIndex - 切割點的全域句子序號 (該句及以後歸為新章節)
+   * @param {string} newChapterTitle - 新章節標題
+   * @returns {Promise<{ book: Object, originalChapter: Object, newChapter: Object, newChapterIndex: number }>}
+   */
+  async splitChapterAtSentence(bookId, chapterIndex, sentenceIndex, newChapterTitle = '') {
+    await this.init();
+    const book = await this.getBook(bookId);
+    if (!book) throw new Error(`找不到書籍 ${bookId}`);
+
+    const allChaps = await this.getChaptersByBook(bookId);
+    if (chapterIndex < 0 || chapterIndex >= allChaps.length) {
+      throw new Error(`無效的章節索引 ${chapterIndex}`);
+    }
+
+    const origChap = allChaps[chapterIndex];
+    // 確保章節具備 paragraphs 與句子
+    if (!origChap.paragraphs || origChap.paragraphs.length === 0) {
+      const seg = TextSegmenter.segment(origChap.content || '');
+      origChap.paragraphs = seg.paragraphs;
+      origChap.sentencesCount = seg.flatSentences.length;
+    }
+
+    // 展平所有句子
+    const flatSentences = [];
+    (origChap.paragraphs || []).forEach(p => {
+      (p.sentences || []).forEach(s => {
+        flatSentences.push(typeof s === 'object' && s !== null && s.text !== undefined ? s.text : String(s));
+      });
+    });
+
+    const totalSentences = flatSentences.length;
+    if (sentenceIndex <= 0) {
+      throw new Error('無法在章節最前端進行分割（會產生空白章節）');
+    }
+    if (sentenceIndex >= totalSentences) {
+      throw new Error('無法在章節最末端進行分割（會產生空白章節）');
+    }
+
+    // 句子拆分
+    const part1Sentences = flatSentences.slice(0, sentenceIndex);
+    const part2Sentences = flatSentences.slice(sentenceIndex);
+
+    const part1Text = part1Sentences.join('\n');
+    const part2Text = part2Sentences.join('\n');
+
+    const seg1 = TextSegmenter.segment(part1Text);
+    const seg2 = TextSegmenter.segment(part2Text);
+
+    // 1. 原章節截斷 (保留序號 chapterIndex)
+    origChap.content = part1Text;
+    origChap.paragraphs = seg1.paragraphs;
+    origChap.sentencesCount = seg1.flatSentences.length;
+
+    // 2. 新章節建立
+    const title = (newChapterTitle || '').trim() || (part2Sentences[0] ? part2Sentences[0].slice(0, 30) : `第 ${chapterIndex + 2} 章`);
+    const newChapId = `chap_${bookId}_${Date.now()}_split`;
+    const newChap = {
+      id: newChapId,
+      bookId,
+      index: chapterIndex + 1,
+      title,
+      content: part2Text,
+      paragraphs: seg2.paragraphs,
+      sentencesCount: seg2.flatSentences.length
+    };
+
+    // 3. 後續章節序號順延 (+1)
+    // 兩階段平滑寫入防 unique key 衝突:
+    // 階段 A: 負數過渡
+    const shiftedChaps = allChaps.slice(chapterIndex + 1);
+    await new Promise((resolve, reject) => {
+      const tx = this.db.transaction(['chapters'], 'readwrite');
+      const store = tx.objectStore('chapters');
+      // 將原章節先更新
+      store.put(origChap);
+      // 後續章節轉為負數
+      shiftedChaps.forEach((chap, idx) => {
+        chap.index = -2000 - idx;
+        store.put(chap);
+      });
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+    });
+
+    // 階段 B: 寫入新章節並將後續章節排定為 chapterIndex + 2, + 3...
+    await new Promise((resolve, reject) => {
+      const tx = this.db.transaction(['chapters'], 'readwrite');
+      const store = tx.objectStore('chapters');
+      // 寫入新章節
+      store.put(newChap);
+      // 正式序號
+      shiftedChaps.forEach((chap, idx) => {
+        chap.index = chapterIndex + 2 + idx;
+        store.put(chap);
+      });
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+    });
+
+    // 4. 更新書籍中繼資料
+    book.totalChapters = allChaps.length + 1;
+    book.downloadedChaptersCount = allChaps.length + 1;
+    book.updatedAt = Date.now();
+    await this.saveBook(book);
+
+    return {
+      book,
+      originalChapter: origChap,
+      newChapter: newChap,
+      newChapterIndex: chapterIndex + 1
+    };
+  }
+
+  /**
    * 更新單一章節標題與內文，並自動重新分段 (GWT 21.3)
    * @param {string} chapterId 
    * @param {string} newTitle 
@@ -521,6 +1019,7 @@ class StorageModule {
 
     let matchedCount = 0;
     const modifiedChapters = [];
+    const originalChapters = [];
 
     // 計算符合次數並進行替換 (GWT 23.2: 彈性空白與換行容錯比對)
     targetChapters.forEach(chap => {
@@ -528,6 +1027,15 @@ class StorageModule {
       const matches = content.match(regex);
       if (matches && matches.length > 0) {
         matchedCount += matches.length;
+        // Story 47: 僅記錄受影響章節之原始純文字快照 (輕量無負擔)
+        originalChapters.push({
+          id: chap.id,
+          bookId: chap.bookId,
+          index: chap.index,
+          title: chap.title,
+          url: chap.url || '',
+          content: content
+        });
         const newContent = content.replace(regex, normalizedReplace);
         chap.content = newContent;
         const seg = TextSegmenter.segment(newContent);
@@ -536,8 +1044,16 @@ class StorageModule {
       }
     });
 
-    // 批次寫入修改過的章節
+    // 批次寫入修改過的章節並儲存單次最新還原快照 (Story 47)
     if (modifiedChapters.length > 0) {
+      await this.saveBatchReplaceBackup({
+        bookId,
+        timestamp: Date.now(),
+        findText,
+        replaceText,
+        originalChapters
+      });
+
       await new Promise((resolve, reject) => {
         const tx = this.db.transaction(['chapters'], 'readwrite');
         const store = tx.objectStore('chapters');
@@ -554,7 +1070,531 @@ class StorageModule {
       modifiedCount: modifiedChapters.length
     };
   }
+
+  /**
+   * 儲存批量替換單次最新快照 (Story 47)
+   */
+  async saveBatchReplaceBackup(backup) {
+    await this.init();
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction(['batch_backups'], 'readwrite');
+      const store = tx.objectStore('batch_backups');
+      const req = store.put(backup);
+      req.onsuccess = () => resolve(backup);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  /**
+   * 取得指定書籍最新批量替換快照 (Story 47)
+   */
+  async getBatchReplaceBackup(bookId) {
+    await this.init();
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction(['batch_backups'], 'readonly');
+      const store = tx.objectStore('batch_backups');
+      const req = store.get(bookId);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  /**
+   * 還原上次批量替換快照 (Story 47)
+   */
+  async restoreBatchReplaceBackup(bookId) {
+    await this.init();
+    const backup = await this.getBatchReplaceBackup(bookId);
+    if (!backup || !Array.isArray(backup.originalChapters) || backup.originalChapters.length === 0) {
+      throw new Error('未找到可供還原的備份快照');
+    }
+
+    // 寫回原章節
+    await new Promise((resolve, reject) => {
+      const tx = this.db.transaction(['chapters'], 'readwrite');
+      const store = tx.objectStore('chapters');
+
+      backup.originalChapters.forEach(c => {
+        const seg = TextSegmenter.segment(c.content || '');
+        c.paragraphs = seg.paragraphs;
+        c.sentences = null;
+        c.sentencesCount = seg.flatSentences.length;
+        store.put(c);
+      });
+
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+    });
+
+    // 清除已還原的快照
+    await new Promise((resolve, reject) => {
+      const tx = this.db.transaction(['batch_backups'], 'readwrite');
+      const store = tx.objectStore('batch_backups');
+      const req = store.delete(bookId);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => reject(req.error);
+    });
+
+    return {
+      restoredCount: backup.originalChapters.length,
+      findText: backup.findText,
+      replaceText: backup.replaceText
+    };
+  }
+
+  // ==========================================================
+  // 書櫃自訂分類管理 (Story 28)
+  // ==========================================================
+
+  /**
+   * 取得所有分類列表 (依 order 遞增排序)
+   * @returns {Array<Object>}
+   */
+  getCategories() {
+    const key = 'xreader_categories';
+    const defaultCat = { id: 'uncategorized', name: '未分類', order: 0, isDefault: true };
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) {
+        localStorage.setItem(key, JSON.stringify([defaultCat]));
+        return [defaultCat];
+      }
+      const cats = JSON.parse(raw);
+      if (!Array.isArray(cats) || cats.length === 0) {
+        localStorage.setItem(key, JSON.stringify([defaultCat]));
+        return [defaultCat];
+      }
+      // 確保「未分類」一定存在
+      if (!cats.some(c => c.id === 'uncategorized')) {
+        cats.unshift(defaultCat);
+      }
+      cats.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      return cats;
+    } catch (e) {
+      console.warn('載入分類失敗，使用預設值:', e);
+      return [defaultCat];
+    }
+  }
+
+  /**
+   * 新增自訂分類 (若無名稱則自動順號「分類1」、「分類2」...)
+   * @param {string|null} name 
+   * @returns {Object}
+   */
+  createCategory(name = null) {
+    const cats = this.getCategories();
+    let finalName = (name || '').trim();
+
+    if (!finalName) {
+      // 尋找現有已命名的最大順號
+      let maxNum = 0;
+      cats.forEach(c => {
+        const m = (c.name || '').match(/^分類(\d+)$/);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (n > maxNum) maxNum = n;
+        }
+      });
+      finalName = `分類${maxNum + 1}`;
+    }
+
+    const maxOrder = cats.reduce((max, c) => Math.max(max, c.order ?? 0), 0);
+    const newCat = {
+      id: `cat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: finalName,
+      order: maxOrder + 1,
+      isDefault: false
+    };
+
+    cats.push(newCat);
+    localStorage.setItem('xreader_categories', JSON.stringify(cats));
+    return newCat;
+  }
+
+  /**
+   * 更新分類資訊 (名稱、排序等)
+   * @param {string} id 
+   * @param {Object} updates 
+   * @returns {Object}
+   */
+  updateCategory(id, updates = {}) {
+    if (id === 'uncategorized' && updates.name && updates.name !== '未分類') {
+      throw new Error('原生系統「未分類」不可修改名稱！');
+    }
+
+    const cats = this.getCategories();
+    const idx = cats.findIndex(c => c.id === id);
+    if (idx === -1) throw new Error(`找不到分類 ${id}`);
+
+    cats[idx] = { ...cats[idx], ...updates };
+    localStorage.setItem('xreader_categories', JSON.stringify(cats));
+    return cats[idx];
+  }
+
+  /**
+   * 批次更新分類排序
+   * @param {Array<string>} orderedIds 
+   * @returns {Array<Object>}
+   */
+  reorderCategories(orderedIds) {
+    const cats = this.getCategories();
+    const map = new Map(cats.map(c => [c.id, c]));
+
+    const newCats = [];
+    orderedIds.forEach((id, idx) => {
+      if (map.has(id)) {
+        const c = map.get(id);
+        c.order = idx;
+        newCats.push(c);
+        map.delete(id);
+      }
+    });
+
+    // 將未包含在 orderedIds 的其餘分類依序補在最後
+    let nextOrder = newCats.length;
+    map.forEach(c => {
+      c.order = nextOrder++;
+      newCats.push(c);
+    });
+
+    localStorage.setItem('xreader_categories', JSON.stringify(newCats));
+    return newCats;
+  }
+
+  /**
+   * 安全刪除自訂分類：該分類下之所有書籍自動平移至「未分類」防呆保護
+   * @param {string} id 
+   * @returns {Promise<{ movedBooksCount: number }>}
+   */
+  async deleteCategorySafe(id) {
+    if (id === 'uncategorized') {
+      throw new Error('原生系統保護之「未分類」不可刪除！');
+    }
+
+    // 1. 搬移該分類下所有書籍至未分類
+    const allBooks = await this.getAllBooks();
+    let movedBooksCount = 0;
+
+    for (const b of allBooks) {
+      if (b.categoryId === id) {
+        b.categoryId = 'uncategorized';
+        await this.saveBook(b);
+        this.updateCrawlerRecordCategory(b.id, 'uncategorized'); // Story 36
+        movedBooksCount++;
+      }
+    }
+
+    // 2. 移除該分類紀錄
+    const cats = this.getCategories().filter(c => c.id !== id);
+    localStorage.setItem('xreader_categories', JSON.stringify(cats));
+
+    return { movedBooksCount };
+  }
+
+  /**
+   * 更新單一書籍所屬分類 (Story 36: 同步更新關聯爬蟲紀錄)
+   * @param {string} bookId 
+   * @param {string} categoryId 
+   * @returns {Promise<Object>}
+   */
+  async updateBookCategory(bookId, categoryId) {
+    const book = await this.getBook(bookId);
+    if (!book) throw new Error(`找不到書籍 ${bookId}`);
+
+    book.categoryId = categoryId || 'uncategorized';
+    book.updatedAt = Date.now();
+    await this.saveBook(book);
+
+    // Story 36: 雙向同步更新爬蟲歷史紀錄中的 targetCategoryId
+    this.updateCrawlerRecordCategory(bookId, book.categoryId);
+
+    return book;
+  }
+
+  /**
+   * 清空指定書籍的所有章節 (Story 37: 覆蓋重整原書)
+   * @param {string} bookId 
+   * @returns {Promise<boolean>}
+   */
+  async clearBookChapters(bookId) {
+    await this.init();
+    const existingChaps = await this.getChaptersByBook(bookId);
+    if (existingChaps.length > 0) {
+      await new Promise((resolve, reject) => {
+        const tx = this.db.transaction(['chapters'], 'readwrite');
+        const store = tx.objectStore('chapters');
+        existingChaps.forEach(c => store.delete(c.id));
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    const book = await this.getBook(bookId);
+    if (book) {
+      book.totalChapters = 0;
+      book.downloadedChaptersCount = 0;
+      book.lastChapterIndex = 0;
+      book.lastSentenceIndex = 0;
+      book.updatedAt = Date.now();
+      await this.saveBook(book);
+    }
+    return true;
+  }
+
+  // ==========================================================
+  // 爬蟲歷史紀錄與追更管理 (Story 27)
+  // ==========================================================
+
+  /**
+   * 儲存或更新爬蟲歷史紀錄
+   * @param {Object} record 
+   * @returns {Object}
+   */
+  saveCrawlerRecord(record) {
+    const key = 'xreader_crawler_records';
+    let records = [];
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) records = JSON.parse(raw);
+    } catch (e) {
+      records = [];
+    }
+
+    if (!record.id) {
+      record.id = `crawl_rec_${Date.now()}`;
+    }
+    record.lastCrawlTime = Date.now();
+
+    // 確保 historicalKeys 陣列存在
+    if (!Array.isArray(record.historicalKeys)) {
+      record.historicalKeys = [];
+    }
+
+    const idx = records.findIndex(r => r.id === record.id || (record.bookId && r.bookId === record.bookId));
+    if (idx >= 0) {
+      // 合併歷史已抓取鍵值池
+      const mergedKeys = new Set([...(records[idx].historicalKeys || []), ...record.historicalKeys]);
+      record.historicalKeys = Array.from(mergedKeys);
+      records[idx] = { ...records[idx], ...record };
+    } else {
+      records.unshift(record);
+    }
+
+    localStorage.setItem(key, JSON.stringify(records));
+    return record;
+  }
+
+  /**
+   * 取得所有爬蟲歷史紀錄 (時間最新在前)
+   * @returns {Array<Object>}
+   */
+  getCrawlerRecords() {
+    const key = 'xreader_crawler_records';
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return [];
+      const records = JSON.parse(raw);
+      if (!Array.isArray(records)) return [];
+      records.sort((a, b) => (b.lastCrawlTime || 0) - (a.lastCrawlTime || 0));
+      return records;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /**
+   * 依 ID 取得單筆爬蟲紀錄
+   * @param {string} id 
+   * @returns {Object|null}
+   */
+  getCrawlerRecord(id) {
+    const records = this.getCrawlerRecords();
+    return records.find(r => r.id === id || r.url === id) || null;
+  }
+
+  /**
+   * 依書籍 ID 取得關聯的爬蟲紀錄
+   * @param {string} bookId 
+   * @returns {Object|null}
+   */
+  getCrawlerRecordByBookId(bookId) {
+    const records = this.getCrawlerRecords();
+    return records.find(r => r.bookId === bookId) || null;
+  }
+
+  /**
+   * 同步更新與指定書籍綁定之爬蟲紀錄的目標分類 (Story 36)
+   * @param {string} bookId 
+   * @param {string} categoryId 
+   */
+  updateCrawlerRecordCategory(bookId, categoryId) {
+    const key = 'xreader_crawler_records';
+    const records = this.getCrawlerRecords();
+    let updated = false;
+    records.forEach(r => {
+      if (r.bookId === bookId) {
+        r.targetCategoryId = categoryId || 'uncategorized';
+        updated = true;
+      }
+    });
+    if (updated) {
+      localStorage.setItem(key, JSON.stringify(records));
+    }
+  }
+
+  /**
+   * 單筆刪除爬蟲歷史紀錄 (可選是否連帶刪除已建書籍)
+   * @param {string} id 
+   * @param {boolean} deleteBookAlso 
+   * @returns {Promise<boolean>}
+   */
+  async deleteCrawlerRecord(id, deleteBookAlso = false) {
+    const record = this.getCrawlerRecord(id);
+    if (record && deleteBookAlso && record.bookId) {
+      try {
+        await this.deleteBook(record.bookId);
+      } catch (e) {
+        console.warn('連帶刪除書籍失敗 (可能已被刪除):', e);
+      }
+    }
+
+    const records = this.getCrawlerRecords().filter(r => r.id !== id);
+    localStorage.setItem('xreader_crawler_records', JSON.stringify(records));
+    return true;
+  }
+
+  /**
+   * 增量追加新章節至既有書籍末端 (正序接續)
+   * @param {string} bookId 
+   * @param {Array<Object>} newChapters - 已抓取並分段好之章節陣列 [{ title, content, paragraphs, url, csn }]
+   * @param {string|null} recordId 
+   * @returns {Promise<{ book: Object, appendedCount: number }>}
+   */
+  async appendChaptersToBook(bookId, newChapters, recordId = null, options = {}) {
+    await this.init();
+    const book = await this.getBook(bookId);
+    if (!book) throw new Error(`找不到書籍 ${bookId}`);
+
+    const existingChaps = await this.getChaptersByBook(bookId);
+
+    // 找出目前所有已存在的 index 集合與最大 index
+    const existingIndexSet = new Set(existingChaps.map(c => c.index));
+    const maxIndex = existingChaps.reduce(
+      (max, c) => (typeof c.index === 'number' && !isNaN(c.index) && c.index > max ? c.index : max),
+      -1
+    );
+
+    // 依現有章節數或最大 index + 1 取安全起點 (防止 1-based 或斷號碰撞)
+    let nextIndex = Math.max(existingChaps.length, maxIndex + 1);
+
+    // 執行交易寫入新章節 (防護 unique 索引 bookId_index)
+    await new Promise((resolve, reject) => {
+      const tx = this.db.transaction(['chapters'], 'readwrite');
+      const store = tx.objectStore('chapters');
+
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+
+      for (let i = 0; i < newChapters.length; i++) {
+        const nc = newChapters[i];
+
+        // 確保護衛：targetIndex 絕不與任何已存在的 index 衝突
+        while (existingIndexSet.has(nextIndex)) {
+          nextIndex++;
+        }
+        const targetIndex = nextIndex;
+        existingIndexSet.add(targetIndex);
+        nextIndex++;
+
+        const chapter = {
+          id: `chap_${bookId}_${Date.now()}_${i}`,
+          bookId,
+          index: targetIndex,
+          title: nc.title,
+          url: nc.url || '',
+          csn: nc.csn || null,
+          content: nc.content || '',
+          paragraphs: nc.paragraphs || [],
+          sentences: nc.sentences || null,
+          sentencesCount: nc.sentencesCount || (nc.paragraphs ? nc.paragraphs.reduce((acc, p) => acc + (p.sentences?.length || 0), 0) : 0)
+        };
+        store.put(chapter);
+      }
+    });
+
+    // Story 51: 若包含先前未下載之補抓章節，將全書章節依線上目錄順序重新歸位排序 (GWT 51.3)
+    if (newChapters.some(c => c.isBackfill) || options.reorder) {
+      const allCurrentChaps = await this.getChaptersByBook(bookId);
+      const onlineIndexMap = options.onlineIndexMap || new Map();
+
+      allCurrentChaps.sort((a, b) => {
+        const orderA = onlineIndexMap.has(a.url) ? onlineIndexMap.get(a.url) : (a.onlineIndex !== undefined ? a.onlineIndex : null);
+        const orderB = onlineIndexMap.has(b.url) ? onlineIndexMap.get(b.url) : (b.onlineIndex !== undefined ? b.onlineIndex : null);
+        if (orderA !== null && orderB !== null) return orderA - orderB;
+        if (orderA !== null) return -1;
+        if (orderB !== null) return 1;
+        return (a.index || 0) - (b.index || 0);
+      });
+
+      // 兩階段平滑序號重整 (避開 unique 索引衝突)
+      await new Promise((resolve, reject) => {
+        const tx = this.db.transaction(['chapters'], 'readwrite');
+        const store = tx.objectStore('chapters');
+        allCurrentChaps.forEach((chap, i) => {
+          chap.index = -2000 - i;
+          store.put(chap);
+        });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+
+      await new Promise((resolve, reject) => {
+        const tx = this.db.transaction(['chapters'], 'readwrite');
+        const store = tx.objectStore('chapters');
+        allCurrentChaps.forEach((chap, i) => {
+          chap.index = i;
+          store.put(chap);
+        });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    // 重新取得最新章節清單，更新書籍總數
+    const updatedChaps = await this.getChaptersByBook(bookId);
+    book.totalChapters = updatedChaps.length;
+    book.downloadedChaptersCount = updatedChaps.length;
+    book.updatedAt = Date.now();
+    await this.saveBook(book);
+
+    // 更新對應爬蟲紀錄
+    const rec = recordId ? this.getCrawlerRecord(recordId) : this.getCrawlerRecordByBookId(bookId);
+    if (rec) {
+      rec.lastCrawlTime = Date.now();
+      rec.totalChaptersCrawled = book.totalChapters;
+      if (newChapters.length > 0) {
+        const lastChap = newChapters[newChapters.length - 1];
+        if (lastChap.url) rec.lastChapterUrl = lastChap.url;
+        if (lastChap.csn) rec.lastChapterCsn = lastChap.csn;
+      }
+      // 將新抓章節加入歷史鍵值池 (含 CSN、URL 與標題)
+      const keySet = new Set(rec.historicalKeys || []);
+      newChapters.forEach(c => {
+        if (c.url) keySet.add(c.url);
+        if (c.csn) keySet.add(String(c.csn));
+        if (c.title) keySet.add(c.title.trim().toLowerCase());
+      });
+      rec.historicalKeys = Array.from(keySet);
+      this.saveCrawlerRecord(rec);
+    }
+
+    return {
+      book,
+      appendedCount: newChapters.length
+    };
+  }
 }
 
 export const storage = new StorageModule();
+
 

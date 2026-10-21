@@ -1,0 +1,19 @@
+{
+  "name": "Xreader 小說朗讀",
+  "short_name": "Xreader",
+  "description": "現代化小說朗讀與爬蟲工具",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#121316",
+  "theme_color": "#121316",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
