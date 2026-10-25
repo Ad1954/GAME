@@ -201,12 +201,8 @@ export class IosVoicePlayer {
     this.playbackToken++;
 
     if (isContinuousTransition) {
-      // 跨章連續播放：不暫停保活音訊，僅重設語音 Evade
-      this.isProactiveEvade = true;
-      if (this.synth.speaking || this.synth.pending) {
-        try { this.synth.cancel(); } catch (e) {}
-      }
-      setTimeout(() => { this.isProactiveEvade = false; }, 60);
+      // 跨章連續播放：維持保活音訊不斷流，前一章自然結束時發音佇列已排空，不調用 cancel() 以免誤殺新章節首句
+      this.isProactiveEvade = false;
     } else {
       this.stop(false);
     }
@@ -230,15 +226,9 @@ export class IosVoicePlayer {
     this.updateMediaSessionMetadata();
   }
 
-  play() {
+  play(force = false) {
     if (!this.currentChapter || this.flatSentences.length === 0) {
       logger.warn('iOS Player', 'play() 略過: 無章節或句子長度為 0');
-      return;
-    }
-
-    // 防重入檢查：若已在播放中且非使用者暫停狀態，絕不重複啟動迴圈，根絕雙音軌
-    if (this.isPlaying && !this.isPausedByUser) {
-      logger.info('iOS Player', 'play() 略過: 已在播放中，防止重入產生雙音軌');
       return;
     }
 
@@ -250,26 +240,36 @@ export class IosVoicePlayer {
     }
 
     this.startKeepAlive();
-    this.isPlaying = true;
 
     // GWT 5.2 & GWT 20.2: Clean resume check using internal pause flag
     if (this.isPausedByUser && this.synth.speaking && this.synth.paused) {
       this.isPausedByUser = false;
+      this.isPlaying = true;
       this.synth.resume();
       logger.info('iOS Player', 'synth.resume() 恢復播放');
       this.notifyStateChange();
       this.updateMediaSessionMetadata();
-    } else {
-      this.isPausedByUser = false;
-      // If synth had a stuck paused state from WebKit bug, cancel it cleanly
-      if (this.synth.paused || this.synth.speaking) {
-        try { this.synth.cancel(); } catch(e) {}
-      }
-      logger.info('iOS Player', `開始朗讀 (第 ${this.currentIndex + 1}/${this.flatSentences.length} 句)`);
-      this.notifyStateChange();
-      this.updateMediaSessionMetadata();
-      this.speakCurrentSentence();
+      return;
     }
+
+    // 防重入檢查：只有在「非強制換章」且「底層發音引擎當前正在朗讀中」時，才攔截連點以防止雙音軌
+    if (!force && this.isPlaying && !this.isPausedByUser && (this.synth.speaking || this.synth.pending)) {
+      logger.info('iOS Player', 'play() 略過: 當前句子正在發音中，防止重入產生雙音軌');
+      return;
+    }
+
+    this.isPausedByUser = false;
+    this.isPlaying = true;
+
+    // 若底層有卡住的暫停狀態，解除暫停
+    if (this.synth.paused) {
+      try { this.synth.resume(); } catch(e) {}
+    }
+
+    logger.info('iOS Player', `開始朗讀 (第 ${this.currentIndex + 1}/${this.flatSentences.length} 句, force=${force})`);
+    this.notifyStateChange();
+    this.updateMediaSessionMetadata();
+    this.speakCurrentSentence();
   }
 
   speakCurrentSentence() {

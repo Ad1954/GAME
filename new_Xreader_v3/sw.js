@@ -3,7 +3,7 @@
  * Employs Stale-While-Revalidate / Network-First with Cache Fallback for zero-network reading.
  */
 
-const CACHE_NAME = 'xreader-offline-v1.0';
+const CACHE_NAME = 'xreader-offline-v1.1';
 
 const PRECACHE_ASSETS = [
   './',

@@ -330,7 +330,7 @@ export class ReaderView {
     }
 
     if (autoPlay) {
-      player.play();
+      player.play(isContinuousTransition);
     }
   }
 
