@@ -240,6 +240,10 @@ export class StageManager {
     try {
       localStorage.removeItem(SAVE_KEY);
       localStorage.removeItem('2048RPG_Tutorial_Completed');
+      localStorage.removeItem('2048RPG_DailyLoop_Save_v1');
+      if (this.dailyLoopManager) {
+        this.dailyLoopManager.resetAll();
+      }
       if (this.tutorialManager) {
         this.tutorialManager.isCompleted = false;
       }
@@ -276,6 +280,28 @@ export class StageManager {
     return this.items[type] || 0;
   }
 
+  // Add Gold (C-STORY-101)
+  addGold(amount = 0) {
+    if (amount <= 0) return this.gold;
+    this.gold += amount;
+    this.saveData();
+    if (this.eventBus) {
+      this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold, delta: amount });
+    }
+    return this.gold;
+  }
+
+  // Add Item (C-STORY-101)
+  addItem(type, count = 1) {
+    if (!type || count <= 0) return;
+    this.items[type] = Math.min(MAX_ITEM_STACK, (this.items[type] || 0) + count);
+    this.saveData();
+    if (this.eventBus) {
+      this.eventBus.emit(Events.ITEMS_CHANGED, { items: this.items, itemType: type, delta: count });
+    }
+    return this.items[type];
+  }
+
   // Warehouse Expansion (C-STORY-022)
   getWarehouseConfig() {
     return getWarehouseUpgradeConfig(this.warehouseExpansionLevel);
@@ -308,7 +334,7 @@ export class StageManager {
     };
   }
 
-  // Base Stat Tier Methods (C-STORY-008)
+  // Base Stat Tier Methods (C-STORY-008 & C-STORY-106)
   getBaseTierConfig() {
     return BASE_STAT_TIERS.find(t => t.tier === this.baseTier) || BASE_STAT_TIERS[0];
   }
@@ -317,17 +343,24 @@ export class StageManager {
     return BASE_STAT_TIERS.find(t => t.tier === this.baseTier + 1) || null;
   }
 
+  getHighestOwnedOrEquippedWeapon() {
+    const equippedVal = this.inventory && this.inventory.equippedItem ? (this.inventory.equippedItem.value || 0) : 0;
+    const invItems = (this.inventory && Array.isArray(this.inventory.items)) ? this.inventory.items : [];
+    const maxInvVal = invItems.length > 0 ? Math.max(...invItems.map(it => it.value || 0)) : 0;
+    return Math.max(equippedVal, maxInvVal);
+  }
+
   upgradeBaseTier() {
     const next = this.getNextBaseTierConfig();
     if (!next) {
-      return { success: false, reason: '王國軍備科技已達最高階級 (Tier 24)！' };
+      return { success: false, reason: '王國軍備科技已達最高階級 (Tier 48)！' };
     }
-    // Check gear gate requirement (C-STORY-024)
-    const equippedVal = this.inventory && this.inventory.equippedItem ? this.inventory.equippedItem.value : 0;
-    if (next.minEquippedWeapon && (!equippedVal || equippedVal < next.minEquippedWeapon)) {
+    // Check gear gate requirement (C-STORY-024 & C-STORY-106: checks both equipped & inventory items)
+    const highestGearVal = this.getHighestOwnedOrEquippedWeapon();
+    if (next.minEquippedWeapon && (!highestGearVal || highestGearVal < next.minEquippedWeapon)) {
       return {
         success: false,
-        reason: `裝備實力不足！需先穿戴 Tier ${next.minEquippedWeapon} 以上的裝備，王國工坊才能研發此項大突破科技！`
+        reason: `裝備實力不足！需先持有或穿戴 Tier ${next.minEquippedWeapon} 以上的裝備，王國工坊才能研發此項大突破科技！`
       };
     }
     if (this.gold < next.cost) {

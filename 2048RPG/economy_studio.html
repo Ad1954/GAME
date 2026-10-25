@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📊 《2048 RPG：王國遠征》350 關經濟與養成曲線調校工作台 (Economy Studio)</title>
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-panel: #111827;
+      --bg-card: #1e293b;
+      --border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-blue: #38bdf8;
+      --accent-gold: #facc15;
+      --accent-green: #10b981;
+      --accent-red: #f43f5e;
+      --accent-purple: #a855f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      line-height: 1.45;
+      padding-bottom: 40px;
+    }
+    header {
+      background: linear-gradient(90deg, #0f172a, #1e1b4b, #0f172a);
+      border-bottom: 2px solid var(--accent-blue);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    }
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-title h1 {
+      font-size: 1.25rem;
+      color: var(--accent-gold);
+      letter-spacing: 0.5px;
+    }
+    .badge-standalone {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid var(--accent-green);
+      color: #34d399;
+      font-size: 0.75rem;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 700;
+    }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-weight: 700;
+      font-size: 0.84rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #fff;
+      background: var(--bg-card);
+    }
+    .btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+    .btn-primary { background: linear-gradient(135deg, #0284c7, #2563eb); border-color: #38bdf8; }
+    .btn-gold { background: linear-gradient(135deg, #d97706, #b45309); border-color: #facc15; }
+    .btn-green { background: linear-gradient(135deg, #059669, #047857); border-color: #34d399; }
+    .btn-sm { padding: 4px 10px; font-size: 0.76rem; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      gap: 18px;
+      padding: 18px 22px;
+      max-width: 1820px;
+      margin: 0 auto;
+    }
+    @media (max-width: 1200px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+
+    /* Controls Sidebar */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .panel-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--accent-blue);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .form-group.full { grid-column: span 2; }
+    .form-group label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .form-group input, .form-group select {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: var(--accent-gold);
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+    .summary-strip {
+      margin-top: 10px;
+      padding: 8px 10px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px dashed rgba(56, 189, 248, 0.4);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .winrate-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    /* Main Content Area */
+    .main-area {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 900px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .kpi-card {
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .kpi-label { font-size: 0.75rem; color: var(--text-muted); }
+    .kpi-val { font-size: 1.35rem; font-weight: 900; color: var(--accent-gold); margin: 4px 0 2px 0; }
+    .kpi-sub { font-size: 0.72rem; color: #cbd5e1; }
+
+    /* Charts */
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 1100px) {
+      .charts-row { grid-template-columns: 1fr; }
+    }
+    .chart-box {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .chart-title { font-size: 0.9rem; font-weight: 800; color: #e2e8f0; }
+    .chart-legend {
+      display: flex;
+      gap: 12px;
+      font-size: 0.74rem;
+    }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    canvas {
+      width: 100%;
+      height: 270px;
+      background: #090d16;
+      border-radius: 8px;
+      border: 1px solid #1e293b;
+      display: block;
+    }
+
+    /* Tabs & Tables */
+    .tabs-bar {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.84rem;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: var(--accent-blue);
+      color: #090d16;
+      border-color: var(--accent-blue);
+    }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    .table-wrap {
+      overflow-x: auto;
+      max-height: 540px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      text-align: right;
+    }
+    th, td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      white-space: nowrap;
+    }
+    th {
+      background: #0f172a;
+      color: var(--accent-blue);
+      font-weight: 800;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    th:first-child, td:first-child,
+    th:nth-child(2), td:nth-child(2) {
+      text-align: left;
+    }
+    tr:hover td { background: rgba(56, 189, 248, 0.06); }
+    .row-major td {
+      background: rgba(250, 204, 21, 0.1) !important;
+      font-weight: 700;
+    }
+    .val-pos { color: #34d399; font-weight: 700; }
+    .val-neg { color: #fb7185; font-weight: 700; }
+    .val-gold { color: var(--accent-gold); font-weight: 700; }
+    .inline-input {
+      width: 85px;
+      background: #090d16;
+      border: 1px solid #475569;
+      color: var(--accent-gold);
+      padding: 3px 6px;
+      border-radius: 4px;
+      text-align: right;
+      font-weight: 700;
+    }
+    .filter-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+    .filter-bar select, .filter-bar input {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-title">
+      <h1>📊 《2048 RPG：王國遠征》350 關經濟與養成曲線調校工作台</h1>
+      <span class="badge-standalone">✔ 免開 CMD · 單檔直接執行</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-green" id="btn-export-csv">📥 匯出當前參數 Excel CSV 報表</button>
+      <button class="btn btn-gold" id="btn-copy-config">📋 複製 Constants.js 配置代碼</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <!-- LEFT SIDEBAR: INTERACTIVE PARAMETERS -->
+    <aside class="sidebar">
+
+      <!-- 1. Daily Welfare & Time Model -->
+      <div class="panel">
+        <div class="panel-title">
+          <span>🎁 1. 每日福利與遊玩時間模型</span>
+          <span style="font-size:0.72rem; color:#94a3b8;">10連抽 = <b id="lbl-ten-pull-cost">1000</b>G</span>
+        </div>
+        <div class="preset-row">
+          <button class="btn btn-sm" onclick="applyDailyPreset(3000)">3次十連 (3,000G)</button>
+          <button class="btn btn-sm btn-primary" onclick="applyDailyPreset(3500)">3.5次十連 (3,500G)</button>
+          <button class="btn btn-sm" onclick="applyDailyPreset(5000)">5次十連 (5,000G)</button>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>每日簽到均價 (G/日)</label>
+            <input type="number" id="inp-daily-signin" value="1500" step="100">
+          </div>
+          <div class="form-group">
+            <label>每日任務 4項總計 (G)</label>
+            <input type="number" id="inp-daily-quests" value="1200" step="100">
+          </div>
+          <div class="form-group">
+            <label>100活躍全勤寶箱 (G)</label>
+            <input type="number" id="inp-daily-chest" value="600" step="100">
+          </div>
+          <div class="form-group">
+            <label>商店每日免費禮 (G)</label>
+            <input type="number" id="inp-daily-shop" value="200" step="50">
+          </div>
+          <div class="form-group">
+            <label>每日遊玩時間 (分鐘)</label>
+            <input type="number" id="inp-play-mins" value="40" step="5">
+          </div>
+          <div class="form-group">
+            <label>單回合耗時 (秒)</label>
+            <input type="number" id="inp-sec-per-turn" value="4" step="0.5">
+          </div>
+          <div class="form-group">
+            <label>前 3 章過關回合數</label>
+            <input type="number" id="inp-turns-ch13" value="150" step="10">
+          </div>
+          <div class="form-group">
+            <label>第 4~8 章過關回合數</label>
+            <input type="number" id="inp-turns-ch48" value="400" step="20">
+          </div>
+        </div>
+        <div class="summary-strip">
+          <span>每日全勤固定產出：</span>
+          <strong class="val-gold" id="sum-daily-welfare">3,500 🪙 (3.5 次十連抽)</strong>
+        </div>
+      </div>
+
+      <!-- 2. Stage Reward Curve Formula -->
+      <div class="panel">
+        <div class="panel-title">
+          <span>💰 2. 350 關卡過關獎勵曲線公式</span>
+        </div>
+        <div class="preset-row">
+          <button class="btn btn-sm btn-primary" onclick="applyStagePreset('current')">🔥 現行公式 (後期高)</button>
+          <button class="btn btn-sm" onclick="applyStagePreset('moderate')">⚖️ 溫和控管版</button>
+          <button class="btn btn-sm" onclick="applyStagePreset('flat')">🔒 緊縮日常主導版</button>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>第 1 關基礎獎勵 (G)</label>
+            <input type="number" id="inp-st-base" value="100" step="10">
+          </div>
+          <div class="form-group">
+            <label>St.2~20 每關遞增 (+G)</label>
+            <input type="number" id="inp-st-inc1" value="5" step="1">
+          </div>
+          <div class="form-group">
+            <label>St.21~50 每關遞增 (+G)</label>
+            <input type="number" id="inp-st-inc2" value="10" step="1">
+          </div>
+          <div class="form-group">
+            <label>St.51~90 每關遞增 (+G)</label>
+            <input type="number" id="inp-st-inc3" value="20" step="2">
+          </div>
+          <div class="form-group">
+            <label>St.91~350 每關遞增 (+G)</label>
+            <input type="number" id="inp-st-inc4" value="30" step="5">
+          </div>
+          <div class="form-group">
+            <label>過關總收益倍率 (含場內)</label>
+            <input type="number" id="inp-win-mult" value="2.0" step="0.1">
+          </div>
+          <div class="form-group">
+            <label>敗戰回收倍率 (過關xN)</label>
+            <input type="number" id="inp-fail-mult" value="0.5" step="0.1">
+          </div>
+          <div class="form-group">
+            <label>第 350 關單場雙倍收益</label>
+            <input type="text" id="lbl-st350-reward" value="18,190" disabled>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Tech Sink & Gacha Cost Model -->
+      <div class="panel">
+        <div class="panel-title">
+          <span>🏛️ 3. 24階科技水庫與十連抽消耗模型</span>
+        </div>
+        <div class="preset-row">
+          <button class="btn btn-sm" onclick="applyTechPreset('loose')">💧 舊寬鬆 (5.7萬)</button>
+          <button class="btn btn-sm" onclick="applyTechPreset('old_high')">🏛️ 早期高價 (16萬)</button>
+          <button class="btn btn-sm btn-primary" onclick="applyTechPreset('deep_sink')">🌊 C-STORY-102 (26.5萬)</button>
+          <button class="btn btn-sm" onclick="applyTechPreset('whale')">🌋 巨鯨水庫 (48萬)</button>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>科技整體費用縮放倍率</label>
+            <input type="number" id="inp-tech-scale" value="1.0" step="0.1" min="0.1">
+          </div>
+          <div class="form-group">
+            <label>基礎十連抽價格 (G)</label>
+            <input type="number" id="inp-gacha-base" value="1000" step="100">
+          </div>
+          <div class="form-group full">
+            <label>轉蛋機每升 1 級 (Lv.1~8) 十連抽動態加價 (+G)</label>
+            <input type="number" id="inp-gacha-step" value="0" step="100" title="若設為 200，則 Lv.1 十連=1000、Lv.5 十連=1800、Lv.8 十連=2400">
+          </div>
+        </div>
+        <div class="summary-strip">
+          <span>24 階科技總水庫：</span>
+          <strong class="val-gold" id="sum-tech-sink">265,000 🪙</strong>
+        </div>
+      </div>
+
+      <!-- 4. Chapter Win Rates -->
+      <div class="panel">
+        <div class="panel-title">
+          <span>🎯 4. 各章節預期通關勝率 (%)</span>
+        </div>
+        <div class="winrate-grid">
+          <div class="form-group"><label>Ch.1 (1~5)</label><input type="number" id="wr-1" value="100" min="5" max="100"></div>
+          <div class="form-group"><label>Ch.2 (6~20)</label><input type="number" id="wr-2" value="90" min="5" max="100"></div>
+          <div class="form-group"><label>Ch.3 (21~50)</label><input type="number" id="wr-3" value="80" min="5" max="100"></div>
+          <div class="form-group"><label>Ch.4 (51~90)</label><input type="number" id="wr-4" value="60" min="5" max="100"></div>
+          <div class="form-group"><label>Ch.5 (91~150)</label><input type="number" id="wr-5" value="50" min="5" max="100"></div>
+          <div class="form-group"><label>Ch.6 (151~220)</label><input type="number" id="wr-6" value="40" min="5" max="100"></div>
+          <div class="form-group"><label>Ch.7 (221~280)</label><input type="number" id="wr-7" value="30" min="5" max="100"></div>
+          <div class="form-group"><label>Ch.8 (281~350)</label><input type="number" id="wr-8" value="20" min="5" max="100"></div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- RIGHT MAIN AREA: CHARTS & TABLES -->
+    <main class="main-area">
+
+      <!-- KPI Summary Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">突破前 3 章 (Stage 50) 預估</div>
+          <div class="kpi-val" id="kpi-ch3-days">15.0 天</div>
+          <div class="kpi-sub" id="kpi-ch3-gold">累計總資金：91,200 🪙</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">突破第 4 章 (Stage 90) 預估</div>
+          <div class="kpi-val" id="kpi-ch4-days">48.3 天</div>
+          <div class="kpi-sub" id="kpi-ch4-gold">累計總資金：295,000 🪙</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">第 100 關 (Ch.5初) 資金結餘診斷</div>
+          <div class="kpi-val" id="kpi-st100-surplus">+12,400 🪙</div>
+          <div class="kpi-sub" id="kpi-st100-desc">扣除 T18 科技 + Lv.5 轉蛋後</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">全 24 階科技 + 轉蛋 Lv.8 總水庫</div>
+          <div class="kpi-val" id="kpi-total-sink">380,000 🪙</div>
+          <div class="kpi-sub" id="kpi-sink-detail">科技 26.5萬 + 轉蛋 11.5萬</div>
+        </div>
+      </div>
+
+      <!-- Visual Charts Row -->
+      <div class="charts-row">
+        <div class="chart-box">
+          <div class="chart-header">
+            <span class="chart-title">📈 Day 1 ~ Day 90 玩家累計總收入 vs 養成消耗水庫曲線</span>
+            <div class="chart-legend">
+              <span class="legend-item"><i class="legend-dot" style="background:#10b981;"></i>累計總收入</span>
+              <span class="legend-item"><i class="legend-dot" style="background:#38bdf8;"></i>純關卡收入</span>
+              <span class="legend-item"><i class="legend-dot" style="background:#f43f5e;"></i>科技+轉蛋目標消耗線</span>
+            </div>
+          </div>
+          <canvas id="chart-daily-curve" width="760" height="270"></canvas>
+        </div>
+
+        <div class="chart-box">
+          <div class="chart-header">
+            <span class="chart-title">📊 Stage 1 ~ 350 單關過關雙倍收益 vs 每日福利基準線</span>
+            <div class="chart-legend">
+              <span class="legend-item"><i class="legend-dot" style="background:#facc15;"></i>單場過關總收益 (x2)</span>
+              <span class="legend-item"><i class="legend-dot" style="background:#a855f7;"></i>每日固定福利額</span>
+            </div>
+          </div>
+          <canvas id="chart-stage-curve" width="620" height="270"></canvas>
+        </div>
+      </div>
+
+      <!-- Data Tables Panel -->
+      <div class="panel">
+        <div class="tabs-bar">
+          <button class="tab-btn active" onclick="switchTab('tab-chapters', this)">🏆 1. 八大章節突破天數與收支總表</button>
+          <button class="tab-btn" onclick="switchTab('tab-daily', this)">📅 2. 逐日進度試算表 (Day 1 ~ Day 90)</button>
+          <button class="tab-btn" onclick="switchTab('tab-tech', this)">🏛️ 3. 24 階科技費用比較與單階手動微調</button>
+          <button class="tab-btn" onclick="switchTab('tab-stages', this)">🗺️ 4. 全 350 關卡逐關獎勵明細表</button>
+        </div>
+
+        <!-- TAB 1: 8 CHAPTERS SUMMARY -->
+        <div class="tab-pane active" id="tab-chapters">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>章節</th>
+                  <th>關卡範圍</th>
+                  <th>關數</th>
+                  <th>設定勝率</th>
+                  <th>每日場次</th>
+                  <th>每日推關</th>
+                  <th>突破本章天數</th>
+                  <th>累計天數</th>
+                  <th>本章戰鬥收入</th>
+                  <th>本章日常收入</th>
+                  <th>累計總資金池</th>
+                  <th>建議裝備 (轉蛋消耗)</th>
+                  <th>建議科技 (累計科技消耗)</th>
+                  <th>資金池減去養成結餘</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-chapters"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 2: DAY-BY-DAY PROGRESSION -->
+        <div class="tab-pane" id="tab-daily">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>天數</th>
+                  <th>所在章節</th>
+                  <th>當日場次</th>
+                  <th>當日勝率</th>
+                  <th>當日推進關數</th>
+                  <th>累計到達關卡</th>
+                  <th>當日戰鬥收入</th>
+                  <th>當日日常福利</th>
+                  <th>當日總收入</th>
+                  <th>累計總資金池</th>
+                  <th>可負擔最高科技階級</th>
+                  <th>剩餘資金可抽十連次數</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-daily"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 3: 24-TIER TECH COMPARISON & EDITOR -->
+        <div class="tab-pane" id="tab-tech">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>階級</th>
+                  <th>科技名稱</th>
+                  <th>局內基礎掉落池</th>
+                  <th>最低裝備要求</th>
+                  <th>舊寬鬆版</th>
+                  <th>早期高消耗版</th>
+                  <th>C-STORY-102 基準</th>
+                  <th>✏️ 手動微調當前費用 (G)</th>
+                  <th>所屬循環小計 (5小+1大)</th>
+                  <th>累計總消耗水庫</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-tech"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 4: 350 STAGES TABLE -->
+        <div class="tab-pane" id="tab-stages">
+          <div class="filter-bar">
+            <label style="font-size:0.8rem; color:#94a3b8;">篩選章節：</label>
+            <select id="sel-stage-chapter" onchange="renderStagesTable()">
+              <option value="0">全部章節 (Stage 1 ~ 350)</option>
+              <option value="1">第 1 章 (Stage 1 ~ 5)</option>
+              <option value="2">第 2 章 (Stage 6 ~ 20)</option>
+              <option value="3">第 3 章 (Stage 21 ~ 50)</option>
+              <option value="4">第 4 章 (Stage 51 ~ 90)</option>
+              <option value="5">第 5 章 (Stage 91 ~ 150)</option>
+              <option value="6">第 6 章 (Stage 151 ~ 220)</option>
+              <option value="7">第 7 章 (Stage 221 ~ 280)</option>
+              <option value="8">第 8 章 (Stage 281 ~ 350)</option>
+            </select>
+            <span style="font-size:0.78rem; color:#94a3b8;">※ 修改左側「關卡獎勵曲線公式」後，下表 350 關數據會即時同步重算！</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>關卡ID</th>
+                  <th>所屬章節</th>
+                  <th>推薦戰力</th>
+                  <th>Boss 戰力</th>
+                  <th>怪物數</th>
+                  <th>基礎過關金幣</th>
+                  <th>場內金幣上限</th>
+                  <th>過關預估總收益 (x倍率)</th>
+                  <th>敗戰預估收益</th>
+                  <th>累計基礎金幣</th>
+                  <th>累計過關總金幣</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-stages"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // =========================================================================
+    // CORE DATA DEFINITIONS
+    // =========================================================================
+    const TECH_BASE_DATA = [
+      { tier: 1, name: '新兵武裝', range: '[2, 4, 8]', minWpn: 0, loose: 0, oldHigh: 0, sink102: 0, cycle: 1 },
+      { tier: 2, name: '巡邏獵備', range: '[2, 4, 8]', minWpn: 0, loose: 600, oldHigh: 800, sink102: 800, cycle: 1 },
+      { tier: 3, name: '鐵衛防具', range: '[2, 4, 8]', minWpn: 0, loose: 700, oldHigh: 900, sink102: 1000, cycle: 1 },
+      { tier: 4, name: '先鋒戰備', range: '[2, 4, 8]', minWpn: 0, loose: 800, oldHigh: 1100, sink102: 1400, cycle: 1 },
+      { tier: 5, name: '精鋼鍛造', range: '[2, 4, 8]', minWpn: 0, loose: 900, oldHigh: 1400, sink102: 1800, cycle: 1 },
+      { tier: 6, name: '【大突破】白銀軍備 (淘汰2)', range: '[4, 8, 16]', minWpn: 4, loose: 2700, oldHigh: 4500, sink102: 5000, cycle: 1, isMajor: true },
+
+      { tier: 7, name: '精銳配給', range: '[4, 8, 16]', minWpn: 4, loose: 1000, oldHigh: 1800, sink102: 2200, cycle: 2 },
+      { tier: 8, name: '戰陣重裝', range: '[4, 8, 16]', minWpn: 4, loose: 1100, oldHigh: 2100, sink102: 2600, cycle: 2 },
+      { tier: 9, name: '騎士鎧甲', range: '[4, 8, 16]', minWpn: 4, loose: 1200, oldHigh: 2400, sink102: 3000, cycle: 2 },
+      { tier: 10, name: '秘銀附魔', range: '[4, 8, 16]', minWpn: 4, loose: 1300, oldHigh: 2700, sink102: 3400, cycle: 2 },
+      { tier: 11, name: '皇家禮裝', range: '[4, 8, 16]', minWpn: 4, loose: 1400, oldHigh: 3000, sink102: 3800, cycle: 2 },
+      { tier: 12, name: '【大突破】黃金領主 (淘汰4)', range: '[8, 16, 32]', minWpn: 8, loose: 4200, oldHigh: 10000, sink102: 15000, cycle: 2, isMajor: true },
+
+      { tier: 13, name: '聖殿武裝', range: '[8, 16, 32]', minWpn: 8, loose: 1600, oldHigh: 4000, sink102: 5000, cycle: 3 },
+      { tier: 14, name: '光輝重刃', range: '[8, 16, 32]', minWpn: 8, loose: 1800, oldHigh: 4500, sink102: 6000, cycle: 3 },
+      { tier: 15, name: '神聖制式', range: '[8, 16, 32]', minWpn: 8, loose: 2000, oldHigh: 5000, sink102: 7000, cycle: 3 },
+      { tier: 16, name: '大師神匠', range: '[8, 16, 32]', minWpn: 8, loose: 2300, oldHigh: 5500, sink102: 8000, cycle: 3 },
+      { tier: 17, name: '泰坦鍛爐', range: '[8, 16, 32]', minWpn: 8, loose: 2600, oldHigh: 6000, sink102: 9000, cycle: 3 },
+      { tier: 18, name: '【大突破】屠龍戰狂 (淘汰8)', range: '[16, 32, 64]', minWpn: 16, loose: 7800, oldHigh: 20000, sink102: 35000, cycle: 3, isMajor: true },
+
+      { tier: 19, name: '炎息戰甲', range: '[16, 32, 64]', minWpn: 16, loose: 2900, oldHigh: 7000, sink102: 11000, cycle: 4 },
+      { tier: 20, name: '黑曜武具', range: '[16, 32, 64]', minWpn: 16, loose: 3300, oldHigh: 8000, sink102: 13000, cycle: 4 },
+      { tier: 21, name: '遠古龍骨', range: '[16, 32, 64]', minWpn: 16, loose: 3700, oldHigh: 9000, sink102: 15000, cycle: 4 },
+      { tier: 22, name: '神域符文', range: '[16, 32, 64]', minWpn: 16, loose: 4200, oldHigh: 10000, sink102: 17000, cycle: 4 },
+      { tier: 23, name: '終焉聖光', range: '[16, 32, 64]', minWpn: 16, loose: 4800, oldHigh: 11000, sink102: 19000, cycle: 4 },
+      { tier: 24, name: '【大突破】創世星辰 (淘汰16)', range: '[32, 64, 128]', minWpn: 32, loose: 14400, oldHigh: 40000, sink102: 80000, cycle: 4, isMajor: true }
+    ];
+
+    // Custom editable costs initialized to sink102
+    let customTechCosts = TECH_BASE_DATA.map(t => t.sink102);
+
+    const CHAPTER_META = [
+      { id: 1, name: '第 I 章：微風之境', start: 1, end: 5, targetTech: 3, targetPulls: 20, wpnDesc: '武器 8~16 (Lv.1)' },
+      { id: 2, name: '第 II 章：灼熱熔岩', start: 6, end: 20, targetTech: 6, targetPulls: 80, wpnDesc: '武器 32~64 (Lv.2)' },
+      { id: 3, name: '第 III 章：孤峰岩地', start: 21, end: 50, targetTech: 11, targetPulls: 220, wpnDesc: '武器 128~256 (Lv.4)' },
+      { id: 4, name: '第 IV 章：蛛魔荒漠', start: 51, end: 90, targetTech: 12, targetPulls: 380, wpnDesc: '武器 512 (Lv.5)' },
+      { id: 5, name: '第 V 章：遠古地宮', start: 91, end: 150, targetTech: 18, targetPulls: 600, wpnDesc: '武器 1024 (Lv.6)' },
+      { id: 6, name: '第 VI 章：滅世黑曜', start: 151, end: 220, targetTech: 21, targetPulls: 850, wpnDesc: '武器 2048 (Lv.7)' },
+      { id: 7, name: '第 VII 章：神魔深淵', start: 221, end: 280, targetTech: 23, targetPulls: 1150, wpnDesc: '武器 4096 (Lv.8)' },
+      { id: 8, name: '第 VIII 章：終焉神域', start: 281, end: 350, targetTech: 24, targetPulls: 1500, wpnDesc: '武器 8192+ (神話)' }
+    ];
+
+    let computedStages = [];
+    let computedChapters = [];
+    let computedDaily = [];
+
+    // =========================================================================
+    // PRESETS & INPUT HANDLERS
+    // =========================================================================
+    function applyDailyPreset(totalGold) {
+      if (totalGold === 3000) {
+        document.getElementById('inp-daily-signin').value = 1000;
+        document.getElementById('inp-daily-quests').value = 1200;
+        document.getElementById('inp-daily-chest').value = 600;
+        document.getElementById('inp-daily-shop').value = 200;
+      } else if (totalGold === 3500) {
+        document.getElementById('inp-daily-signin').value = 1500;
+        document.getElementById('inp-daily-quests').value = 1200;
+        document.getElementById('inp-daily-chest').value = 600;
+        document.getElementById('inp-daily-shop').value = 200;
+      } else if (totalGold === 5000) {
+        document.getElementById('inp-daily-signin').value = 2000;
+        document.getElementById('inp-daily-quests').value = 1600;
+        document.getElementById('inp-daily-chest').value = 1000;
+        document.getElementById('inp-daily-shop').value = 400;
+      }
+      recalculateAll();
+    }
+
+    function applyStagePreset(mode) {
+      if (mode === 'current') {
+        document.getElementById('inp-st-base').value = 100;
+        document.getElementById('inp-st-inc1').value = 5;
+        document.getElementById('inp-st-inc2').value = 10;
+        document.getElementById('inp-st-inc3').value = 20;
+        document.getElementById('inp-st-inc4').value = 30;
+      } else if (mode === 'moderate') {
+        document.getElementById('inp-st-base').value = 100;
+        document.getElementById('inp-st-inc1').value = 5;
+        document.getElementById('inp-st-inc2').value = 8;
+        document.getElementById('inp-st-inc3').value = 10;
+        document.getElementById('inp-st-inc4').value = 12;
+      } else if (mode === 'flat') {
+        document.getElementById('inp-st-base').value = 80;
+        document.getElementById('inp-st-inc1').value = 3;
+        document.getElementById('inp-st-inc2').value = 5;
+        document.getElementById('inp-st-inc3').value = 6;
+        document.getElementById('inp-st-inc4').value = 8;
+      }
+      recalculateAll();
+    }
+
+    function applyTechPreset(mode) {
+      document.getElementById('inp-tech-scale').value = 1.0;
+      if (mode === 'loose') {
+        customTechCosts = TECH_BASE_DATA.map(t => t.loose);
+      } else if (mode === 'old_high') {
+        customTechCosts = TECH_BASE_DATA.map(t => t.oldHigh);
+      } else if (mode === 'deep_sink') {
+        customTechCosts = TECH_BASE_DATA.map(t => t.sink102);
+      } else if (mode === 'whale') {
+        customTechCosts = TECH_BASE_DATA.map(t => Math.round(t.sink102 * 1.8));
+      }
+      recalculateAll();
+    }
+
+    function onManualTechCostChange(tierIdx, val) {
+      const num = Math.max(0, parseInt(val, 10) || 0);
+      customTechCosts[tierIdx] = num;
+      recalculateAll(false);
+    }
+
+    function switchTab(tabId, btnEl) {
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btnEl.classList.add('active');
+    }
+
+    // =========================================================================
+    // SIMULATION ENGINE
+    // =========================================================================
+    function getEffectiveTechCost(tierIdx) {
+      const scale = parseFloat(document.getElementById('inp-tech-scale').value) || 1.0;
+      return Math.round((customTechCosts[tierIdx] || 0) * scale);
+    }
+
+    function getCumulativeTechCost(targetTier) {
+      let sum = 0;
+      for (let i = 0; i < targetTier && i < 24; i++) {
+        sum += getEffectiveTechCost(i);
+      }
+      return sum;
+    }
+
+    // Calculate Gacha total cost for N pulls considering dynamic step cost per level
+    function getGachaCumulativeCost(totalPulls) {
+      const baseTen = parseFloat(document.getElementById('inp-gacha-base').value) || 1000;
+      const stepTen = parseFloat(document.getElementById('inp-gacha-step').value) || 0;
+      // Level thresholds in pulls: Lv1: 0..30, Lv2: 31..100, Lv3: 101..200, Lv4: 201..340, Lv5: 341..530, Lv6: 531..790, Lv7: 791..1150, Lv8: 1151+
+      const brackets = [30, 70, 100, 140, 190, 260, 360, 99999];
+      let rem = totalPulls;
+      let cost = 0;
+      for (let lv = 0; lv < brackets.length; lv++) {
+        if (rem <= 0) break;
+        const pullsInLv = Math.min(rem, brackets[lv]);
+        const tenCost = baseTen + lv * stepTen;
+        cost += (pullsInLv / 10) * tenCost;
+        rem -= pullsInLv;
+      }
+      return Math.round(cost);
+    }
+
+    function recalculateAll(rebuildTechTable = true) {
+      // 1. Read inputs
+      const dailySignin = parseFloat(document.getElementById('inp-daily-signin').value) || 0;
+      const dailyQuests = parseFloat(document.getElementById('inp-daily-quests').value) || 0;
+      const dailyChest = parseFloat(document.getElementById('inp-daily-chest').value) || 0;
+      const dailyShop = parseFloat(document.getElementById('inp-daily-shop').value) || 0;
+      const dailyWelfare = dailySignin + dailyQuests + dailyChest + dailyShop;
+
+      const baseTen = parseFloat(document.getElementById('inp-gacha-base').value) || 1000;
+      document.getElementById('lbl-ten-pull-cost').textContent = baseTen;
+      document.getElementById('sum-daily-welfare').textContent =
+        `${dailyWelfare.toLocaleString()} 🪙 (${(dailyWelfare / baseTen).toFixed(1)} 次十連抽)`;
+
+      const playMins = parseFloat(document.getElementById('inp-play-mins').value) || 40;
+      const secPerTurn = parseFloat(document.getElementById('inp-sec-per-turn').value) || 4;
+      const turnsCh13 = parseFloat(document.getElementById('inp-turns-ch13').value) || 150;
+      const turnsCh48 = parseFloat(document.getElementById('inp-turns-ch48').value) || 400;
+
+      // Plays per day (minimum 1, and if remainder > 0 round up to finish match as requested!)
+      const minsPerMatch13 = (turnsCh13 * secPerTurn) / 60;
+      const minsPerMatch48 = (turnsCh48 * secPerTurn) / 60;
+      const playsPerDay13 = Math.max(1, Math.ceil(playMins / minsPerMatch13));
+      const playsPerDay48 = Math.max(1, Math.ceil(playMins / minsPerMatch48));
+
+      // Stage formula inputs
+      const stBase = parseFloat(document.getElementById('inp-st-base').value) || 100;
+      const inc1 = parseFloat(document.getElementById('inp-st-inc1').value) || 5;
+      const inc2 = parseFloat(document.getElementById('inp-st-inc2').value) || 10;
+      const inc3 = parseFloat(document.getElementById('inp-st-inc3').value) || 20;
+      const inc4 = parseFloat(document.getElementById('inp-st-inc4').value) || 30;
+      const winMult = parseFloat(document.getElementById('inp-win-mult').value) || 2.0;
+      const failMult = parseFloat(document.getElementById('inp-fail-mult').value) || 0.5;
+
+      // 2. Compute 350 stages
+      computedStages = [];
+      let cumBase = 0;
+      let cumWin = 0;
+      const r20 = stBase + 19 * inc1;
+      const r50 = r20 + 30 * inc2;
+      const r90 = r50 + 40 * inc3;
+
+      for (let s = 1; s <= 350; s++) {
+        let chId = 1;
+        for (const ch of CHAPTER_META) {
+          if (s >= ch.start && s <= ch.end) { chId = ch.id; break; }
+        }
+        let baseG = stBase;
+        if (s <= 20) baseG = stBase + (s - 1) * inc1;
+        else if (s <= 50) baseG = r20 + (s - 20) * inc2;
+        else if (s <= 90) baseG = r50 + (s - 50) * inc3;
+        else baseG = r90 + (s - 90) * inc4;
+
+        baseG = Math.round(baseG);
+        const winG = Math.round(baseG * winMult);
+        const failG = Math.round(baseG * failMult);
+        const goldCap = Math.floor(80 + s * 4);
+
+        let bossExp = 9;
+        if (s === 1) bossExp = 3;
+        else if (s <= 3) bossExp = 4;
+        else if (s <= 5) bossExp = 5;
+        else if (s <= 7) bossExp = 6;
+        else if (s <= 9) bossExp = 7;
+        else if (s <= 19) bossExp = 8;
+        else if (s <= 27) bossExp = 9;
+        else if (s <= 41) bossExp = 10;
+        else if (s <= 60) bossExp = 11;
+        else if (s <= 90) bossExp = 12;
+        else if (s <= 120) bossExp = 13;
+        else if (s <= 150) bossExp = 14;
+        else if (s <= 180) bossExp = 15;
+        else if (s <= 220) bossExp = 16;
+        else if (s <= 280) bossExp = 17;
+        else bossExp = 18;
+
+        const bossVal = Math.pow(2, bossExp);
+        const recPower = Math.pow(2, Math.max(1, bossExp - 1));
+        const mCnt = s <= 4 ? 3 : (s <= 21 ? 4 : (s <= 50 ? (s % 2 === 0 ? 5 : 4) : (s <= 150 ? 5 : 6)));
+
+        cumBase += baseG;
+        cumWin += winG;
+
+        computedStages.push({
+          id: s, chId, recPower, bossVal, mCnt,
+          baseG, goldCap, winG, failG, cumBase, cumWin
+        });
+      }
+
+      document.getElementById('lbl-st350-reward').value =
+        computedStages[349].winG.toLocaleString() + ' G';
+
+      // 3. Compute 8 Chapters Summary
+      computedChapters = [];
+      let cumDays = 0;
+      let cumGoldPool = 300; // initial gold
+
+      for (const ch of CHAPTER_META) {
+        const wrPct = parseFloat(document.getElementById(`wr-${ch.id}`).value) || 50;
+        const wr = Math.max(0.05, Math.min(1.0, wrPct / 100));
+        const playsPerDay = ch.id <= 3 ? playsPerDay13 : playsPerDay48;
+        const stageCnt = ch.end - ch.start + 1;
+        const advPerDay = playsPerDay * wr;
+        const daysNeeded = stageCnt / advPerDay;
+        cumDays += daysNeeded;
+
+        const chStages = computedStages.filter(st => st.chId === ch.id);
+        const winGoldSum = chStages.reduce((acc, st) => acc + st.winG, 0);
+        const avgFailGold = chStages.reduce((acc, st) => acc + st.failG, 0) / chStages.length;
+        const totalPlays = stageCnt / wr;
+        const failPlays = totalPlays - stageCnt;
+        const failGoldSum = Math.round(failPlays * avgFailGold);
+
+        const combatGold = winGoldSum + failGoldSum;
+        const welfareGold = Math.round(daysNeeded * dailyWelfare);
+        cumGoldPool += (combatGold + welfareGold);
+
+        const reqTechCost = getCumulativeTechCost(ch.targetTech);
+        const reqGachaCost = getGachaCumulativeCost(ch.targetPulls);
+        const totalSinkAtCh = reqTechCost + reqGachaCost;
+        const surplus = cumGoldPool - totalSinkAtCh;
+
+        computedChapters.push({
+          ...ch,
+          stageCnt, wrPct, playsPerDay, advPerDay,
+          daysNeeded, cumDays,
+          combatGold, welfareGold, cumGoldPool,
+          reqTechCost, reqGachaCost, totalSinkAtCh, surplus
+        });
+      }
+
+      // 4. Compute Day-by-Day (Day 1 ~ Day 90)
+      computedDaily = [];
+      let curStageFloat = 1.0;
+      let runningGold = 300;
+      let runningCombatGold = 0;
+
+      for (let day = 1; day <= 90; day++) {
+        const curStageInt = Math.min(350, Math.floor(curStageFloat));
+        const chMeta = CHAPTER_META.find(c => curStageInt >= c.start && curStageInt <= c.end) || CHAPTER_META[7];
+        const wrPct = parseFloat(document.getElementById(`wr-${chMeta.id}`).value) || 50;
+        const wr = Math.max(0.05, Math.min(1.0, wrPct / 100));
+        const plays = chMeta.id <= 3 ? playsPerDay13 : playsPerDay48;
+
+        const wins = plays * wr;
+        const fails = plays * (1 - wr);
+
+        let dayCombatG = 0;
+        // Approximate stage rewards around current stage
+        const stObj = computedStages[Math.min(349, Math.max(0, curStageInt - 1))];
+        dayCombatG = Math.round(wins * stObj.winG + fails * stObj.failG);
+
+        curStageFloat = Math.min(350, curStageFloat + wins);
+        const reachedStage = Math.min(350, Math.floor(curStageFloat));
+
+        runningCombatGold += dayCombatG;
+        runningGold += (dayCombatG + dailyWelfare);
+
+        // Find highest affordable tech tier (assuming 50% budget on tech, 50% on gacha)
+        let affordableTier = 1;
+        for (let t = 1; t <= 24; t++) {
+          if (getCumulativeTechCost(t) <= runningGold * 0.55) {
+            affordableTier = t;
+          }
+        }
+        const techSpent = getCumulativeTechCost(affordableTier);
+        const remForGacha = Math.max(0, runningGold - techSpent);
+        const tenPullsAffordable = Math.floor(remForGacha / baseTen);
+
+        // Target sink interpolation based on reachedStage
+        const chForStage = computedChapters.find(c => reachedStage >= c.start && reachedStage <= c.end) || computedChapters[7];
+        const prevSink = chForStage.id > 1 ? computedChapters[chForStage.id - 2].totalSinkAtCh : 0;
+        const progressInCh = (reachedStage - chForStage.start + 1) / chForStage.stageCnt;
+        const targetSinkNow = Math.round(prevSink + (chForStage.totalSinkAtCh - prevSink) * progressInCh);
+
+        computedDaily.push({
+          day,
+          chName: `第 ${chMeta.id} 章`,
+          plays,
+          wrPct,
+          wins,
+          reachedStage,
+          dayCombatG,
+          dailyWelfare,
+          dayTotalG: dayCombatG + dailyWelfare,
+          runningCombatGold,
+          runningGold,
+          affordableTier,
+          tenPullsAffordable,
+          targetSinkNow
+        });
+      }
+
+      // 5. Update KPIs
+      const totalTech24 = getCumulativeTechCost(24);
+      document.getElementById('sum-tech-sink').textContent = `${totalTech24.toLocaleString()} 🪙`;
+
+      const ch3Obj = computedChapters[2];
+      document.getElementById('kpi-ch3-days').textContent = `${ch3Obj.cumDays.toFixed(1)} 天`;
+      document.getElementById('kpi-ch3-gold').textContent = `累計總資金：${ch3Obj.cumGoldPool.toLocaleString()} 🪙`;
+
+      const ch4Obj = computedChapters[3];
+      document.getElementById('kpi-ch4-days').textContent = `${ch4Obj.cumDays.toFixed(1)} 天`;
+      document.getElementById('kpi-ch4-gold').textContent = `累計總資金：${ch4Obj.cumGoldPool.toLocaleString()} 🪙`;
+
+      // Stage 100 surplus check (approx Ch4 end + 10 stages)
+      const dayAtSt100 = computedDaily.find(d => d.reachedStage >= 100) || computedDaily[computedDaily.length - 1];
+      const sinkAtSt100 = getCumulativeTechCost(18) + getGachaCumulativeCost(350);
+      const diffSt100 = dayAtSt100.runningGold - sinkAtSt100;
+      const kpi100El = document.getElementById('kpi-st100-surplus');
+      kpi100El.textContent = `${diffSt100 >= 0 ? '+' : ''}${diffSt100.toLocaleString()} 🪙`;
+      kpi100El.className = 'kpi-val ' + (diffSt100 >= 0 ? 'val-pos' : 'val-neg');
+      document.getElementById('kpi-st100-desc').textContent =
+        `第 ${dayAtSt100.day} 天達 100 關 (扣除 T18 + 350抽)`;
+
+      const gachaLv8Sink = getGachaCumulativeCost(1150);
+      document.getElementById('kpi-total-sink').textContent = `${(totalTech24 + gachaLv8Sink).toLocaleString()} 🪙`;
+      document.getElementById('kpi-sink-detail').textContent =
+        `科技 ${(totalTech24/10000).toFixed(1)}萬 + 轉蛋Lv.8 ${(gachaLv8Sink/10000).toFixed(1)}萬`;
+
+      // 6. Render Tables & Charts
+      renderChaptersTable();
+      renderDailyTable();
+      if (rebuildTechTable) renderTechTable();
+      else updateTechTableTotalsOnly();
+      renderStagesTable();
+      drawDailyChart();
+      drawStageChart(dailyWelfare);
+    }
+
+    // =========================================================================
+    // TABLE RENDERERS
+    // =========================================================================
+    function renderChaptersTable() {
+      const tbody = document.getElementById('tbody-chapters');
+      tbody.innerHTML = computedChapters.map(ch => `
+        <tr>
+          <td><b>${ch.name}</b></td>
+          <td>Stage ${ch.start} ~ ${ch.end}</td>
+          <td>${ch.stageCnt} 關</td>
+          <td>${ch.wrPct}%</td>
+          <td>${ch.playsPerDay} 場/日</td>
+          <td>${ch.advPerDay.toFixed(2)} 關/日</td>
+          <td class="val-gold">${ch.daysNeeded.toFixed(1)} 天</td>
+          <td><b>${ch.cumDays.toFixed(1)} 天</b></td>
+          <td>${ch.combatGold.toLocaleString()} 🪙</td>
+          <td>${ch.welfareGold.toLocaleString()} 🪙</td>
+          <td class="val-gold">${ch.cumGoldPool.toLocaleString()} 🪙</td>
+          <td>${ch.wpnDesc}<br><small style="color:#94a3b8;">(累計 ${ch.reqGachaCost.toLocaleString()}G)</small></td>
+          <td>Tier ${ch.targetTech}<br><small style="color:#94a3b8;">(累計 ${ch.reqTechCost.toLocaleString()}G)</small></td>
+          <td class="${ch.surplus >= 0 ? 'val-pos' : 'val-neg'}">
+            ${ch.surplus >= 0 ? '+' : ''}${ch.surplus.toLocaleString()} 🪙
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderDailyTable() {
+      const tbody = document.getElementById('tbody-daily');
+      tbody.innerHTML = computedDaily.map(d => `
+        <tr>
+          <td><b>Day ${d.day}</b></td>
+          <td>${d.chName}</td>
+          <td>${d.plays} 場</td>
+          <td>${d.wrPct}%</td>
+          <td>+${d.wins.toFixed(1)} 關</td>
+          <td class="val-gold">Stage ${d.reachedStage}</td>
+          <td>${d.dayCombatG.toLocaleString()} 🪙</td>
+          <td>${d.dailyWelfare.toLocaleString()} 🪙</td>
+          <td><b>${d.dayTotalG.toLocaleString()} 🪙</b></td>
+          <td class="val-gold">${d.runningGold.toLocaleString()} 🪙</td>
+          <td>Tier ${d.affordableTier}</td>
+          <td>${d.tenPullsAffordable} 次十連</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderTechTable() {
+      const tbody = document.getElementById('tbody-tech');
+      let cum = 0;
+      const cycleSums = { 1: 0, 2: 0, 3: 0, 4: 0 };
+      TECH_BASE_DATA.forEach((t, idx) => {
+        cycleSums[t.cycle] += getEffectiveTechCost(idx);
+      });
+
+      tbody.innerHTML = TECH_BASE_DATA.map((t, idx) => {
+        const effCost = getEffectiveTechCost(idx);
+        cum += effCost;
+        const cycText = t.isMajor ? `循環 ${t.cycle} 小計：${cycleSums[t.cycle].toLocaleString()} G` : '-';
+        return `
+          <tr class="${t.isMajor ? 'row-major' : ''}">
+            <td><b>Tier ${t.tier}</b></td>
+            <td>${t.name}</td>
+            <td>${t.range}</td>
+            <td>${t.minWpn > 0 ? '裝備 ≥ ' + t.minWpn : '無'}</td>
+            <td style="color:#94a3b8;">${t.loose.toLocaleString()}</td>
+            <td style="color:#94a3b8;">${t.oldHigh.toLocaleString()}</td>
+            <td style="color:#38bdf8;">${t.sink102.toLocaleString()}</td>
+            <td>
+              <input type="number" class="inline-input" value="${customTechCosts[idx]}" step="200"
+                oninput="onManualTechCostChange(${idx}, this.value)">
+            </td>
+            <td id="tech-cyc-${idx}" class="val-gold">${cycText}</td>
+            <td id="tech-cum-${idx}"><b>${cum.toLocaleString()} 🪙</b></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function updateTechTableTotalsOnly() {
+      let cum = 0;
+      const cycleSums = { 1: 0, 2: 0, 3: 0, 4: 0 };
+      TECH_BASE_DATA.forEach((t, idx) => {
+        cycleSums[t.cycle] += getEffectiveTechCost(idx);
+      });
+      TECH_BASE_DATA.forEach((t, idx) => {
+        const effCost = getEffectiveTechCost(idx);
+        cum += effCost;
+        const cycEl = document.getElementById(`tech-cyc-${idx}`);
+        const cumEl = document.getElementById(`tech-cum-${idx}`);
+        if (cycEl) cycEl.textContent = t.isMajor ? `循環 ${t.cycle} 小計：${cycleSums[t.cycle].toLocaleString()} G` : '-';
+        if (cumEl) cumEl.innerHTML = `<b>${cum.toLocaleString()} 🪙</b>`;
+      });
+    }
+
+    function renderStagesTable() {
+      const selCh = parseInt(document.getElementById('sel-stage-chapter').value, 10) || 0;
+      const list = selCh === 0 ? computedStages : computedStages.filter(s => s.chId === selCh);
+      const tbody = document.getElementById('tbody-stages');
+      tbody.innerHTML = list.map(st => `
+        <tr>
+          <td><b>Stage ${st.id}</b></td>
+          <td>第 ${st.chId} 章</td>
+          <td>${st.recPower.toLocaleString()}</td>
+          <td style="color:#fb7185; font-weight:700;">${st.bossVal.toLocaleString()}</td>
+          <td>${st.mCnt} 隻</td>
+          <td>${st.baseG.toLocaleString()} 🪙</td>
+          <td>${st.goldCap.toLocaleString()} 🪙</td>
+          <td class="val-gold">${st.winG.toLocaleString()} 🪙</td>
+          <td style="color:#94a3b8;">${st.failG.toLocaleString()} 🪙</td>
+          <td>${st.cumBase.toLocaleString()} 🪙</td>
+          <td class="val-pos">${st.cumWin.toLocaleString()} 🪙</td>
+        </tr>
+      `).join('');
+    }
+
+    // =========================================================================
+    // CANVAS CHART RENDERERS
+    // =========================================================================
+    function drawDailyChart() {
+      const canvas = document.getElementById('chart-daily-curve');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      const padL = 68, padR = 20, padT = 20, padB = 32;
+      const plotW = W - padL - padR;
+      const plotH = H - padT - padB;
+
+      const maxVal = Math.max(
+        ...computedDaily.map(d => Math.max(d.runningGold, d.targetSinkNow)),
+        100000
+      ) * 1.08;
+
+      // Grid lines
+      ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'right';
+      for (let i = 0; i <= 4; i++) {
+        const y = padT + plotH - (i / 4) * plotH;
+        const val = Math.round((i / 4) * maxVal);
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(W - padR, y);
+        ctx.stroke();
+        ctx.fillText((val / 1000).toFixed(0) + 'k', padL - 6, y + 4);
+      }
+
+      // X-axis labels
+      ctx.textAlign = 'center';
+      for (let d = 1; d <= 90; d += 10) {
+        const x = padL + ((d - 1) / 89) * plotW;
+        ctx.fillText(`D${d}`, x, H - 10);
+      }
+
+      const drawLine = (getter, color, width = 2.5) => {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        computedDaily.forEach((d, idx) => {
+          const x = padL + (idx / 89) * plotW;
+          const y = padT + plotH - (getter(d) / maxVal) * plotH;
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      };
+
+      drawLine(d => d.runningCombatGold, '#38bdf8', 2);
+      drawLine(d => d.targetSinkNow, '#f43f5e', 2.5);
+      drawLine(d => d.runningGold, '#10b981', 3);
+    }
+
+    function drawStageChart(dailyWelfare) {
+      const canvas = document.getElementById('chart-stage-curve');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      const padL = 62, padR = 20, padT = 20, padB = 32;
+      const plotW = W - padL - padR;
+      const plotH = H - padT - padB;
+
+      const maxVal = Math.max(
+        computedStages[349].winG,
+        dailyWelfare,
+        5000
+      ) * 1.1;
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'right';
+      for (let i = 0; i <= 4; i++) {
+        const y = padT + plotH - (i / 4) * plotH;
+        const val = Math.round((i / 4) * maxVal);
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(W - padR, y);
+        ctx.stroke();
+        ctx.fillText(val.toLocaleString(), padL - 6, y + 4);
+      }
+
+      ctx.textAlign = 'center';
+      [1, 50, 100, 150, 200, 250, 300, 350].forEach(s => {
+        const x = padL + ((s - 1) / 349) * plotW;
+        ctx.fillText(`S${s}`, x, H - 10);
+      });
+
+      // Daily welfare horizontal reference line
+      const yWelfare = padT + plotH - (dailyWelfare / maxVal) * plotH;
+      ctx.strokeStyle = '#a855f7';
+      ctx.setLineDash([6, 4]);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(padL, yWelfare);
+      ctx.lineTo(W - padR, yWelfare);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Stage winG curve
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      computedStages.forEach((st, idx) => {
+        const x = padL + (idx / 349) * plotW;
+        const y = padT + plotH - (st.winG / maxVal) * plotH;
+        if (idx === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+
+    // =========================================================================
+    // EXPORT CSV & COPY CONFIG
+    // =========================================================================
+    document.getElementById('btn-export-csv').addEventListener('click', () => {
+      const rows = [];
+      rows.push(['【表一】24階科技費用配置']);
+      rows.push(['階級', '名稱', '掉落池', '當前設定費用(G)', '累計費用(G)']);
+      let cumT = 0;
+      TECH_BASE_DATA.forEach((t, idx) => {
+        const c = getEffectiveTechCost(idx);
+        cumT += c;
+        rows.push([`Tier ${t.tier}`, t.name, t.range, c, cumT]);
+      });
+      rows.push([]);
+      rows.push(['【表二】8大章節進度與收支推衍']);
+      rows.push(['章節', '關卡範圍', '勝率(%)', '每日場次', '突破天數', '累計天數', '戰鬥收入', '日常收入', '累計總資金', '養成後結餘']);
+      computedChapters.forEach(c => {
+        rows.push([c.name, `${c.start}~${c.end}`, c.wrPct, c.playsPerDay, c.daysNeeded.toFixed(1), c.cumDays.toFixed(1), c.combatGold, c.welfareGold, c.cumGoldPool, c.surplus]);
+      });
+      rows.push([]);
+      rows.push(['【表三】全350關卡逐關獎勵試算']);
+      rows.push(['關卡ID', '章節', '推薦戰力', 'Boss戰力', '基礎過關金幣', '場內金幣上限', '過關預估總收益', '敗戰預估收益', '累計過關總金幣']);
+      computedStages.forEach(st => {
+        rows.push([st.id, `第${st.chId}章`, st.recPower, st.bossVal, st.baseG, st.goldCap, st.winG, st.failG, st.cumWin]);
+      });
+
+      const csvContent = '\uFEFF' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'economy_350_stages_custom.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('btn-copy-config').addEventListener('click', () => {
+      const costs = TECH_BASE_DATA.map((t, idx) => `Tier ${t.tier}: ${getEffectiveTechCost(idx)}`).join(', ');
+      const snippet = `// Economy Studio Exported Config\n// Tech Costs: ${costs}\n// Stage Formula: base=${document.getElementById('inp-st-base').value}, inc=[${document.getElementById('inp-st-inc1').value}, ${document.getElementById('inp-st-inc2').value}, ${document.getElementById('inp-st-inc3').value}, ${document.getElementById('inp-st-inc4').value}]`;
+      navigator.clipboard.writeText(snippet).then(() => {
+        alert('✅ 已複製當前調校參數摘要！可直接貼給 AI 助理一鍵同步至遊戲代碼！');
+      });
+    });
+
+    // Bind all inputs for real-time update
+    document.querySelectorAll('.sidebar input').forEach(inp => {
+      inp.addEventListener('input', () => recalculateAll(false));
+    });
+
+    // Initial render
+    recalculateAll(true);
+  </script>
+</body>
+</html>

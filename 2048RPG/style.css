@@ -4153,3 +4153,401 @@ body {
   50% { transform: translate(calc(var(--fly-x) * 0.5), calc(var(--fly-y) * 0.5 - 30px)) scale(1.2); opacity: 1; }
   100% { transform: translate(var(--fly-x), var(--fly-y)) scale(0.4); opacity: 0; }
 }
+
+/* =========================================================================
+   C-STORY-101: DAILY RETENTION & QUEST SYSTEM STYLES
+   ========================================================================= */
+
+/* Lobby Activity Quick Bar */
+.daily-lobby-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+}
+
+.btn-daily-action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #f8fafc;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+.btn-daily-action:hover {
+  transform: translateY(-2px);
+  border-color: #38bdf8;
+  box-shadow: 0 6px 16px rgba(56, 189, 248, 0.25);
+}
+
+.btn-daily-action:active {
+  transform: translateY(1px);
+}
+
+.daily-btn-icon {
+  font-size: 1.05rem;
+}
+
+/* Universal Notification Dot */
+.badge-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 10px;
+  height: 10px;
+  background: #ef4444;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #ef4444;
+  animation: badgePulse 1.5s infinite;
+  z-index: 10;
+}
+
+@keyframes badgePulse {
+  0% { transform: scale(1); box-shadow: 0 0 4px #ef4444; }
+  50% { transform: scale(1.25); box-shadow: 0 0 10px #f87171; }
+  100% { transform: scale(1); box-shadow: 0 0 4px #ef4444; }
+}
+
+/* Modal Headers */
+.modal-header-with-close {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.btn-modal-close-icon {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.15s ease;
+}
+
+.btn-modal-close-icon:hover {
+  color: #f8fafc;
+}
+
+.modal-subtitle {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-bottom: 14px;
+}
+
+/* 7-Day Sign-in Grid */
+.signin-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.signin-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px 4px;
+  text-align: center;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.signin-card.day7-grand {
+  grid-column: span 2;
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.18), rgba(30, 41, 59, 0.9));
+  border-color: #facc15;
+}
+
+.signin-card.current {
+  border-color: #38bdf8;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(30, 41, 59, 0.9));
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+  animation: currentPulse 2s infinite;
+}
+
+@keyframes currentPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.signin-card.claimed {
+  opacity: 0.65;
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.signin-card-day {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.signin-card.current .signin-card-day {
+  color: #38bdf8;
+}
+
+.signin-card-icon {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+}
+
+.signin-card-reward {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #facc15;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.signin-card-status {
+  font-size: 0.65rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.signin-card.claimed .signin-card-status {
+  color: #10b981;
+}
+
+.signin-card.current .signin-card-status {
+  color: #38bdf8;
+  font-weight: 800;
+}
+
+/* Daily Quests UI */
+.modal-quests-card {
+  max-width: 440px;
+  width: 92%;
+}
+
+.daily-activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+
+.activity-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-label {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+.activity-points {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #facc15;
+}
+
+.activity-bar-container {
+  flex: 1;
+  height: 8px;
+  background: #334155;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.activity-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #facc15);
+  transition: width 0.3s ease;
+}
+
+.btn-claim-chest {
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-claim-chest.disabled {
+  background: #334155;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.btn-claim-chest.glow-active {
+  background: linear-gradient(135deg, #facc15, #f59e0b);
+  color: #78350f;
+  box-shadow: 0 0 12px #facc15;
+  animation: currentPulse 1.5s infinite;
+}
+
+.btn-claim-chest.claimed {
+  background: #1e293b;
+  color: #10b981;
+  border: 1px solid #10b981;
+}
+
+/* Daily Quests List */
+.daily-quests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.quest-item-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 8px 12px;
+  transition: all 0.2s ease;
+}
+
+.quest-item-card.completed {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(30, 41, 59, 0.95);
+}
+
+.quest-item-card.claimed {
+  opacity: 0.6;
+}
+
+.quest-icon {
+  font-size: 1.5rem;
+}
+
+.quest-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.quest-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.quest-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.quest-points {
+  font-size: 0.72rem;
+  color: #facc15;
+  font-weight: 700;
+}
+
+.quest-desc {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quest-progress-bar-wrap {
+  position: relative;
+  height: 6px;
+  background: #1e293b;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.quest-progress-bar {
+  height: 100%;
+  background: #38bdf8;
+  transition: width 0.3s ease;
+}
+
+.quest-progress-text {
+  position: absolute;
+  right: 2px;
+  top: -12px;
+  font-size: 0.62rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.quest-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.quest-reward-pill {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #facc15;
+}
+
+.btn-quest-claim {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-quest-claim.disabled {
+  background: #334155;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.btn-quest-claim.active {
+  background: linear-gradient(135deg, #38bdf8, #0284c7);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.btn-quest-claim.claimed {
+  background: #1e293b;
+  color: #10b981;
+}
+
+.glow-pulse {
+  animation: glowPulse 2s infinite;
+}
+
+@keyframes glowPulse {
+  0% { box-shadow: 0 0 6px rgba(250, 204, 21, 0.4); }
+  50% { box-shadow: 0 0 16px rgba(250, 204, 21, 0.8); }
+  100% { box-shadow: 0 0 6px rgba(250, 204, 21, 0.4); }
+}
+

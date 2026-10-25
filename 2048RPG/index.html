@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>2048 RPG：王國遠征 (Commercial Edition)</title>
-  <link rel="stylesheet" href="style.css?v=1.4.4">
+  <link rel="stylesheet" href="style.css?v=1.4.5">
   <link rel="stylesheet" href="visual_tuning.css">
 </head>
 <body>
@@ -24,7 +24,7 @@
         <div class="title-hero-avatar">⚔️🛡️👑</div>
         <div class="title-feature-tags">
           <span class="feat-tag">🗺️ 350 關史詩遠征</span>
-          <span class="feat-tag">🏛️ 24 階軍備科技</span>
+          <span class="feat-tag">🏛️ 48 階軍備科技</span>
           <span class="feat-tag">🪙 合成金幣經濟</span>
         </div>
         <p class="title-prompt">滑動合體 · 突破重圍 · 擊潰魔物</p>
@@ -32,7 +32,7 @@
           <span class="btn-start-icon">⚔️</span>
           <span class="btn-start-text">開始遊戲</span>
         </button>
-        <div class="title-version">v5.7.1 · 350 Stages Commercial Version</div>
+        <div class="title-version">v5.8.2 · 350 Stages Commercial Version</div>
       </div>
     </div>
 
@@ -62,6 +62,20 @@
 
       <!-- ================= TAB 1: STAGES (MAIN BATTLE) ================= -->
       <section class="tab-view active" id="view-stages">
+        <!-- Daily Activities Quick Bar (C-STORY-101) -->
+        <div class="daily-lobby-bar" id="daily-lobby-bar">
+          <button class="btn-daily-action" id="btn-open-signin">
+            <span class="daily-btn-icon">📅</span>
+            <span class="daily-btn-label">每日簽到</span>
+            <span class="badge-dot" id="badge-signin" style="display: none;"></span>
+          </button>
+          <button class="btn-daily-action" id="btn-open-quests">
+            <span class="daily-btn-icon">📜</span>
+            <span class="daily-btn-label">每日任務</span>
+            <span class="badge-dot" id="badge-quests" style="display: none;"></span>
+          </button>
+        </div>
+
         <!-- Chapter Switcher Tabs (Supports 8 Chapters) -->
         <div class="chapter-tabs" id="chapter-tabs">
           <!-- Dynamically populated or initialized via JS -->
@@ -309,6 +323,20 @@
         </div>
 
         <div class="shop-privilege-grid">
+          <!-- 0. Daily Free Shop Supplies (C-STORY-101) -->
+          <div class="privilege-card card-daily-free-gift" id="card-daily-free-gift" style="border: 2px solid #38bdf8; background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(15, 23, 42, 0.85));">
+            <div class="privilege-badge" style="background: #0284c7; color: #fff;">✨ 每日福利</div>
+            <div class="privilege-icon">📦</div>
+            <div class="privilege-info">
+              <h4 class="privilege-title">每日免費軍資箱 (+200🪙)</h4>
+              <p class="privilege-desc" id="shop-free-gift-status">王國軍資每日免費補給 (+200🪙)</p>
+            </div>
+            <button class="btn-privilege-buy" id="btn-claim-shop-free-gift">
+              <span class="privilege-price">免費</span>
+              <span class="privilege-action">立即領取</span>
+            </button>
+          </div>
+
           <!-- 1. Lifetime No-Ads Pass -->
           <div class="privilege-card card-no-ads" id="card-no-ads">
             <div class="privilege-badge">👑 尊榮終身</div>
@@ -418,9 +446,10 @@
         <span class="nav-icon">⛺</span>
         <span class="nav-label">營地</span>
       </button>
-      <button class="nav-item" data-tab="view-shop" id="nav-shop">
+      <button class="nav-item" data-tab="view-shop" id="nav-shop" style="position: relative;">
         <span class="nav-icon">💎</span>
         <span class="nav-label">商店</span>
+        <span class="badge-dot" id="badge-shop" style="display: none;"></span>
       </button>
     </nav>
 
@@ -599,12 +628,43 @@
           <hr style="border: 0; border-top: 1px solid #334155; margin: 12px 0;">
           <div class="setting-section-header" style="margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
             <span style="font-size: 0.92rem; font-weight: 800; color: #38bdf8;">📜 版本更新履歷</span>
-            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v5.7.1</span>
+            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v5.8.2</span>
           </div>
           <div class="version-changelog-box" id="version-changelog-box">
+            <!-- C-STORY-106 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-106 (最新)</div>
+              <div class="changelog-title">48 階王國軍備科技擴充 (270萬深水庫) ＆ 全 350 關 800 回合節奏平衡對齊</div>
+              <ul class="changelog-list">
+                <li>🏛️ 科技上限擴充至 48 階 (8 大週期)：盤面基礎產出最高突破至 [512, 1024, 2048]，前期 Cycle 1~2 降價更親民 (僅需 2.4萬 G)，中後期阶梯陡峭拉升至總額 270萬 G！</li>
+                <li>🗡️ 大突破裝備持有門檻雙向支援：每 6 階大突破檢查玩家「穿戴中或背包內持有」之最高裝備 (16 ➔ 65536)，引導裝備與科技雙軌養成。</li>
+                <li>⚖️ 全 350 關出擊參考指標對齊：以第 350 關 800 回合內討伐完成為基準，更新全關卡純參考建議戰力與建議科技階級（挑戰關卡 100% 自由無限制，可隨時裸裝出擊）。</li>
+              </ul>
+            </div>
+            <!-- C-STORY-102 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-102</div>
+              <div class="changelog-title">經濟數值可視化調校工作台 (Economy Studio) ＆ 350 關 CSV 報表 ＆ 26.5萬科技深水庫</div>
+              <ul class="changelog-list">
+                <li>📊 單檔免開 CMD 經濟調校工作台 (economy_studio.html)：支援即時調整每日福利、關卡獎勵斜率、科技倍率、十連抽動態定價與章節勝率，即時繪製收支曲線與匯出 CSV！</li>
+                <li>🎁 每日 3~5 次十連抽福利升級：簽到首日 1,000G 起跳、第 7 天 5,000G＋雙倍戰槌與沙漏；100 活躍全勤寶箱升級發放 600G＋精準重弩 x2＋破壞戰槌 x1！</li>
+                <li>🏛️ 24 階科技深水庫重構 (總額 265,000G)：四大突破升級為 5,000 / 15,000 / 35,000 / 80,000G，有效吸收中後期金幣產出，防止關卡難度過早崩塌。</li>
+              </ul>
+            </div>
+            <!-- C-STORY-101 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-101</div>
+              <div class="changelog-title">每日留存與活躍循環系統（7日簽到 ＆ 每日任務 ＆ 商店免費補給）</div>
+              <ul class="changelog-list">
+                <li>📅 七日之約連續簽到：每天進入大廳領取階梯遞增金幣，第 7 天發放 2000 金幣與「破壞戰槌」神級戰鬥道具，首次登入自動引導彈窗！</li>
+                <li>📜 每日活躍任務矩陣：四項推關順手達成的目標（消滅魔物、合成高階士兵/裝備、開採金幣、遠征場次），每項提供專屬金幣產出與活躍度點數！</li>
+                <li>🏆 100 活躍度全勤大寶箱：當天完成任務填滿 100 活躍度，即刻領取 500 金幣與「精準重弩」大獎，每日 00:00 自動無感跨天重置！</li>
+                <li>📦 皇家寶庫每日免費軍資：商店頂部常駐每日 200 金幣免費補給箱，大廳各活動入口配備智慧紅點提示，養成目標清晰明確。</li>
+              </ul>
+            </div>
             <!-- C-STORY-100 -->
             <div class="changelog-item">
-              <div class="changelog-badge">🌟 C-STORY-100 (最新)</div>
+              <div class="changelog-badge">🌟 C-STORY-100</div>
               <div class="changelog-title">商人技能無金幣前置安全攔截 ＆ 破甲重矢 18 片輕量化 ＆ 三大職業專屬必殺音效實裝</div>
               <ul class="changelog-list">
                 <li>🪙 商人急召無金幣前置攔截：盤面無金幣時主動施放技能，跳出「⚠️ 盤面無金幣可供回收！」警示漂字並立即安全返回，杜絕虛假觸發演出與空放問題，充能完整保留。</li>
@@ -1233,8 +1293,57 @@
       </div>
     </div>
 
+    <!-- ================= MODAL: 7-DAY SIGN-IN (C-STORY-101) ================= -->
+    <div class="modal-backdrop" id="modal-daily-signin" style="display: none; z-index: 130;">
+      <div class="modal-card modal-daily-card">
+        <div class="modal-header-with-close">
+          <h3 class="modal-title">📅 每日簽到 · 七日之約</h3>
+          <button class="btn-modal-close-icon" id="btn-close-signin">✖</button>
+        </div>
+        <p class="modal-subtitle" id="signin-status-hint">每天登入簽到領取豐厚軍資，連續簽到解鎖神級大禮！</p>
+        <div class="signin-cards-grid" id="signin-cards-grid">
+          <!-- Populated by DailyLoopView.js -->
+        </div>
+        <div class="modal-actions" style="margin-top: 14px;">
+          <button class="btn-modal-primary glow-pulse" id="btn-claim-signin" style="width: 100%;">
+            立即簽到領取獎勵
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL: DAILY QUESTS (C-STORY-101) ================= -->
+    <div class="modal-backdrop" id="modal-daily-quests" style="display: none; z-index: 130;">
+      <div class="modal-card modal-quests-card">
+        <div class="modal-header-with-close">
+          <h3 class="modal-title">📜 每日活躍任務</h3>
+          <button class="btn-modal-close-icon" id="btn-close-quests">✖</button>
+        </div>
+
+        <!-- Activity Points Header Bar -->
+        <div class="daily-activity-header">
+          <div class="activity-info">
+            <span class="activity-label">今日活躍度：</span>
+            <span class="activity-points" id="activity-points-val">0 / 100</span>
+          </div>
+          <div class="activity-bar-container">
+            <div class="activity-progress-fill" id="activity-progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="activity-chest-box">
+            <button class="btn-claim-chest disabled" id="btn-claim-activity-chest" disabled>
+              🎁 全勤寶箱
+            </button>
+          </div>
+        </div>
+
+        <div class="daily-quests-list" id="daily-quests-list">
+          <!-- Populated by DailyLoopView.js -->
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <script type="module" src="main.js?v=1.4.4"></script>
+  <script type="module" src="main.js?v=1.4.5"></script>
 </body>
 </html>

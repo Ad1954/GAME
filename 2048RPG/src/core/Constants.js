@@ -45,10 +45,13 @@ export const Events = {
   CHARACTER_CHANGED: 'CHARACTER_CHANGED',
   SKILL_USED: 'SKILL_USED',
   SKILL_CHARGE_CHANGED: 'SKILL_CHARGE_CHANGED',
-  SKILL_UPGRADED: 'SKILL_UPGRADED'
+  SKILL_UPGRADED: 'SKILL_UPGRADED',
+  // C-STORY-101: DAILY RETENTION & QUEST EVENTS
+  DAILY_STATE_CHANGED: 'DAILY_STATE_CHANGED',
+  QUEST_PROGRESS_CHANGED: 'QUEST_PROGRESS_CHANGED'
 };
 
-export const CURRENT_GAME_VERSION = 'v1.4.4';
+export const CURRENT_GAME_VERSION = 'v1.4.5';
 
 export const MAX_ITEM_STACK = 999;
 
@@ -133,43 +136,170 @@ export const ITEM_CONFIGS = {
 };
 
 // ==========================================
-// C-STORY-008 & C-STORY-037: 24-TIER BASE STAT UPGRADES
-// Formula: Tier 2 starts at 600, +15% per tier (floor hundreds),
-// Major breakthroughs (T6, T12, T18, T24) = 3x previous tier!
+// C-STORY-101 & C-STORY-102: DAILY RETENTION & QUEST SYSTEM (3~5x 10-Pull Baseline)
+// ==========================================
+export const DAILY_SIGNIN_REWARDS = [
+  { day: 1, gold: 1000, items: null, desc: '金幣 x1,000' },
+  { day: 2, gold: 1200, items: null, desc: '金幣 x1,200' },
+  { day: 3, gold: 1500, items: null, desc: '金幣 x1,500' },
+  { day: 4, gold: 1800, items: null, desc: '金幣 x1,800' },
+  { day: 5, gold: 2200, items: null, desc: '金幣 x2,200' },
+  { day: 6, gold: 3000, items: null, desc: '金幣 x3,000' },
+  { day: 7, gold: 5000, items: { hammer: 2, undo: 2 }, desc: '金幣 x5,000 + 破壞戰槌 x2 + 時光沙漏 x2' }
+];
+
+export const DAILY_FREE_SHOP_REWARD = {
+  gold: 200,
+  desc: '每日免費軍資補給：金幣 x200'
+};
+
+export const DAILY_QUEST_CONFIGS = [
+  {
+    id: 'quest_kill_monsters',
+    name: '魔物清剿',
+    desc: '在冒險關卡中累計擊倒 15 隻魔物',
+    icon: '⚔️',
+    target: 15,
+    rewardGold: 300,
+    activityPoints: 25
+  },
+  {
+    id: 'quest_high_merge',
+    name: '精良合成',
+    desc: '在盤面上合成出數值 ≥ 128 的士兵或裝備 1 次',
+    icon: '🛡️',
+    target: 1,
+    rewardGold: 300,
+    activityPoints: 25
+  },
+  {
+    id: 'quest_collect_gold',
+    name: '開採財富',
+    desc: '在冒險關卡中累計回收 50 枚金幣',
+    icon: '🪙',
+    target: 50,
+    rewardGold: 300,
+    activityPoints: 25
+  },
+  {
+    id: 'quest_combat_count',
+    name: '勤勉遠征',
+    desc: '進行任意冒險關卡戰鬥累計達 3 場',
+    icon: '🚩',
+    target: 3,
+    rewardGold: 300,
+    activityPoints: 25
+  }
+];
+
+export const DAILY_ACTIVITY_CHEST_CONFIG = {
+  requiredPoints: 100,
+  rewardGold: 600,
+  rewardItem: 'snipe',
+  itemCount: 2,
+  rewardItems: { snipe: 2, hammer: 1 },
+  desc: '活躍大寶箱：金幣 x600 + 精準重弩 x2 + 破壞戰槌 x1'
+};
+
+// ==========================================
+// C-STORY-008 & C-STORY-037 & C-STORY-102 & C-STORY-106: 48-TIER BASE STAT UPGRADES (8 Cycles, Total: 2,700,000G)
+// Cycle 1: 6,000G (T6=3,000)    | Cycle 2: 18,000G (T12=7,000)   | Cycle 3: 46,000G (T18=20,000)  | Cycle 4: 110,000G (T24=55,000)
+// Cycle 5: 220,000G (T30=110k)  | Cycle 6: 400,000G (T36=200k)   | Cycle 7: 700,000G (T42=350k)   | Cycle 8: 1,200,000G (T48=600k)
 // ==========================================
 export const BASE_STAT_TIERS = [
-  // Cycle 1: [2, 4, 8]
+  // Cycle 1: [2, 4, 8] -> Subtotal: 6,000 (Cumulative: 6,000)
   { tier: 1, cost: 0, isMajor: false, baseRange: [2, 4, 8], weights: [0.80, 0.18, 0.02], name: '新兵武裝', desc: '初階新兵物資，以 2 為主' },
-  { tier: 2, cost: 600, isMajor: false, baseRange: [2, 4, 8], weights: [0.75, 0.22, 0.03], name: '巡邏獵備', desc: '4 階裝備出現率微幅提升' },
-  { tier: 3, cost: 700, isMajor: false, baseRange: [2, 4, 8], weights: [0.70, 0.25, 0.05], name: '鐵衛防具', desc: '4 與 8 階裝備產出提升' },
+  { tier: 2, cost: 400, isMajor: false, baseRange: [2, 4, 8], weights: [0.75, 0.22, 0.03], name: '巡邏獵備', desc: '4 階裝備出現率微幅提升' },
+  { tier: 3, cost: 600, isMajor: false, baseRange: [2, 4, 8], weights: [0.70, 0.25, 0.05], name: '鐵衛防具', desc: '4 與 8 階裝備產出提升' },
   { tier: 4, cost: 800, isMajor: false, baseRange: [2, 4, 8], weights: [0.65, 0.28, 0.07], name: '先鋒戰備', desc: '進一步優化戰鬥裝備質量' },
-  { tier: 5, cost: 900, isMajor: false, baseRange: [2, 4, 8], weights: [0.60, 0.30, 0.10], name: '精鋼鍛造', desc: '小升階頂峰，準備大升階突破' },
-  { tier: 6, cost: 2700, isMajor: true, minEquippedWeapon: 4, baseRange: [4, 8, 16], weights: [0.75, 0.22, 0.03], name: '【大突破】白銀軍備', desc: '🚨 徹底淘汰 2！盤面基礎產出提升至 [4, 8, 16]' },
+  { tier: 5, cost: 1200, isMajor: false, baseRange: [2, 4, 8], weights: [0.60, 0.30, 0.10], name: '精鋼鍛造', desc: '小升階頂峰，準備大升階突破' },
+  { tier: 6, cost: 3000, isMajor: true, minEquippedWeapon: 16, baseRange: [4, 8, 16], weights: [0.75, 0.22, 0.03], name: '【大突破】白銀軍備', desc: '🚨 徹底淘汰 2！盤面基礎產出提升至 [4, 8, 16]' },
 
-  // Cycle 2: [4, 8, 16]
-  { tier: 7, cost: 1000, isMajor: false, baseRange: [4, 8, 16], weights: [0.70, 0.25, 0.05], name: '精銳配給', desc: '8 階裝備產出提升' },
-  { tier: 8, cost: 1100, isMajor: false, baseRange: [4, 8, 16], weights: [0.65, 0.28, 0.07], name: '戰陣重裝', desc: '進一步優化白銀裝備質量' },
-  { tier: 9, cost: 1200, isMajor: false, baseRange: [4, 8, 16], weights: [0.60, 0.30, 0.10], name: '騎士鎧甲', desc: '8 與 16 階產出提升' },
-  { tier: 10, cost: 1300, isMajor: false, baseRange: [4, 8, 16], weights: [0.55, 0.32, 0.13], name: '秘銀附魔', desc: '高階白銀裝備大比例掉落' },
-  { tier: 11, cost: 1400, isMajor: false, baseRange: [4, 8, 16], weights: [0.50, 0.34, 0.16], name: '皇家禮裝', desc: '黃金大突破前哨' },
-  { tier: 12, cost: 4200, isMajor: true, minEquippedWeapon: 8, baseRange: [8, 16, 32], weights: [0.75, 0.22, 0.03], name: '【大突破】黃金領主', desc: '🚨 徹底淘汰 4！盤面基礎產出提升至 [8, 16, 32]' },
+  // Cycle 2: [4, 8, 16] -> Subtotal: 18,000 (Cumulative: 24,000)
+  { tier: 7, cost: 1400, isMajor: false, baseRange: [4, 8, 16], weights: [0.70, 0.25, 0.05], name: '精銳配給', desc: '8 階裝備產出提升' },
+  { tier: 8, cost: 1800, isMajor: false, baseRange: [4, 8, 16], weights: [0.65, 0.28, 0.07], name: '戰陣重裝', desc: '進一步優化白銀裝備質量' },
+  { tier: 9, cost: 2200, isMajor: false, baseRange: [4, 8, 16], weights: [0.60, 0.30, 0.10], name: '騎士鎧甲', desc: '8 與 16 階產出提升' },
+  { tier: 10, cost: 2600, isMajor: false, baseRange: [4, 8, 16], weights: [0.55, 0.32, 0.13], name: '秘銀附魔', desc: '高階白銀裝備大比例掉落' },
+  { tier: 11, cost: 3000, isMajor: false, baseRange: [4, 8, 16], weights: [0.50, 0.34, 0.16], name: '皇家禮裝', desc: '黃金大突破前哨' },
+  { tier: 12, cost: 7000, isMajor: true, minEquippedWeapon: 128, baseRange: [8, 16, 32], weights: [0.75, 0.22, 0.03], name: '【大突破】黃金領主', desc: '🚨 徹底淘汰 4！盤面基礎產出提升至 [8, 16, 32]' },
 
-  // Cycle 3: [8, 16, 32]
-  { tier: 13, cost: 1600, isMajor: false, baseRange: [8, 16, 32], weights: [0.70, 0.25, 0.05], name: '聖殿武裝', desc: '16 階裝備產出提升' },
-  { tier: 14, cost: 1800, isMajor: false, baseRange: [8, 16, 32], weights: [0.65, 0.28, 0.07], name: '光輝重刃', desc: '穩定掉落 16 與 32' },
-  { tier: 15, cost: 2000, isMajor: false, baseRange: [8, 16, 32], weights: [0.60, 0.30, 0.10], name: '神聖制式', desc: '大額提升 32 階產出' },
-  { tier: 16, cost: 2300, isMajor: false, baseRange: [8, 16, 32], weights: [0.55, 0.32, 0.13], name: '大師神匠', desc: '黃金工藝極限' },
-  { tier: 17, cost: 2600, isMajor: false, baseRange: [8, 16, 32], weights: [0.50, 0.34, 0.16], name: '泰坦鍛爐', desc: '屠龍大突破前夕' },
-  { tier: 18, cost: 7800, isMajor: true, minEquippedWeapon: 16, baseRange: [16, 32, 64], weights: [0.75, 0.22, 0.03], name: '【大突破】屠龍戰狂', desc: '🚨 徹底淘汰 8！大升階直達 64！盤面基礎提升至 [16, 32, 64]' },
+  // Cycle 3: [8, 16, 32] -> Subtotal: 46,000 (Cumulative: 70,000)
+  { tier: 13, cost: 3600, isMajor: false, baseRange: [8, 16, 32], weights: [0.70, 0.25, 0.05], name: '聖殿武裝', desc: '16 階裝備產出提升' },
+  { tier: 14, cost: 4400, isMajor: false, baseRange: [8, 16, 32], weights: [0.65, 0.28, 0.07], name: '光輝重刃', desc: '穩定掉落 16 與 32' },
+  { tier: 15, cost: 5200, isMajor: false, baseRange: [8, 16, 32], weights: [0.60, 0.30, 0.10], name: '神聖制式', desc: '大額提升 32 階產出' },
+  { tier: 16, cost: 6000, isMajor: false, baseRange: [8, 16, 32], weights: [0.55, 0.32, 0.13], name: '大師神匠', desc: '黃金工藝極限' },
+  { tier: 17, cost: 6800, isMajor: false, baseRange: [8, 16, 32], weights: [0.50, 0.34, 0.16], name: '泰坦鍛爐', desc: '屠龍大突破前夕' },
+  { tier: 18, cost: 20000, isMajor: true, minEquippedWeapon: 512, baseRange: [16, 32, 64], weights: [0.75, 0.22, 0.03], name: '【大突破】屠龍戰狂', desc: '🚨 徹底淘汰 8！大升階直達 64！盤面基礎提升至 [16, 32, 64]' },
 
-  // Cycle 4: [16, 32, 64]
-  { tier: 19, cost: 2900, isMajor: false, baseRange: [16, 32, 64], weights: [0.70, 0.25, 0.05], name: '炎息戰甲', desc: '32 階裝備產出提升' },
-  { tier: 20, cost: 3300, isMajor: false, baseRange: [16, 32, 64], weights: [0.65, 0.28, 0.07], name: '黑曜武具', desc: '穩固 32 與 64 掉落' },
-  { tier: 21, cost: 3700, isMajor: false, baseRange: [16, 32, 64], weights: [0.60, 0.30, 0.10], name: '遠古龍骨', desc: '高階龍裝高頻出現' },
-  { tier: 22, cost: 4200, isMajor: false, baseRange: [16, 32, 64], weights: [0.55, 0.32, 0.13], name: '神域符文', desc: '神話裝備浸染' },
-  { tier: 23, cost: 4800, isMajor: false, baseRange: [16, 32, 64], weights: [0.50, 0.34, 0.16], name: '終焉聖光', desc: '星辰神話大突破前哨' },
-  { tier: 24, cost: 14400, isMajor: true, minEquippedWeapon: 32, baseRange: [32, 64, 128], weights: [0.75, 0.22, 0.03], name: '【大突破】創世星辰', desc: '🚨 徹底淘汰 16！盤面基礎產出達到頂峰 [32, 64, 128]' }
+  // Cycle 4: [16, 32, 64] -> Subtotal: 110,000 (Cumulative: 180,000)
+  { tier: 19, cost: 8000, isMajor: false, baseRange: [16, 32, 64], weights: [0.70, 0.25, 0.05], name: '炎息戰甲', desc: '32 階裝備產出提升' },
+  { tier: 20, cost: 9500, isMajor: false, baseRange: [16, 32, 64], weights: [0.65, 0.28, 0.07], name: '黑曜武具', desc: '穩固 32 與 64 掉落' },
+  { tier: 21, cost: 11000, isMajor: false, baseRange: [16, 32, 64], weights: [0.60, 0.30, 0.10], name: '遠古龍骨', desc: '高階龍裝高頻出現' },
+  { tier: 22, cost: 12500, isMajor: false, baseRange: [16, 32, 64], weights: [0.55, 0.32, 0.13], name: '神域符文', desc: '神話裝備浸染' },
+  { tier: 23, cost: 14000, isMajor: false, baseRange: [16, 32, 64], weights: [0.50, 0.34, 0.16], name: '終焉聖光', desc: '星辰神話大突破前哨' },
+  { tier: 24, cost: 55000, isMajor: true, minEquippedWeapon: 2048, baseRange: [32, 64, 128], weights: [0.75, 0.22, 0.03], name: '【大突破】創世星辰', desc: '🚨 徹底淘汰 16！盤面基礎產出提升至 [32, 64, 128]' },
+
+  // Cycle 5: [32, 64, 128] -> Subtotal: 220,000 (Cumulative: 400,000)
+  { tier: 25, cost: 16000, isMajor: false, baseRange: [32, 64, 128], weights: [0.70, 0.25, 0.05], name: '星輝武裝', desc: '64 階裝備產出提升' },
+  { tier: 26, cost: 19000, isMajor: false, baseRange: [32, 64, 128], weights: [0.65, 0.28, 0.07], name: '蒼穹重鎧', desc: '穩固 64 與 128 掉落' },
+  { tier: 27, cost: 22000, isMajor: false, baseRange: [32, 64, 128], weights: [0.60, 0.30, 0.10], name: '破界神兵', desc: '大額提升 128 階產出' },
+  { tier: 28, cost: 25000, isMajor: false, baseRange: [32, 64, 128], weights: [0.55, 0.32, 0.13], name: '虛空戰備', desc: '星辰鍛造極限' },
+  { tier: 29, cost: 28000, isMajor: false, baseRange: [32, 64, 128], weights: [0.50, 0.34, 0.16], name: '星界聖裁', desc: '蒼穹霸主大突破前哨' },
+  { tier: 30, cost: 110000, isMajor: true, minEquippedWeapon: 4096, baseRange: [64, 128, 256], weights: [0.75, 0.22, 0.03], name: '【大突破】蒼穹霸主', desc: '🚨 徹底淘汰 32！盤面基礎產出提升至 [64, 128, 256]' },
+
+  // Cycle 6: [64, 128, 256] -> Subtotal: 400,000 (Cumulative: 800,000)
+  { tier: 31, cost: 30000, isMajor: false, baseRange: [64, 128, 256], weights: [0.70, 0.25, 0.05], name: '龍神戰甲', desc: '128 階裝備產出提升' },
+  { tier: 32, cost: 35000, isMajor: false, baseRange: [64, 128, 256], weights: [0.65, 0.28, 0.07], name: '天罰重刃', desc: '穩固 128 與 256 掉落' },
+  { tier: 33, cost: 40000, isMajor: false, baseRange: [64, 128, 256], weights: [0.60, 0.30, 0.10], name: '不朽聖盾', desc: '大額提升 256 階產出' },
+  { tier: 34, cost: 45000, isMajor: false, baseRange: [64, 128, 256], weights: [0.55, 0.32, 0.13], name: '混沌神鍛', desc: '不朽神工淬鍊' },
+  { tier: 35, cost: 50000, isMajor: false, baseRange: [64, 128, 256], weights: [0.50, 0.34, 0.16], name: '諸神黃昏', desc: '不朽神王大突破前哨' },
+  { tier: 36, cost: 200000, isMajor: true, minEquippedWeapon: 8192, baseRange: [128, 256, 512], weights: [0.75, 0.22, 0.03], name: '【大突破】不朽神王', desc: '🚨 徹底淘汰 64！盤面基礎產出提升至 [128, 256, 512]' },
+
+  // Cycle 7: [128, 256, 512] -> Subtotal: 700,000 (Cumulative: 1,500,000)
+  { tier: 37, cost: 55000, isMajor: false, baseRange: [128, 256, 512], weights: [0.70, 0.25, 0.05], name: '深淵魔鎧', desc: '256 階裝備產出提升' },
+  { tier: 38, cost: 62000, isMajor: false, baseRange: [128, 256, 512], weights: [0.65, 0.28, 0.07], name: '冥界死神', desc: '穩固 256 與 512 掉落' },
+  { tier: 39, cost: 70000, isMajor: false, baseRange: [128, 256, 512], weights: [0.60, 0.30, 0.10], name: '時空裂隙', desc: '大額提升 512 階產出' },
+  { tier: 40, cost: 78000, isMajor: false, baseRange: [128, 256, 512], weights: [0.55, 0.32, 0.13], name: '永恆星核', desc: '次元神力凝聚' },
+  { tier: 41, cost: 85000, isMajor: false, baseRange: [128, 256, 512], weights: [0.50, 0.34, 0.16], name: '次元主宰', desc: '次元主宰大突破前哨' },
+  { tier: 42, cost: 350000, isMajor: true, minEquippedWeapon: 16384, baseRange: [256, 512, 1024], weights: [0.75, 0.22, 0.03], name: '【大突破】次元主宰', desc: '🚨 徹底淘汰 128！盤面基礎產出提升至 [256, 512, 1024]' },
+
+  // Cycle 8: [256, 512, 1024] -> Subtotal: 1,200,000 (Cumulative: 2,700,000)
+  { tier: 43, cost: 95000, isMajor: false, baseRange: [256, 512, 1024], weights: [0.70, 0.25, 0.05], name: '神域法則', desc: '512 階裝備產出提升' },
+  { tier: 44, cost: 105000, isMajor: false, baseRange: [256, 512, 1024], weights: [0.65, 0.28, 0.07], name: '萬象歸一', desc: '穩固 512 與 1024 掉落' },
+  { tier: 45, cost: 120000, isMajor: false, baseRange: [256, 512, 1024], weights: [0.60, 0.30, 0.10], name: '無上神威', desc: '大額提升 1024 階產出' },
+  { tier: 46, cost: 135000, isMajor: false, baseRange: [256, 512, 1024], weights: [0.55, 0.32, 0.13], name: '鴻濛造化', desc: '神域造化極限' },
+  { tier: 47, cost: 145000, isMajor: false, baseRange: [256, 512, 1024], weights: [0.50, 0.34, 0.16], name: '終焉審判', desc: '創世神話大突破前哨' },
+  { tier: 48, cost: 600000, isMajor: true, minEquippedWeapon: 65536, baseRange: [512, 1024, 2048], weights: [0.75, 0.22, 0.03], name: '【大突破】創世神話', desc: '🚨 徹底淘汰 256！盤面基礎產出達到神話頂峰 [512, 1024, 2048]' }
 ];
+
+// C-STORY-106: Pure Reference Recommended Weapon & Tech Tier Progression for Stages 1~350
+// (Strictly informational in Briefing UI; players are 100% free to challenge any stage naked!)
+export function getStageRecommendedProgression(s) {
+  if (s <= 0) return { recPower: 2, recTechTier: 1 };
+  if (s <= 5) return { recPower: 8, recTechTier: 2 };
+  if (s <= 12) return { recPower: 16, recTechTier: 4 };
+  if (s <= 19) return { recPower: 32, recTechTier: 5 };
+  if (s === 20) return { recPower: 64, recTechTier: 6 };
+  if (s <= 27) return { recPower: 64, recTechTier: 7 };
+  if (s <= 30) return { recPower: 128, recTechTier: 8 };
+  if (s <= 41) return { recPower: 128, recTechTier: 9 };
+  if (s <= 50) return { recPower: 256, recTechTier: 11 };
+  if (s <= 60) return { recPower: 256, recTechTier: 12 };
+  if (s <= 75) return { recPower: 512, recTechTier: 13 };
+  if (s <= 90) return { recPower: 512, recTechTier: 15 };
+  if (s <= 100) return { recPower: 1024, recTechTier: 18 };
+  if (s <= 120) return { recPower: 1024, recTechTier: 20 };
+  if (s <= 135) return { recPower: 2048, recTechTier: 22 };
+  if (s <= 150) return { recPower: 2048, recTechTier: 24 };
+  if (s <= 165) return { recPower: 4096, recTechTier: 28 };
+  if (s <= 180) return { recPower: 4096, recTechTier: 29 };
+  if (s <= 200) return { recPower: 8192, recTechTier: 34 };
+  if (s <= 220) return { recPower: 8192, recTechTier: 35 };
+  if (s <= 250) return { recPower: 16384, recTechTier: 40 };
+  if (s <= 280) return { recPower: 16384, recTechTier: 41 };
+  if (s <= 315) return { recPower: 32768, recTechTier: 46 };
+  return { recPower: 65536, recTechTier: 47 };
+}
 
 // 9 Chapters (Prologue Chapter 0 + Chapters 1~8)
 export const CHAPTER_CONFIGS = [
@@ -452,6 +582,13 @@ function generateAllStages() {
       waves: [],
       icon: chInfo.icon
     });
+  }
+
+  // Apply pure reference recPower & recTechTier aligned with 800-turn curve (C-STORY-106)
+  for (const st of stages) {
+    const recProg = getStageRecommendedProgression(st.id);
+    st.recPower = recProg.recPower;
+    st.recTechTier = recProg.recTechTier;
   }
 
   return stages;

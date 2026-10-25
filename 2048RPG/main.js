@@ -9,6 +9,8 @@ import { StageListView } from './src/presentation/StageListView.js';
 import { Direction, TileType, STAGE_CONFIGS, STAGE_0_CONFIG, Events, MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS, DEFEAT_TACTICAL_TIPS, getEquipmentImagePath, getMonsterImagePath, getHeroImagePath, getMonsterThemeByChapter, CharacterClass, CHARACTER_SKILL_CONFIGS } from './src/core/Constants.js';
 import { GwtRunner } from './src/tests/GwtRunner.js';
 import { CombatVfxEngine } from './src/presentation/CombatVfxEngine.js';
+import { DailyLoopManager } from './src/core/DailyLoopManager.js';
+import { DailyLoopView } from './src/presentation/DailyLoopView.js';
 
 class AppController {
   constructor() {
@@ -182,6 +184,16 @@ class AppController {
     this.updateGoldDisplay(this.stageManager.gold);
     this.updateStaminaDisplay();
     this.updateItemCounts();
+
+    // C-STORY-101: Daily Retention & Quests Manager and View
+    this.dailyLoopManager = new DailyLoopManager(this.eventBus, this.stageManager);
+    this.stageManager.dailyLoopManager = this.dailyLoopManager;
+    this.dailyLoopView = new DailyLoopView(
+      this.dailyLoopManager,
+      this.audio,
+      this.stageManager,
+      (text, color) => this.showFloatingCombatText(text, color)
+    );
 
     // Stamina heartbeat recovery check
     setInterval(() => {
@@ -579,6 +591,7 @@ class AppController {
         this.renderGachaMachine();
         this.updateItemCounts();
         this.updateGoldDisplay(this.stageManager.gold);
+        if (this.dailyLoopView) this.dailyLoopView.renderAll();
         alert('🎉 遊戲紀錄已全數重置為初始狀態！');
       });
     }
@@ -632,7 +645,12 @@ class AppController {
     document.getElementById('briefing-icon').textContent = stage.icon || '⚔️';
     document.getElementById('briefing-title').textContent = stage.name;
     document.getElementById('briefing-desc').textContent = stage.desc;
-    document.getElementById('briefing-power').textContent = stage.recPower;
+    const powerEl = document.getElementById('briefing-power');
+    if (powerEl) {
+      powerEl.textContent = stage.recTechTier
+        ? `裝備 ${stage.recPower} · 科技 Tier ${stage.recTechTier} (參考)`
+        : `${stage.recPower}`;
+    }
 
     const rewardEl = document.getElementById('briefing-reward');
     if (rewardEl) {
@@ -1737,12 +1755,14 @@ class AppController {
     if (rangeEl) rangeEl.textContent = `[${tierConfig.baseRange.join(', ')}]`;
     if (descEl) descEl.textContent = tierConfig.desc;
 
-    const equippedVal = this.stageManager.inventory && this.stageManager.inventory.equippedItem ? this.stageManager.inventory.equippedItem.value : 0;
-    const isGearGated = nextTier && nextTier.minEquippedWeapon && equippedVal < nextTier.minEquippedWeapon;
+    const highestGearVal = this.stageManager.getHighestOwnedOrEquippedWeapon
+      ? this.stageManager.getHighestOwnedOrEquippedWeapon()
+      : (this.stageManager.inventory && this.stageManager.inventory.equippedItem ? this.stageManager.inventory.equippedItem.value : 0);
+    const isGearGated = nextTier && nextTier.minEquippedWeapon && highestGearVal < nextTier.minEquippedWeapon;
 
     if (gateMsgEl) {
       if (isGearGated) {
-        gateMsgEl.textContent = `🔒 需先穿戴 Tier ${nextTier.minEquippedWeapon} 以上裝備方可研發！`;
+        gateMsgEl.textContent = `🔒 需先持有或穿戴 Tier ${nextTier.minEquippedWeapon} 以上裝備方可研發！`;
         gateMsgEl.style.display = 'block';
       } else {
         gateMsgEl.style.display = 'none';

@@ -14,6 +14,8 @@ import { TutorialOverlay } from '../presentation/TutorialOverlay.js';
 import { StageListView } from '../presentation/StageListView.js';
 import { CombatVfxEngine } from '../presentation/CombatVfxEngine.js';
 import { AudioEffects } from '../presentation/AudioEffects.js';
+import { DailyLoopManager } from '../core/DailyLoopManager.js';
+import { DAILY_SIGNIN_REWARDS, DAILY_FREE_SHOP_REWARD, DAILY_QUEST_CONFIGS, DAILY_ACTIVITY_CHEST_CONFIG } from '../core/Constants.js';
 
 export class GwtRunner {
   constructor() {
@@ -265,7 +267,19 @@ export class GwtRunner {
       // C-STORY-100: 商人前置安全攔截、破甲重矢18片輕量化與專屬必殺音效
       this.testGwt100_1_MerchantNoGoldPrecheckIntercept.bind(this),
       this.testGwt100_2_ArcherSkillDebrisParticleCountLightweight.bind(this),
-      this.testGwt100_3_DedicatedSkillAudioSynthesizersExistAndCallable.bind(this)
+      this.testGwt100_3_DedicatedSkillAudioSynthesizersExistAndCallable.bind(this),
+      // C-STORY-101: 每日留存與活躍循環系統
+      this.testGwt101_1_DailySignInAndFreeShopGiftClaim.bind(this),
+      this.testGwt101_2_DailyQuestProgressAccumulationAndCaps.bind(this),
+      this.testGwt101_3_DailyQuestRewardsAnd100ActivityMasterChest.bind(this),
+      // C-STORY-102: 經濟數值工作台與高價科技深水庫平衡
+      this.testGwt102_1_DailyRewardsUpgradedTo3To5TenPullScale.bind(this),
+      this.testGwt102_2_ActivityChestGrantsMultipleItems.bind(this),
+      this.testGwt102_3_DeepTechSink265kAndMajorBreakthroughs.bind(this),
+      // C-STORY-106: 48 階王國軍備科技擴充、持有或穿戴武器門檻與 350 關建議強度同步
+      this.testGwt106_1_48TierTechAnd8MajorBreakthroughs.bind(this),
+      this.testGwt106_2_2700kDeepSinkAndOwnedOrEquippedWeaponGate.bind(this),
+      this.testGwt106_3_350StageReferenceProgressionAndFreeNakedChallenge.bind(this)
     ];
 
     for (const test of testCases) {
@@ -1096,9 +1110,9 @@ export class GwtRunner {
     this.assert(tier2.baseRange.includes(spawned.value), `Spawned value ${spawned.value} must be in tier2 baseRange`);
   }
 
-  // C-STORY-008 GWT 8.5：王國軍備科技大升階徹底淘汰低階方塊（大升階至 64）
+  // C-STORY-008 & C-STORY-106 GWT 8.5：王國軍備科技大升階徹底淘汰低階方塊（擴充至 48 階）
   testGwt8_5_BaseTechTierMajorUpgradeEliminationUpTo64() {
-    this.assert(BASE_STAT_TIERS.length === 24, `Must have 24 tiers, got ${BASE_STAT_TIERS.length}`);
+    this.assert(BASE_STAT_TIERS.length === 48, `Must have 48 tiers, got ${BASE_STAT_TIERS.length}`);
 
     // Tier 6 (Major 1): 淘汰 2 -> [4, 8, 16]
     const tier6 = BASE_STAT_TIERS.find(t => t.tier === 6);
@@ -1436,55 +1450,60 @@ export class GwtRunner {
     }
   }
 
-  // C-STORY-011 GWT 11.2：科技升階研發費用試算表精確匹配（已在 C-STORY-037 平滑重構）
+  // C-STORY-011 & C-STORY-106 GWT 11.2：科技升階研發費用試算表精確匹配（48 階全表）
   testGwt11_2_BaseTechTierTableExactMatch() {
     const expectedCosts = [
-      0, 600, 700, 800, 900, 2700,
-      1000, 1100, 1200, 1300, 1400, 4200,
-      1600, 1800, 2000, 2300, 2600, 7800,
-      2900, 3300, 3700, 4200, 4800, 14400
+      0, 400, 600, 800, 1200, 3000,
+      1400, 1800, 2200, 2600, 3000, 7000,
+      3600, 4400, 5200, 6000, 6800, 20000,
+      8000, 9500, 11000, 12500, 14000, 55000,
+      16000, 19000, 22000, 25000, 28000, 110000,
+      30000, 35000, 40000, 45000, 50000, 200000,
+      55000, 62000, 70000, 78000, 85000, 350000,
+      95000, 105000, 120000, 135000, 145000, 600000
     ];
 
-    this.assert(BASE_STAT_TIERS.length === 24, `Must have 24 tiers, got ${BASE_STAT_TIERS.length}`);
-    for (let i = 0; i < 24; i++) {
+    this.assert(BASE_STAT_TIERS.length === 48, `Must have 48 tiers, got ${BASE_STAT_TIERS.length}`);
+    for (let i = 0; i < 48; i++) {
       const tier = BASE_STAT_TIERS[i];
       this.assert(tier.tier === i + 1, `Tier number is ${i + 1}`);
       this.assert(tier.cost === expectedCosts[i], `Tier ${tier.tier} cost should be ${expectedCosts[i]}, got ${tier.cost}`);
     }
   }
 
-  // C-STORY-011 GWT 11.3：大升階數值等於前一階 3 倍判定（已在 C-STORY-037 重構）
+  // C-STORY-011 & C-STORY-106 GWT 11.3：八大升階數值判定
   testGwt11_3_MajorUpgradeSumOfPreviousFourMinorTiers() {
-    const t5 = BASE_STAT_TIERS.find(t => t.tier === 5);
     const t6 = BASE_STAT_TIERS.find(t => t.tier === 6);
-    this.assert(t6.cost === t5.cost * 3, `Tier 6 cost (${t6.cost}) equals 3x Tier 5 (${t5.cost * 3})`);
-
-    const t11 = BASE_STAT_TIERS.find(t => t.tier === 11);
     const t12 = BASE_STAT_TIERS.find(t => t.tier === 12);
-    this.assert(t12.cost === t11.cost * 3, `Tier 12 cost (${t12.cost}) equals 3x Tier 11 (${t11.cost * 3})`);
-
-    const t17 = BASE_STAT_TIERS.find(t => t.tier === 17);
     const t18 = BASE_STAT_TIERS.find(t => t.tier === 18);
-    this.assert(t18.cost === t17.cost * 3, `Tier 18 cost (${t18.cost}) equals 3x Tier 17 (${t17.cost * 3})`);
-
-    const t23 = BASE_STAT_TIERS.find(t => t.tier === 23);
     const t24 = BASE_STAT_TIERS.find(t => t.tier === 24);
-    this.assert(t24.cost === t23.cost * 3, `Tier 24 cost (${t24.cost}) equals 3x Tier 23 (${t23.cost * 3})`);
+    const t30 = BASE_STAT_TIERS.find(t => t.tier === 30);
+    const t36 = BASE_STAT_TIERS.find(t => t.tier === 36);
+    const t42 = BASE_STAT_TIERS.find(t => t.tier === 42);
+    const t48 = BASE_STAT_TIERS.find(t => t.tier === 48);
+    this.assert(t6.cost === 3000, `Tier 6 cost (${t6.cost}) equals 3000`);
+    this.assert(t12.cost === 7000, `Tier 12 cost (${t12.cost}) equals 7000`);
+    this.assert(t18.cost === 20000, `Tier 18 cost (${t18.cost}) equals 20000`);
+    this.assert(t24.cost === 55000, `Tier 24 cost (${t24.cost}) equals 55000`);
+    this.assert(t30.cost === 110000, `Tier 30 cost (${t30.cost}) equals 110000`);
+    this.assert(t36.cost === 200000, `Tier 36 cost (${t36.cost}) equals 200000`);
+    this.assert(t42.cost === 350000, `Tier 42 cost (${t42.cost}) equals 350000`);
+    this.assert(t48.cost === 600000, `Tier 48 cost (${t48.cost}) equals 600000`);
   }
 
-  // C-STORY-011 GWT 11.4：小升階數值平滑延續判定（C-STORY-037 規格：跨突破起點溫和遞增）
+  // C-STORY-011 & C-STORY-106 GWT 11.4：小升階數值平滑延續判定（跨突破起點溫和遞增）
   testGwt11_4_MinorUpgradeSubtractedRemainderProgression() {
     const t5 = BASE_STAT_TIERS.find(t => t.tier === 5);
     const t7 = BASE_STAT_TIERS.find(t => t.tier === 7);
-    this.assert(t7.cost === 1000 && t7.cost > t5.cost, 'Tier 7 starts at 1000 smoothly progressing from Tier 5');
+    this.assert(t7.cost === 1400 && t7.cost > t5.cost, 'Tier 7 starts at 1400 smoothly progressing from Tier 5');
 
     const t11 = BASE_STAT_TIERS.find(t => t.tier === 11);
     const t13 = BASE_STAT_TIERS.find(t => t.tier === 13);
-    this.assert(t13.cost === 1600 && t13.cost > t11.cost, 'Tier 13 starts at 1600 smoothly progressing from Tier 11');
+    this.assert(t13.cost === 3600 && t13.cost > t11.cost, 'Tier 13 starts at 3600 smoothly progressing from Tier 11');
 
     const t17 = BASE_STAT_TIERS.find(t => t.tier === 17);
     const t19 = BASE_STAT_TIERS.find(t => t.tier === 19);
-    this.assert(t19.cost === 2900 && t19.cost > t17.cost, 'Tier 19 starts at 2900 smoothly progressing from Tier 17');
+    this.assert(t19.cost === 8000 && t19.cost > t17.cost, 'Tier 19 starts at 8000 smoothly progressing from Tier 17');
   }
 
   // C-STORY-011 GWT 11.5：快速跳轉功能金幣補償同步適配新等速曲線
@@ -2461,33 +2480,34 @@ export class GwtRunner {
   // C-STORY-024: 基本掉落科技裝備門檻防堵
   // =========================================================================
 
-  // C-STORY-024 GWT 24.1：未佩戴達標裝備時阻止重大突破升級
+  // C-STORY-024 & C-STORY-106 GWT 24.1：未持有或佩戴達標裝備時阻止重大突破升級
   testGwt24_1_GearGatedTechUpgradePreventsBreakthroughWithoutEquippedWeapon() {
     const sm = new StageManager();
     sm.resetSaveData();
 
-    // Set tech to Tier 5 (next tier is Tier 6: 【大突破】白銀軍備, minEquippedWeapon: 4)
+    // Set tech to Tier 5 (next tier is Tier 6: 【大突破】白銀軍備, minEquippedWeapon: 16)
     sm.baseTier = 5;
     sm.gold = 10000;
     // Hero has no equipment or only default power 2
     sm.inventory.equippedItem = null;
+    sm.inventory.items = [];
 
     const res = sm.upgradeBaseTier();
     this.assert(res.success === false, 'Upgrade to Tier 6 without gear must fail');
-    this.assert(res.reason.includes('需先穿戴 Tier 4 以上的裝備'), `Reason mentions requirement: ${res.reason}`);
+    this.assert(res.reason.includes('Tier 16 以上的裝備'), `Reason mentions requirement: ${res.reason}`);
     this.assert(sm.baseTier === 5, 'Base tier remains at 5');
     this.assert(sm.gold === 10000, 'Gold is not deducted');
 
-    // Equip a weak weapon (value 2)
-    const weakItem = sm.inventory.addItem(2);
+    // Equip a weak weapon (value 8 < 16)
+    const weakItem = sm.inventory.addItem(8);
     sm.inventory.equip(weakItem.id);
     const resWeak = sm.upgradeBaseTier();
-    this.assert(resWeak.success === false, 'Upgrade with Tier 2 gear must still fail');
+    this.assert(resWeak.success === false, 'Upgrade with Tier 8 gear must still fail');
     this.assert(sm.baseTier === 5, 'Base tier still 5');
     this.assert(sm.gold === 10000, 'Gold still 10000');
   }
 
-  // C-STORY-024 GWT 24.2：佩戴符合門檻之裝備允許重大突破升級，並驗證後續階級門檻配置
+  // C-STORY-024 & C-STORY-106 GWT 24.2：持有或佩戴符合門檻之裝備允許重大突破升級，並驗證後續階級門檻配置
   testGwt24_2_GearGatedTechUpgradeAllowsBreakthroughWithSufficientGear() {
     const sm = new StageManager();
     sm.resetSaveData();
@@ -2498,21 +2518,21 @@ export class GwtRunner {
     const t18 = BASE_STAT_TIERS.find(t => t.tier === 18);
     const t24 = BASE_STAT_TIERS.find(t => t.tier === 24);
 
-    this.assert(t6.minEquippedWeapon === 4, 'Tier 6 requires minEquippedWeapon 4');
-    this.assert(t12.minEquippedWeapon === 8, 'Tier 12 requires minEquippedWeapon 8');
-    this.assert(t18.minEquippedWeapon === 16, 'Tier 18 requires minEquippedWeapon 16');
-    this.assert(t24.minEquippedWeapon === 32, 'Tier 24 requires minEquippedWeapon 32');
+    this.assert(t6.minEquippedWeapon === 16, 'Tier 6 requires minEquippedWeapon 16');
+    this.assert(t12.minEquippedWeapon === 128, 'Tier 12 requires minEquippedWeapon 128');
+    this.assert(t18.minEquippedWeapon === 512, 'Tier 18 requires minEquippedWeapon 512');
+    this.assert(t24.minEquippedWeapon === 2048, 'Tier 24 requires minEquippedWeapon 2048');
 
-    // Test successful breakthrough
+    // Test successful breakthrough with Tier 16 gear
     sm.baseTier = 5;
     sm.gold = 10000;
-    const gear4 = sm.inventory.addItem(4);
-    sm.inventory.equip(gear4.id);
+    const gear16 = sm.inventory.addItem(16);
+    sm.inventory.equip(gear16.id);
 
     const res = sm.upgradeBaseTier();
-    this.assert(res.success === true, 'Upgrade to Tier 6 succeeds with Tier 4 gear');
+    this.assert(res.success === true, 'Upgrade to Tier 6 succeeds with Tier 16 gear');
     this.assert(sm.baseTier === 6, 'Base tier upgraded to 6');
-    this.assert(sm.gold === 10000 - 2700, 'Cost 2700 correctly deducted (rebalanced in C-STORY-037)');
+    this.assert(sm.gold === 10000 - t6.cost, 'Tier 6 cost correctly deducted');
     this.assert(res.tierConfig.baseRange[0] === 4, 'Base range starts from 4');
   }
 
@@ -3602,7 +3622,7 @@ export class GwtRunner {
         'main.js must have version query parameter'
       );
     }
-    this.assert(CURRENT_GAME_VERSION === 'v1.4.4', 'CURRENT_GAME_VERSION must be v1.4.4');
+    this.assert(CURRENT_GAME_VERSION === 'v1.4.5', 'CURRENT_GAME_VERSION must be v1.4.5');
   }
 
   // C-STORY-036 GWT 36.2：設定視窗具備「檢查並刷新最新版本」按鈕配置
@@ -3702,33 +3722,29 @@ export class GwtRunner {
     this.assert(getPeak(lv8Cfg) === 128, 'Lv.8 peak is 128');
   }
 
-  // C-STORY-037 GWT 37.2：王國軍備科技費用平滑化與大突破 3 倍階梯重構
+  // C-STORY-037 & C-STORY-106 GWT 37.2：王國軍備科技 48 階費用與八大突破階梯驗證
   testGwt37_2_BaseTechTierRebalancedCostsAndRatios() {
-    this.assert(BASE_STAT_TIERS.length === 24, 'Must have 24 tiers');
+    this.assert(BASE_STAT_TIERS.length === 48, 'Must have 48 tiers');
 
-    // 起點壓低至 600
-    this.assert(BASE_STAT_TIERS[1].cost === 600, 'Tier 2 starts at 600 (lowered from 1000)');
-
-    // 驗證四大突破為前階 3 倍
     const t5 = BASE_STAT_TIERS.find(t => t.tier === 5);
     const t6 = BASE_STAT_TIERS.find(t => t.tier === 6);
-    this.assert(t6.cost === t5.cost * 3, `Tier 6 cost (${t6.cost}) is 3x Tier 5 (${t5.cost * 3})`);
-    this.assert(t6.cost === 2700, 'Tier 6 cost is 2700');
+    this.assert(t6.cost > t5.cost * 2, `Tier 6 major breakthrough cost (${t6.cost}) must be > 2x Tier 5`);
+    this.assert(t6.cost === 3000, 'Tier 6 cost is 3000 in C-STORY-106');
 
     const t11 = BASE_STAT_TIERS.find(t => t.tier === 11);
     const t12 = BASE_STAT_TIERS.find(t => t.tier === 12);
-    this.assert(t12.cost === t11.cost * 3, `Tier 12 cost (${t12.cost}) is 3x Tier 11 (${t11.cost * 3})`);
-    this.assert(t12.cost === 4200, 'Tier 12 cost is 4200');
+    this.assert(t12.cost > t11.cost * 2, `Tier 12 major breakthrough cost (${t12.cost}) must be > 2x Tier 11`);
+    this.assert(t12.cost === 7000, 'Tier 12 cost is 7000 in C-STORY-106');
 
     const t17 = BASE_STAT_TIERS.find(t => t.tier === 17);
     const t18 = BASE_STAT_TIERS.find(t => t.tier === 18);
-    this.assert(t18.cost === t17.cost * 3, `Tier 18 cost (${t18.cost}) is 3x Tier 17 (${t17.cost * 3})`);
-    this.assert(t18.cost === 7800, 'Tier 18 cost is 7800');
+    this.assert(t18.cost > t17.cost * 2, `Tier 18 major breakthrough cost (${t18.cost}) must be > 2x Tier 17`);
+    this.assert(t18.cost === 20000, 'Tier 18 cost is 20000 in C-STORY-106');
 
     const t23 = BASE_STAT_TIERS.find(t => t.tier === 23);
     const t24 = BASE_STAT_TIERS.find(t => t.tier === 24);
-    this.assert(t24.cost === t23.cost * 3, `Tier 24 cost (${t24.cost}) is 3x Tier 23 (${t23.cost * 3})`);
-    this.assert(t24.cost === 14400, 'Tier 24 cost is 14400');
+    this.assert(t24.cost > t23.cost * 2, `Tier 24 major breakthrough cost (${t24.cost}) must be > 2x Tier 23`);
+    this.assert(t24.cost === 55000, 'Tier 24 cost is 55000 in C-STORY-106');
   }
 
   // C-STORY-037 GWT 37.3：每次十連抽固定額外贈送 1 救急道具，單抽不贈送
@@ -5235,6 +5251,257 @@ export class GwtRunner {
       errOccurred = true;
     }
     this.assert(errOccurred === false, 'Skill audio functions must execute safely without throwing errors');
+  }
+
+  // =========================================================================
+  // C-STORY-101: 每日留存與活躍循環系統
+  // =========================================================================
+
+  // GWT 101.1: 7日簽到獎勵與商店免費補給箱領取與跨日重置
+  testGwt101_1_DailySignInAndFreeShopGiftClaim() {
+    const bus = new GameEventBus();
+    const sm = new StageManager(bus);
+    sm.gold = 300;
+    
+    // 清理儲存以進行測試
+    const dlm = new DailyLoopManager(bus, sm);
+    dlm.resetAll();
+
+    // 1. Initial State: Day 1 unclaimed
+    this.assert(dlm.state.signInDay === 1, 'Initial signin day must be 1');
+    this.assert(dlm.state.signInClaimedToday === false, 'Initially unclaimed today');
+    this.assert(dlm.hasSignInPending() === true, 'Must have signin pending');
+    this.assert(dlm.hasShopGiftPending() === true, 'Must have shop gift pending');
+
+    // 2. Claim Day 1 Sign-in
+    const resSignIn = dlm.claimSignInReward();
+    this.assert(resSignIn.success === true, 'Day 1 signin must succeed');
+    this.assert(resSignIn.reward.gold === DAILY_SIGNIN_REWARDS[0].gold, 'Day 1 reward must match config');
+    this.assert(sm.gold === 300 + DAILY_SIGNIN_REWARDS[0].gold, 'StageManager gold must increase by Day 1 reward');
+    this.assert(dlm.hasSignInPending() === false, 'No pending signin after claimed');
+
+    // 3. Repeat claim today should fail
+    const resRepeat = dlm.claimSignInReward();
+    this.assert(resRepeat.success === false, 'Repeat signin today must fail');
+
+    // 4. Claim Shop Free Supplies
+    const resShop = dlm.claimShopGift();
+    this.assert(resShop.success === true, 'Shop gift claim must succeed');
+    this.assert(sm.gold === 300 + DAILY_SIGNIN_REWARDS[0].gold + DAILY_FREE_SHOP_REWARD.gold, 'StageManager gold must increase by shop gift');
+    this.assert(dlm.hasShopGiftPending() === false, 'Shop gift must not be pending');
+
+    // 5. Simulate Cross-day Reset
+    const resetTriggered = dlm.checkDailyReset('2099-12-31');
+    this.assert(resetTriggered === true, 'checkDailyReset must trigger on new date');
+    this.assert(dlm.state.signInDay === 2, 'Day must advance to Day 2');
+    this.assert(dlm.state.signInClaimedToday === false, 'New day signin reset to false');
+    this.assert(dlm.state.shopGiftClaimedToday === false, 'New day shop gift reset to false');
+    this.assert(dlm.hasSignInPending() === true, 'Must have signin pending on new day');
+  }
+
+  // GWT 101.2: 推關過程中的每日任務進度即時累計與上限封頂
+  testGwt101_2_DailyQuestProgressAccumulationAndCaps() {
+    const bus = new GameEventBus();
+    const sm = new StageManager(bus);
+    const dlm = new DailyLoopManager(bus, sm);
+    dlm.resetAll();
+
+    // 1. Monster Killed event
+    bus.emit(Events.MONSTER_KILLED, {});
+    bus.emit(Events.MONSTER_KILLED, {});
+    this.assert(dlm.state.quests['quest_kill_monsters'].progress === 2, 'Monster kill progress must be 2');
+
+    // Trigger more than 15 to test cap
+    for (let i = 0; i < 20; i++) {
+      bus.emit(Events.MONSTER_KILLED, {});
+    }
+    this.assert(dlm.state.quests['quest_kill_monsters'].progress === 15, 'Monster kill progress must be capped at 15');
+
+    // 2. High Tier Tile Merged event
+    const fakeHeroTile = new Tile(128, TileType.HERO, 0, 0);
+    bus.emit(Events.TILE_MERGED, { tile: fakeHeroTile });
+    this.assert(dlm.state.quests['quest_high_merge'].progress === 1, 'High merge progress must be 1');
+
+    // 3. Gold Cashed Out event
+    bus.emit(Events.GOLD_CASHED_OUT, { amount: 60 });
+    this.assert(dlm.state.quests['quest_collect_gold'].progress === 50, 'Gold collect progress must be capped at 50');
+
+    // 4. Combat Count event
+    bus.emit(Events.STAGE_VICTORY, {});
+    bus.emit(Events.STAGE_DEFEAT, {});
+    bus.emit(Events.STAGE_VICTORY, {});
+    this.assert(dlm.state.quests['quest_combat_count'].progress === 3, 'Combat count progress must be 3');
+
+    // Check if quest pending badge is true
+    this.assert(dlm.hasQuestPending() === true, 'hasQuestPending must be true when tasks are ready to claim');
+  }
+
+  // GWT 101.3: 每日任務獎勵發放與 100 活躍度全勤大寶箱
+  testGwt101_3_DailyQuestRewardsAnd100ActivityMasterChest() {
+    const bus = new GameEventBus();
+    const sm = new StageManager(bus);
+    sm.gold = 1000;
+    const dlm = new DailyLoopManager(bus, sm);
+    dlm.resetAll();
+
+    // Directly prepare quests as completed
+    DAILY_QUEST_CONFIGS.forEach(q => {
+      dlm.state.quests[q.id].progress = q.target;
+    });
+
+    // 1. Claim 4 quests one by one
+    let expectedGold = 1000;
+    let expectedPoints = 0;
+
+    DAILY_QUEST_CONFIGS.forEach(q => {
+      const res = dlm.claimQuestReward(q.id);
+      this.assert(res.success === true, `Claiming quest ${q.id} must succeed`);
+      expectedGold += q.rewardGold;
+      expectedPoints += q.activityPoints;
+    });
+
+    this.assert(sm.gold === expectedGold, `StageManager gold must match total claimed: ${expectedGold}`);
+    this.assert(dlm.state.activityPoints === 100, 'Activity points must reach 100');
+
+    // 2. Claim 100 Activity Master Chest
+    const resChest = dlm.claimActivityChest();
+    this.assert(resChest.success === true, 'Activity chest claim must succeed at 100 points');
+    this.assert(dlm.state.activityChestClaimed === true, 'activityChestClaimed must be true');
+    this.assert(sm.gold === expectedGold + DAILY_ACTIVITY_CHEST_CONFIG.rewardGold, 'StageManager gold must add chest rewardGold');
+    this.assert(sm.items.snipe >= 1, 'StageManager must receive snipe item from chest');
+
+    // 3. Repeat claim chest must fail
+    const resChestRepeat = dlm.claimActivityChest();
+    this.assert(resChestRepeat.success === false, 'Repeat chest claim must fail');
+  }
+
+  // =========================================================================
+  // C-STORY-102: 經濟數值工作台與高價科技深水庫平衡
+  // =========================================================================
+
+  // GWT 102.1: 每日簽到與每日任務提升至 3~5 次十連抽規模 (Day 1 = 1000G, Day 7 = 5000G + 複數道具)
+  testGwt102_1_DailyRewardsUpgradedTo3To5TenPullScale() {
+    this.assert(DAILY_SIGNIN_REWARDS[0].gold === 1000, 'Day 1 signin must be 1000 gold (1x 10-pull)');
+    const day7 = DAILY_SIGNIN_REWARDS.find(r => r.day === 7);
+    this.assert(day7.gold === 5000, 'Day 7 grand signin must be 5000 gold (5x 10-pull)');
+    this.assert(day7.items && day7.items.hammer === 2 && day7.items.undo === 2, 'Day 7 must grant 2 hammers and 2 undos');
+
+    const questGoldSum = DAILY_QUEST_CONFIGS.reduce((acc, q) => acc + q.rewardGold, 0);
+    const dailyTotalMin = DAILY_SIGNIN_REWARDS[0].gold + questGoldSum + DAILY_ACTIVITY_CHEST_CONFIG.rewardGold + DAILY_FREE_SHOP_REWARD.gold;
+    this.assert(dailyTotalMin >= 3000, `Minimum daily full-clear gold (${dailyTotalMin}) must be >= 3000 (3x 10-pulls)`);
+  }
+
+  // GWT 102.2: 100 活躍全勤大寶箱發放複數戰鬥道具 (精準重弩 x2 + 破壞戰槌 x1)
+  testGwt102_2_ActivityChestGrantsMultipleItems() {
+    const bus = new GameEventBus();
+    const sm = new StageManager(bus);
+    sm.resetSaveData();
+    const dlm = new DailyLoopManager(bus, sm);
+    dlm.resetAll();
+
+    dlm.state.activityPoints = 100;
+    const res = dlm.claimActivityChest();
+    this.assert(res.success === true, 'Claiming 100 activity chest must succeed');
+    this.assert(sm.items.snipe === 2, `Expected 2 snipes from activity chest, got ${sm.items.snipe}`);
+    this.assert(sm.items.hammer === 1, `Expected 1 hammer from activity chest, got ${sm.items.hammer}`);
+  }
+
+  // GWT 102.3 & 106: 前 24 階科技累計 180,000 G 且全 48 階達 2,700,000 G
+  testGwt102_3_DeepTechSink265kAndMajorBreakthroughs() {
+    const cycle1Sum = BASE_STAT_TIERS.slice(0, 6).reduce((a, t) => a + t.cost, 0);
+    const cycle2Sum = BASE_STAT_TIERS.slice(6, 12).reduce((a, t) => a + t.cost, 0);
+    const cycle3Sum = BASE_STAT_TIERS.slice(12, 18).reduce((a, t) => a + t.cost, 0);
+    const cycle4Sum = BASE_STAT_TIERS.slice(18, 24).reduce((a, t) => a + t.cost, 0);
+    const first24Sum = cycle1Sum + cycle2Sum + cycle3Sum + cycle4Sum;
+
+    this.assert(cycle1Sum === 6000, `Cycle 1 subtotal must be 6000, got ${cycle1Sum}`);
+    this.assert(cycle2Sum === 18000, `Cycle 2 subtotal must be 18000, got ${cycle2Sum}`);
+    this.assert(cycle3Sum === 46000, `Cycle 3 subtotal must be 46000, got ${cycle3Sum}`);
+    this.assert(cycle4Sum === 110000, `Cycle 4 subtotal must be 110000, got ${cycle4Sum}`);
+    this.assert(first24Sum === 180000, `First 24 tiers subtotal must be 180000, got ${first24Sum}`);
+  }
+
+  // =========================================================================
+  // C-STORY-106: 48 階王國軍備科技擴充、持有或穿戴武器門檻與 350 關建議強度同步
+  // =========================================================================
+
+  // GWT 106.1: 48 階軍備科技配置與 8 大突破數字池淘汰驗證
+  testGwt106_1_48TierTechAnd8MajorBreakthroughs() {
+    this.assert(BASE_STAT_TIERS.length === 48, `BASE_STAT_TIERS must have 48 tiers, got ${BASE_STAT_TIERS.length}`);
+
+    const majorExpected = [
+      { tier: 6, minVal: 4, maxVal: 16, reqWpn: 16 },
+      { tier: 12, minVal: 8, maxVal: 32, reqWpn: 128 },
+      { tier: 18, minVal: 16, maxVal: 64, reqWpn: 512 },
+      { tier: 24, minVal: 32, maxVal: 128, reqWpn: 2048 },
+      { tier: 30, minVal: 64, maxVal: 256, reqWpn: 4096 },
+      { tier: 36, minVal: 128, maxVal: 512, reqWpn: 8192 },
+      { tier: 42, minVal: 256, maxVal: 1024, reqWpn: 16384 },
+      { tier: 48, minVal: 512, maxVal: 2048, reqWpn: 65536 }
+    ];
+
+    majorExpected.forEach(exp => {
+      const cfg = BASE_STAT_TIERS.find(t => t.tier === exp.tier);
+      this.assert(cfg !== undefined && cfg.isMajor === true, `Tier ${exp.tier} must be a major breakthrough`);
+      this.assert(cfg.baseRange[0] === exp.minVal && cfg.baseRange[2] === exp.maxVal, `Tier ${exp.tier} baseRange must be [${exp.minVal}, ..., ${exp.maxVal}]`);
+      this.assert(cfg.minEquippedWeapon === exp.reqWpn, `Tier ${exp.tier} minEquippedWeapon must be ${exp.reqWpn}`);
+    });
+  }
+
+  // GWT 106.2: 270 萬金幣科技水庫與「持有或穿戴」大突破裝備門檻驗證
+  testGwt106_2_2700kDeepSinkAndOwnedOrEquippedWeaponGate() {
+    const cycleSubtotals = [6000, 18000, 46000, 110000, 220000, 400000, 700000, 1200000];
+    let grandTotal = 0;
+
+    for (let i = 0; i < 8; i++) {
+      const cycSum = BASE_STAT_TIERS.slice(i * 6, (i + 1) * 6).reduce((a, t) => a + t.cost, 0);
+      this.assert(cycSum === cycleSubtotals[i], `Cycle ${i + 1} subtotal must be ${cycleSubtotals[i]}, got ${cycSum}`);
+      grandTotal += cycSum;
+    }
+    this.assert(grandTotal === 2700000, `Total 48-tier tech sink must be 2700000, got ${grandTotal}`);
+
+    // Verify owning item in inventory (even without equipping) satisfies breakthrough requirement!
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.baseTier = 23;
+    sm.gold = 100000;
+    sm.inventory.equippedItem = null;
+    sm.inventory.items = [];
+
+    // Blocked when neither equipped nor in inventory
+    const blockedRes = sm.upgradeBaseTier();
+    this.assert(blockedRes.success === false, 'Tier 24 upgrade must fail without 2048 weapon');
+
+    // Add 2048 weapon to inventory WITHOUT equipping it -> must succeed!
+    sm.inventory.addItem(2048);
+    const passRes = sm.upgradeBaseTier();
+    this.assert(passRes.success === true, 'Tier 24 upgrade must succeed when 2048 weapon is held in inventory');
+    this.assert(sm.baseTier === 24, 'Base tier is now 24');
+  }
+
+  // GWT 106.3: 全 350 關「純參考建議數值」更新與裸裝無限制出擊驗證
+  testGwt106_3_350StageReferenceProgressionAndFreeNakedChallenge() {
+    const s1 = STAGE_CONFIGS.find(s => s.id === 1);
+    const s100 = STAGE_CONFIGS.find(s => s.id === 100);
+    const s200 = STAGE_CONFIGS.find(s => s.id === 200);
+    const s350 = STAGE_CONFIGS.find(s => s.id === 350);
+
+    this.assert(s1.recPower === 8 && s1.recTechTier === 2, `Stage 1 recPower/recTechTier must be 8/2`);
+    this.assert(s100.recPower === 1024 && s100.recTechTier === 18, `Stage 100 recPower/recTechTier must be 1024/18`);
+    this.assert(s200.recPower === 8192 && s200.recTechTier === 34, `Stage 200 recPower/recTechTier must be 8192/34`);
+    this.assert(s350.recPower === 65536 && s350.recTechTier === 47, `Stage 350 recPower/recTechTier must be 65536/47`);
+
+    // Verify player can freely challenge Stage 350 completely naked (power 2, Tech Tier 1)!
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.unlockedStageId = 350;
+    sm.baseTier = 1;
+    sm.inventory.equippedItem = null;
+
+    const started = sm.startStage(350);
+    this.assert(started !== null && sm.isInBattle === true, 'Player must be 100% free to challenge Stage 350 naked with Tier 1 tech');
+    const hero = sm.board.getHero();
+    this.assert(hero !== null && hero.value === 2, 'Naked hero spawns with default power 2 in Stage 350');
   }
 }
 
