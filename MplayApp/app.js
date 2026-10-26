@@ -1,5 +1,5 @@
 /**
- * Mplay 隨身影格播放器 - iPad Pro USB Drive Local Media PWA (v1.2.0)
+ * Mplay 隨身影格播放器 - iPad Pro USB Drive Local Media PWA (v1.2.1)
  * Core Features:
  * 1. Zero-copy, zero-stat instant ingestion for 100GB+ USB folders (only stores lightweight File pointers)
  * 2. Strict Single-Active-File loading: only loads current file on demand; lazy virtualized playlist
@@ -28,6 +28,7 @@ const state = {
   activeFilter: 'all',
   currentIndex: 0,
   isPlaying: false,
+  isManualFullscreen: false,
   activeMediaEl: null,
   activeObjectUrls: new Map(), // Keeps strictly active item ObjectURL to guarantee minimal memory
   imageFitMode: 'boundary',    // 'boundary' (等比例撐到邊界) | 'original' (原始 1:1)
@@ -42,6 +43,7 @@ const state = {
 // DOM References
 const dom = {
   app: document.getElementById('app'),
+  btnHomeLogo: document.getElementById('btnHomeLogo'),
   topHud: document.getElementById('topHud'),
   bottomHud: document.getElementById('bottomHud'),
   offlineBadge: document.getElementById('offlineBadge'),
@@ -442,7 +444,9 @@ function destroyActiveMediaDecoder() {
     state.activeMediaEl = null;
   }
   state.isPlaying = false;
-  dom.app.classList.remove('hud-hidden');
+  if (!state.isManualFullscreen) {
+    dom.app.classList.remove('hud-hidden');
+  }
 }
 
 /* =========================================
@@ -589,7 +593,9 @@ function bindMediaEvents(mediaEl, item) {
 
   mediaEl.addEventListener('pause', () => {
     state.isPlaying = false;
-    dom.app.classList.remove('hud-hidden');
+    if (!state.isManualFullscreen) {
+      dom.app.classList.remove('hud-hidden');
+    }
     dom.centerPlayBtn.classList.remove('hidden');
     const disc = document.getElementById('vinylDisc');
     if (disc) disc.classList.remove('spinning');
@@ -598,7 +604,9 @@ function bindMediaEvents(mediaEl, item) {
 
   mediaEl.addEventListener('ended', () => {
     state.isPlaying = false;
-    dom.app.classList.remove('hud-hidden');
+    if (!state.isManualFullscreen) {
+      dom.app.classList.remove('hud-hidden');
+    }
     dom.centerPlayBtn.classList.remove('hidden');
     const disc = document.getElementById('vinylDisc');
     if (disc) disc.classList.remove('spinning');
@@ -1182,7 +1190,30 @@ function escapeHtml(str) {
   }[c]));
 }
 
+function returnToHome() {
+  state.isManualFullscreen = false;
+  destroyActiveMediaDecoder();
+  releaseAllObjectUrls();
+  state.allFiles = [];
+  state.filteredFiles = [];
+  dom.slideViewport.innerHTML = '';
+  dom.mediaStage.classList.add('hidden');
+  dom.bottomHud.classList.add('hidden');
+  dom.filterBar.classList.add('hidden');
+  dom.btnTogglePlaylist.classList.add('hidden');
+  dom.playlistDrawer.classList.add('hidden');
+  dom.emptyState.classList.remove('hidden');
+  dom.currentFileTitle.textContent = '請選擇外接隨身碟資料夾或檔案';
+}
+
 function bindEvents() {
+  // Click Top-Left Logo to Return to Home Screen
+  if (dom.btnHomeLogo) {
+    dom.btnHomeLogo.addEventListener('click', () => {
+      returnToHome();
+    });
+  }
+
   // Primary Action: Open Folder directly (webkitdirectory)
   const triggerFolderPicker = () => {
     dom.fileInputFolder.value = '';
@@ -1262,6 +1293,7 @@ function bindEvents() {
 
   dom.btnFullscreen.addEventListener('click', (e) => {
     e.stopPropagation();
+    state.isManualFullscreen = true;
     dom.app.classList.add('hud-hidden');
     const docEl = document.documentElement;
     const reqFs = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
@@ -1272,12 +1304,13 @@ function bindEvents() {
         // Ignore on iPadOS standalone mode where system fullscreen is already active
       }
     }
-    showFeedbackToast('🖥️', '已隱藏介面', '點擊右上角「顯示介面」可恢復');
+    showFeedbackToast('🖥️', '已鎖定全螢幕隱藏介面', '滑動換檔將持續維持全螢幕');
   });
 
   if (dom.btnRestoreHud) {
     dom.btnRestoreHud.addEventListener('click', (e) => {
       e.stopPropagation();
+      state.isManualFullscreen = false;
       dom.app.classList.remove('hud-hidden');
       const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
       if (exitFs && (document.fullscreenElement || document.webkitFullscreenElement)) {
