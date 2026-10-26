@@ -395,6 +395,11 @@ html, body {
   color: #fb7185;
 }
 
+.guide-tag.image {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
 /* =========================================
    MEDIA STAGE & VIRTUAL SLIDE VIEWPORT
    ========================================= */
@@ -462,12 +467,29 @@ html, body {
 }
 
 .media-element-image {
+  object-fit: contain;
+  transition: transform 0.12s ease-out;
+  will-change: transform;
+  pointer-events: none;
+  transform-origin: center center;
+}
+
+/* 等比例放大至長或寬其中一方抵到畫面邊界（絕不改變比例） */
+.media-element-image.fit-boundary {
+  width: 100%;
+  height: 100%;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  transition: transform 0.15s ease-out;
-  will-change: transform;
-  pointer-events: none;
+}
+
+/* 原始 1:1 尺寸（僅在超出畫面時等比例縮小） */
+.media-element-image.fit-original {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .media-element-video {
@@ -532,7 +554,7 @@ html, body {
   color: var(--text-muted);
 }
 
-/* Center Big Play Button Overlay */
+/* Center Big Play Button Overlay (Visual cue; full stage handles tap) */
 .center-play-btn {
   position: absolute;
   z-index: 22;
@@ -542,8 +564,8 @@ html, body {
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  cursor: pointer;
   color: #fff;
+  pointer-events: none;
   transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 

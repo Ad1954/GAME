@@ -1,34 +1,40 @@
 /**
- * Mplay 隨身影格播放器 - iPad Pro USB Drive Local Media PWA
+ * Mplay 隨身影格播放器 - iPad Pro USB Drive Local Media PWA (v1.1)
  * Core Features:
- * 1. Zero-copy local streaming via ObjectURL with strict single-decoder memory management
- * 2. State-based gesture routing:
- *    - Idle / Paused (isPlaying = false): Left/Right swipe switches files
- *    - Playing (isPlaying = true): Auto-hides HUD; Left/Right swipe executes custom seek/action
- * 3. Customizable gesture settings persisted in localStorage
- * 4. Offline PWA support & Media Session API integration
+ * 1. Zero-copy, zero-stat instant ingestion for 100GB+ USB folders (only stores lightweight File pointers)
+ * 2. Strict Single-Active-File loading: only loads current file on demand; lazy virtualized playlist
+ * 3. Folder Depth Protection: prevents accidental root-directory recursive overload
+ * 4. State-based gesture routing + Full-Stage Tap to Play/Pause video
+ * 5. Proportional Fit-to-Boundary (等比例放大至長或寬抵到畫面邊界，絕不變形) + Pinch-to-Zoom & Pan for WebP/GIF/Images
  */
 
-const STORAGE_KEY = 'mplay_user_settings_v1';
+const STORAGE_KEY = 'mplay_user_settings_v2';
 
 const DEFAULT_SETTINGS = {
   leftAction: 'rewind',        // 'rewind' | 'forward' | 'next' | 'prev' | 'none'
   leftSeconds: 30,
   rightAction: 'forward',      // 'forward' | 'rewind' | 'prev' | 'next' | 'none'
   rightSeconds: 30,
+  folderDepthMode: 'shallow',  // 'shallow' (only chosen folder level) | 'recursive' (include subfolders)
   tapPlayingBehavior: 'pause', // 'pause' | 'toggleHud'
   swipeThreshold: 45           // px
 };
 
+const fastCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
 const state = {
-  allFiles: [],       // Array of { id, file, name, type: 'video'|'image'|'audio', ext, isDemo, demoUrl }
+  allFiles: [],          // Lightweight pointers: { id, file, name, type, ext, isDemo, demoUrl, posterUrl }
   filteredFiles: [],
   activeFilter: 'all',
   currentIndex: 0,
   isPlaying: false,
   activeMediaEl: null,
-  activeObjectUrls: new Map(), // index -> objectURL (kept strictly <= 3 items)
+  activeObjectUrls: new Map(), // Keeps strictly active item ObjectURL to guarantee minimal memory
+  imageFitMode: 'boundary',    // 'boundary' (等比例撐到邊界) | 'original' (原始 1:1)
   imageZoom: 1,
+  imagePanX: 0,
+  imagePanY: 0,
+  playlistRenderLimit: 80,
   settings: loadSettings(),
   feedbackTimer: null
 };
@@ -45,11 +51,12 @@ const dom = {
   countVideo: document.getElementById('countVideo'),
   countImage: document.getElementById('countImage'),
   countAudio: document.getElementById('countAudio'),
-  fileInputMultiple: document.getElementById('fileInputMultiple'),
   fileInputFolder: document.getElementById('fileInputFolder'),
+  fileInputMultiple: document.getElementById('fileInputMultiple'),
+  btnOpenFolder: document.getElementById('btnOpenFolder'),
   btnOpenFiles: document.getElementById('btnOpenFiles'),
-  btnHeroSelectFiles: document.getElementById('btnHeroSelectFiles'),
   btnHeroSelectFolder: document.getElementById('btnHeroSelectFolder'),
+  btnHeroSelectFiles: document.getElementById('btnHeroSelectFiles'),
   btnLoadDemo: document.getElementById('btnLoadDemo'),
   btnTogglePlaylist: document.getElementById('btnTogglePlaylist'),
   btnOpenSettings: document.getElementById('btnOpenSettings'),
@@ -79,9 +86,11 @@ const dom = {
   filePositionInfo: document.getElementById('filePositionInfo'),
   gestureHintFooter: document.getElementById('gestureHintFooter'),
   guideGestureSummary: document.getElementById('guideGestureSummary'),
+  btnToggleFitMode: document.getElementById('btnToggleFitMode'),
   btnZoomReset: document.getElementById('btnZoomReset'),
   btnFullscreen: document.getElementById('btnFullscreen'),
   playlistDrawer: document.getElementById('playlistDrawer'),
+  playlistHeaderTitle: document.getElementById('playlistHeaderTitle'),
   btnClosePlaylist: document.getElementById('btnClosePlaylist'),
   playlistContainer: document.getElementById('playlistContainer'),
   settingsModal: document.getElementById('settingsModal'),
@@ -92,6 +101,7 @@ const dom = {
   selectRightAction: document.getElementById('selectRightAction'),
   inputRightSeconds: document.getElementById('inputRightSeconds'),
   rightSecondsGroup: document.getElementById('rightSecondsGroup'),
+  selectFolderDepthMode: document.getElementById('selectFolderDepthMode'),
   selectTapPlayingBehavior: document.getElementById('selectTapPlayingBehavior'),
   inputSwipeThreshold: document.getElementById('inputSwipeThreshold'),
   swipeThresholdLabel: document.getElementById('swipeThresholdLabel'),
@@ -195,6 +205,7 @@ function applySettingsToUI() {
   dom.inputRightSeconds.value = s.rightSeconds;
   dom.rightSecondsGroup.classList.toggle('hidden', s.rightAction !== 'rewind' && s.rightAction !== 'forward');
 
+  dom.selectFolderDepthMode.value = s.folderDepthMode || 'shallow';
   dom.selectTapPlayingBehavior.value = s.tapPlayingBehavior;
   dom.inputSwipeThreshold.value = s.swipeThreshold;
   dom.swipeThresholdLabel.textContent = s.swipeThreshold;
@@ -218,66 +229,129 @@ function syncPresetChips(targetInputId, val) {
 }
 
 /* =========================================
-   3. FILE CLASSIFICATION & LOADING
+   3. ZERO-STAT INSTANT FILE INGESTION
    ========================================= */
 const VIDEO_EXTS = new Set(['mp4', 'mov', 'm4v', 'webm', 'mkv', 'avi', 'ogv', '3gp', 'ts']);
 const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif', 'svg', 'bmp', 'avif']);
 const AUDIO_EXTS = new Set(['mp3', 'm4a', 'wav', 'flac', 'ogg', 'aac', 'opus']);
 
-function classifyFile(file) {
-  const name = file.name || '';
-  const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
-  const mime = (file.type || '').toLowerCase();
+/**
+ * Classifies file purely by filename extension first so iPadOS never has to stat() file metadata over USB.
+ */
+function classifyByNameFast(fileName) {
+  const dotIdx = fileName.lastIndexOf('.');
+  if (dotIdx <= 0) return null;
+  const ext = fileName.slice(dotIdx + 1).toLowerCase();
 
-  if (VIDEO_EXTS.has(ext) || mime.startsWith('video/')) return { type: 'video', ext: ext || 'mp4' };
-  if (IMAGE_EXTS.has(ext) || mime.startsWith('image/')) return { type: 'image', ext: ext || 'img' };
-  if (AUDIO_EXTS.has(ext) || mime.startsWith('audio/')) return { type: 'audio', ext: ext || 'mp3' };
+  if (VIDEO_EXTS.has(ext)) return { type: 'video', ext: ext.toUpperCase() };
+  if (IMAGE_EXTS.has(ext)) return { type: 'image', ext: ext.toUpperCase() };
+  if (AUDIO_EXTS.has(ext)) return { type: 'audio', ext: ext.toUpperCase() };
   return null;
 }
 
-function ingestFileList(fileList) {
-  const rawFiles = Array.from(fileList || []);
-  const validItems = [];
+function getRelativeDepth(file) {
+  const rel = file.webkitRelativePath || '';
+  if (!rel) return 1;
+  // e.g. "SelectedFolder/video.mp4" -> 2 parts (depth 1 inside SelectedFolder)
+  // e.g. "SelectedFolder/Sub/video.mp4" -> 3 parts (depth 2)
+  let slashes = 0;
+  for (let i = 0; i < rel.length; i++) {
+    if (rel.charCodeAt(i) === 47) slashes++;
+  }
+  return slashes;
+}
 
-  for (const file of rawFiles) {
-    if (file.name.startsWith('.')) continue; // skip hidden macOS/USB dot files like ._file
-    const info = classifyFile(file);
-    if (info) {
-      validItems.push({
-        id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2, 7)}`,
-        file,
-        name: file.name,
-        type: info.type,
-        ext: info.ext.toUpperCase(),
-        isDemo: false
-      });
+function ingestFileList(fileList, isFromFolderPicker = false) {
+  const totalRaw = fileList ? fileList.length : 0;
+  if (totalRaw === 0) return;
+
+  const isShallowMode = isFromFolderPicker && state.settings.folderDepthMode === 'shallow';
+  const shallowItems = [];
+  const allCandidates = [];
+  let skippedSubfolderCount = 0;
+
+  // Ultra-fast loop: only reads file.name and file.webkitRelativePath (in-memory strings, zero USB disk I/O!)
+  for (let i = 0; i < totalRaw; i++) {
+    const file = fileList[i];
+    const name = file.name || '';
+    if (!name || name.charCodeAt(0) === 46) continue; // skip hidden dot files like ._file
+
+    const info = classifyByNameFast(name);
+    if (!info) continue;
+
+    const depth = getRelativeDepth(file);
+    const pointerItem = {
+      id: `f-${i}-${name}`,
+      file,
+      name,
+      depth,
+      type: info.type,
+      ext: info.ext,
+      isDemo: false
+    };
+
+    allCandidates.push(pointerItem);
+    if (depth <= 1) {
+      shallowItems.push(pointerItem);
+    } else {
+      skippedSubfolderCount++;
+    }
+  }
+
+  // Decide which list to use based on folder depth protection
+  let validItems = allCandidates;
+  if (isShallowMode) {
+    if (shallowItems.length > 0) {
+      validItems = shallowItems;
+    } else if (allCandidates.length > 0) {
+      // If user picked a parent folder that only has subfolders, take only the shallowest subfolder depth
+      let minDepth = Infinity;
+      for (let i = 0; i < allCandidates.length; i++) {
+        if (allCandidates[i].depth < minDepth) minDepth = allCandidates[i].depth;
+      }
+      validItems = allCandidates.filter((item) => item.depth === minDepth);
     }
   }
 
   if (validItems.length === 0) {
-    showFeedbackToast('⚠️', '未偵測到支援的媒體檔案', '請選取 MP4/圖片/WebP/GIF/MP3 檔案');
+    showFeedbackToast('⚠️', '未偵測到支援的媒體檔案', '支援 MP4/MOV/圖片/WebP/GIF/MP3');
     return;
   }
 
-  // Natural alphanumeric sort (e.g. 1.jpg, 2.jpg, 10.jpg)
-  validItems.sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
-  );
+  // Fast natural sort via Intl.Collator
+  validItems.sort((a, b) => fastCollator.compare(a.name, b.name));
 
-  // Clean up previous session resources
+  // Release any previous session decoders & URLs
   releaseAllObjectUrls();
   destroyActiveMediaDecoder();
 
   state.allFiles = validItems;
   state.activeFilter = 'all';
+  state.playlistRenderLimit = 80;
+
   updateCategoryCounts();
   applyFilter('all');
+
+  if (isShallowMode && skippedSubfolderCount > 0 && shallowItems.length > 0) {
+    showFeedbackToast(
+      '📂',
+      `已載入當層 ${validItems.length} 個檔案`,
+      `已自動略過子資料夾 ${skippedSubfolderCount} 個檔案（可於設定更改）`
+    );
+  } else {
+    showFeedbackToast(
+      '⚡',
+      `瞬時載入 ${validItems.length} 個檔案指標`,
+      '僅讀取當前第 1 個檔案，零空間佔用'
+    );
+  }
 }
 
 function updateCategoryCounts() {
   const counts = { all: state.allFiles.length, video: 0, image: 0, audio: 0 };
-  for (const item of state.allFiles) {
-    counts[item.type] = (counts[item.type] || 0) + 1;
+  for (let i = 0; i < state.allFiles.length; i++) {
+    const t = state.allFiles[i].type;
+    counts[t] = (counts[t] || 0) + 1;
   }
   dom.countAll.textContent = counts.all;
   dom.countVideo.textContent = counts.video;
@@ -295,7 +369,7 @@ function applyFilter(filterType) {
   });
 
   state.filteredFiles = filterType === 'all'
-    ? [...state.allFiles]
+    ? state.allFiles
     : state.allFiles.filter((f) => f.type === filterType);
 
   if (state.filteredFiles.length === 0) {
@@ -309,12 +383,15 @@ function applyFilter(filterType) {
   dom.mediaStage.classList.remove('hidden');
   dom.bottomHud.classList.remove('hidden');
 
-  renderPlaylist();
+  // Immediately display the first file! Do NOT block on rendering playlist DOM until opened.
   loadMediaAtIndex(0);
+  if (!dom.playlistDrawer.classList.contains('hidden')) {
+    renderPlaylist();
+  }
 }
 
 /* =========================================
-   4. VIRTUAL SLIDE & MEMORY MANAGEMENT
+   4. STRICT SINGLE-ACTIVE-FILE MEMORY ENGINE
    ========================================= */
 function getOrCreateObjectUrl(index) {
   const item = state.filteredFiles[index];
@@ -329,22 +406,16 @@ function getOrCreateObjectUrl(index) {
   return url;
 }
 
-function pruneObjectUrlsAround(centerIndex) {
-  const keepIds = new Set();
-  const total = state.filteredFiles.length;
-  if (total > 0) {
-    const indices = [
-      (centerIndex - 1 + total) % total,
-      centerIndex,
-      (centerIndex + 1) % total
-    ];
-    indices.forEach((idx) => {
-      if (state.filteredFiles[idx]) keepIds.add(state.filteredFiles[idx].id);
-    });
-  }
+/**
+ * Only keeps the current active file's ObjectURL in memory so even 100GB folders
+ * only ever open 1 file handle on the USB drive at a time!
+ */
+function pruneObjectUrlsStrict(centerIndex) {
+  const currentItem = state.filteredFiles[centerIndex];
+  const keepId = currentItem ? currentItem.id : null;
 
   for (const [id, url] of state.activeObjectUrls.entries()) {
-    if (!keepIds.has(id)) {
+    if (id !== keepId) {
       URL.revokeObjectURL(url);
       state.activeObjectUrls.delete(id);
     }
@@ -380,27 +451,28 @@ function loadMediaAtIndex(index, slideDirection = 0) {
   const total = state.filteredFiles.length;
   if (total === 0) return;
 
-  // Wrap around seamlessly
   const targetIndex = (index + total) % total;
 
   // Always stop previous decoder and reset to NOT PLAYING when switching files
   destroyActiveMediaDecoder();
   state.currentIndex = targetIndex;
   state.imageZoom = 1;
+  state.imagePanX = 0;
+  state.imagePanY = 0;
   dom.btnZoomReset.classList.add('hidden');
 
   const item = state.filteredFiles[targetIndex];
   const mediaUrl = getOrCreateObjectUrl(targetIndex);
-  pruneObjectUrlsAround(targetIndex);
+  pruneObjectUrlsStrict(targetIndex);
 
   // Subtle slide transition effect
   if (slideDirection !== 0) {
     dom.slideViewport.style.transition = 'none';
-    dom.slideViewport.style.transform = `translateX(${slideDirection > 0 ? '42px' : '-42px'})`;
-    dom.slideViewport.style.opacity = '0.35';
+    dom.slideViewport.style.transform = `translateX(${slideDirection > 0 ? '36px' : '-36px'})`;
+    dom.slideViewport.style.opacity = '0.4';
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        dom.slideViewport.style.transition = 'transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease';
+        dom.slideViewport.style.transition = 'transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.16s ease';
         dom.slideViewport.style.transform = 'translateX(0)';
         dom.slideViewport.style.opacity = '1';
       });
@@ -411,7 +483,7 @@ function loadMediaAtIndex(index, slideDirection = 0) {
 
   if (item.type === 'image') {
     const img = document.createElement('img');
-    img.className = 'media-element-image';
+    img.className = `media-element-image ${state.imageFitMode === 'boundary' ? 'fit-boundary' : 'fit-original'}`;
     img.src = mediaUrl;
     img.alt = item.name;
     img.draggable = false;
@@ -419,6 +491,8 @@ function loadMediaAtIndex(index, slideDirection = 0) {
 
     dom.centerPlayBtn.classList.add('hidden');
     dom.playbackControlsRow.classList.add('hidden');
+    dom.btnToggleFitMode.classList.remove('hidden');
+    updateFitModeButtonLabel();
   } else if (item.type === 'video') {
     const video = document.createElement('video');
     video.className = 'media-element-video';
@@ -426,6 +500,7 @@ function loadMediaAtIndex(index, slideDirection = 0) {
     if (item.posterUrl) {
       video.poster = item.posterUrl;
     }
+    // Use preload="metadata" without seeking so USB drive doesn't block on deep file reads before play
     video.preload = 'metadata';
     video.playsInline = true;
     video.setAttribute('playsinline', '');
@@ -433,22 +508,19 @@ function loadMediaAtIndex(index, slideDirection = 0) {
     video.controls = false;
     video.playbackRate = Number(dom.playbackRateSelect.value) || 1;
 
-    // Fetch first frame preview cleanly on iPadOS Safari
     video.addEventListener('loadedmetadata', () => {
       dom.timeDuration.textContent = formatTime(video.duration);
       dom.timeCurrent.textContent = formatTime(video.currentTime);
-      if (video.currentTime === 0) {
-        video.currentTime = 0.001;
-      }
     });
 
     bindMediaEvents(video, item);
     dom.slideViewport.appendChild(video);
     state.activeMediaEl = video;
 
-    // Crucial requirement: Do NOT autoplay! Show Center Play Button.
+    // Default to NOT playing; tapping anywhere on the video stage starts playback
     dom.centerPlayBtn.classList.remove('hidden');
     dom.playbackControlsRow.classList.remove('hidden');
+    dom.btnToggleFitMode.classList.add('hidden');
     resetScrubberUI();
   } else if (item.type === 'audio') {
     const deck = document.createElement('div');
@@ -462,7 +534,7 @@ function loadMediaAtIndex(index, slideDirection = 0) {
         </svg>
       </div>
       <div class="audio-title">${escapeHtml(item.name)}</div>
-      <div class="audio-sub">MP3 / 音訊隨身聽模式</div>
+      <div class="audio-sub">輕點畫面任意處開始播放 / 暫停</div>
     `;
 
     const audio = document.createElement('audio');
@@ -480,9 +552,9 @@ function loadMediaAtIndex(index, slideDirection = 0) {
     dom.slideViewport.appendChild(deck);
     state.activeMediaEl = audio;
 
-    // Do NOT autoplay when selected; wait for center Play button tap
     dom.centerPlayBtn.classList.remove('hidden');
     dom.playbackControlsRow.classList.remove('hidden');
+    dom.btnToggleFitMode.classList.add('hidden');
     resetScrubberUI();
   }
 
@@ -491,7 +563,9 @@ function loadMediaAtIndex(index, slideDirection = 0) {
   dom.fileTypeBadge.textContent = `${item.type.toUpperCase()} · ${item.ext}`;
   dom.filePositionInfo.textContent = `${targetIndex + 1} / ${total}`;
 
-  highlightPlaylistActive();
+  if (!dom.playlistDrawer.classList.contains('hidden')) {
+    highlightPlaylistActive();
+  }
   updateStageStateUI();
   updateMediaSessionMetadata(item);
 }
@@ -505,7 +579,6 @@ function resetScrubberUI() {
 function bindMediaEvents(mediaEl, item) {
   mediaEl.addEventListener('play', () => {
     state.isPlaying = true;
-    // Automatically hide HUD when playing starts
     dom.app.classList.add('hud-hidden');
     dom.centerPlayBtn.classList.add('hidden');
     const disc = document.getElementById('vinylDisc');
@@ -515,7 +588,6 @@ function bindMediaEvents(mediaEl, item) {
 
   mediaEl.addEventListener('pause', () => {
     state.isPlaying = false;
-    // Reveal HUD & Center Play Button when paused/stopped so user can swipe files
     dom.app.classList.remove('hud-hidden');
     dom.centerPlayBtn.classList.remove('hidden');
     const disc = document.getElementById('vinylDisc');
@@ -531,7 +603,6 @@ function bindMediaEvents(mediaEl, item) {
     if (disc) disc.classList.remove('spinning');
     updateStageStateUI();
 
-    // If audio track ends, optionally advance or stay ready
     if (item.type === 'audio' && state.filteredFiles.length > 1) {
       showFeedbackToast('🎵', '播放完畢', '左右滑動可切換下一首');
     }
@@ -560,18 +631,24 @@ function togglePlayPause() {
 
 function updateStageStateUI() {
   const s = state.settings;
+  const currentItem = state.filteredFiles[state.currentIndex];
   if (state.isPlaying) {
     dom.modeStateDot.className = 'state-dot playing';
     const leftText = describeGestureAction(s.leftAction, s.leftSeconds);
     const rightText = describeGestureAction(s.rightAction, s.rightSeconds);
-    dom.modeStateText.textContent = `播放中：左滑${leftText} · 右滑${rightText}`;
+    dom.modeStateText.textContent = `播放中：左滑${leftText} · 右滑${rightText}（輕點畫面暫停）`;
     dom.gestureHintFooter.textContent = `播放中手勢：左滑${leftText} / 右滑${rightText}`;
     dom.iconPlay.classList.add('hidden');
     dom.iconPause.classList.remove('hidden');
   } else {
     dom.modeStateDot.className = 'state-dot idle';
-    dom.modeStateText.textContent = '未播放：左右滑動切換檔案';
-    dom.gestureHintFooter.textContent = '未播放狀態：左右滑動切換上/下一個檔案';
+    if (currentItem && currentItem.type === 'image') {
+      dom.modeStateText.textContent = '看圖模式：左右滑動換張 · 輕點切換等比例邊界放大 · 雙指縮放';
+      dom.gestureHintFooter.textContent = '左右滑動切換檔案 ｜ 輕點切換等比例撐滿邊界';
+    } else {
+      dom.modeStateText.textContent = '未播放：左右滑動切換檔案 · 輕點畫面任意處開始播放';
+      dom.gestureHintFooter.textContent = '未播放：左右滑動換檔 ｜ 輕點畫面任意處開始播放';
+    }
     dom.iconPlay.classList.remove('hidden');
     dom.iconPause.classList.add('hidden');
   }
@@ -590,7 +667,58 @@ function nextFile() {
 }
 
 /* =========================================
-   6. STATE-AWARE GESTURE ENGINE (TOUCH & MOUSE)
+   6. IMAGE PROPORTIONAL FIT-TO-BOUNDARY & ZOOM
+   ========================================= */
+function toggleImageFitMode() {
+  const currentItem = state.filteredFiles[state.currentIndex];
+  if (!currentItem || currentItem.type !== 'image') return;
+
+  // If currently pinch-zoomed in, reset zoom first
+  if (state.imageZoom > 1.02) {
+    resetImageTransform();
+    showFeedbackToast('📐', '已重置縮放', '等比例配合畫面邊界');
+    return;
+  }
+
+  state.imageFitMode = state.imageFitMode === 'boundary' ? 'original' : 'boundary';
+  const img = dom.slideViewport.querySelector('.media-element-image');
+  if (img) {
+    img.classList.toggle('fit-boundary', state.imageFitMode === 'boundary');
+    img.classList.toggle('fit-original', state.imageFitMode === 'original');
+  }
+  updateFitModeButtonLabel();
+
+  if (state.imageFitMode === 'boundary') {
+    showFeedbackToast('📐', '等比例放大至邊界', '長或寬抵到畫面邊界（維持原比例不變形）');
+  } else {
+    showFeedbackToast('🔎', '原始 1:1 尺寸', '顯示圖片原始像素大小');
+  }
+}
+
+function updateFitModeButtonLabel() {
+  if (state.imageFitMode === 'boundary') {
+    dom.btnToggleFitMode.textContent = '📐 等比例撐滿邊界';
+  } else {
+    dom.btnToggleFitMode.textContent = '🔎 原始 1:1 比例';
+  }
+}
+
+function applyImageTransform() {
+  const img = dom.slideViewport.querySelector('.media-element-image');
+  if (!img) return;
+  img.style.transform = `translate3d(${state.imagePanX}px, ${state.imagePanY}px, 0) scale(${state.imageZoom})`;
+  dom.btnZoomReset.classList.toggle('hidden', state.imageZoom <= 1.02);
+}
+
+function resetImageTransform() {
+  state.imageZoom = 1;
+  state.imagePanX = 0;
+  state.imagePanY = 0;
+  applyImageTransform();
+}
+
+/* =========================================
+   7. STATE-AWARE GESTURE ENGINE (FULL-STAGE TAP, SWIPE, PINCH & PAN)
    ========================================= */
 function executePlayingGesture(direction) {
   const s = state.settings;
@@ -627,8 +755,11 @@ function executePlayingGesture(direction) {
 function setupStageGestures() {
   let startX = 0;
   let startY = 0;
+  let lastPanX = 0;
+  let lastPanY = 0;
   let startTime = 0;
   let isTracking = false;
+  let isPanningZoomedImage = false;
   let initialPinchDist = null;
   let initialZoom = 1;
 
@@ -638,9 +769,11 @@ function setupStageGestures() {
   stage.addEventListener('touchstart', (e) => {
     if (e.target.closest('button, input, select')) return;
 
-    if (e.touches.length === 2) {
-      // Pinch to zoom for images
+    const currentItem = state.filteredFiles[state.currentIndex];
+
+    if (e.touches.length === 2 && currentItem && currentItem.type === 'image') {
       isTracking = false;
+      isPanningZoomedImage = false;
       initialPinchDist = getPinchDistance(e.touches);
       initialZoom = state.imageZoom;
       return;
@@ -651,18 +784,39 @@ function setupStageGestures() {
       startY = e.touches[0].clientY;
       startTime = Date.now();
       isTracking = true;
+
+      if (currentItem && currentItem.type === 'image' && state.imageZoom > 1.05) {
+        isPanningZoomedImage = true;
+        lastPanX = state.imagePanX;
+        lastPanY = state.imagePanY;
+      } else {
+        isPanningZoomedImage = false;
+      }
     }
   }, { passive: true });
 
   stage.addEventListener('touchmove', (e) => {
+    const currentItem = state.filteredFiles[state.currentIndex];
+    if (!currentItem || currentItem.type !== 'image') return;
+
     if (e.touches.length === 2 && initialPinchDist) {
-      const currentItem = state.filteredFiles[state.currentIndex];
-      if (currentItem && currentItem.type === 'image') {
-        const dist = getPinchDistance(e.touches);
-        const scale = Math.max(1, Math.min(4, initialZoom * (dist / initialPinchDist)));
-        setImageZoom(scale);
+      const dist = getPinchDistance(e.touches);
+      const scale = Math.max(1, Math.min(5, initialZoom * (dist / initialPinchDist)));
+      state.imageZoom = scale;
+      if (scale <= 1.02) {
+        state.imagePanX = 0;
+        state.imagePanY = 0;
       }
+      applyImageTransform();
       return;
+    }
+
+    if (e.touches.length === 1 && isPanningZoomedImage && state.imageZoom > 1.05) {
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      state.imagePanX = lastPanX + dx;
+      state.imagePanY = lastPanY + dy;
+      applyImageTransform();
     }
   }, { passive: true });
 
@@ -676,10 +830,22 @@ function setupStageGestures() {
 
     const endX = e.changedTouches[0].clientX;
     const endY = e.changedTouches[0].clientY;
-    handlePointerGestureEnd(startX, startY, endX, endY, Date.now() - startTime);
+    const elapsed = Date.now() - startTime;
+
+    if (isPanningZoomedImage) {
+      isPanningZoomedImage = false;
+      // If it was just a quick tap while zoomed in, toggle/reset zoom
+      if (Math.abs(endX - startX) < 12 && Math.abs(endY - startY) < 12 && elapsed < 350) {
+        resetImageTransform();
+        showFeedbackToast('📐', '已重置縮放 (100%)', '恢復左右滑動切換檔案');
+      }
+      return;
+    }
+
+    handlePointerGestureEnd(startX, startY, endX, endY, elapsed);
   }, { passive: true });
 
-  // Mouse fallback for desktop browser testing
+  // Mouse fallback & wheel zoom for desktop testing
   stage.addEventListener('mousedown', (e) => {
     if (e.target.closest('button, input, select')) return;
     startX = e.clientX;
@@ -693,6 +859,19 @@ function setupStageGestures() {
     isTracking = false;
     handlePointerGestureEnd(startX, startY, e.clientX, e.clientY, Date.now() - startTime);
   });
+
+  stage.addEventListener('wheel', (e) => {
+    const currentItem = state.filteredFiles[state.currentIndex];
+    if (!currentItem || currentItem.type !== 'image') return;
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.2 : -0.2;
+    state.imageZoom = Math.max(1, Math.min(5, state.imageZoom + delta));
+    if (state.imageZoom <= 1.02) {
+      state.imagePanX = 0;
+      state.imagePanY = 0;
+    }
+    applyImageTransform();
+  }, { passive: false });
 }
 
 function handlePointerGestureEnd(startX, startY, endX, endY, elapsedMs) {
@@ -704,18 +883,15 @@ function handlePointerGestureEnd(startX, startY, endX, endY, elapsedMs) {
 
   // 1. Horizontal Swipe Detection
   if (absX >= threshold && absX > absY * 1.2) {
-    // If image is zoomed in, reset zoom first or allow swipe
     if (!state.isPlaying) {
       // IDLE / NOT PLAYING STATE -> Switch File!
-      // Swipe Left (finger moves right-to-left, dx < 0) -> Next File
-      // Swipe Right (finger moves left-to-right, dx > 0) -> Previous File
       if (dx < 0) {
         nextFile();
       } else {
         prevFile();
       }
     } else {
-      // PLAYING STATE -> Lock file switching, execute custom left/right gesture!
+      // PLAYING STATE -> Lock file switching, execute custom left/right seek gesture!
       if (dx < 0) {
         executePlayingGesture('left');
       } else {
@@ -725,24 +901,26 @@ function handlePointerGestureEnd(startX, startY, endX, endY, elapsedMs) {
     return;
   }
 
-  // 2. Single Tap Detection (minimal movement & short duration)
-  if (absX < 14 && absY < 14 && elapsedMs < 450) {
+  // 2. Full-Stage Single Tap Detection (Requirement #4 & #5)
+  if (absX < 16 && absY < 16 && elapsedMs < 480) {
     const currentItem = state.filteredFiles[state.currentIndex];
     if (!currentItem) return;
 
-    if (state.isPlaying) {
-      // When playing video/audio, tap either pauses (returning to file-switch state) or toggles HUD
-      if (state.settings.tapPlayingBehavior === 'pause') {
-        if (state.activeMediaEl) state.activeMediaEl.pause();
-        showFeedbackToast('⏸️', '已暫停播放', '現在可左右滑動切換檔案');
+    if (currentItem.type === 'video' || currentItem.type === 'audio') {
+      // Requirement #4: Tap ANYWHERE on the video/audio playback area triggers Play or Pause!
+      if (!state.isPlaying) {
+        togglePlayPause();
       } else {
-        dom.app.classList.toggle('hud-hidden');
+        if (state.settings.tapPlayingBehavior === 'pause') {
+          if (state.activeMediaEl) state.activeMediaEl.pause();
+          showFeedbackToast('⏸️', '已暫停播放', '現在可左右滑動切換檔案');
+        } else {
+          dom.app.classList.toggle('hud-hidden');
+        }
       }
-    } else {
-      // When viewing an image, a tap can toggle HUD for clean full-bleed photo viewing
-      if (currentItem.type === 'image') {
-        dom.app.classList.toggle('hud-hidden');
-      }
+    } else if (currentItem.type === 'image') {
+      // Requirement #5: Tap on image/WebP toggles proportional Fit-to-Boundary vs Original 1:1 size
+      toggleImageFitMode();
     }
   }
 }
@@ -753,17 +931,8 @@ function getPinchDistance(touches) {
   return Math.hypot(dx, dy);
 }
 
-function setImageZoom(scale) {
-  state.imageZoom = scale;
-  const img = dom.slideViewport.querySelector('.media-element-image');
-  if (img) {
-    img.style.transform = `scale(${scale})`;
-  }
-  dom.btnZoomReset.classList.toggle('hidden', scale <= 1.02);
-}
-
 /* =========================================
-   7. MEDIA SESSION API (iPadOS Lock Screen)
+   8. MEDIA SESSION API (iPadOS Lock Screen)
    ========================================= */
 function updateMediaSessionMetadata(item) {
   if (!('mediaSession' in navigator) || !item) return;
@@ -788,13 +957,21 @@ function updateMediaSessionMetadata(item) {
 }
 
 /* =========================================
-   8. PLAYLIST & BUILT-IN DEMO GENERATOR
+   9. LAZY VIRTUALIZED PLAYLIST & DEMO GENERATOR
    ========================================= */
 function renderPlaylist() {
+  const total = state.filteredFiles.length;
+  dom.playlistHeaderTitle.textContent = `📂 已載入檔案 (${total})`;
   dom.playlistContainer.innerHTML = '';
-  state.filteredFiles.forEach((item, idx) => {
+
+  const limit = Math.min(total, state.playlistRenderLimit);
+  const fragment = document.createDocumentFragment();
+
+  for (let idx = 0; idx < limit; idx++) {
+    const item = state.filteredFiles[idx];
     const btn = document.createElement('button');
     btn.className = `playlist-item ${idx === state.currentIndex ? 'active' : ''}`;
+    btn.dataset.idx = idx;
     const icon = item.type === 'video' ? '🎬' : item.type === 'image' ? '🖼️' : '🎵';
     btn.innerHTML = `
       <span>${icon}</span>
@@ -805,20 +982,33 @@ function renderPlaylist() {
       loadMediaAtIndex(idx);
       dom.playlistDrawer.classList.add('hidden');
     });
-    dom.playlistContainer.appendChild(btn);
-  });
+    fragment.appendChild(btn);
+  }
+
+  if (total > limit) {
+    const moreBtn = document.createElement('button');
+    moreBtn.className = 'demo-link-btn';
+    moreBtn.textContent = `顯示更多檔案（尚有 ${total - limit} 個）...`;
+    moreBtn.addEventListener('click', () => {
+      state.playlistRenderLimit += 150;
+      renderPlaylist();
+    });
+    fragment.appendChild(moreBtn);
+  }
+
+  dom.playlistContainer.appendChild(fragment);
 }
 
 function highlightPlaylistActive() {
   const items = dom.playlistContainer.querySelectorAll('.playlist-item');
-  items.forEach((el, idx) => {
-    el.classList.toggle('active', idx === state.currentIndex);
+  items.forEach((el) => {
+    el.classList.toggle('active', Number(el.dataset.idx) === state.currentIndex);
   });
 }
 
 /**
- * Generates 100% offline local demo media (Images, Animated SVG/GIF-style frame, playable WAV audio, and playable Video)
- * so the user can test all gestures immediately.
+ * Generates offline demo samples including a small 500x100 banner WebP-style image
+ * to demonstrate proportional Fit-to-Boundary scaling without distortion.
  */
 async function loadDemoSamples() {
   releaseAllObjectUrls();
@@ -826,47 +1016,46 @@ async function loadDemoSamples() {
 
   const demoItems = [];
 
-  // 1. High-Res Film Poster Image (SVG Blob)
-  const svgPoster1 = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800">
+  // 1. Small 500x100 Wide Banner Image to prove proportional scaling to left/right edge without distortion!
+  const svgWideBanner = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" width="500" height="100">
     <defs>
-      <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#0f172a"/><stop offset="50%" stop-color="#1e1b4b"/><stop offset="100%" stop-color="#31102f"/>
+      <linearGradient id="gw" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#1e1b4b"/><stop offset="50%" stop-color="#31102f"/><stop offset="100%" stop-color="#0f172a"/>
       </linearGradient>
     </defs>
-    <rect width="1200" height="800" fill="url(#g1)"/>
-    <circle cx="600" cy="360" r="180" fill="#f59e0b" opacity="0.18"/>
-    <circle cx="600" cy="360" r="110" fill="#f43f5e" opacity="0.3"/>
-    <text x="600" y="340" fill="#f8fafc" font-size="54" font-family="sans-serif" font-weight="bold" text-anchor="middle">01. 隨身碟靜態圖片範例 (JPG/PNG)</text>
-    <text x="600" y="420" fill="#fbbf24" font-size="32" font-family="sans-serif" text-anchor="middle">👈 請往左滑動切換至下一個檔案 👉</text>
-    <text x="600" y="480" fill="#94a3b8" font-size="24" font-family="sans-serif" text-anchor="middle">支援雙指縮放與全螢幕無縫看圖</text>
+    <rect width="500" height="100" fill="url(#gw)" stroke="#f59e0b" stroke-width="4"/>
+    <circle cx="50" cy="50" r="35" fill="none" stroke="#38bdf8" stroke-width="3"/>
+    <circle cx="450" cy="50" r="35" fill="none" stroke="#f43f5e" stroke-width="3"/>
+    <text x="250" y="44" fill="#f8fafc" font-size="18" font-family="sans-serif" font-weight="bold" text-anchor="middle">01. 小尺寸寬幅圖測試 (原圖僅 500×100)</text>
+    <text x="250" y="72" fill="#fbbf24" font-size="13" font-family="sans-serif" text-anchor="middle">自動等比例放大到橫向抵住畫面邊界（左右正圓形絕不變形！輕點可切換 1:1）</text>
   </svg>`;
-  const imgBlob1 = new Blob([svgPoster1], { type: 'image/svg+xml' });
+  const imgBlob1 = new Blob([svgWideBanner], { type: 'image/svg+xml' });
   demoItems.push({
     id: 'demo-img-1',
     file: imgBlob1,
-    name: '01_隨身碟相片範例_星夜影格.png',
+    name: '01_寬幅小圖等比例放大測試_500x100.webp',
     type: 'image',
-    ext: 'PNG',
+    ext: 'WEBP',
     isDemo: true,
     demoUrl: URL.createObjectURL(imgBlob1)
   });
 
-  // 2. Animated WebP / GIF-style Motion Image (Animated SVG Blob)
-  const svgAnim = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800">
-    <rect width="1200" height="800" fill="#090d16"/>
-    <g transform="translate(600, 340)">
-      <circle r="130" fill="none" stroke="#f59e0b" stroke-width="8" stroke-dasharray="40 20">
+  // 2. Animated WebP / GIF-style Motion Image
+  const svgAnim = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+    <rect width="800" height="600" fill="#090d16"/>
+    <g transform="translate(400, 250)">
+      <circle r="110" fill="none" stroke="#f59e0b" stroke-width="7" stroke-dasharray="36 18">
         <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="6s" repeatCount="indefinite"/>
       </circle>
-      <circle r="85" fill="none" stroke="#f43f5e" stroke-width="8" stroke-dasharray="30 15">
+      <circle r="72" fill="none" stroke="#f43f5e" stroke-width="7" stroke-dasharray="24 14">
         <animateTransform attributeName="transform" type="rotate" from="360" to="0" dur="4s" repeatCount="indefinite"/>
       </circle>
-      <circle r="28" fill="#6366f1">
-        <animate attributeName="r" values="22;42;22" dur="1.6s" repeatCount="indefinite"/>
+      <circle r="24" fill="#6366f1">
+        <animate attributeName="r" values="18;36;18" dur="1.5s" repeatCount="indefinite"/>
       </circle>
     </g>
-    <text x="600" y="560" fill="#f8fafc" font-size="48" font-family="sans-serif" font-weight="bold" text-anchor="middle">02. 動態圖片範例 (WebP / GIF 動圖自動播放)</text>
-    <text x="600" y="625" fill="#38bdf8" font-size="28" font-family="sans-serif" text-anchor="middle">再往左滑動，體驗「影片預設不播放 vs 點擊播放後手勢快轉」</text>
+    <text x="400" y="440" fill="#f8fafc" font-size="32" font-family="sans-serif" font-weight="bold" text-anchor="middle">02. 動態 WebP / GIF 範例（支援雙指縮放與點擊切換）</text>
+    <text x="400" y="490" fill="#38bdf8" font-size="22" font-family="sans-serif" text-anchor="middle">往左滑動體驗「全畫面任意處點擊播放影片」</text>
   </svg>`;
   const imgBlob2 = new Blob([svgAnim], { type: 'image/svg+xml' });
   demoItems.push({
@@ -879,33 +1068,21 @@ async function loadDemoSamples() {
     demoUrl: URL.createObjectURL(imgBlob2)
   });
 
-  // 3. Synthesized Playable Audio (90-second stereo WAV Blob so user can test +/- 30s seek!)
-  const wavBlob = createDemoWavBlob(90);
-  demoItems.push({
-    id: 'demo-audio-3',
-    file: wavBlob,
-    name: '03_隨身碟音樂範例_AmbientSynth_90s.mp3',
-    type: 'audio',
-    ext: 'MP3',
-    isDemo: true,
-    demoUrl: URL.createObjectURL(wavBlob)
-  });
-
-  // 4. Playable Video (Use WAV or Canvas Stream / Video element)
+  // 3. Playable Video (120s seekable test)
   const svgVideoPoster = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800">
     <rect width="1200" height="800" fill="#0b0e17"/>
     <rect x="80" y="80" width="1040" height="640" rx="28" fill="#131826" stroke="#f59e0b" stroke-width="4" stroke-dasharray="18 10"/>
-    <text x="600" y="250" fill="#f59e0b" font-size="46" font-family="sans-serif" font-weight="bold" text-anchor="middle">🎬 04. 影片手勢分流測試 (120 秒)</text>
-    <text x="600" y="340" fill="#e2e8f0" font-size="30" font-family="sans-serif" text-anchor="middle">• 未播放時：左右滑動 ＝ 切換上/下一個檔案</text>
-    <text x="600" y="405" fill="#fb7185" font-size="30" font-family="sans-serif" font-weight="bold" text-anchor="middle">• 點擊中央播放鍵後：自動隱藏介面，左右滑動 ＝ 快轉/倒退秒數！</text>
-    <text x="600" y="590" fill="#94a3b8" font-size="24" font-family="sans-serif" text-anchor="middle">播放中點擊畫面中央即可暫停並恢復滑動換檔</text>
+    <text x="600" y="240" fill="#f59e0b" font-size="46" font-family="sans-serif" font-weight="bold" text-anchor="middle">🎬 03. 全畫面點擊播放 + 手勢快轉測試 (120秒)</text>
+    <text x="600" y="330" fill="#38bdf8" font-size="32" font-family="sans-serif" font-weight="bold" text-anchor="middle">👆 現在無須瞄準正中間，輕點整個影片畫面任意處即可開始播放！</text>
+    <text x="600" y="405" fill="#fb7185" font-size="30" font-family="sans-serif" font-weight="bold" text-anchor="middle">• 播放中：左右滑動 ＝ 快轉/倒退 30 秒（再輕點任意處即暫停）</text>
+    <text x="600" y="590" fill="#94a3b8" font-size="24" font-family="sans-serif" text-anchor="middle">• 未播放時：左右滑動 ＝ 切換上/下一個檔案</text>
   </svg>`;
   const videoPosterBlob = new Blob([svgVideoPoster], { type: 'image/svg+xml' });
   const videoTestBlob = createDemoWavBlob(120);
   demoItems.push({
-    id: 'demo-video-4',
+    id: 'demo-video-3',
     file: videoTestBlob,
-    name: '04_隨身碟影片測試_120秒手勢快轉測試.mp4',
+    name: '03_隨身碟影片測試_全畫面點擊播放_120s.mp4',
     type: 'video',
     ext: 'MP4',
     isDemo: true,
@@ -913,10 +1090,22 @@ async function loadDemoSamples() {
     posterUrl: URL.createObjectURL(videoPosterBlob)
   });
 
+  // 4. Playable Audio Track
+  const wavBlob = createDemoWavBlob(90);
+  demoItems.push({
+    id: 'demo-audio-4',
+    file: wavBlob,
+    name: '04_隨身碟音樂範例_AmbientSynth_90s.mp3',
+    type: 'audio',
+    ext: 'MP3',
+    isDemo: true,
+    demoUrl: URL.createObjectURL(wavBlob)
+  });
+
   state.allFiles = demoItems;
   updateCategoryCounts();
   applyFilter('all');
-  showFeedbackToast('✨', '已載入 4 個測試檔案', '未播放可滑動換檔；播放中可滑動快轉');
+  showFeedbackToast('✨', '已載入 4 個測試樣本', '第1張為 500×100 寬幅圖等比例邊界放大展示');
 }
 
 function createDemoWavBlob(durationSeconds = 90) {
@@ -934,8 +1123,8 @@ function createDemoWavBlob(durationSeconds = 90) {
   writeStr(8, 'WAVE');
   writeStr(12, 'fmt ');
   view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true); // PCM
-  view.setUint16(22, 1, true); // Mono
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
   view.setUint32(24, sampleRate, true);
   view.setUint32(28, sampleRate * 2, true);
   view.setUint16(32, 2, true);
@@ -943,7 +1132,6 @@ function createDemoWavBlob(durationSeconds = 90) {
   writeStr(36, 'data');
   view.setUint32(40, numSamples * 2, true);
 
-  // Soft harmonic chord progression
   const freqs = [261.63, 329.63, 392.00, 523.25];
   for (let i = 0; i < numSamples; i++) {
     const t = i / sampleRate;
@@ -957,7 +1145,7 @@ function createDemoWavBlob(durationSeconds = 90) {
 }
 
 /* =========================================
-   9. UI HELPERS & EVENT BINDINGS
+   10. UI HELPERS & EVENT BINDINGS
    ========================================= */
 function showFeedbackToast(icon, mainText, subText = '') {
   dom.gestureFeedbackIcon.textContent = icon;
@@ -968,7 +1156,7 @@ function showFeedbackToast(icon, mainText, subText = '') {
   if (state.feedbackTimer) clearTimeout(state.feedbackTimer);
   state.feedbackTimer = setTimeout(() => {
     dom.gestureFeedback.classList.add('hidden');
-  }, 1100);
+  }, 1150);
 }
 
 function formatTime(sec) {
@@ -994,28 +1182,31 @@ function escapeHtml(str) {
 }
 
 function bindEvents() {
-  // File Picker Triggers
-  const openMultiPicker = () => {
+  // Primary Action: Open Folder directly (webkitdirectory)
+  const triggerFolderPicker = () => {
+    dom.fileInputFolder.value = '';
+    dom.fileInputFolder.click();
+  };
+  dom.btnOpenFolder.addEventListener('click', triggerFolderPicker);
+  dom.btnHeroSelectFolder.addEventListener('click', triggerFolderPicker);
+
+  // Secondary Action: Open Individual/Multiple Files (without iOS transcode delay!)
+  const triggerMultiFilePicker = () => {
     dom.fileInputMultiple.value = '';
     dom.fileInputMultiple.click();
   };
-  dom.btnOpenFiles.addEventListener('click', openMultiPicker);
-  dom.btnHeroSelectFiles.addEventListener('click', openMultiPicker);
+  dom.btnOpenFiles.addEventListener('click', triggerMultiFilePicker);
+  dom.btnHeroSelectFiles.addEventListener('click', triggerMultiFilePicker);
 
-  dom.btnHeroSelectFolder.addEventListener('click', () => {
-    dom.fileInputFolder.value = '';
-    dom.fileInputFolder.click();
+  dom.fileInputFolder.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      ingestFileList(e.target.files, true);
+    }
   });
 
   dom.fileInputMultiple.addEventListener('change', (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      ingestFileList(e.target.files);
-    }
-  });
-
-  dom.fileInputFolder.addEventListener('change', (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      ingestFileList(e.target.files);
+      ingestFileList(e.target.files, false);
     }
   });
 
@@ -1030,12 +1221,7 @@ function bindEvents() {
     });
   });
 
-  // Center Big Play Button & Bottom Play/Pause
-  dom.centerPlayBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    togglePlayPause();
-  });
-
+  // Bottom Play/Pause button
   dom.btnBottomPlayPause.addEventListener('click', () => {
     togglePlayPause();
   });
@@ -1069,8 +1255,9 @@ function bindEvents() {
     nextFile();
   });
 
-  // Image Zoom Reset & Fullscreen
-  dom.btnZoomReset.addEventListener('click', () => setImageZoom(1));
+  // Image Fit Mode Toggle & Zoom Reset & Fullscreen
+  dom.btnToggleFitMode.addEventListener('click', () => toggleImageFitMode());
+  dom.btnZoomReset.addEventListener('click', () => resetImageTransform());
   dom.btnFullscreen.addEventListener('click', () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen?.().catch(() => {});
@@ -1079,9 +1266,15 @@ function bindEvents() {
     }
   });
 
-  // Playlist Drawer
+  // Lazy Playlist Drawer (Only builds DOM when opened!)
   dom.btnTogglePlaylist.addEventListener('click', () => {
-    dom.playlistDrawer.classList.toggle('hidden');
+    const willOpen = dom.playlistDrawer.classList.contains('hidden');
+    if (willOpen) {
+      renderPlaylist();
+      dom.playlistDrawer.classList.remove('hidden');
+    } else {
+      dom.playlistDrawer.classList.add('hidden');
+    }
   });
   dom.btnClosePlaylist.addEventListener('click', () => {
     dom.playlistDrawer.classList.add('hidden');
@@ -1135,15 +1328,16 @@ function bindEvents() {
       leftSeconds: Math.max(1, Math.min(600, Number(dom.inputLeftSeconds.value) || 30)),
       rightAction: dom.selectRightAction.value,
       rightSeconds: Math.max(1, Math.min(600, Number(dom.inputRightSeconds.value) || 30)),
+      folderDepthMode: dom.selectFolderDepthMode.value,
       tapPlayingBehavior: dom.selectTapPlayingBehavior.value,
       swipeThreshold: Number(dom.inputSwipeThreshold.value) || 45
     };
     saveSettings(updated);
     dom.settingsModal.classList.add('hidden');
-    showFeedbackToast('✅', '手勢設定已儲存', `${describeGestureAction(updated.leftAction, updated.leftSeconds)} / ${describeGestureAction(updated.rightAction, updated.rightSeconds)}`);
+    showFeedbackToast('✅', '設定已儲存', `${describeGestureAction(updated.leftAction, updated.leftSeconds)} / ${describeGestureAction(updated.rightAction, updated.rightSeconds)}`);
   });
 
-  // Drag & Drop Support (iPadOS Split View / Slide Over Files App Drag-and-Drop)
+  // Drag & Drop Support
   window.addEventListener('dragover', (e) => {
     e.preventDefault();
     dom.dropZoneOverlay.classList.remove('hidden');
@@ -1162,11 +1356,11 @@ function bindEvents() {
 
     const collectedFiles = await extractDroppedFiles(e.dataTransfer);
     if (collectedFiles.length > 0) {
-      ingestFileList(collectedFiles);
+      ingestFileList(collectedFiles, false);
     }
   });
 
-  // Keyboard shortcuts (for iPad Magic Keyboard or desktop testing)
+  // Keyboard shortcuts
   window.addEventListener('keydown', (e) => {
     if (!dom.settingsModal.classList.contains('hidden')) return;
     if (state.filteredFiles.length === 0) return;
@@ -1190,6 +1384,7 @@ function bindEvents() {
 
 async function extractDroppedFiles(dataTransfer) {
   const files = [];
+  const allowSubfolders = state.settings.folderDepthMode === 'recursive';
   if (dataTransfer.items && dataTransfer.items.length > 0) {
     const entries = [];
     for (const item of dataTransfer.items) {
@@ -1202,7 +1397,7 @@ async function extractDroppedFiles(dataTransfer) {
       }
     }
     for (const entry of entries) {
-      await traverseFileTree(entry, files);
+      await traverseFileTree(entry, files, 0, allowSubfolders);
     }
   } else if (dataTransfer.files) {
     files.push(...Array.from(dataTransfer.files));
@@ -1210,7 +1405,7 @@ async function extractDroppedFiles(dataTransfer) {
   return files;
 }
 
-function traverseFileTree(entry, outFiles) {
+function traverseFileTree(entry, outFiles, currentDepth, allowSubfolders) {
   return new Promise((resolve) => {
     if (entry.isFile) {
       entry.file((file) => {
@@ -1218,6 +1413,10 @@ function traverseFileTree(entry, outFiles) {
         resolve();
       }, () => resolve());
     } else if (entry.isDirectory) {
+      if (currentDepth >= 1 && !allowSubfolders) {
+        resolve();
+        return;
+      }
       const dirReader = entry.createReader();
       const readBatch = () => {
         dirReader.readEntries(async (entries) => {
@@ -1226,7 +1425,7 @@ function traverseFileTree(entry, outFiles) {
             return;
           }
           for (const child of entries) {
-            await traverseFileTree(child, outFiles);
+            await traverseFileTree(child, outFiles, currentDepth + 1, allowSubfolders);
           }
           readBatch();
         }, () => resolve());
