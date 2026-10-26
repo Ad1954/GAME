@@ -49,6 +49,7 @@
         <div class="brand-titles">
           <div class="brand-name-row">
             <span class="brand-name">Mplay</span>
+            <span class="version-badge">v1.2.0</span>
             <span id="offlineBadge" class="status-badge online">離線就緒</span>
           </div>
           <span id="currentFileTitle" class="current-file-title">請選擇外接隨身碟資料夾或檔案</span>
@@ -102,7 +103,10 @@
           </div>
           <div class="film-card-body">
             <img src="./icons/icon.svg" alt="Film Strip Icon" class="hero-icon" />
-            <h1>iPad Pro 隨身碟直讀播放器</h1>
+            <div class="hero-title-row">
+              <h1>iPad Pro 隨身碟直讀播放器</h1>
+              <span class="hero-version-badge">v1.2.0</span>
+            </div>
             <p class="hero-desc">
               <strong>零複製、瞬時開啟上百 GB 資料夾！</strong><br />
               僅建立檔案指標，預設只先載入當前第 1 個檔案，不佔用 iPad 內部空間。
@@ -162,6 +166,11 @@
 
       <!-- Active Media Viewport (Virtual Single-Decoder Stage) -->
       <section id="mediaStage" class="media-stage hidden">
+        <!-- Floating Restore HUD Button (Only visible when HUD is hidden in Fullscreen mode) -->
+        <button id="btnRestoreHud" class="restore-hud-btn" title="退出全螢幕並顯示介面">
+          <span>顯示介面</span>
+        </button>
+
         <!-- Gesture Mode Indicator Pill -->
         <div id="modeStateIndicator" class="mode-state-indicator">
           <span id="modeStateDot" class="state-dot idle"></span>
@@ -252,7 +261,7 @@
         <div class="meta-right">
           <button id="btnToggleFitMode" class="mini-action-btn hidden">📐 等比例撐滿邊界</button>
           <button id="btnZoomReset" class="mini-action-btn hidden">重置縮放 (100%)</button>
-          <button id="btnFullscreen" class="mini-action-btn" title="全螢幕切換">全螢幕</button>
+          <button id="btnFullscreen" class="mini-action-btn" title="全螢幕隱藏介面">全螢幕 (隱藏介面)</button>
         </div>
       </div>
     </footer>

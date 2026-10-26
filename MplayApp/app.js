@@ -1,5 +1,5 @@
 /**
- * Mplay 隨身影格播放器 - iPad Pro USB Drive Local Media PWA (v1.1)
+ * Mplay 隨身影格播放器 - iPad Pro USB Drive Local Media PWA (v1.2.0)
  * Core Features:
  * 1. Zero-copy, zero-stat instant ingestion for 100GB+ USB folders (only stores lightweight File pointers)
  * 2. Strict Single-Active-File loading: only loads current file on demand; lazy virtualized playlist
@@ -89,6 +89,7 @@ const dom = {
   btnToggleFitMode: document.getElementById('btnToggleFitMode'),
   btnZoomReset: document.getElementById('btnZoomReset'),
   btnFullscreen: document.getElementById('btnFullscreen'),
+  btnRestoreHud: document.getElementById('btnRestoreHud'),
   playlistDrawer: document.getElementById('playlistDrawer'),
   playlistHeaderTitle: document.getElementById('playlistHeaderTitle'),
   btnClosePlaylist: document.getElementById('btnClosePlaylist'),
@@ -1156,7 +1157,7 @@ function showFeedbackToast(icon, mainText, subText = '') {
   if (state.feedbackTimer) clearTimeout(state.feedbackTimer);
   state.feedbackTimer = setTimeout(() => {
     dom.gestureFeedback.classList.add('hidden');
-  }, 1150);
+  }, 550);
 }
 
 function formatTime(sec) {
@@ -1255,16 +1256,39 @@ function bindEvents() {
     nextFile();
   });
 
-  // Image Fit Mode Toggle & Zoom Reset & Fullscreen
+  // Image Fit Mode Toggle & Zoom Reset & Fullscreen (Hide HUD)
   dom.btnToggleFitMode.addEventListener('click', () => toggleImageFitMode());
   dom.btnZoomReset.addEventListener('click', () => resetImageTransform());
-  dom.btnFullscreen.addEventListener('click', () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().catch(() => {});
-    } else {
-      document.exitFullscreen?.().catch(() => {});
+
+  dom.btnFullscreen.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dom.app.classList.add('hud-hidden');
+    const docEl = document.documentElement;
+    const reqFs = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
+    if (reqFs && !document.fullscreenElement && !document.webkitFullscreenElement) {
+      try {
+        reqFs.call(docEl)?.catch?.(() => {});
+      } catch {
+        // Ignore on iPadOS standalone mode where system fullscreen is already active
+      }
     }
+    showFeedbackToast('🖥️', '已隱藏介面', '點擊右上角「顯示介面」可恢復');
   });
+
+  if (dom.btnRestoreHud) {
+    dom.btnRestoreHud.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dom.app.classList.remove('hud-hidden');
+      const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exitFs && (document.fullscreenElement || document.webkitFullscreenElement)) {
+        try {
+          exitFs.call(document)?.catch?.(() => {});
+        } catch {
+          // Ignore
+        }
+      }
+    });
+  }
 
   // Lazy Playlist Drawer (Only builds DOM when opened!)
   dom.btnTogglePlaylist.addEventListener('click', () => {
