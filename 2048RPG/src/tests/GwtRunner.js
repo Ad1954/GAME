@@ -279,7 +279,11 @@ export class GwtRunner {
       // C-STORY-106: 48 階王國軍備科技擴充、持有或穿戴武器門檻與 350 關建議強度同步
       this.testGwt106_1_48TierTechAnd8MajorBreakthroughs.bind(this),
       this.testGwt106_2_2700kDeepSinkAndOwnedOrEquippedWeaponGate.bind(this),
-      this.testGwt106_3_350StageReferenceProgressionAndFreeNakedChallenge.bind(this)
+      this.testGwt106_3_350StageReferenceProgressionAndFreeNakedChallenge.bind(this),
+      // C-STORY-107: 每日合成任務優化為「任意合成 10 次」與盤面/倉庫合成即時觸發修復
+      this.testGwt107_1_DailyQuestMergeConfigTarget10.bind(this),
+      this.testGwt107_2_BoardMoveMergeTriggersDailyQuestProgress.bind(this),
+      this.testGwt107_3_InventoryAutoAndManualMergeTriggersDailyQuest.bind(this)
     ];
 
     for (const test of testCases) {
@@ -3622,7 +3626,7 @@ export class GwtRunner {
         'main.js must have version query parameter'
       );
     }
-    this.assert(CURRENT_GAME_VERSION === 'v1.4.5', 'CURRENT_GAME_VERSION must be v1.4.5');
+    this.assert(CURRENT_GAME_VERSION === 'v1.4.6', 'CURRENT_GAME_VERSION must be v1.4.6');
   }
 
   // C-STORY-036 GWT 36.2：設定視窗具備「檢查並刷新最新版本」按鈕配置
@@ -5502,6 +5506,71 @@ export class GwtRunner {
     this.assert(started !== null && sm.isInBattle === true, 'Player must be 100% free to challenge Stage 350 naked with Tier 1 tech');
     const hero = sm.board.getHero();
     this.assert(hero !== null && hero.value === 2, 'Naked hero spawns with default power 2 in Stage 350');
+  }
+
+  // =========================================================================
+  // C-STORY-107: 每日合成任務優化為「任意合成 10 次」與盤面/倉庫合成即時觸發修復
+  // =========================================================================
+
+  // GWT 107.1: 每日任務配置「精良合成」改為「任意合成 10 次」 (target = 10)
+  testGwt107_1_DailyQuestMergeConfigTarget10() {
+    const mergeQuest = DAILY_QUEST_CONFIGS.find(q => q.id === 'quest_high_merge');
+    this.assert(mergeQuest !== undefined, 'quest_high_merge must exist in DAILY_QUEST_CONFIGS');
+    this.assert(mergeQuest.target === 10, `quest_high_merge target must be 10, got ${mergeQuest.target}`);
+    this.assert(mergeQuest.desc.includes('10'), `quest_high_merge desc must mention 10 merges, got ${mergeQuest.desc}`);
+    this.assert(mergeQuest.rewardGold === 300 && mergeQuest.activityPoints === 25, 'Reward gold and activity points must remain 300 and 25');
+  }
+
+  // GWT 107.2: 關卡盤面真實滑動合成 (handleMove) 即時觸發 TILE_MERGED 並累計進度
+  testGwt107_2_BoardMoveMergeTriggersDailyQuestProgress() {
+    const bus = new GameEventBus();
+    const sm = new StageManager(bus);
+    sm.resetSaveData();
+    const dlm = new DailyLoopManager(bus, sm);
+    dlm.resetAll();
+
+    sm.startStage(1);
+    sm.board.clear();
+    // Place a monster at (0, 0) so victory doesn't immediately end battle
+    sm.board.setTile(0, 0, new Tile(64, TileType.MONSTER, 0, 0));
+    // Place Hero(2) at (4, 0) and Equipment(2) at (4, 1), plus two Equipment(4) at (3, 0) and (3, 1)
+    sm.board.setTile(4, 0, new Tile(2, TileType.HERO, 4, 0));
+    sm.board.setTile(4, 1, new Tile(2, TileType.EQUIPMENT, 4, 1));
+    sm.board.setTile(3, 0, new Tile(4, TileType.EQUIPMENT, 3, 0));
+    sm.board.setTile(3, 1, new Tile(4, TileType.EQUIPMENT, 3, 1));
+
+    // Swipe LEFT -> produces 2 merges in one turn (Hero 2+2=4, Equipment 4+4=8)
+    const moveRes = sm.handleMove(Direction.LEFT);
+    this.assert(moveRes.moved === true && moveRes.merges === 2, `Expected 2 merges on board swipe, got ${moveRes.merges}`);
+    this.assert(dlm.state.quests['quest_high_merge'].progress === 2, `Daily quest progress must be 2 after 2 board merges, got ${dlm.state.quests['quest_high_merge'].progress}`);
+  }
+
+  // GWT 107.3: 倉庫手動合成與一鍵合成同步觸發每日合成任務累計並可完成領獎
+  testGwt107_3_InventoryAutoAndManualMergeTriggersDailyQuest() {
+    const bus = new GameEventBus();
+    const sm = new StageManager(bus);
+    sm.resetSaveData();
+    const dlm = new DailyLoopManager(bus, sm);
+    dlm.resetAll();
+
+    // 1. Manual merge 2 items -> +1 progress
+    const it1 = sm.inventory.addItem(2);
+    const it2 = sm.inventory.addItem(2);
+    const manualRes = sm.manualMergeItems(it1.id, it2.id);
+    this.assert(manualRes.success === true, 'Manual merge in inventory must succeed');
+    this.assert(dlm.state.quests['quest_high_merge'].progress === 1, `Progress after 1 manual merge must be 1, got ${dlm.state.quests['quest_high_merge'].progress}`);
+
+    // 2. Batch auto-merge: currently has one '4'. Add fifteen '2's -> 7 pairs of '2' (7 merges -> seven '4's) + existing '4' = eight '4's (4 merges -> four '8's) -> total > 10 merges!
+    for (let i = 0; i < 15; i++) {
+      sm.inventory.addItem(2);
+    }
+    const autoRes = sm.batchAutoMerge();
+    this.assert(autoRes.mergedCount >= 9, `Batch auto-merge should perform at least 9 merges, got ${autoRes.mergedCount}`);
+    this.assert(dlm.state.quests['quest_high_merge'].progress === 10, `Quest progress must reach cap 10, got ${dlm.state.quests['quest_high_merge'].progress}`);
+
+    // Claim quest reward
+    const claimRes = dlm.claimQuestReward('quest_high_merge');
+    this.assert(claimRes.success === true, 'Claiming quest_high_merge at 10/10 must succeed');
   }
 }
 

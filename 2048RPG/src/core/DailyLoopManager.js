@@ -109,17 +109,14 @@ export class DailyLoopManager {
 
     // 1. Monster Killed
     this.eventBus.on(Events.MONSTER_KILLED, (payload) => {
-      this.incrementQuestProgress('quest_kill_monsters', 1);
+      const kills = (payload && typeof payload.kills === 'number' && payload.kills > 0) ? payload.kills : 1;
+      this.incrementQuestProgress('quest_kill_monsters', kills);
     });
 
-    // 2. High Tier Tile Merged (≥ 128)
+    // 2. Any Tile / Equipment Merged (10 merges target) (C-STORY-107)
     this.eventBus.on(Events.TILE_MERGED, (payload) => {
-      if (payload && payload.tile && payload.tile.value >= 128) {
-        // Only count equipment or hero tiles (positive fusion)
-        if (payload.tile.isEquipment() || payload.tile.isHero()) {
-          this.incrementQuestProgress('quest_high_merge', 1);
-        }
-      }
+      const count = (payload && typeof payload.count === 'number' && payload.count > 0) ? payload.count : 1;
+      this.incrementQuestProgress('quest_high_merge', count);
     });
 
     // 3. Gold Collection

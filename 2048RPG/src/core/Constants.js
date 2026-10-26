@@ -51,7 +51,7 @@ export const Events = {
   QUEST_PROGRESS_CHANGED: 'QUEST_PROGRESS_CHANGED'
 };
 
-export const CURRENT_GAME_VERSION = 'v1.4.5';
+export const CURRENT_GAME_VERSION = 'v1.4.6';
 
 export const MAX_ITEM_STACK = 999;
 
@@ -166,9 +166,9 @@ export const DAILY_QUEST_CONFIGS = [
   {
     id: 'quest_high_merge',
     name: '精良合成',
-    desc: '在盤面上合成出數值 ≥ 128 的士兵或裝備 1 次',
+    desc: '任意合成 10 次',
     icon: '🛡️',
-    target: 1,
+    target: 10,
     rewardGold: 300,
     activityPoints: 25
   },

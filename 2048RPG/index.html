@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>2048 RPG：王國遠征 (Commercial Edition)</title>
-  <link rel="stylesheet" href="style.css?v=1.4.5">
+  <link rel="stylesheet" href="style.css?v=1.4.6">
   <link rel="stylesheet" href="visual_tuning.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
           <span class="btn-start-icon">⚔️</span>
           <span class="btn-start-text">開始遊戲</span>
         </button>
-        <div class="title-version">v5.8.2 · 350 Stages Commercial Version</div>
+        <div class="title-version">v5.8.3 · 350 Stages Commercial Version</div>
       </div>
     </div>
 
@@ -628,12 +628,21 @@
           <hr style="border: 0; border-top: 1px solid #334155; margin: 12px 0;">
           <div class="setting-section-header" style="margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
             <span style="font-size: 0.92rem; font-weight: 800; color: #38bdf8;">📜 版本更新履歷</span>
-            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v5.8.2</span>
+            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v5.8.3</span>
           </div>
           <div class="version-changelog-box" id="version-changelog-box">
+            <!-- C-STORY-107 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-107 (最新)</div>
+              <div class="changelog-title">每日任務「精良合成」優化為「任意合成 10 次」 ＆ 盤面/倉庫合成即時觸發修復</div>
+              <ul class="changelog-list">
+                <li>🛡️ 每日合成任務改為「任意合成 10 次」：移除單次 128 高階限制，改為累計任意合成 10 次即可領取 300 🪙 與 25 活躍度！</li>
+                <li>⚡ 盤面滑動與倉庫合成全線觸發：修復關卡滑動合成與倉庫手動/一鍵合成未派發 TILE_MERGED 事件的問題，每次合成皆即時更新每日任務進度。</li>
+              </ul>
+            </div>
             <!-- C-STORY-106 -->
             <div class="changelog-item">
-              <div class="changelog-badge">🌟 C-STORY-106 (最新)</div>
+              <div class="changelog-badge">🌟 C-STORY-106</div>
               <div class="changelog-title">48 階王國軍備科技擴充 (270萬深水庫) ＆ 全 350 關 800 回合節奏平衡對齊</div>
               <ul class="changelog-list">
                 <li>🏛️ 科技上限擴充至 48 階 (8 大週期)：盤面基礎產出最高突破至 [512, 1024, 2048]，前期 Cycle 1~2 降價更親民 (僅需 2.4萬 G)，中後期阶梯陡峭拉升至總額 270萬 G！</li>
@@ -1344,6 +1353,6 @@
 
   </div>
 
-  <script type="module" src="main.js?v=1.4.5"></script>
+  <script type="module" src="main.js?v=1.4.6"></script>
 </body>
 </html>

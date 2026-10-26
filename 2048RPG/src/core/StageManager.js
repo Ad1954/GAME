@@ -452,6 +452,9 @@ export class StageManager {
     const result = this.inventory.batchAutoMerge();
     this.saveData();
     this.eventBus.emit(Events.INVENTORY_CHANGED, { items: this.inventory.items });
+    if (result && result.mergedCount > 0) {
+      this.eventBus.emit(Events.TILE_MERGED, { count: result.mergedCount, source: 'inventory_auto' });
+    }
     return result;
   }
 
@@ -483,6 +486,7 @@ export class StageManager {
     if (res.success) {
       this.saveData();
       this.eventBus.emit(Events.INVENTORY_CHANGED, { items: this.inventory.items });
+      this.eventBus.emit(Events.TILE_MERGED, { count: 1, source: 'inventory_manual' });
     }
     return res;
   }
@@ -899,6 +903,11 @@ export class StageManager {
           this.eventBus.emit(Events.MONSTER_KILLED, { kills: result.kills });
         }
 
+        // Accrue tile merges in tutorial (C-STORY-107)
+        if (result.merges > 0) {
+          this.eventBus.emit(Events.TILE_MERGED, { count: result.merges, source: 'board_tutorial' });
+        }
+
         // Accrue gold merged rewards in tutorial (C-STORY-033)
         if (result.goldEarned && result.goldEarned > 0) {
           const actualEarned = result.goldEarned;
@@ -955,6 +964,11 @@ export class StageManager {
             }
           });
         }
+      }
+
+      // Accrue tile merges in combat (C-STORY-107)
+      if (result.merges > 0) {
+        this.eventBus.emit(Events.TILE_MERGED, { count: result.merges, source: 'board' });
       }
 
       // Check Gold merged cash-out rewards (100% full payout, no clamping) (C-STORY-017)
