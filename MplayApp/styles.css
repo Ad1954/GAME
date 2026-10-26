@@ -327,11 +327,27 @@ html, body {
   font-size: 0.94rem;
   line-height: 1.6;
   color: var(--text-muted);
-  margin-bottom: 22px;
+  margin-bottom: 14px;
 }
 
 .hero-desc strong {
   color: #e2e8f0;
+}
+
+.video-warning-banner {
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.42);
+  color: #fde68a;
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  text-align: left;
+  margin-bottom: 18px;
+}
+
+.video-warning-banner strong {
+  color: #fbbf24;
 }
 
 .action-buttons-grid {

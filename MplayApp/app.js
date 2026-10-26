@@ -1,5 +1,5 @@
 /**
- * Mplay 隨身影格播放器 - iPad Pro USB Drive Local Media PWA (v1.2.1)
+ * Mplay 隨身影格播放器 - iPad Pro USB Drive Local Media PWA (v1.2.2)
  * Core Features:
  * 1. Zero-copy, zero-stat instant ingestion for 100GB+ USB folders (only stores lightweight File pointers)
  * 2. Strict Single-Active-File loading: only loads current file on demand; lazy virtualized playlist
@@ -27,6 +27,7 @@ const state = {
   filteredFiles: [],
   activeFilter: 'all',
   currentIndex: 0,
+  renderToken: 0,
   isPlaying: false,
   isManualFullscreen: false,
   activeMediaEl: null,
@@ -264,7 +265,7 @@ function getRelativeDepth(file) {
   return slashes;
 }
 
-function ingestFileList(fileList, isFromFolderPicker = false) {
+function ingestFileList(fileList, isFromFolderPicker = false, excludeVideo = false) {
   const totalRaw = fileList ? fileList.length : 0;
   if (totalRaw === 0) return;
 
@@ -272,6 +273,7 @@ function ingestFileList(fileList, isFromFolderPicker = false) {
   const shallowItems = [];
   const allCandidates = [];
   let skippedSubfolderCount = 0;
+  let skippedVideoCount = 0;
 
   // Ultra-fast loop: only reads file.name and file.webkitRelativePath (in-memory strings, zero USB disk I/O!)
   for (let i = 0; i < totalRaw; i++) {
@@ -282,10 +284,16 @@ function ingestFileList(fileList, isFromFolderPicker = false) {
     const info = classifyByNameFast(name);
     if (!info) continue;
 
+    if (excludeVideo && info.type === 'video') {
+      skippedVideoCount++;
+      continue;
+    }
+
     const depth = getRelativeDepth(file);
     const pointerItem = {
       id: `f-${i}-${name}`,
       file,
+      handle: null,
       name,
       depth,
       type: info.type,
@@ -307,7 +315,6 @@ function ingestFileList(fileList, isFromFolderPicker = false) {
     if (shallowItems.length > 0) {
       validItems = shallowItems;
     } else if (allCandidates.length > 0) {
-      // If user picked a parent folder that only has subfolders, take only the shallowest subfolder depth
       let minDepth = Infinity;
       for (let i = 0; i < allCandidates.length; i++) {
         if (allCandidates[i].depth < minDepth) minDepth = allCandidates[i].depth;
@@ -317,10 +324,22 @@ function ingestFileList(fileList, isFromFolderPicker = false) {
   }
 
   if (validItems.length === 0) {
-    showFeedbackToast('⚠️', '未偵測到支援的媒體檔案', '支援 MP4/MOV/圖片/WebP/GIF/MP3');
+    if (excludeVideo && skippedVideoCount > 0) {
+      showFeedbackToast('🎬', '資料夾模式已排除影片檔', '觀看影片請點擊「🎬 選影片/單檔」按鈕');
+    } else {
+      showFeedbackToast('⚠️', '未偵測到支援的媒體檔案', '支援圖片/WebP/GIF/MP3 或單選影片');
+    }
     return;
   }
 
+  commitIngestedItems(validItems, {
+    isShallowMode,
+    skippedSubfolderCount,
+    skippedVideoCount
+  });
+}
+
+function commitIngestedItems(validItems, meta = {}) {
   // Fast natural sort via Intl.Collator
   validItems.sort((a, b) => fastCollator.compare(a.name, b.name));
 
@@ -335,19 +354,141 @@ function ingestFileList(fileList, isFromFolderPicker = false) {
   updateCategoryCounts();
   applyFilter('all');
 
-  if (isShallowMode && skippedSubfolderCount > 0 && shallowItems.length > 0) {
+  if (meta.skippedVideoCount > 0) {
+    showFeedbackToast(
+      '📂',
+      `已載入 ${validItems.length} 個圖片/音訊`,
+      `已自動略過 ${meta.skippedVideoCount} 部影片（看影片請用選單檔）`
+    );
+  } else if (meta.isShallowMode && meta.skippedSubfolderCount > 0) {
     showFeedbackToast(
       '📂',
       `已載入當層 ${validItems.length} 個檔案`,
-      `已自動略過子資料夾 ${skippedSubfolderCount} 個檔案（可於設定更改）`
+      `已自動略過子資料夾 ${meta.skippedSubfolderCount} 個檔案`
     );
   } else {
     showFeedbackToast(
       '⚡',
-      `瞬時載入 ${validItems.length} 個檔案指標`,
-      '僅讀取當前第 1 個檔案，零空間佔用'
+      `瞬時載入 ${validItems.length} 個項目`,
+      '僅按需讀取當前第 1 個檔案'
     );
   }
+}
+
+/**
+ * Modern File System Access API (showDirectoryPicker):
+ * Avoids the browser "Upload N files to this site?" prompt on PC Chrome/Edge and reads FileHandles lazily!
+ */
+async function openFolderSmart() {
+  if (typeof window.showDirectoryPicker === 'function') {
+    try {
+      const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+      const allowRecursive = state.settings.folderDepthMode === 'recursive';
+      const collected = [];
+      const counter = { idx: 0, skippedVideos: 0 };
+
+      await collectHandlesFromDir(dirHandle, collected, 1, allowRecursive, true, counter);
+
+      if (collected.length === 0) {
+        if (counter.skippedVideos > 0) {
+          showFeedbackToast('🎬', '資料夾模式已排除影片檔', '觀看影片請點擊「🎬 選影片/單檔」按鈕');
+        } else {
+          showFeedbackToast('⚠️', '資料夾內無圖片或音訊檔', '支援 JPG/PNG/WebP/GIF/MP3');
+        }
+        return;
+      }
+
+      commitIngestedItems(collected, {
+        isShallowMode: !allowRecursive,
+        skippedSubfolderCount: 0,
+        skippedVideoCount: counter.skippedVideos
+      });
+      return;
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      console.warn('showDirectoryPicker fallback to input:', err);
+    }
+  }
+
+  // Fallback for iPadOS Safari
+  dom.fileInputFolder.value = '';
+  dom.fileInputFolder.click();
+}
+
+async function collectHandlesFromDir(dirHandle, outList, depth, allowRecursive, excludeVideo, counter) {
+  for await (const entry of dirHandle.values()) {
+    const name = entry.name || '';
+    if (!name || name.charCodeAt(0) === 46) continue;
+
+    if (entry.kind === 'file') {
+      const info = classifyByNameFast(name);
+      if (!info) continue;
+      if (excludeVideo && info.type === 'video') {
+        counter.skippedVideos++;
+        continue;
+      }
+      counter.idx++;
+      outList.push({
+        id: `h-${counter.idx}-${name}`,
+        file: null,
+        handle: entry,
+        name,
+        depth,
+        type: info.type,
+        ext: info.ext,
+        isDemo: false
+      });
+    } else if (entry.kind === 'directory' && allowRecursive && depth < 5) {
+      await collectHandlesFromDir(entry, outList, depth + 1, allowRecursive, excludeVideo, counter);
+    }
+  }
+}
+
+/**
+ * Modern File System Access API (showOpenFilePicker) for Single/Few Video or Media files:
+ */
+async function openFilesSmart() {
+  if (typeof window.showOpenFilePicker === 'function') {
+    try {
+      const handles = await window.showOpenFilePicker({
+        multiple: true
+      });
+      if (!handles || handles.length === 0) return;
+
+      const items = [];
+      for (let i = 0; i < handles.length; i++) {
+        const h = handles[i];
+        const name = h.name || '';
+        const info = classifyByNameFast(name);
+        if (!info) continue;
+        items.push({
+          id: `fh-${i}-${name}`,
+          file: null,
+          handle: h,
+          name,
+          depth: 1,
+          type: info.type,
+          ext: info.ext,
+          isDemo: false
+        });
+      }
+
+      if (items.length === 0) {
+        showFeedbackToast('⚠️', '未偵測到支援的媒體檔案', '支援 MP4/MOV/WebM/圖片/MP3');
+        return;
+      }
+
+      commitIngestedItems(items, {});
+      return;
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      console.warn('showOpenFilePicker fallback to input:', err);
+    }
+  }
+
+  // Fallback for iPadOS Safari
+  dom.fileInputMultiple.value = '';
+  dom.fileInputMultiple.click();
 }
 
 function updateCategoryCounts() {
@@ -396,7 +537,7 @@ function applyFilter(filterType) {
 /* =========================================
    4. STRICT SINGLE-ACTIVE-FILE MEMORY ENGINE
    ========================================= */
-function getOrCreateObjectUrl(index) {
+async function getOrCreateObjectUrlAsync(index) {
   const item = state.filteredFiles[index];
   if (!item) return '';
   if (item.isDemo && item.demoUrl) return item.demoUrl;
@@ -404,7 +545,14 @@ function getOrCreateObjectUrl(index) {
   if (state.activeObjectUrls.has(item.id)) {
     return state.activeObjectUrls.get(item.id);
   }
-  const url = URL.createObjectURL(item.file);
+
+  let fileObj = item.file;
+  if (!fileObj && item.handle) {
+    fileObj = await item.handle.getFile();
+  }
+  if (!fileObj) return '';
+
+  const url = URL.createObjectURL(fileObj);
   state.activeObjectUrls.set(item.id, url);
   return url;
 }
@@ -452,11 +600,12 @@ function destroyActiveMediaDecoder() {
 /* =========================================
    5. CORE STAGE RENDERING & PLAYBACK STATE
    ========================================= */
-function loadMediaAtIndex(index, slideDirection = 0) {
+async function loadMediaAtIndex(index, slideDirection = 0) {
   const total = state.filteredFiles.length;
   if (total === 0) return;
 
   const targetIndex = (index + total) % total;
+  const token = ++state.renderToken;
 
   // Always stop previous decoder and reset to NOT PLAYING when switching files
   destroyActiveMediaDecoder();
@@ -467,7 +616,8 @@ function loadMediaAtIndex(index, slideDirection = 0) {
   dom.btnZoomReset.classList.add('hidden');
 
   const item = state.filteredFiles[targetIndex];
-  const mediaUrl = getOrCreateObjectUrl(targetIndex);
+  const mediaUrl = await getOrCreateObjectUrlAsync(targetIndex);
+  if (token !== state.renderToken) return;
   pruneObjectUrlsStrict(targetIndex);
 
   // Subtle slide transition effect
@@ -1214,31 +1364,23 @@ function bindEvents() {
     });
   }
 
-  // Primary Action: Open Folder directly (webkitdirectory)
-  const triggerFolderPicker = () => {
-    dom.fileInputFolder.value = '';
-    dom.fileInputFolder.click();
-  };
-  dom.btnOpenFolder.addEventListener('click', triggerFolderPicker);
-  dom.btnHeroSelectFolder.addEventListener('click', triggerFolderPicker);
+  // Primary Action: Open Image/Audio Folder (excludes video files to prevent folder overload)
+  dom.btnOpenFolder.addEventListener('click', () => openFolderSmart());
+  dom.btnHeroSelectFolder.addEventListener('click', () => openFolderSmart());
 
-  // Secondary Action: Open Individual/Multiple Files (without iOS transcode delay!)
-  const triggerMultiFilePicker = () => {
-    dom.fileInputMultiple.value = '';
-    dom.fileInputMultiple.click();
-  };
-  dom.btnOpenFiles.addEventListener('click', triggerMultiFilePicker);
-  dom.btnHeroSelectFiles.addEventListener('click', triggerMultiFilePicker);
+  // Secondary Action: Open Single/Few Files (supports video files!)
+  dom.btnOpenFiles.addEventListener('click', () => openFilesSmart());
+  dom.btnHeroSelectFiles.addEventListener('click', () => openFilesSmart());
 
   dom.fileInputFolder.addEventListener('change', (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      ingestFileList(e.target.files, true);
+      ingestFileList(e.target.files, true, true);
     }
   });
 
   dom.fileInputMultiple.addEventListener('change', (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      ingestFileList(e.target.files, false);
+      ingestFileList(e.target.files, false, false);
     }
   });
 

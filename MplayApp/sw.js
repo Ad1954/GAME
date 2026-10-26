@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mplay-pwa-v1.2.1';
+const CACHE_NAME = 'mplay-pwa-v1.2.2';
 const PRECACHE_ASSETS = [
   './',
   './index.html',
