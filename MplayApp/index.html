@@ -49,10 +49,10 @@
         <div class="brand-titles">
           <div class="brand-name-row">
             <span class="brand-name">Mplay</span>
-            <span class="version-badge">v1.2.2</span>
+            <span class="version-badge">v1.2.3</span>
             <span id="offlineBadge" class="status-badge online">離線就緒</span>
           </div>
-          <span id="currentFileTitle" class="current-file-title">請選擇外接隨身碟圖片資料夾或單一影片</span>
+          <span id="currentFileTitle" class="current-file-title">請選擇外接隨身碟資料夾或單一檔案</span>
         </div>
       </div>
 
@@ -65,14 +65,14 @@
       </div>
 
       <div class="hud-actions">
-        <button id="btnOpenFolder" class="hud-btn primary-btn" title="選擇整包圖片/動圖資料夾（自動排除影片）">
+        <button id="btnOpenFolder" class="hud-btn primary-btn" title="選擇隨身碟資料夾（支援影片/圖片/音樂）">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
           </svg>
-          <span>選圖片資料夾</span>
+          <span>選擇資料夾</span>
         </button>
-        <button id="btnOpenFiles" class="hud-btn" title="選擇單一或少數影片檔案">
-          <span>🎬 選影片/單檔</span>
+        <button id="btnOpenFiles" class="hud-btn" title="選擇單一或少數檔案">
+          <span>🎬 選單檔</span>
         </button>
         <button id="btnTogglePlaylist" class="hud-btn icon-only hidden" title="檔案清單">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
@@ -105,16 +105,17 @@
             <img src="./icons/icon.svg" alt="Film Strip Icon" class="hero-icon" />
             <div class="hero-title-row">
               <h1>iPad Pro 隨身碟直讀播放器</h1>
-              <span class="hero-version-badge">v1.2.2</span>
+              <span class="hero-version-badge">v1.2.3</span>
             </div>
             <p class="hero-desc">
-              <strong>圖片整包資料夾滑動瀏覽 ＆ 單一影片手勢快轉播放！</strong>
+              <strong>零預載 (`preload="none"`) 加速引擎 ＋ 免上傳控制代碼直讀！</strong><br />
+              切換影片時 0 磁碟讀取，點擊播放瞬間才啟動串流。
             </p>
 
             <div class="video-warning-banner">
-              ⚠️ <strong>重要提示：載入大型影片會有系統讀取延遲，觀看影片請勿選擇整個資料夾！</strong><br />
-              • <strong>選擇圖片資料夾</strong>：專供整包圖片 / WebP / GIF / MP3 使用（已設為<strong>自動排除影片檔案</strong>）。<br />
-              • <strong>選擇影片 / 單一檔案</strong>：觀看 MP4 等影片請點選右方按鈕，每次選取單一或少數影片即可快速開啟。
+              💡 <strong>載入提示：</strong><br />
+              • <strong>📂 選擇資料夾</strong>：已開放直接載入<strong>影片、圖片、WebP/GIF 與 MP3</strong>（未播放前不讀取影片實體，加速切換）。<br />
+              • ⚠️ <strong>若在 iPad 上選擇超大容量影片資料夾遇到系統級延遲</strong>，請改用右方<strong>「🎬 選擇單一 / 少數檔案」</strong>單選開啟（亦可於設定中將資料夾改為排除影片）。
             </div>
 
             <div class="action-buttons-grid">
@@ -123,8 +124,8 @@
                   <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                 </svg>
                 <div>
-                  <div class="btn-main-text">📂 選擇圖片資料夾（僅限圖片/音樂）</div>
-                  <div class="btn-sub-text">一次載入整包圖片/WebP/GIF（自動排除影片檔）</div>
+                  <div class="btn-main-text">📂 一鍵選擇隨身碟資料夾</div>
+                  <div class="btn-sub-text">支援整包圖片/WebP/MP3 與影片零預載切換</div>
                 </div>
               </button>
 
@@ -133,8 +134,8 @@
                   <polygon points="5 3 19 12 5 21 5 3"/>
                 </svg>
                 <div>
-                  <div class="btn-main-text">🎬 選擇單一 / 少數檔案（可選影片）</div>
-                  <div class="btn-sub-text">觀看 MP4 影片請由此單選開啟，避免整包卡頓</div>
+                  <div class="btn-main-text">🎬 選擇單一 / 少數檔案</div>
+                  <div class="btn-sub-text">若 iPad 整包資料夾有系統延遲，可由此單選影片</div>
                 </div>
               </button>
             </div>
@@ -355,7 +356,11 @@
 
           <!-- Folder Scope Protection -->
           <div class="setting-block">
-            <label class="setting-title">📁 資料夾載入防呆保護（避免誤選根目錄）</label>
+            <label class="setting-title">📁 資料夾載入範圍與影片設定</label>
+            <select id="selectFolderVideoPolicy" class="setting-select">
+              <option value="include">🎬 允許資料夾載入影片、圖片與音訊（預設，搭配零預載加速）</option>
+              <option value="exclude">🖼️ 資料夾僅載入圖片與音訊（自動排除影片檔案）</option>
+            </select>
             <select id="selectFolderDepthMode" class="setting-select">
               <option value="shallow">🛡️ 僅載入所選資料夾「當層」檔案（略過深層子資料夾，推薦）</option>
               <option value="recursive">📂 包含所有子資料夾內的檔案</option>

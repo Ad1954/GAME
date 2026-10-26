@@ -586,8 +586,34 @@ html, body {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  background: #000;
+  background: radial-gradient(circle at center, #161b2e 0%, #090b10 100%);
   pointer-events: none;
+}
+
+.video-standby-title {
+  position: absolute;
+  bottom: calc(var(--safe-bottom) + 110px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 21;
+  max-width: 82vw;
+  padding: 8px 18px;
+  border-radius: 12px;
+  background: rgba(13, 16, 26, 0.78);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f8fafc;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.app-shell.hud-hidden .video-standby-title {
+  opacity: 0;
 }
 
 /* Audio Vinyl / Film Deck Card */

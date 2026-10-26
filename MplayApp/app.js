@@ -1,5 +1,5 @@
 /**
- * Mplay 隨身影格播放器 - iPad Pro USB Drive Local Media PWA (v1.2.2)
+ * Mplay 隨身影格播放器 - iPad Pro USB Drive Local Media PWA (v1.2.3)
  * Core Features:
  * 1. Zero-copy, zero-stat instant ingestion for 100GB+ USB folders (only stores lightweight File pointers)
  * 2. Strict Single-Active-File loading: only loads current file on demand; lazy virtualized playlist
@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   leftSeconds: 30,
   rightAction: 'forward',      // 'forward' | 'rewind' | 'prev' | 'next' | 'none'
   rightSeconds: 30,
+  folderVideoPolicy: 'include', // 'include' (load videos + images + audio) | 'exclude' (images + audio only)
   folderDepthMode: 'shallow',  // 'shallow' (only chosen folder level) | 'recursive' (include subfolders)
   tapPlayingBehavior: 'pause', // 'pause' | 'toggleHud'
   swipeThreshold: 45           // px
@@ -105,6 +106,7 @@ const dom = {
   selectRightAction: document.getElementById('selectRightAction'),
   inputRightSeconds: document.getElementById('inputRightSeconds'),
   rightSecondsGroup: document.getElementById('rightSecondsGroup'),
+  selectFolderVideoPolicy: document.getElementById('selectFolderVideoPolicy'),
   selectFolderDepthMode: document.getElementById('selectFolderDepthMode'),
   selectTapPlayingBehavior: document.getElementById('selectTapPlayingBehavior'),
   inputSwipeThreshold: document.getElementById('inputSwipeThreshold'),
@@ -209,6 +211,9 @@ function applySettingsToUI() {
   dom.inputRightSeconds.value = s.rightSeconds;
   dom.rightSecondsGroup.classList.toggle('hidden', s.rightAction !== 'rewind' && s.rightAction !== 'forward');
 
+  if (dom.selectFolderVideoPolicy) {
+    dom.selectFolderVideoPolicy.value = s.folderVideoPolicy || 'include';
+  }
   dom.selectFolderDepthMode.value = s.folderDepthMode || 'shallow';
   dom.selectTapPlayingBehavior.value = s.tapPlayingBehavior;
   dom.inputSwipeThreshold.value = s.swipeThreshold;
@@ -380,6 +385,7 @@ function commitIngestedItems(validItems, meta = {}) {
  * Avoids the browser "Upload N files to this site?" prompt on PC Chrome/Edge and reads FileHandles lazily!
  */
 async function openFolderSmart() {
+  const excludeVideo = state.settings.folderVideoPolicy === 'exclude';
   if (typeof window.showDirectoryPicker === 'function') {
     try {
       const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
@@ -387,13 +393,13 @@ async function openFolderSmart() {
       const collected = [];
       const counter = { idx: 0, skippedVideos: 0 };
 
-      await collectHandlesFromDir(dirHandle, collected, 1, allowRecursive, true, counter);
+      await collectHandlesFromDir(dirHandle, collected, 1, allowRecursive, excludeVideo, counter);
 
       if (collected.length === 0) {
         if (counter.skippedVideos > 0) {
-          showFeedbackToast('🎬', '資料夾模式已排除影片檔', '觀看影片請點擊「🎬 選影片/單檔」按鈕');
+          showFeedbackToast('🎬', '目前設定為資料夾排除影片', '可於⚙️設定開啟資料夾載入影片，或點「選單檔」');
         } else {
-          showFeedbackToast('⚠️', '資料夾內無圖片或音訊檔', '支援 JPG/PNG/WebP/GIF/MP3');
+          showFeedbackToast('⚠️', '資料夾內無支援的媒體檔案', '支援 MP4/MOV/JPG/PNG/WebP/GIF/MP3');
         }
         return;
       }
@@ -537,7 +543,7 @@ function applyFilter(filterType) {
 /* =========================================
    4. STRICT SINGLE-ACTIVE-FILE MEMORY ENGINE
    ========================================= */
-async function getOrCreateObjectUrlAsync(index) {
+function getOrCreateObjectUrlSync(index) {
   const item = state.filteredFiles[index];
   if (!item) return '';
   if (item.isDemo && item.demoUrl) return item.demoUrl;
@@ -545,13 +551,23 @@ async function getOrCreateObjectUrlAsync(index) {
   if (state.activeObjectUrls.has(item.id)) {
     return state.activeObjectUrls.get(item.id);
   }
-
-  let fileObj = item.file;
-  if (!fileObj && item.handle) {
-    fileObj = await item.handle.getFile();
+  if (item.file) {
+    const url = URL.createObjectURL(item.file);
+    state.activeObjectUrls.set(item.id, url);
+    return url;
   }
-  if (!fileObj) return '';
+  return '';
+}
 
+async function getOrCreateObjectUrlAsync(index) {
+  const syncUrl = getOrCreateObjectUrlSync(index);
+  if (syncUrl) return syncUrl;
+
+  const item = state.filteredFiles[index];
+  if (!item || !item.handle) return '';
+
+  const fileObj = await item.handle.getFile();
+  item.file = fileObj;
   const url = URL.createObjectURL(fileObj);
   state.activeObjectUrls.set(item.id, url);
   return url;
@@ -616,8 +632,6 @@ async function loadMediaAtIndex(index, slideDirection = 0) {
   dom.btnZoomReset.classList.add('hidden');
 
   const item = state.filteredFiles[targetIndex];
-  const mediaUrl = await getOrCreateObjectUrlAsync(targetIndex);
-  if (token !== state.renderToken) return;
   pruneObjectUrlsStrict(targetIndex);
 
   // Subtle slide transition effect
@@ -637,6 +651,9 @@ async function loadMediaAtIndex(index, slideDirection = 0) {
   dom.slideViewport.innerHTML = '';
 
   if (item.type === 'image') {
+    const mediaUrl = await getOrCreateObjectUrlAsync(targetIndex);
+    if (token !== state.renderToken) return;
+
     const img = document.createElement('img');
     img.className = `media-element-image ${state.imageFitMode === 'boundary' ? 'fit-boundary' : 'fit-original'}`;
     img.src = mediaUrl;
@@ -651,12 +668,11 @@ async function loadMediaAtIndex(index, slideDirection = 0) {
   } else if (item.type === 'video') {
     const video = document.createElement('video');
     video.className = 'media-element-video';
-    video.src = mediaUrl;
     if (item.posterUrl) {
       video.poster = item.posterUrl;
     }
-    // Use preload="metadata" without seeking so USB drive doesn't block on deep file reads before play
-    video.preload = 'metadata';
+    // Zero-preload standby: 0 bytes read from USB drive until user taps to play!
+    video.preload = 'none';
     video.playsInline = true;
     video.setAttribute('playsinline', '');
     video.setAttribute('webkit-playsinline', '');
@@ -668,11 +684,17 @@ async function loadMediaAtIndex(index, slideDirection = 0) {
       dom.timeCurrent.textContent = formatTime(video.currentTime);
     });
 
+    const standbyBadge = document.createElement('div');
+    standbyBadge.id = 'videoStandbyTitle';
+    standbyBadge.className = 'video-standby-title';
+    standbyBadge.textContent = `🎬 ${item.name}`;
+
     bindMediaEvents(video, item);
     dom.slideViewport.appendChild(video);
+    dom.slideViewport.appendChild(standbyBadge);
     state.activeMediaEl = video;
 
-    // Default to NOT playing; tapping anywhere on the video stage starts playback
+    // Default to NOT playing; tapping anywhere on the video stage attaches stream & starts playback
     dom.centerPlayBtn.classList.remove('hidden');
     dom.playbackControlsRow.classList.remove('hidden');
     dom.btnToggleFitMode.classList.add('hidden');
@@ -693,8 +715,7 @@ async function loadMediaAtIndex(index, slideDirection = 0) {
     `;
 
     const audio = document.createElement('audio');
-    audio.src = mediaUrl;
-    audio.preload = 'metadata';
+    audio.preload = 'none';
     audio.playbackRate = Number(dom.playbackRateSelect.value) || 1;
 
     audio.addEventListener('loadedmetadata', () => {
@@ -736,6 +757,8 @@ function bindMediaEvents(mediaEl, item) {
     state.isPlaying = true;
     dom.app.classList.add('hud-hidden');
     dom.centerPlayBtn.classList.add('hidden');
+    const standbyTitle = document.getElementById('videoStandbyTitle');
+    if (standbyTitle) standbyTitle.classList.add('hidden');
     const disc = document.getElementById('vinylDisc');
     if (disc) disc.classList.add('spinning');
     updateStageStateUI();
@@ -776,15 +799,31 @@ function bindMediaEvents(mediaEl, item) {
   });
 }
 
-function togglePlayPause() {
-  if (!state.activeMediaEl) return;
-  if (state.activeMediaEl.paused) {
-    state.activeMediaEl.play().catch((err) => {
+async function togglePlayPause() {
+  const mediaEl = state.activeMediaEl;
+  if (!mediaEl) return;
+
+  if (mediaEl.paused) {
+    // Attach ObjectURL on-demand at the exact moment user taps Play!
+    if (!mediaEl.getAttribute('src')) {
+      const idx = state.currentIndex;
+      const syncUrl = getOrCreateObjectUrlSync(idx);
+      if (syncUrl) {
+        mediaEl.src = syncUrl;
+      } else {
+        const asyncUrl = await getOrCreateObjectUrlAsync(idx);
+        if (!asyncUrl || state.activeMediaEl !== mediaEl) return;
+        mediaEl.src = asyncUrl;
+      }
+      pruneObjectUrlsStrict(idx);
+    }
+
+    mediaEl.play().catch((err) => {
       console.warn('Play blocked or failed:', err);
-      showFeedbackToast('⚠️', '無法播放此格式', '請確認編碼格式是否受 iPadOS 支援');
+      showFeedbackToast('⚠️', '無法播放此格式', '請確認編碼格式是否受系統支援');
     });
   } else {
-    state.activeMediaEl.pause();
+    mediaEl.pause();
   }
 }
 
@@ -1374,7 +1413,8 @@ function bindEvents() {
 
   dom.fileInputFolder.addEventListener('change', (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      ingestFileList(e.target.files, true, true);
+      const excludeVideo = state.settings.folderVideoPolicy === 'exclude';
+      ingestFileList(e.target.files, true, excludeVideo);
     }
   });
 
@@ -1527,6 +1567,7 @@ function bindEvents() {
       leftSeconds: Math.max(1, Math.min(600, Number(dom.inputLeftSeconds.value) || 30)),
       rightAction: dom.selectRightAction.value,
       rightSeconds: Math.max(1, Math.min(600, Number(dom.inputRightSeconds.value) || 30)),
+      folderVideoPolicy: dom.selectFolderVideoPolicy ? dom.selectFolderVideoPolicy.value : 'include',
       folderDepthMode: dom.selectFolderDepthMode.value,
       tapPlayingBehavior: dom.selectTapPlayingBehavior.value,
       swipeThreshold: Number(dom.inputSwipeThreshold.value) || 45
