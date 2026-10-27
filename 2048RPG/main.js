@@ -896,6 +896,10 @@ class AppController {
         alert(res.reason);
       } else {
         this.setAimingMode(null);
+        if (res.action === 'cash_out') {
+          this.audio.playCoin();
+          this.showFloatingCombatText(`+${res.amount} 🪙`, r, c, 'gold');
+        }
       }
       return;
     }
@@ -1902,10 +1906,10 @@ class AppController {
     if (this.targetingBanner) {
       if (mode === 'hammer') {
         this.targetingBanner.style.display = 'flex';
-        if (this.targetingText) this.targetingText.textContent = '🔨 瞄準模式：點選任意 1 格非勇者方塊粉碎！';
+        if (this.targetingText) this.targetingText.textContent = '🔨 瞄準模式：點選裝備粉碎，點選金幣直接領取（不耗戰槌）';
       } else if (mode === 'snipe') {
         this.targetingBanner.style.display = 'flex';
-        if (this.targetingText) this.targetingText.textContent = '🏹 瞄準模式：點選戰力小於勇者的魔物無損狙殺！';
+        if (this.targetingText) this.targetingText.textContent = '🏹 瞄準模式：點選任意 1 隻魔物無損狙殺！';
       } else {
         this.targetingBanner.style.display = 'none';
       }
@@ -1926,14 +1930,13 @@ class AppController {
       const tile = this.stageManager.board.getTile(r, c);
 
       if (this.currentAimingItem === 'hammer') {
-        if (tile && !tile.isHero()) {
+        if (tile && !tile.isHero() && !tile.isMonster()) {
           cell.classList.add('target-valid');
         } else {
           cell.classList.add('target-invalid');
         }
       } else if (this.currentAimingItem === 'snipe') {
-        const hero = this.stageManager.board.getHero();
-        if (tile && tile.isMonster() && hero && tile.value < hero.value) {
+        if (tile && tile.isMonster()) {
           cell.classList.add('target-valid');
         } else {
           cell.classList.add('target-invalid');

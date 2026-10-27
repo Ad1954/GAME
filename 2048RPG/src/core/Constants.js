@@ -51,7 +51,7 @@ export const Events = {
   QUEST_PROGRESS_CHANGED: 'QUEST_PROGRESS_CHANGED'
 };
 
-export const CURRENT_GAME_VERSION = 'v1.4.6';
+export const CURRENT_GAME_VERSION = 'v1.4.7';
 
 export const MAX_ITEM_STACK = 999;
 
@@ -123,7 +123,7 @@ export const ITEM_CONFIGS = {
     id: 'hammer',
     name: '破壞戰槌',
     icon: '🔨',
-    desc: '點選粉碎任意 1 格非勇者方塊，立即騰出空間',
+    desc: '點選粉碎任意裝備騰空；點選金幣直接領取（不耗戰槌，無法破壞魔物/勇者）',
     defaultCount: 0
   },
   snipe: {

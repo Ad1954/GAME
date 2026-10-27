@@ -283,7 +283,11 @@ export class GwtRunner {
       // C-STORY-107: 每日合成任務優化為「任意合成 10 次」與盤面/倉庫合成即時觸發修復
       this.testGwt107_1_DailyQuestMergeConfigTarget10.bind(this),
       this.testGwt107_2_BoardMoveMergeTriggersDailyQuestProgress.bind(this),
-      this.testGwt107_3_InventoryAutoAndManualMergeTriggersDailyQuest.bind(this)
+      this.testGwt107_3_InventoryAutoAndManualMergeTriggersDailyQuest.bind(this),
+      // C-STORY-108: 破壞戰槌規則調優（排除魔物/英雄 ＆ 點選金幣智慧直接兌現且不耗戰槌）
+      this.testGwt108_1_HammerBlocksMonsterAndHero.bind(this),
+      this.testGwt108_2_HammerSmashesEquipmentAndConsumesHammer.bind(this),
+      this.testGwt108_3_HammerGoldTileSmartCashOutWithoutConsumingHammer.bind(this)
     ];
 
     for (const test of testCases) {
@@ -3626,7 +3630,7 @@ export class GwtRunner {
         'main.js must have version query parameter'
       );
     }
-    this.assert(CURRENT_GAME_VERSION === 'v1.4.6', 'CURRENT_GAME_VERSION must be v1.4.6');
+    this.assert(CURRENT_GAME_VERSION === 'v1.4.7', 'CURRENT_GAME_VERSION must be v1.4.7');
   }
 
   // C-STORY-036 GWT 36.2：設定視窗具備「檢查並刷新最新版本」按鈕配置
@@ -5571,6 +5575,80 @@ export class GwtRunner {
     // Claim quest reward
     const claimRes = dlm.claimQuestReward('quest_high_merge');
     this.assert(claimRes.success === true, 'Claiming quest_high_merge at 10/10 must succeed');
+  }
+
+  // =========================================================================
+  // C-STORY-108: 破壞戰槌規則調優（排除魔物/英雄 ＆ 點選金幣智慧直接兌現且不耗戰槌）
+  // =========================================================================
+
+  // GWT 108.1: 破壞戰槌點擊魔物與勇者方塊防呆阻擋，不扣戰槌且魔物不減損
+  testGwt108_1_HammerBlocksMonsterAndHero() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startStage(1, 16);
+    sm.board.clear();
+
+    sm.board.setTile(0, 0, new Tile(16, TileType.HERO, 0, 0));
+    sm.board.setTile(0, 1, new Tile(32, TileType.MONSTER, 0, 1));
+    sm.items.hammer = 2;
+
+    // 1. Try hammer on Hero -> Blocked
+    const heroRes = sm.useHammerItem(0, 0);
+    this.assert(heroRes.success === false, 'Cannot destroy Hero tile');
+    this.assert(heroRes.reason.includes('無法破壞勇者'), `Expected hero block message, got: ${heroRes.reason}`);
+    this.assert(sm.items.hammer === 2, 'Hammer count not consumed on hero block');
+    this.assert(sm.board.getTile(0, 0) !== null, 'Hero tile remains intact');
+
+    // 2. Try hammer on Monster -> Blocked
+    const monsterRes = sm.useHammerItem(0, 1);
+    this.assert(monsterRes.success === false, 'Cannot destroy Monster tile with Hammer');
+    this.assert(monsterRes.reason.includes('無法破壞魔物'), `Expected monster block message, got: ${monsterRes.reason}`);
+    this.assert(sm.items.hammer === 2, 'Hammer count not consumed on monster block');
+    this.assert(sm.board.getTile(0, 1) !== null, 'Monster tile remains intact');
+    this.assert(sm.monstersKilled === 0, 'No monster kill accrued');
+  }
+
+  // GWT 108.2: 破壞戰槌點擊裝備方塊正常粉碎、扣除 1 槌且不消耗回合步數
+  testGwt108_2_HammerSmashesEquipmentAndConsumesHammer() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.startStage(1, 16);
+    sm.board.clear();
+
+    sm.board.setTile(0, 0, new Tile(16, TileType.HERO, 0, 0));
+    sm.board.setTile(0, 1, new Tile(32, TileType.MONSTER, 0, 1));
+    sm.board.setTile(1, 1, new Tile(8, TileType.EQUIPMENT, 1, 1));
+    sm.items.hammer = 3;
+    sm.turnCount = 5;
+
+    const smashRes = sm.useHammerItem(1, 1);
+    this.assert(smashRes.success === true, 'Hammer successfully smashed equipment');
+    this.assert(smashRes.action === 'smash_equipment', 'Action is smash_equipment');
+    this.assert(sm.items.hammer === 2, 'Hammer count decremented to 2');
+    this.assert(sm.board.getTile(1, 1) === null, 'Equipment cell is now empty');
+    this.assert(sm.turnCount === 5, 'Turn count remains unchanged');
+  }
+
+  // GWT 108.3: 破壞戰槌點擊金幣方塊智慧兌現全額金幣騰地，且 100% 保留戰槌數量
+  testGwt108_3_HammerGoldTileSmartCashOutWithoutConsumingHammer() {
+    const sm = new StageManager();
+    sm.resetSaveData();
+    sm.gold = 300;
+    sm.startStage(1, 16);
+    sm.board.clear();
+
+    sm.board.setTile(0, 0, new Tile(16, TileType.HERO, 0, 0));
+    sm.board.setTile(0, 1, new Tile(32, TileType.MONSTER, 0, 1));
+    sm.board.setTile(2, 2, new Tile(64, TileType.GOLD, 2, 2));
+    sm.items.hammer = 2;
+
+    const goldRes = sm.useHammerItem(2, 2);
+    this.assert(goldRes.success === true, 'Hammer clicking gold must succeed');
+    this.assert(goldRes.action === 'cash_out', 'Gold action is cash_out');
+    this.assert(goldRes.amount === 64, 'Gold amount cashed out is 64');
+    this.assert(sm.gold === 300 + 64, `Total gold should increase by 64 (got ${sm.gold})`);
+    this.assert(sm.board.getTile(2, 2) === null, 'Gold cell (2, 2) is now empty space');
+    this.assert(sm.items.hammer === 2, `Hammer count MUST NOT be consumed (remains 2, got ${sm.items.hammer})`);
   }
 }
 

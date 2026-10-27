@@ -1171,7 +1171,7 @@ export class StageManager {
     return { success: true, remaining: this.items.undo };
   }
 
-  // Use Hammer Item (C-STORY-007)
+  // Use Hammer Item (C-STORY-007 & C-STORY-108)
   useHammerItem(r, c) {
     if (!this.isInBattle || this.isVictory || this.isGameOver) {
       return { success: false, reason: '戰鬥已結束或未在戰鬥中' };
@@ -1186,26 +1186,39 @@ export class StageManager {
     if (tile.isHero()) {
       return { success: false, reason: '無法破壞勇者方塊！' };
     }
+    if (tile.isMonster()) {
+      return { success: false, reason: '破壞戰槌無法破壞魔物！請使用精準重弩或進行戰鬥消滅。' };
+    }
 
+    // Smart Cash-Out if Gold tile: collect gold directly without consuming hammer (C-STORY-108)
+    if (tile.isGold()) {
+      const cashRes = this.cashOutGoldTile(r, c);
+      return {
+        success: true,
+        action: 'cash_out',
+        amount: cashRes.amount,
+        remaining: this.items.hammer,
+        hammerConsumed: false
+      };
+    }
+
+    // Smashes Equipment: consumes 1 hammer
     this.items.hammer--;
     const destroyed = this.board.removeTile(r, c);
-    if (destroyed.isMonster()) {
-      this.monstersKilled++;
-      this.eventBus.emit(Events.MONSTER_KILLED, { kills: 1 });
-    }
 
     this.saveData();
     this.eventBus.emit(Events.ITEMS_CHANGED, { items: this.items });
     this.eventBus.emit(Events.ITEM_USED, { itemType: 'hammer', r, c, tile: destroyed });
 
-    const remainingMonsters = this.board.getMonsters();
-    if (remainingMonsters.length === 0) {
-      this.handleVictory();
-    } else {
-      this.emitState();
-    }
+    this.emitState();
 
-    return { success: true, remaining: this.items.hammer, destroyedTile: destroyed };
+    return {
+      success: true,
+      action: 'smash_equipment',
+      remaining: this.items.hammer,
+      destroyedTile: destroyed,
+      hammerConsumed: true
+    };
   }
 
   // Use Snipe Crossbow Item (C-STORY-007)
