@@ -1,5 +1,5 @@
 /**
- * Mplay 隨身影格播放器 - iPad Pro USB Drive Local Media PWA (v1.2.3)
+ * Mplay 隨身影格播放器 - iPad Pro USB Drive Local Media PWA (v1.3.0)
  * Core Features:
  * 1. Zero-copy, zero-stat instant ingestion for 100GB+ USB folders (only stores lightweight File pointers)
  * 2. Strict Single-Active-File loading: only loads current file on demand; lazy virtualized playlist
@@ -61,6 +61,8 @@ const dom = {
   btnOpenFiles: document.getElementById('btnOpenFiles'),
   btnHeroSelectFolder: document.getElementById('btnHeroSelectFolder'),
   btnHeroSelectFiles: document.getElementById('btnHeroSelectFiles'),
+  storageUsageText: document.getElementById('storageUsageText'),
+  btnClearAppCache: document.getElementById('btnClearAppCache'),
   btnLoadDemo: document.getElementById('btnLoadDemo'),
   btnTogglePlaylist: document.getElementById('btnTogglePlaylist'),
   btnOpenSettings: document.getElementById('btnOpenSettings'),
@@ -123,6 +125,7 @@ function initApp() {
   registerServiceWorker();
   setupNetworkStatus();
   applySettingsToUI();
+  updateStorageUsageDisplay();
   bindEvents();
 }
 
@@ -1393,9 +1396,87 @@ function returnToHome() {
   dom.playlistDrawer.classList.add('hidden');
   dom.emptyState.classList.remove('hidden');
   dom.currentFileTitle.textContent = '請選擇外接隨身碟資料夾或檔案';
+  updateStorageUsageDisplay();
+}
+
+/**
+ * Storage Quota Estimation & App Cache Purge
+ */
+async function updateStorageUsageDisplay() {
+  if (!dom.storageUsageText) return;
+  if ('storage' in navigator && navigator.storage.estimate) {
+    try {
+      const estimate = await navigator.storage.estimate();
+      const usageBytes = estimate.usage || 0;
+      if (usageBytes < 1024 * 1024) {
+        dom.storageUsageText.textContent = `${(usageBytes / 1024).toFixed(1)} KB`;
+      } else if (usageBytes < 1024 * 1024 * 1024) {
+        dom.storageUsageText.textContent = `${(usageBytes / (1024 * 1024)).toFixed(1)} MB`;
+      } else {
+        dom.storageUsageText.textContent = `${(usageBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+      }
+      return;
+    } catch (e) {
+      console.warn('Storage estimate error:', e);
+    }
+  }
+  dom.storageUsageText.textContent = '小於 5 MB';
+}
+
+async function clearAppStorageAndCache() {
+  const confirmClear = confirm('確定要清空此 App 的所有快取暫存並釋放空間嗎？\n\n（此操作 100% 僅針對本 App，絕不影響您 Safari 瀏覽其他網站的紀錄與資料）');
+  if (!confirmClear) return;
+
+  dom.btnClearAppCache.disabled = true;
+  dom.storageUsageText.textContent = '正在釋放...';
+
+  // 1. Revoke active object URLs
+  releaseAllObjectUrls();
+  destroyActiveMediaDecoder();
+
+  // 2. Clear CacheStorage
+  if ('caches' in window) {
+    try {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((name) => caches.delete(name)));
+    } catch (e) {
+      console.warn('Caches delete error:', e);
+    }
+  }
+
+  // 3. Clear IndexedDB if exists
+  if (window.indexedDB && indexedDB.databases) {
+    try {
+      const dbs = await indexedDB.databases();
+      for (const db of dbs) {
+        if (db.name) indexedDB.deleteDatabase(db.name);
+      }
+    } catch (e) {
+      console.warn('IndexedDB clear error:', e);
+    }
+  }
+
+  // 4. Clear SessionStorage (keep localStorage settings)
+  try {
+    sessionStorage.clear();
+  } catch (e) {}
+
+  showFeedbackToast('🧹', '本站暫存已清空', '已釋放本 App 暫存空間！');
+
+  setTimeout(async () => {
+    await updateStorageUsageDisplay();
+    dom.btnClearAppCache.disabled = false;
+  }, 600);
 }
 
 function bindEvents() {
+  // Clear App Cache Button on Home Card
+  if (dom.btnClearAppCache) {
+    dom.btnClearAppCache.addEventListener('click', () => {
+      clearAppStorageAndCache();
+    });
+  }
+
   // Click Top-Left Logo to Return to Home Screen
   if (dom.btnHomeLogo) {
     dom.btnHomeLogo.addEventListener('click', () => {

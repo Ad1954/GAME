@@ -49,7 +49,7 @@
         <div class="brand-titles">
           <div class="brand-name-row">
             <span class="brand-name">Mplay</span>
-            <span class="version-badge">v1.2.3</span>
+            <span class="version-badge">v1.3.0</span>
             <span id="offlineBadge" class="status-badge online">離線就緒</span>
           </div>
           <span id="currentFileTitle" class="current-file-title">請選擇外接隨身碟資料夾或單一檔案</span>
@@ -105,12 +105,24 @@
             <img src="./icons/icon.svg" alt="Film Strip Icon" class="hero-icon" />
             <div class="hero-title-row">
               <h1>iPad Pro 隨身碟直讀播放器</h1>
-              <span class="hero-version-badge">v1.2.3</span>
+              <span class="hero-version-badge">v1.3.0</span>
             </div>
             <p class="hero-desc">
               <strong>零預載 (`preload="none"`) 加速引擎 ＋ 免上傳控制代碼直讀！</strong><br />
               切換影片時 0 磁碟讀取，點擊播放瞬間才啟動串流。
             </p>
+
+            <!-- Storage Manager Bar on Home Card -->
+            <div class="storage-manager-card">
+              <div class="storage-info">
+                <span class="storage-icon">📦</span>
+                <span class="storage-label">本 App 暫存佔用：</span>
+                <strong id="storageUsageText" class="storage-value">計算中...</strong>
+              </div>
+              <button id="btnClearAppCache" class="storage-clear-btn" title="立即清空此 App 暫存並釋放 iPad 空間（不影響其他網站）">
+                <span>🧹 一鍵清空暫存 (釋放空間)</span>
+              </button>
+            </div>
 
             <div class="video-warning-banner">
               💡 <strong>載入提示：</strong><br />
