@@ -8,6 +8,8 @@
   left: 0;
   right: 0;
   bottom: 0;
+  padding: env(safe-area-inset-top, 12px) env(safe-area-inset-right, 12px) env(safe-area-inset-bottom, 12px) env(safe-area-inset-left, 12px);
+  box-sizing: border-box;
   background-color: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(4px);
   display: flex;
@@ -28,8 +30,13 @@
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  width: 90%;
+  width: 92%;
   max-width: 480px;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   transform: scale(0.95);
@@ -41,7 +48,8 @@
 }
 
 .modal-header {
-  padding: 1.25rem 1.5rem;
+  flex-shrink: 0;
+  padding: 1.1rem 1.4rem;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
@@ -62,14 +70,19 @@
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: 1.25rem 1.4rem;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-footer {
-  padding: 1rem 1.5rem;
+  flex-shrink: 0;
+  padding: 0.85rem 1.4rem;
   border-top: 1px solid var(--border-color);
   background-color: var(--bg-elevated);
   display: flex;
@@ -202,5 +215,102 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* ============================================================
+   Crawler Catalog Preview Modal (Story 42 & Mobile Adaption)
+   ============================================================ */
+#crawler-catalog-modal .modal-card {
+  max-width: 720px;
+  width: 95%;
+  max-height: calc(100vh - 20px);
+  max-height: calc(100dvh - 20px);
+}
+
+#crawler-catalog-modal .catalog-preview-body {
+  padding: 1rem 1.25rem;
+  gap: 10px;
+}
+
+#preview-book-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.35;
+  word-break: break-all;
+}
+
+#preview-chapters-container {
+  flex: 1 1 auto;
+  min-height: 140px;
+  max-height: none;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 600px) {
+  #crawler-catalog-modal .modal-card {
+    width: 96%;
+    max-height: calc(100vh - 12px);
+    max-height: calc(100dvh - 12px);
+    border-radius: var(--radius-md);
+  }
+
+  #crawler-catalog-modal .modal-header {
+    padding: 0.75rem 0.9rem;
+  }
+
+  #crawler-catalog-modal .modal-title {
+    font-size: 1rem;
+  }
+
+  #crawler-catalog-modal .catalog-preview-body {
+    padding: 0.75rem 0.85rem;
+    gap: 8px;
+  }
+
+  #crawler-catalog-modal .modal-footer {
+    padding: 0.65rem 0.85rem;
+    gap: 8px;
+  }
+
+  #crawler-catalog-modal .preview-summary-box {
+    padding: 8px 10px !important;
+  }
+
+  #preview-book-title {
+    font-size: 0.92rem !important;
+  }
+
+  #crawler-catalog-modal .preview-toolbar-box {
+    padding: 6px 8px !important;
+    gap: 6px !important;
+  }
+
+  #crawler-catalog-modal .preview-toolbar-box .btn-sm {
+    padding: 2px 7px !important;
+    font-size: 0.78rem !important;
+  }
+
+  #preview-search-input {
+    font-size: 0.8rem !important;
+    padding: 5px 10px !important;
+  }
+
+  #preview-chapters-container {
+    min-height: 110px;
+  }
+
+  #btn-confirm-catalog-download {
+    font-size: 0.84rem !important;
+    padding: 7px 12px !important;
+  }
+
+  #btn-cancel-catalog-preview {
+    font-size: 0.84rem !important;
+    padding: 7px 12px !important;
+  }
 }
 

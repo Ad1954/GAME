@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="css/crawler.css?v=9.6">
   <link rel="stylesheet" href="css/bookshelf.css?v=9.6">
   <link rel="stylesheet" href="css/reader.css?v=9.6">
-  <link rel="stylesheet" href="css/modal.css?v=9.6">
+  <link rel="stylesheet" href="css/modal.css?v=9.7">
 </head>
 <body>
 
@@ -1040,25 +1040,25 @@
        Crawler Catalog Preview & Selective Download Modal (Story 42)
        ======================================================== -->
   <div id="crawler-catalog-modal" class="modal-backdrop">
-    <div class="modal-card" style="max-width: 720px; width: 95%;">
+    <div class="modal-card">
       <div class="modal-header">
         <h3 class="modal-title">📋 章節清單預覽與自訂下載</h3>
         <button id="btn-close-catalog-preview" class="modal-close-btn">&times;</button>
       </div>
-      <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px; padding: 1.25rem;">
+      <div class="modal-body catalog-preview-body">
         <!-- Book Summary -->
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; background: var(--bg-surface); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-          <div>
+        <div class="preview-summary-box" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; background: var(--bg-surface); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <div style="flex: 1; min-width: 0;">
             <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);" id="preview-book-title">《書籍名稱》</div>
             <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">作者: <span id="preview-book-author">未知</span></div>
           </div>
-          <div style="text-align: right;">
+          <div style="text-align: right; flex-shrink: 0;">
             <span id="preview-total-badge" style="background: var(--bg-elevated); color: var(--accent-primary); font-weight: 600; padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.82rem;">共解析出 0 篇</span>
           </div>
         </div>
 
         <!-- Quick Action Toolbar -->
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; background: var(--bg-elevated); padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <div class="preview-toolbar-box" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; background: var(--bg-elevated); padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
           <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
             <span style="font-size: 0.82rem; color: var(--text-secondary); font-weight: 600;">勾選：</span>
             <button id="btn-preview-select-all" type="button" class="btn btn-secondary btn-sm" title="勾選全部解析出的連結">全選</button>
@@ -1082,7 +1082,7 @@
         </div>
 
         <!-- Search / Filter & Count Indicator -->
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-shrink: 0;">
           <input type="text" id="preview-search-input" class="form-input" placeholder="🔍 快速過濾章節標題關鍵字..." style="font-size: 0.85rem; padding: 6px 12px; flex: 1;">
           <div style="font-size: 0.86rem; font-weight: 600; white-space: nowrap; color: var(--text-secondary);">
             已選取: <span id="preview-selected-count" style="color: var(--accent-primary); font-family: var(--font-mono); font-size: 1.05rem; font-weight: 700;">0</span> / <span id="preview-list-count">0</span> 章
@@ -1090,7 +1090,7 @@
         </div>
 
         <!-- Scrollable Chapter Checklist Container -->
-        <div id="preview-chapters-container" style="max-height: 360px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-surface); padding: 4px;">
+        <div id="preview-chapters-container" style="border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-surface); padding: 4px;">
           <!-- Dynamically populated rows -->
         </div>
       </div>
