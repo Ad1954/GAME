@@ -3,7 +3,7 @@
  * Employs Stale-While-Revalidate / Network-First with Cache Fallback for zero-network reading.
  */
 
-const CACHE_NAME = 'xreader-offline-v1.2';
+const CACHE_NAME = 'xreader-offline-v1.3';
 
 const PRECACHE_ASSETS = [
   './',
@@ -16,7 +16,7 @@ const PRECACHE_ASSETS = [
   './css/bookshelf.css?v=9.6',
   './css/reader.css?v=9.6',
   './css/modal.css?v=9.7',
-  './js/app.js?v=9.6',
+  './js/app.js?v=9.8',
   './js/eventBus.js',
   './js/audio/playerFactory.js',
   './js/audio/silentAudioData.js',

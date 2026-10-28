@@ -298,6 +298,18 @@ export class CrawlerService {
     let book = null;
     if (bookId) {
       book = await storage.getBook(bookId);
+    } else {
+      // Story 2: 若未明確提供 targetBookId，先查詢是否已有相同 sourceUrl 的既有書籍，以利續傳與去重
+      try {
+        const allBooks = await storage.getBooks();
+        const existingBook = allBooks.find(b => b.sourceUrl === catalogUrl || (b.sourceUrl && b.sourceUrl.replace(/\/$/, '') === catalogUrl.replace(/\/$/, '')));
+        if (existingBook) {
+          bookId = existingBook.id;
+          book = existingBook;
+        }
+      } catch (err) {
+        console.warn('Find existing book by sourceUrl error:', err);
+      }
     }
 
     // Story 53: 若傳入自訂章節且未指定書名/作者，且為新書，回退解析一次目錄以取得標準書名與作者
@@ -335,9 +347,10 @@ export class CrawlerService {
     // Save initial book record
     await storage.saveBook(book);
 
-    // Existing downloaded chapters check (for resumption)
+    // Existing downloaded chapters check (for resumption & deduplication by index or URL)
     const existingChapters = await storage.getChaptersByBook(bookId);
     const existingMap = new Map(existingChapters.map(c => [c.index, c]));
+    const existingUrlMap = new Map(existingChapters.filter(c => c.url).map(c => [c.url, c]));
 
     const total = targetChapters.length;
 
@@ -353,9 +366,9 @@ export class CrawlerService {
 
       const chapMeta = targetChapters[i];
 
-      // Checkpoint check - skip if already validly downloaded and not an error placeholder
-      if (existingMap.has(i)) {
-        const existChap = existingMap.get(i);
+      // Checkpoint check - skip if already validly downloaded by index or URL (and not an error placeholder)
+      const existChap = existingMap.get(i) || (chapMeta.url ? existingUrlMap.get(chapMeta.url) : null);
+      if (existChap) {
         if (existChap.content && existChap.content.length > 50 && !existChap.content.includes('[本章下載受阻')) {
           onProgress({
             status: 'downloading',
@@ -426,10 +439,27 @@ export class CrawlerService {
 
       // Atomic commit to IndexedDB per chapter (ADR 0003)
       await storage.saveChapter(chapter);
+      if (chapMeta.url) {
+        existingUrlMap.set(chapMeta.url, chapter);
+      }
+      existingMap.set(i, chapter);
 
       // Update downloaded count on book
       book.downloadedChaptersCount = i + 1;
       await storage.saveBook(book);
+
+      // Story 2: 即時更新爬蟲斷點記錄，確保隨時中斷皆能精確記錄進度與最後章節網址
+      storage.saveCrawlerRecord({
+        id: recordId || undefined,
+        bookId: book.id,
+        bookTitle: book.title,
+        sourceUrl: catalogUrl,
+        sourceType: 'web',
+        totalChaptersCrawled: book.downloadedChaptersCount,
+        lastChapterUrl: chapMeta.url || '',
+        targetCategoryId: book.categoryId,
+        historicalKeys: targetChapters.slice(0, i + 1).map(c => c.url).filter(Boolean)
+      });
 
       // Respectful delay to avoid WAF IP blocking
       if (i < total - 1 && delay > 0 && !this.isCancelled && !this.isPaused) {

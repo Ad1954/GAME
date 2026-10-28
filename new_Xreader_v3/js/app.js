@@ -104,6 +104,11 @@ class App {
   }
 
   switchTab(tabId) {
+    // Story 1: 若當前處於小說內文閱讀器畫面，切換到其他標籤時自動退出閱讀器並解除視窗捲動鎖定
+    if (tabId !== 'tab-bookshelf' && this.readerView) {
+      this.readerView.hideReader();
+    }
+
     this.navTabs.forEach(t => {
       if (t.dataset.tab === tabId) {
         t.classList.add('active');
