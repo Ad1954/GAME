@@ -323,7 +323,11 @@ export class GwtRunner {
       // C-STORY-120: 樣條引擎升級：Catmull-Rom 自然過彎與弧長等距關卡分佈
       this.testGwt120_1_CatmullRomNaturalSpline.bind(this),
       this.testGwt120_2_ArcLengthEquidistantStageDistribution.bind(this),
-      this.testGwt120_3_DualModeInteractiveSync.bind(this)
+      this.testGwt120_3_DualModeInteractiveSync.bind(this),
+      // C-STORY-121: 地圖與工作台雙向錨點名稱同步與點擊捲動置中聚焦聯動
+      this.testGwt121_1_UnifiedWaypointLabelsSync.bind(this),
+      this.testGwt121_2_MapPinToWorkbenchScrollFocus.bind(this),
+      this.testGwt121_3_WorkbenchToMapPinScrollFocus.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6075,6 +6079,49 @@ export class GwtRunner {
     }
     this.assert(htmlText.includes('recalculateAllPoints()'), 'Recalculates all stage points upon waypoint modification');
     this.assert(htmlText.includes('renderSplineAndWaypointPins()'), 'Redraws spline and pins synchronously');
+  }
+
+  // C-STORY-121 GWT 121.1: 地圖圖釘與工作台清單標籤統一與序號對齊
+  async testGwt121_1_UnifiedWaypointLabelsSync() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('getWaypointUnifiedLabel('), 'Defines getWaypointUnifiedLabel function for synchronized naming');
+    this.assert(htmlText.includes('W${idx + 1}'), 'Formats labels consistently with W{idx+1} prefix');
+    this.assert(htmlText.includes('pin-active-focus'), 'Defines pin-active-focus style for highlighted map pin');
+    this.assert(htmlText.includes('wp-selected-active'), 'Defines wp-selected-active style for selected workbench item');
+  }
+
+  // C-STORY-121 GWT 121.2: 地圖圖釘點擊觸發工作台自動捲動與高亮聚焦
+  async testGwt121_2_MapPinToWorkbenchScrollFocus() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('focusWaypointFromMap('), 'Defines focusWaypointFromMap function for pin click handling');
+    this.assert(htmlText.includes('scrollIntoView({ behavior: \'smooth\''), 'Workbench list automatically scrolls target item into view');
+    this.assert(htmlText.includes('highlightMapPin('), 'Highlights active map pin with pulse effect');
+  }
+
+  // C-STORY-121 GWT 121.3: 工作台列表點擊/滑動觸發地圖視窗平滑置中
+  async testGwt121_3_WorkbenchToMapPinScrollFocus() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('focusWaypointFromList('), 'Defines focusWaypointFromList function for workbench interaction');
+    this.assert(htmlText.includes('box.scrollTo({'), 'Calculates target pixel height and smoothly scrolls map viewport');
+    this.assert(htmlText.includes('onfocus="focusWaypointFromList('), 'Binds input range sliders to trigger bidirectional focus');
   }
 }
 

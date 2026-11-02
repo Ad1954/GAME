@@ -247,6 +247,11 @@
     .wp-highlight-flash {
       animation: wpFlash 1.6s ease-out;
     }
+    .wb-wp-item.wp-selected-active {
+      border: 1px solid #38bdf8 !important;
+      background: rgba(56, 189, 248, 0.18) !important;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.4) !important;
+    }
     .wb-alert-box {
       background: rgba(30, 41, 59, 0.85);
       border-left: 4px solid #38bdf8;
@@ -667,6 +672,17 @@
       cursor: grabbing;
       transform: translate(-50%, -50%) scale(1.22);
       box-shadow: 0 0 24px rgba(251, 191, 36, 1);
+    }
+    @keyframes pinPulse {
+      0% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 10px rgba(251, 191, 36, 0.8); }
+      50% { transform: translate(-50%, -50%) scale(1.35); box-shadow: 0 0 25px rgba(56, 189, 248, 1), 0 0 40px rgba(251, 191, 36, 1); }
+      100% { transform: translate(-50%, -50%) scale(1.15); box-shadow: 0 0 15px rgba(251, 191, 36, 0.8); }
+    }
+    .map-waypoint-pin.pin-active-focus {
+      animation: pinPulse 0.5s ease-in-out infinite alternate;
+      z-index: 50 !important;
+      border-color: #38bdf8 !important;
+      background: linear-gradient(135deg, #0284c7, #38bdf8) !important;
     }
 
     /* Dimmed Stage Nodes in Tab 1 */
@@ -1810,6 +1826,77 @@
     let selectedTuningStage = 25;
     let isDraggingNode = false;
     let currentDraggingStage = null;
+    let focusedWaypointIdx = null; // Currently highlighted waypoint for bidirectional sync
+
+    // Format unified synchronized label for both Map Pins and Workbench List: W{idx+1} (名稱 · X%)
+    function getWaypointUnifiedLabel(wp, idx) {
+      if (!wp) return `W${idx + 1}`;
+      const pct = Math.round((wp.p !== undefined ? wp.p : 0) * 100);
+      let desc = '';
+      if (wp.label) {
+        let raw = wp.label.replace(/^W\d+\s*[-:·]?\s*/i, '').trim();
+        raw = raw.replace(/^\((.*)\)$/, '$1').trim();
+        raw = raw.replace(/[·\s]*\d+%\s*$/, '').trim();
+        if (raw) desc = raw;
+      }
+      if (!desc) {
+        if (idx === 0) desc = '起點綠野';
+        else if (idx === ROAD_WAYPOINTS.length - 1) desc = '巔峰王座';
+        else desc = '途經點';
+      }
+      return `W${idx + 1} (${desc} · ${pct}%)`;
+    }
+
+    // Bidirectional Focus: Pin Click -> Workbench List Scroll + Focus Glow
+    function focusWaypointFromMap(idx) {
+      focusedWaypointIdx = idx;
+      highlightMapPin(idx);
+
+      const itemEl = document.getElementById(`wp-item-${idx}`);
+      if (itemEl) {
+        document.querySelectorAll('.wb-wp-item').forEach(el => el.classList.remove('wp-selected-active'));
+        itemEl.classList.add('wp-selected-active');
+        itemEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      const wp = ROAD_WAYPOINTS[idx];
+      const label = getWaypointUnifiedLabel(wp, idx);
+      showToast(`📍 已選中 ${label}（工作台已同步捲動定位）`);
+    }
+
+    // Bidirectional Focus: Workbench Click/Slide -> Map Pin Centered Scroll + Pulse Focus
+    function focusWaypointFromList(idx) {
+      focusedWaypointIdx = idx;
+
+      const itemEl = document.getElementById(`wp-item-${idx}`);
+      if (itemEl) {
+        document.querySelectorAll('.wb-wp-item').forEach(el => el.classList.remove('wp-selected-active'));
+        itemEl.classList.add('wp-selected-active');
+      }
+
+      highlightMapPin(idx);
+
+      const wp = ROAD_WAYPOINTS[idx];
+      const box = document.getElementById('map-scroll-box');
+      const track = document.getElementById('map-track');
+      if (wp && box && track) {
+        const topPct = 95 - wp.p * 90;
+        const totalH = Math.max(1, track.clientHeight || mapTotalHeight);
+        const pinPixelY = (topPct / 100) * totalH;
+        box.scrollTo({
+          top: pinPixelY - (box.clientHeight / 2),
+          behavior: 'smooth'
+        });
+      }
+    }
+
+    function highlightMapPin(idx) {
+      document.querySelectorAll('.map-waypoint-pin').forEach(p => p.classList.remove('pin-active-focus'));
+      const pin = document.getElementById(`map-wp-pin-${idx}`);
+      if (pin) {
+        pin.classList.add('pin-active-focus');
+      }
+    }
 
     // Standard Catmull-Rom Cubic Spline Interpolation Helper
     function catmullRom(p0, p1, p2, p3, t) {
@@ -2195,11 +2282,16 @@
         const pin = document.createElement('div');
         pin.className = 'map-waypoint-pin';
         pin.id = `map-wp-pin-${idx}`;
+        if (focusedWaypointIdx === idx) {
+          pin.classList.add('pin-active-focus');
+        }
         const isEndpoint = (idx === 0 || idx === ROAD_WAYPOINTS.length - 1);
         const topPct = 95 - wp.p * 90;
+        const unifiedLabel = getWaypointUnifiedLabel(wp, idx);
         pin.style.left = `${wp.x}%`;
         pin.style.top = `${topPct}%`;
         pin.setAttribute('data-wp-idx', idx);
+        pin.title = `${unifiedLabel} - 點擊可在右側工作台定位`;
         pin.innerHTML = `
           <span>📍</span>
           <span>W${idx + 1}</span>
@@ -2207,6 +2299,11 @@
 
         let isDraggingPin = false;
         let pinMoved = false;
+
+        pin.addEventListener('click', (e) => {
+          focusWaypointFromMap(idx);
+          e.stopPropagation();
+        });
 
         pin.addEventListener('pointerdown', (e) => {
           isDraggingPin = true;
@@ -2249,6 +2346,8 @@
           recalculateAllPoints();
           if (pinMoved) {
             showToast(`📍 頂點 W${idx + 1} 已更新至 X:${wp.x}%, Y:${Math.round(wp.p * 100)}%`);
+          } else {
+            focusWaypointFromMap(idx);
           }
         });
 
@@ -2423,10 +2522,16 @@
           const item = document.createElement('div');
           item.className = 'wb-wp-item';
           item.id = `wp-item-${idx}`;
+          if (focusedWaypointIdx === idx) {
+            item.classList.add('wp-selected-active');
+          }
+          item.onclick = (e) => {
+            focusWaypointFromList(idx);
+          };
           const isEndpoint = (idx === 0 || idx === ROAD_WAYPOINTS.length - 1);
           const canDelete = ROAD_WAYPOINTS.length > 2 && !isEndpoint;
           const canInsertMid = idx < ROAD_WAYPOINTS.length - 1;
-          const displayLabel = wp.label || `W${idx+1} (${Math.round((wp.p !== undefined ? wp.p : 0) * 100)}%)`;
+          const displayLabel = getWaypointUnifiedLabel(wp, idx);
 
           item.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
@@ -2438,13 +2543,13 @@
             </div>
             <div style="display:flex; gap:8px; align-items:center; width:100%;">
               <span style="font-size:0.72rem; color:#94a3b8; width:34px;">X偏轉</span>
-              <input type="range" min="10" max="90" step="1" value="${wp.x}" oninput="onWaypointXChanged(${idx}, this.value)">
+              <input type="range" min="10" max="90" step="1" value="${wp.x}" onfocus="focusWaypointFromList(${idx})" oninput="onWaypointXChanged(${idx}, this.value)">
               <span class="wp-val" id="wp-val-${idx}">${wp.x}%</span>
             </div>
             ${(!isEndpoint) ? `
             <div style="display:flex; gap:8px; align-items:center; width:100%;">
               <span style="font-size:0.72rem; color:#fbbf24; width:34px;">Y高度</span>
-              <input type="range" min="1" max="99" step="1" value="${Math.round(wp.p * 100)}" onchange="onWaypointYChanged(${idx}, this.value)" oninput="document.getElementById('wp-pval-${idx}').textContent=this.value+'%'">
+              <input type="range" min="1" max="99" step="1" value="${Math.round(wp.p * 100)}" onfocus="focusWaypointFromList(${idx})" onchange="onWaypointYChanged(${idx}, this.value)" oninput="document.getElementById('wp-pval-${idx}').textContent=this.value+'%'">
               <span class="wp-val" id="wp-pval-${idx}" style="color:#fbbf24;">${Math.round(wp.p * 100)}%</span>
             </div>` : ''}
           `;
@@ -2540,7 +2645,7 @@
       const newWp = {
         p: prog,
         x: currentX,
-        label: `視野錨點 (${Math.round(prog * 100)}%)`
+        label: `視野錨點`
       };
       ROAD_WAYPOINTS.push(newWp);
       ROAD_WAYPOINTS.sort((a, b) => a.p - b.p);
@@ -2550,13 +2655,13 @@
       recalculateAllPoints();
 
       const newIdx = ROAD_WAYPOINTS.indexOf(newWp);
+      focusWaypointFromList(newIdx);
       const targetEl = document.getElementById(`wp-item-${newIdx}`);
       if (targetEl) {
-        targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         targetEl.classList.add('wp-highlight-flash');
         setTimeout(() => targetEl.classList.remove('wp-highlight-flash'), 1800);
       }
-      showToast(`➕ 已在可視視野中心 (高度 ${Math.round(prog * 100)}%) 插入新轉折頂點！`);
+      showToast(`➕ 已在可視視野中心 (高度 ${Math.round(prog * 100)}%) 插入新轉折頂點 W${newIdx + 1}！`);
     }
 
     function addNewWaypoint() {
@@ -2575,7 +2680,7 @@
       const newWp = {
         p: midP,
         x: midX,
-        label: `切分錨點 (${Math.round(midP * 100)}%)`
+        label: `切分錨點`
       };
       ROAD_WAYPOINTS.splice(idx + 1, 0, newWp);
       ROAD_WAYPOINTS.sort((a, b) => a.p - b.p);
@@ -2585,24 +2690,25 @@
       recalculateAllPoints();
 
       const newIdx = ROAD_WAYPOINTS.indexOf(newWp);
+      focusWaypointFromList(newIdx);
       const targetEl = document.getElementById(`wp-item-${newIdx}`);
       if (targetEl) {
-        targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         targetEl.classList.add('wp-highlight-flash');
         setTimeout(() => targetEl.classList.remove('wp-highlight-flash'), 1800);
       }
-      showToast(`➕ 已在第 ${idx + 1} 與 ${idx + 2} 頂點中間插入切分點！`);
+      showToast(`➕ 已在第 ${idx + 1} 與 ${idx + 2} 頂點中間插入切分點 W${newIdx + 1}！`);
     }
 
     function onWaypointYChanged(idx, val) {
       val = parseFloat(val);
       const newProg = Math.max(0.01, Math.min(0.99, Math.round(val) / 100));
       ROAD_WAYPOINTS[idx].p = newProg;
-      ROAD_WAYPOINTS[idx].label = `調整錨點 (${Math.round(newProg * 100)}%)`;
       ROAD_WAYPOINTS.sort((a, b) => a.p - b.p);
+      const updatedIdx = ROAD_WAYPOINTS.indexOf(ROAD_WAYPOINTS.find(w => w.p === newProg));
       saveCustomPath();
       initWorkbenchControls();
       recalculateAllPoints();
+      focusWaypointFromList(updatedIdx >= 0 ? updatedIdx : idx);
       showToast(`↕️ 已將頂點高度更新為 ${Math.round(newProg * 100)}% 並自動重排序！`);
     }
 
@@ -2616,10 +2722,15 @@
         return;
       }
       const removed = ROAD_WAYPOINTS.splice(idx, 1);
+      if (focusedWaypointIdx === idx) {
+        focusedWaypointIdx = null;
+      } else if (focusedWaypointIdx > idx) {
+        focusedWaypointIdx--;
+      }
       saveCustomPath();
       initWorkbenchControls();
       recalculateAllPoints();
-      showToast(`🗑️ 已移除頂點：${removed[0].label || '自訂頂點'}`);
+      showToast(`🗑️ 已移除頂點：W${idx + 1} (${removed[0].label || '自訂頂點'})`);
     }
 
     function onWaypointXChanged(idx, val) {
