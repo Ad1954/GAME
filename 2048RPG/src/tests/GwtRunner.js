@@ -315,7 +315,11 @@ export class GwtRunner {
       // C-STORY-118: 骨架與關卡解耦：視野中心插入頂點與頂點高度/順序動態調整
       this.testGwt118_1_SyntaxErrorFreeAndDecoupledSpline.bind(this),
       this.testGwt118_2_ViewportCenterWaypointInsertionAndHighlight.bind(this),
-      this.testGwt118_3_WaypointYHeightAdjustAndMidpointInsertion.bind(this)
+      this.testGwt118_3_WaypointYHeightAdjustAndMidpointInsertion.bind(this),
+      // C-STORY-119: 雙模式分層視覺化：標籤 1「曲線動線與頂點錨點」與標籤 2「關卡節點精細放置」
+      this.testGwt119_1_Tab1SplineAndWaypointPinsRender.bind(this),
+      this.testGwt119_2_Tab2StageNodeModeSwitch.bind(this),
+      this.testGwt119_3_InteractiveWaypointPinDragAndSync.bind(this)
     ];
 
     for (const test of testCases) {
@@ -5985,6 +5989,48 @@ export class GwtRunner {
     this.assert(htmlText.includes('insertWaypointAfter('), 'Contains insertWaypointAfter handler for midpoint insertion');
     this.assert(htmlText.includes('onWaypointYChanged('), 'Contains onWaypointYChanged handler for vertical height and reordering');
     this.assert(htmlText.includes('➕中點'), 'Contains midpoint insert button in workbench markup');
+  }
+
+  // C-STORY-119 GWT 119.1: 標籤 1 可視化 SVG 動線軌跡與頂點圖釘渲染
+  async testGwt119_1_Tab1SplineAndWaypointPinsRender() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('renderSplineAndWaypointPins'), 'Contains renderSplineAndWaypointPins function');
+    this.assert(htmlText.includes('map-waypoint-pin'), 'Defines map-waypoint-pin CSS styling and DOM generation');
+    this.assert(htmlText.includes('dimmed-stage'), 'Defines dimmed-stage CSS class for dimming stage nodes in Tab 1');
+  }
+
+  // C-STORY-119 GWT 119.2: 標籤 2 切換為詳細關卡按鍵模式
+  async testGwt119_2_Tab2StageNodeModeSwitch() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('applyVisualMode'), 'Contains applyVisualMode function for tab switching');
+    this.assert(htmlText.includes('mode-spline-editing'), 'Contains mode-spline-editing state class');
+    this.assert(htmlText.includes('mode-stage-editing'), 'Contains mode-stage-editing state class');
+  }
+
+  // C-STORY-119 GWT 119.3: 頂點調整與 SVG 動線即時流暢重繪
+  async testGwt119_3_InteractiveWaypointPinDragAndSync() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('renderSplineOnly'), 'Contains lightweight renderSplineOnly for 60fps dragging');
+    this.assert(htmlText.includes('spline-glow'), 'SVG contains spline-glow filter definition');
+    this.assert(htmlText.includes('setPointerCapture'), 'Waypoint pins support pointer capture dragging on map');
   }
 }
 
