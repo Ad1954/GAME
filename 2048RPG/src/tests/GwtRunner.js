@@ -319,7 +319,11 @@ export class GwtRunner {
       // C-STORY-119: 雙模式分層視覺化：標籤 1「曲線動線與頂點錨點」與標籤 2「關卡節點精細放置」
       this.testGwt119_1_Tab1SplineAndWaypointPinsRender.bind(this),
       this.testGwt119_2_Tab2StageNodeModeSwitch.bind(this),
-      this.testGwt119_3_InteractiveWaypointPinDragAndSync.bind(this)
+      this.testGwt119_3_InteractiveWaypointPinDragAndSync.bind(this),
+      // C-STORY-120: 樣條引擎升級：Catmull-Rom 自然過彎與弧長等距關卡分佈
+      this.testGwt120_1_CatmullRomNaturalSpline.bind(this),
+      this.testGwt120_2_ArcLengthEquidistantStageDistribution.bind(this),
+      this.testGwt120_3_DualModeInteractiveSync.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6031,6 +6035,46 @@ export class GwtRunner {
     this.assert(htmlText.includes('renderSplineOnly'), 'Contains lightweight renderSplineOnly for 60fps dragging');
     this.assert(htmlText.includes('spline-glow'), 'SVG contains spline-glow filter definition');
     this.assert(htmlText.includes('setPointerCapture'), 'Waypoint pins support pointer capture dragging on map');
+  }
+
+  // C-STORY-120 GWT 120.1: Catmull-Rom 自然樣條過彎（消除餘弦垂直夾持）
+  async testGwt120_1_CatmullRomNaturalSpline() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('catmullRom('), 'Implements catmullRom spline cubic basis helper');
+    this.assert(htmlText.includes('generateSplineDenseSamples('), 'Implements dense sampling generator for smooth path');
+    this.assert(htmlText.includes('value="catmull"'), 'Contains Catmull-Rom natural spline algorithm option in markup');
+  }
+
+  // C-STORY-120 GWT 120.2: 關卡節點弧長等距分佈（消除大拐彎拉扯感）
+  async testGwt120_2_ArcLengthEquidistantStageDistribution() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('getArcLengthDistributedStages('), 'Implements arc-length equidistant stage distribution');
+    this.assert(htmlText.includes('Math.hypot(dx, dy)'), 'Computes 2D euclidean arc length segments');
+  }
+
+  // C-STORY-120 GWT 120.3: 標籤 1 與標籤 2 雙模式無縫聯動
+  async testGwt120_3_DualModeInteractiveSync() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('recalculateAllPoints()'), 'Recalculates all stage points upon waypoint modification');
+    this.assert(htmlText.includes('renderSplineAndWaypointPins()'), 'Redraws spline and pins synchronously');
   }
 }
 

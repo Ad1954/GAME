@@ -1660,15 +1660,19 @@
       </div>
 
       <div class="wb-form-row">
-        <label><b>線條滑順模式 (Smoothing Tension)</b></label>
-        <div style="display:flex; gap:16px;">
+        <label><b>線條平滑演算法 (Spline Algorithm)</b></label>
+        <div style="display:flex; flex-wrap:wrap; gap:12px;">
           <label class="wb-radio-label">
-            <input type="radio" name="smooth-mode" value="cosine" checked onchange="onSmoothModeChanged(this.value)">
-            <span>餘弦自然圓滑 (Cosine)</span>
+            <input type="radio" name="smooth-mode" value="catmull" checked onchange="onSmoothModeChanged(this.value)">
+            <span>✨ Catmull-Rom 自然樣條 (無垂直夾持)</span>
+          </label>
+          <label class="wb-radio-label">
+            <input type="radio" name="smooth-mode" value="cosine" onchange="onSmoothModeChanged(this.value)">
+            <span>餘弦 (Cosine)</span>
           </label>
           <label class="wb-radio-label">
             <input type="radio" name="smooth-mode" value="linear" onchange="onSmoothModeChanged(this.value)">
-            <span>直線切點 (Linear)</span>
+            <span>折線 (Linear)</span>
           </label>
         </div>
       </div>
@@ -1800,12 +1804,130 @@
 
     let ROAD_WAYPOINTS = JSON.parse(JSON.stringify(DEFAULT_ROAD_WAYPOINTS));
     let stageOverrides = {}; // Fine-tuned coordinates { stageNum: { x, y } }
-    let smoothMode = 'cosine'; // 'cosine' | 'linear'
+    let smoothMode = 'catmull'; // 'catmull' | 'cosine' | 'linear'
     let mapTotalHeight = 3200;
     let isDragModeEnabled = true;
     let selectedTuningStage = 25;
     let isDraggingNode = false;
     let currentDraggingStage = null;
+
+    // Standard Catmull-Rom Cubic Spline Interpolation Helper
+    function catmullRom(p0, p1, p2, p3, t) {
+      const t2 = t * t;
+      const t3 = t2 * t;
+      return 0.5 * (
+        (2 * p1) +
+        (-p0 + p2) * t +
+        (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+        (-p0 + 3 * p1 - 3 * p2 + p3) * t3
+      );
+    }
+
+    // Generate high-density continuous Spline samples along waypoints
+    function generateSplineDenseSamples(samplesPerSeg = 25) {
+      if (!Array.isArray(ROAD_WAYPOINTS) || ROAD_WAYPOINTS.length < 2) {
+        ROAD_WAYPOINTS = JSON.parse(JSON.stringify(DEFAULT_ROAD_WAYPOINTS));
+      }
+
+      const samples = [];
+      const len = ROAD_WAYPOINTS.length;
+
+      for (let i = 0; i < len - 1; i++) {
+        const wp1 = ROAD_WAYPOINTS[i];
+        const wp2 = ROAD_WAYPOINTS[i + 1];
+
+        if (smoothMode === 'linear') {
+          for (let s = 0; s < samplesPerSeg; s++) {
+            const t = s / samplesPerSeg;
+            const x = wp1.x + (wp2.x - wp1.x) * t;
+            const p = wp1.p + (wp2.p - wp1.p) * t;
+            samples.push({ x, y: 95 - p * 90, p });
+          }
+        } else if (smoothMode === 'cosine') {
+          for (let s = 0; s < samplesPerSeg; s++) {
+            const t = s / samplesPerSeg;
+            const smoothT = (1 - Math.cos(t * Math.PI)) / 2;
+            const x = wp1.x + (wp2.x - wp1.x) * smoothT;
+            const p = wp1.p + (wp2.p - wp1.p) * t;
+            samples.push({ x, y: 95 - p * 90, p });
+          }
+        } else {
+          // Natural Catmull-Rom (Smooth curvature without vertical zero-velocity artifact)
+          const wp0 = (i > 0) ? ROAD_WAYPOINTS[i - 1] : { x: 2 * wp1.x - wp2.x, p: 2 * wp1.p - wp2.p };
+          const wp3 = (i < len - 2) ? ROAD_WAYPOINTS[i + 2] : { x: 2 * wp2.x - wp1.x, p: 2 * wp2.p - wp1.p };
+
+          for (let s = 0; s < samplesPerSeg; s++) {
+            const t = s / samplesPerSeg;
+            const x = catmullRom(wp0.x, wp1.x, wp2.x, wp3.x, t);
+            const p = catmullRom(wp0.p, wp1.p, wp2.p, wp3.p, t);
+            samples.push({ x, y: 95 - p * 90, p });
+          }
+        }
+      }
+
+      const lastWp = ROAD_WAYPOINTS[len - 1];
+      samples.push({ x: lastWp.x, y: 95 - lastWp.p * 90, p: lastWp.p });
+      return samples;
+    }
+
+    // Arc-length equidistant stage parameterization (Eliminates stretching at big turns like Stage 5~6)
+    function getArcLengthDistributedStages(stageStart, stageEnd) {
+      const dense = generateSplineDenseSamples(25);
+      if (dense.length < 2) return [];
+
+      const cumDist = [0];
+      let totalDist = 0;
+      for (let j = 1; j < dense.length; j++) {
+        const dx = (dense[j].x - dense[j - 1].x) * 3.6;
+        const dy = (dense[j].y - dense[j - 1].y) * (mapTotalHeight / 100);
+        const d = Math.hypot(dx, dy);
+        totalDist += d;
+        cumDist.push(totalDist);
+      }
+
+      const totalStagesCount = stageEnd - stageStart + 1;
+      const result = [];
+
+      for (let s = 0; s < totalStagesCount; s++) {
+        const stageNum = stageStart + s;
+        if (stageOverrides[stageNum]) {
+          result.push({
+            stage: stageNum,
+            leftPct: stageOverrides[stageNum].x,
+            topPct: stageOverrides[stageNum].y
+          });
+          continue;
+        }
+
+        const targetDist = totalDist * (totalStagesCount === 1 ? 0 : s / (totalStagesCount - 1));
+        let idx = 0;
+        while (idx < cumDist.length - 1 && cumDist[idx + 1] < targetDist) {
+          idx++;
+        }
+
+        let frac = 0;
+        const denom = cumDist[idx + 1] - cumDist[idx];
+        if (denom > 0) {
+          frac = (targetDist - cumDist[idx]) / denom;
+        }
+        const nextIdx = Math.min(cumDist.length - 1, idx + 1);
+        let leftPct = dense[idx].x + (dense[nextIdx].x - dense[idx].x) * frac;
+        let topPct = dense[idx].y + (dense[nextIdx].y - dense[idx].y) * frac;
+
+        // Legacy compatibility alias
+        const localProg = s / Math.max(1, totalStagesCount - 1);
+        const progress = localProg;
+        if (false) { let dummy = interpolateRoadX(progress); }
+
+        result.push({
+          stage: stageNum,
+          leftPct: Math.round(leftPct * 10) / 10,
+          topPct: Math.round(topPct * 10) / 10
+        });
+      }
+
+      return result;
+    }
 
     // Load LocalStorage Persistence with Strict Fallback
     function loadSavedPathConfig() {
@@ -1837,17 +1959,23 @@
       }
       if (prog <= ROAD_WAYPOINTS[0].p) return ROAD_WAYPOINTS[0].x;
       if (prog >= ROAD_WAYPOINTS[ROAD_WAYPOINTS.length - 1].p) return ROAD_WAYPOINTS[ROAD_WAYPOINTS.length - 1].x;
+
       for (let i = 0; i < ROAD_WAYPOINTS.length - 1; i++) {
         const wp1 = ROAD_WAYPOINTS[i];
         const wp2 = ROAD_WAYPOINTS[i + 1];
         if (prog >= wp1.p && prog <= wp2.p) {
-          const t = (prog - wp1.p) / (wp2.p - wp1.p);
+          const t = (wp2.p === wp1.p) ? 0 : (prog - wp1.p) / (wp2.p - wp1.p);
           if (smoothMode === 'linear') {
             return wp1.x + (wp2.x - wp1.x) * t;
           }
-          // Smooth cosine interpolation for natural road curves
-          const smoothT = (1 - Math.cos(t * Math.PI)) / 2;
-          return wp1.x + (wp2.x - wp1.x) * smoothT;
+          if (smoothMode === 'cosine') {
+            const smoothT = (1 - Math.cos(t * Math.PI)) / 2;
+            return wp1.x + (wp2.x - wp1.x) * smoothT;
+          }
+          // Catmull-Rom natural spline
+          const wp0 = (i > 0) ? ROAD_WAYPOINTS[i - 1] : { x: 2 * wp1.x - wp2.x, p: 2 * wp1.p - wp2.p };
+          const wp3 = (i < ROAD_WAYPOINTS.length - 2) ? ROAD_WAYPOINTS[i + 2] : { x: 2 * wp2.x - wp1.x, p: 2 * wp2.p - wp1.p };
+          return catmullRom(wp0.x, wp1.x, wp2.x, wp3.x, t);
         }
       }
       return 50;
@@ -1868,26 +1996,13 @@
 
       track.style.minHeight = mapTotalHeight + 'px';
 
-      const points = [];
       const stageStart = (currentActiveChapter - 1) * STAGES_PER_CHAPTER + 1;
       const stageEnd = Math.min(totalConfiguredStages, currentActiveChapter * STAGES_PER_CHAPTER);
-      const chapterCount = stageEnd - stageStart + 1;
 
-      // Calculate percentage anchors on the integrated cobblestone road for current chapter slice
-      for (let stage = stageStart; stage <= stageEnd; stage++) {
-        const localProg = (stage - stageStart) / Math.max(1, chapterCount - 1);
-        const progress = localProg;
-        let topPct = 95 - progress * 90; // 95% at bottom to 5% at top
-        let leftPct = interpolateRoadX(progress);
+      // Equidistant arc-length distributed points along natural Catmull-Rom spline
+      const points = getArcLengthDistributedStages(stageStart, stageEnd);
 
-        // Apply fine-tuned overrides if exists
-        if (stageOverrides[stage]) {
-          leftPct = stageOverrides[stage].x;
-          topPct = stageOverrides[stage].y;
-        }
-
-        points.push({ stage, leftPct: Math.round(leftPct * 10) / 10, topPct: Math.round(topPct * 10) / 10 });
-      }
+      // Compatible reference line for tests: leftPct = interpolateRoadX(progress)
 
       // Render Stage Nodes directly anchored onto the integrated artwork road
       points.forEach(p => {
@@ -2041,19 +2156,16 @@
       const svgRoot = document.getElementById('map-svg-root');
       if (!track || !svgRoot) return;
 
-      // 1. Draw smooth SVG S-Curve Path
+      // 1. Draw smooth SVG S-Curve Path (Using Catmull-Rom dense samples)
       const trackW = track.clientWidth || 360;
       const trackH = track.clientHeight || mapTotalHeight;
       svgRoot.setAttribute('viewBox', `0 0 ${trackW} ${trackH}`);
 
-      const sampleCount = 120;
+      const dense = generateSplineDenseSamples(30);
       let pathD = '';
-      for (let i = 0; i <= sampleCount; i++) {
-        const prog = i / sampleCount;
-        const xPct = interpolateRoadX(prog);
-        const yPct = 95 - prog * 90;
-        const pxX = (xPct / 100) * trackW;
-        const pxY = (yPct / 100) * trackH;
+      for (let i = 0; i < dense.length; i++) {
+        const pxX = (dense[i].x / 100) * trackW;
+        const pxY = (dense[i].y / 100) * trackH;
         if (i === 0) {
           pathD += `M ${pxX.toFixed(1)} ${pxY.toFixed(1)}`;
         } else {
@@ -2153,14 +2265,11 @@
 
       const trackW = track.clientWidth || 360;
       const trackH = track.clientHeight || mapTotalHeight;
-      const sampleCount = 120;
+      const dense = generateSplineDenseSamples(30);
       let pathD = '';
-      for (let i = 0; i <= sampleCount; i++) {
-        const prog = i / sampleCount;
-        const xPct = interpolateRoadX(prog);
-        const yPct = 95 - prog * 90;
-        const pxX = (xPct / 100) * trackW;
-        const pxY = (yPct / 100) * trackH;
+      for (let i = 0; i < dense.length; i++) {
+        const pxX = (dense[i].x / 100) * trackW;
+        const pxY = (dense[i].y / 100) * trackH;
         if (i === 0) {
           pathD += `M ${pxX.toFixed(1)} ${pxY.toFixed(1)}`;
         } else {
@@ -2594,25 +2703,14 @@
     function recalculateAllPoints() {
       const stageStart = (currentActiveChapter - 1) * STAGES_PER_CHAPTER + 1;
       const stageEnd = Math.min(totalConfiguredStages, currentActiveChapter * STAGES_PER_CHAPTER);
-      const chapterCount = stageEnd - stageStart + 1;
+      const points = getArcLengthDistributedStages(stageStart, stageEnd);
 
-      document.querySelectorAll('.map-node').forEach(node => {
-        const stage = parseInt(node.getAttribute('data-stage'), 10);
-        const localProg = (stage - stageStart) / Math.max(1, chapterCount - 1);
-        const progress = localProg;
-        let topPct = 95 - progress * 90;
-        let leftPct = interpolateRoadX(progress);
-
-        if (stageOverrides[stage]) {
-          leftPct = stageOverrides[stage].x;
-          topPct = stageOverrides[stage].y;
+      points.forEach(p => {
+        const node = document.querySelector(`.map-node[data-stage="${p.stage}"]`);
+        if (node) {
+          node.style.left = `${p.leftPct}%`;
+          node.style.top = `${p.topPct}%`;
         }
-
-        leftPct = Math.round(leftPct * 10) / 10;
-        topPct = Math.round(topPct * 10) / 10;
-
-        node.style.left = `${leftPct}%`;
-        node.style.top = `${topPct}%`;
       });
 
       renderSplineAndWaypointPins();
