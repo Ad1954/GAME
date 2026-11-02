@@ -212,19 +212,22 @@
     }
     .wb-wp-item {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
+      flex-direction: column;
+      gap: 4px;
       font-size: 0.80rem;
-      padding: 4px 6px;
+      padding: 6px 8px;
       border-bottom: 1px solid #1e293b;
+      background: rgba(15, 23, 42, 0.4);
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+    .wb-wp-item:hover {
+      background: rgba(30, 41, 59, 0.6);
     }
     .wb-wp-item span.wp-label {
-      width: 140px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      font-weight: 700;
       color: #e2e8f0;
+      font-size: 0.78rem;
     }
     .wb-wp-item input[type="range"] {
       flex: 1;
@@ -236,6 +239,13 @@
       text-align: right;
       font-weight: 800;
       color: #38bdf8;
+    }
+    @keyframes wpFlash {
+      0% { border: 1px solid #fbbf24; background: rgba(251, 191, 36, 0.25); box-shadow: 0 0 10px rgba(251, 191, 36, 0.6); }
+      100% { border: 1px solid transparent; background: rgba(15, 23, 42, 0.4); box-shadow: none; }
+    }
+    .wp-highlight-flash {
+      animation: wpFlash 1.6s ease-out;
     }
     .wb-alert-box {
       background: rgba(30, 41, 59, 0.85);
@@ -1618,9 +1628,9 @@
       </div>
 
       <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-        <div class="wb-section-title">📍 關鍵轉折頂點 X 軸位置 (Waypoints)</div>
-        <button class="cr-btn cr-btn-blue" style="width:auto; padding:4px 10px; font-size:0.82rem; min-height:28px;" onclick="addNewWaypoint()" title="在目前選中關卡高度插入新錨點">
-          ➕ 新增頂點
+        <div class="wb-section-title">📍 關鍵轉折頂點骨架 (Waypoints Spline)</div>
+        <button class="cr-btn cr-btn-blue" style="width:auto; padding:4px 10px; font-size:0.82rem; min-height:28px;" onclick="addNewWaypointAtViewportCenter()" title="在左側手機可視視野中央高度新增頂點 (➕ 新增頂點)">
+          ➕ 在視野中心新增頂點
         </button>
       </div>
       <div class="wb-waypoints-list" id="wb-waypoints-container" style="min-height:160px;">
@@ -1939,12 +1949,6 @@
       }, 150);
     }
 
-      // Auto-scroll to Current Frontier Node
-      setTimeout(() => {
-        scrollToFrontier(false);
-      }, 150);
-    }
-
     function createChapterLandmark(text, x, y) {
       const el = document.createElement('div');
       el.className = 'chapter-landmark';
@@ -2079,13 +2083,31 @@
         ROAD_WAYPOINTS.forEach((wp, idx) => {
           const item = document.createElement('div');
           item.className = 'wb-wp-item';
-          const canDelete = ROAD_WAYPOINTS.length > 2;
+          item.id = `wp-item-${idx}`;
+          const isEndpoint = (idx === 0 || idx === ROAD_WAYPOINTS.length - 1);
+          const canDelete = ROAD_WAYPOINTS.length > 2 && !isEndpoint;
+          const canInsertMid = idx < ROAD_WAYPOINTS.length - 1;
           const displayLabel = wp.label || `W${idx+1} (${Math.round((wp.p !== undefined ? wp.p : 0) * 100)}%)`;
+
           item.innerHTML = `
-            <span class="wp-label" title="${displayLabel}">${displayLabel}</span>
-            <input type="range" min="10" max="90" step="1" value="${wp.x}" oninput="onWaypointXChanged(${idx}, this.value)">
-            <span class="wp-val" id="wp-val-${idx}">${wp.x}%</span>
-            ${canDelete ? `<button class="wb-nudge-btn" style="color:#ef4444; border-color:#7f1d1d; min-width:24px; height:24px; padding:0; font-size:0.75rem;" onclick="deleteWaypoint(${idx})" title="刪除此頂點">✖</button>` : ''}
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+              <span class="wp-label" title="${displayLabel}">${displayLabel}</span>
+              <div style="display:flex; gap:4px; align-items:center;">
+                ${canInsertMid ? `<button class="wb-nudge-btn" style="color:#38bdf8; border-color:#0284c7; min-width:38px; height:22px; padding:0 4px; font-size:0.7rem;" onclick="insertWaypointAfter(${idx})" title="在此頂點與下一頂點中間插入中點">➕中點</button>` : ''}
+                ${canDelete ? `<button class="wb-nudge-btn" style="color:#ef4444; border-color:#7f1d1d; min-width:22px; height:22px; padding:0; font-size:0.75rem;" onclick="deleteWaypoint(${idx})" title="刪除此頂點">✖</button>` : ''}
+              </div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; width:100%;">
+              <span style="font-size:0.72rem; color:#94a3b8; width:34px;">X偏轉</span>
+              <input type="range" min="10" max="90" step="1" value="${wp.x}" oninput="onWaypointXChanged(${idx}, this.value)">
+              <span class="wp-val" id="wp-val-${idx}">${wp.x}%</span>
+            </div>
+            ${(!isEndpoint) ? `
+            <div style="display:flex; gap:8px; align-items:center; width:100%;">
+              <span style="font-size:0.72rem; color:#fbbf24; width:34px;">Y高度</span>
+              <input type="range" min="1" max="99" step="1" value="${Math.round(wp.p * 100)}" onchange="onWaypointYChanged(${idx}, this.value)" oninput="document.getElementById('wp-pval-${idx}').textContent=this.value+'%'">
+              <span class="wp-val" id="wp-pval-${idx}" style="color:#fbbf24;">${Math.round(wp.p * 100)}%</span>
+            </div>` : ''}
           `;
           wpContainer.appendChild(item);
         });
@@ -2160,24 +2182,89 @@
       showToast(`📖 已切換至第 ${currentActiveChapter} 章 (STAGE ${stageStart} ~ ${Math.min(totalConfiguredStages, currentActiveChapter * STAGES_PER_CHAPTER)}) 進行路徑編輯！`);
     }
 
-    function addNewWaypoint() {
-      const stageStart = (currentActiveChapter - 1) * STAGES_PER_CHAPTER + 1;
-      const stageEnd = Math.min(totalConfiguredStages, currentActiveChapter * STAGES_PER_CHAPTER);
-      const chapterCount = stageEnd - stageStart + 1;
-      const localProg = (selectedTuningStage - stageStart) / Math.max(1, chapterCount - 1);
-      const roundedProg = Math.round(localProg * 100) / 100;
-      const currentX = interpolateRoadX(roundedProg);
+    function addNewWaypointAtViewportCenter() {
+      const box = document.getElementById('map-scroll-box');
+      const track = document.getElementById('map-track');
+      if (!box || !track) return;
 
-      ROAD_WAYPOINTS.push({
-        p: roundedProg,
-        x: Math.round(currentX),
-        label: `自訂轉折 (S${selectedTuningStage})`
-      });
+      const centerWorldY = box.scrollTop + (box.clientHeight / 2);
+      const totalH = Math.max(1, track.scrollHeight || mapTotalHeight);
+      const currentTopPct = (centerWorldY / totalH) * 100;
+      let prog = (95 - currentTopPct) / 90;
+      prog = Math.max(0.02, Math.min(0.98, Math.round(prog * 100) / 100));
 
+      if (ROAD_WAYPOINTS.some(w => Math.abs(w.p - prog) < 0.015)) {
+        prog = Math.min(0.98, Math.round((prog + 0.03) * 100) / 100);
+      }
+
+      const currentX = Math.round(interpolateRoadX(prog));
+      const newWp = {
+        p: prog,
+        x: currentX,
+        label: `視野錨點 (${Math.round(prog * 100)}%)`
+      };
+      ROAD_WAYPOINTS.push(newWp);
       ROAD_WAYPOINTS.sort((a, b) => a.p - b.p);
+
+      saveCustomPath();
       initWorkbenchControls();
       recalculateAllPoints();
-      showToast(`➕ 已在 STAGE ${selectedTuningStage} 高度新增轉折頂點！`);
+
+      const newIdx = ROAD_WAYPOINTS.indexOf(newWp);
+      const targetEl = document.getElementById(`wp-item-${newIdx}`);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        targetEl.classList.add('wp-highlight-flash');
+        setTimeout(() => targetEl.classList.remove('wp-highlight-flash'), 1800);
+      }
+      showToast(`➕ 已在可視視野中心 (高度 ${Math.round(prog * 100)}%) 插入新轉折頂點！`);
+    }
+
+    function addNewWaypoint() {
+      addNewWaypointAtViewportCenter();
+    }
+
+    function insertWaypointAfter(idx) {
+      if (idx < 0 || idx >= ROAD_WAYPOINTS.length - 1) {
+        showToast('⚠️ 無法在終點之後插入！');
+        return;
+      }
+      const p1 = ROAD_WAYPOINTS[idx].p;
+      const p2 = ROAD_WAYPOINTS[idx + 1].p;
+      const midP = Math.round(((p1 + p2) / 2) * 100) / 100;
+      const midX = Math.round(interpolateRoadX(midP));
+      const newWp = {
+        p: midP,
+        x: midX,
+        label: `切分錨點 (${Math.round(midP * 100)}%)`
+      };
+      ROAD_WAYPOINTS.splice(idx + 1, 0, newWp);
+      ROAD_WAYPOINTS.sort((a, b) => a.p - b.p);
+
+      saveCustomPath();
+      initWorkbenchControls();
+      recalculateAllPoints();
+
+      const newIdx = ROAD_WAYPOINTS.indexOf(newWp);
+      const targetEl = document.getElementById(`wp-item-${newIdx}`);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        targetEl.classList.add('wp-highlight-flash');
+        setTimeout(() => targetEl.classList.remove('wp-highlight-flash'), 1800);
+      }
+      showToast(`➕ 已在第 ${idx + 1} 與 ${idx + 2} 頂點中間插入切分點！`);
+    }
+
+    function onWaypointYChanged(idx, val) {
+      val = parseFloat(val);
+      const newProg = Math.max(0.01, Math.min(0.99, Math.round(val) / 100));
+      ROAD_WAYPOINTS[idx].p = newProg;
+      ROAD_WAYPOINTS[idx].label = `調整錨點 (${Math.round(newProg * 100)}%)`;
+      ROAD_WAYPOINTS.sort((a, b) => a.p - b.p);
+      saveCustomPath();
+      initWorkbenchControls();
+      recalculateAllPoints();
+      showToast(`↕️ 已將頂點高度更新為 ${Math.round(newProg * 100)}% 並自動重排序！`);
     }
 
     function deleteWaypoint(idx) {
@@ -2185,7 +2272,12 @@
         alert('至少需保留 2 個端點錨點！');
         return;
       }
+      if (idx === 0 || idx === ROAD_WAYPOINTS.length - 1) {
+        alert('起點與終點錨點受到防護，不可刪除！');
+        return;
+      }
       const removed = ROAD_WAYPOINTS.splice(idx, 1);
+      saveCustomPath();
       initWorkbenchControls();
       recalculateAllPoints();
       showToast(`🗑️ 已移除頂點：${removed[0].label || '自訂頂點'}`);

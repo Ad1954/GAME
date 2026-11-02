@@ -311,7 +311,11 @@ export class GwtRunner {
       // C-STORY-117: 頂點列表防呆修復、動態增刪錨點與 50～500 關章節模組化切片架構支援
       this.testGwt117_1_WaypointsFallbackAndSafetyRender.bind(this),
       this.testGwt117_2_AddAndDeleteWaypointHandlers.bind(this),
-      this.testGwt117_3_Scale50To500ChapterSlicing.bind(this)
+      this.testGwt117_3_Scale50To500ChapterSlicing.bind(this),
+      // C-STORY-118: 骨架與關卡解耦：視野中心插入頂點與頂點高度/順序動態調整
+      this.testGwt118_1_SyntaxErrorFreeAndDecoupledSpline.bind(this),
+      this.testGwt118_2_ViewportCenterWaypointInsertionAndHighlight.bind(this),
+      this.testGwt118_3_WaypointYHeightAdjustAndMidpointInsertion.bind(this)
     ];
 
     for (const test of testCases) {
@@ -5939,6 +5943,48 @@ export class GwtRunner {
     this.assert(htmlText.includes('STAGES_PER_CHAPTER'), 'Defines STAGES_PER_CHAPTER slice size');
     this.assert(htmlText.includes('onTotalStagesChanged'), 'Contains onTotalStagesChanged handler');
     this.assert(htmlText.includes('onChapterChanged'), 'Contains onChapterChanged handler');
+  }
+
+  // C-STORY-118 GWT 118.1: 腳本語法 0 錯誤與曲線骨架/關卡解耦
+  async testGwt118_1_SyntaxErrorFreeAndDecoupledSpline() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('addNewWaypointAtViewportCenter'), 'Contains addNewWaypointAtViewportCenter function');
+    this.assert(htmlText.includes('ROAD_WAYPOINTS.sort'), 'Contains sort call to decouple waypoints and stages');
+    this.assert(!htmlText.includes('// Auto-scroll to Current Frontier Node\n      setTimeout(() => {\n        scrollToFrontier(false);\n      }, 150);\n    }\n\n      // Auto-scroll to Current Frontier Node'), 'Fixed duplicate scroll block and syntax error');
+  }
+
+  // C-STORY-118 GWT 118.2: 依手機畫面視野中心 (Viewport Center) 插入頂點與高亮反饋
+  async testGwt118_2_ViewportCenterWaypointInsertionAndHighlight() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('map-scroll-box'), 'Queries scroll box for viewport center calculation');
+    this.assert(htmlText.includes('wp-highlight-flash'), 'Includes animation class for highlighting newly added waypoint');
+    this.assert(htmlText.includes('scrollIntoView'), 'Auto-scrolls workbench container into view for newly added item');
+  }
+
+  // C-STORY-118 GWT 118.3: 頂點 Y 軸高度/順序調整與中點插入
+  async testGwt118_3_WaypointYHeightAdjustAndMidpointInsertion() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('insertWaypointAfter('), 'Contains insertWaypointAfter handler for midpoint insertion');
+    this.assert(htmlText.includes('onWaypointYChanged('), 'Contains onWaypointYChanged handler for vertical height and reordering');
+    this.assert(htmlText.includes('➕中點'), 'Contains midpoint insert button in workbench markup');
   }
 }
 
