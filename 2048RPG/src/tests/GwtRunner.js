@@ -327,7 +327,12 @@ export class GwtRunner {
       // C-STORY-121: 地圖與工作台雙向錨點名稱同步與點擊捲動置中聚焦聯動
       this.testGwt121_1_UnifiedWaypointLabelsSync.bind(this),
       this.testGwt121_2_MapPinToWorkbenchScrollFocus.bind(this),
-      this.testGwt121_3_WorkbenchToMapPinScrollFocus.bind(this)
+      this.testGwt121_3_WorkbenchToMapPinScrollFocus.bind(this),
+      // C-STORY-122: 皇室戰爭風格商業化主架構 (UI Concept v2.0)
+      this.testGwt122_1_FiveNavTabsAndVisualFlourish.bind(this),
+      this.testGwt122_2_AdventureHubQuickSwitchAndDetailModal.bind(this),
+      this.testGwt122_3_LargeHitboxHeroCardAndVideoModal.bind(this),
+      this.testGwt122_4_DesignSystemButtonColorMatrix.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6122,6 +6127,70 @@ export class GwtRunner {
     this.assert(htmlText.includes('focusWaypointFromList('), 'Defines focusWaypointFromList function for workbench interaction');
     this.assert(htmlText.includes('box.scrollTo({'), 'Calculates target pixel height and smoothly scrolls map viewport');
     this.assert(htmlText.includes('onfocus="focusWaypointFromList('), 'Binds input range sliders to trigger bidirectional focus');
+  }
+
+  // C-STORY-122 GWT 122.1: 5 大主頁籤切換與圖案視覺襯托 (Shop, Camp, Hub, Gear, Compendium)
+  async testGwt122_1_FiveNavTabsAndVisualFlourish() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('switchMainTab('), 'Defines switchMainTab for 5 navigation tabs');
+    this.assert(htmlText.includes('view-shop'), 'Contains Shop view markup');
+    this.assert(htmlText.includes('view-camp'), 'Contains Camp/Armory view markup');
+    this.assert(htmlText.includes('view-adventure'), 'Contains Adventure battle hub markup');
+    this.assert(htmlText.includes('view-gear'), 'Contains Gear & Hero dual subtabs');
+    this.assert(htmlText.includes('view-compendium'), 'Contains Compendium catalog markup');
+  }
+
+  // C-STORY-122 GWT 122.2: 冒險主頁關卡焦點、換關抽屜與關卡詳細彈窗
+  async testGwt122_2_AdventureHubQuickSwitchAndDetailModal() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('openQuickStageDrawer()'), 'Defines openQuickStageDrawer for chapter & stage grid switching');
+    this.assert(htmlText.includes('openStageDetailModal()'), 'Defines openStageDetailModal for brief info bar trigger');
+    this.assert(htmlText.includes('MAX_UNLOCKED_STAGE'), 'Enforces progression gate preventing selecting locked stages');
+    this.assert(htmlText.includes('changeStageByStep('), 'Handles step-by-step previous/next stage switching with boundaries');
+  }
+
+  // C-STORY-122 GWT 122.3: 英雄卡片超大熱區與實機技能循環影片彈窗
+  async testGwt122_3_LargeHitboxHeroCardAndVideoModal() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('hero-hitbox-upper'), 'Defines large upper hitbox encompassing name, avatar and skill');
+    this.assert(htmlText.includes('openHeroDetailModal('), 'Upper hitbox triggers openHeroDetailModal');
+    this.assert(htmlText.includes('skill_warrior_demo.mp4'), 'Embeds real gameplay video demo for warrior skill');
+    this.assert(htmlText.includes('hero-actions-lower'), 'Lower actions contain independent deploy & upgrade buttons');
+  }
+
+  // C-STORY-122 GWT 122.4: 嚴格 Design System 按鈕色調矩陣與字級模板
+  async testGwt122_4_DesignSystemButtonColorMatrix() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('.cr-btn-blue'), 'Standardized blue combat/deploy button');
+    this.assert(htmlText.includes('.cr-btn-green'), 'Standardized green confirm/upgrade button');
+    this.assert(htmlText.includes('.cr-btn-amber'), 'Standardized amber active/in-use button');
+    this.assert(htmlText.includes('.cr-btn-purple'), 'Standardized purple auxiliary/unequip button');
+    this.assert(htmlText.includes('.cr-btn-disabled'), 'Standardized disabled/maxed button');
+    this.assert(htmlText.includes('--font-display:'), 'Defines typography template scale');
   }
 }
 
