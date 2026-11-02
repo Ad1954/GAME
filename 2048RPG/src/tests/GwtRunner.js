@@ -287,7 +287,31 @@ export class GwtRunner {
       // C-STORY-108: 破壞戰槌規則調優（排除魔物/英雄 ＆ 點選金幣智慧直接兌現且不耗戰槌）
       this.testGwt108_1_HammerBlocksMonsterAndHero.bind(this),
       this.testGwt108_2_HammerSmashesEquipmentAndConsumesHammer.bind(this),
-      this.testGwt108_3_HammerGoldTileSmartCashOutWithoutConsumingHammer.bind(this)
+      this.testGwt108_3_HammerGoldTileSmartCashOutWithoutConsumingHammer.bind(this),
+      // C-STORY-109: 獨立實機概念樣板展示頁 (5大底欄、手遊字級、單一關卡推進軸)
+      this.testGwt109_1_PrototypeShowcaseFileExistsAndIsolated.bind(this),
+      this.testGwt109_2_PrototypeHeroicBattleButtonWithoutRedundantText.bind(this),
+      this.testGwt109_3_PrototypeTypographyAndSafeAreaStandards.bind(this),
+      // C-STORY-111: 冒險首頁「連續蜿蜒大地圖路徑」獨立實機概念樣板 (S-Curve Road Map)
+      this.testGwt111_1_ContinuousRoadMapStructureAndSvgTrack.bind(this),
+      this.testGwt111_2_StageNodeStatesAndFrontierAutoScroll.bind(this),
+      this.testGwt111_3_StageBottomSheetBriefingCard.bind(this),
+      // C-STORY-113: 固定世界畫布與一體化原畫連動圖釘模式 (Fixed World Canvas & Integrated Art Pins)
+      this.testGwt113_1_IntegratedArtWorldCanvas.bind(this),
+      this.testGwt113_2_FixedWorldCanvasPinAnchoring.bind(this),
+      this.testGwt113_3_ResponsiveUniformScaleAndZeroDrift.bind(this),
+      // C-STORY-114: 冒險地圖世界畫布石板路徑航點精準校正 (Adventure Map Cobblestone Path Waypoint Calibration)
+      this.testGwt114_1_WaypointArrayDefinedAndUsed.bind(this),
+      this.testGwt114_2_DesertCurveStagesSitOnRightCliff.bind(this),
+      this.testGwt114_3_ZeroPixelDriftAndSmoothInterpolation.bind(this),
+      // C-STORY-116: PC 寬螢幕雙欄「地圖軌跡視覺工作台」（粗略頂點設定 + 精細滑鼠拖曳放置雙頁籤）
+      this.testGwt116_1_SplitLayoutAndWorkbenchContainer.bind(this),
+      this.testGwt116_2_CoarseTuningTabAndWaypointsSliders.bind(this),
+      this.testGwt116_3_FineTuningDragAndLocalStoragePersistence.bind(this),
+      // C-STORY-117: 頂點列表防呆修復、動態增刪錨點與 50～500 關章節模組化切片架構支援
+      this.testGwt117_1_WaypointsFallbackAndSafetyRender.bind(this),
+      this.testGwt117_2_AddAndDeleteWaypointHandlers.bind(this),
+      this.testGwt117_3_Scale50To500ChapterSlicing.bind(this)
     ];
 
     for (const test of testCases) {
@@ -5649,6 +5673,272 @@ export class GwtRunner {
     this.assert(sm.gold === 300 + 64, `Total gold should increase by 64 (got ${sm.gold})`);
     this.assert(sm.board.getTile(2, 2) === null, 'Gold cell (2, 2) is now empty space');
     this.assert(sm.items.hammer === 2, `Hammer count MUST NOT be consumed (remains 2, got ${sm.items.hammer})`);
+  }
+
+  // =========================================================================
+  // C-STORY-109: 獨立實機概念樣板展示頁 (5大底欄、手遊字級、單一關卡推進軸)
+  // =========================================================================
+
+  // GWT 109.1: 獨立實機概念樣板頁面存在、具備5大分頁且完全零污染主程式
+  async testGwt109_1_PrototypeShowcaseFileExistsAndIsolated() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.length > 0, 'ui_prototype_showcase.html must exist and be readable');
+    this.assert(htmlText.includes('id="view-shop"'), 'Must contain Shop tab view (view-shop)');
+    this.assert(htmlText.includes('id="view-armory"'), 'Must contain Armory tab view (view-armory)');
+    this.assert(htmlText.includes('id="view-adventure"'), 'Must contain Adventure tab view (view-adventure)');
+    this.assert(htmlText.includes('id="view-heroes"'), 'Must contain Heroes tab view (view-heroes)');
+    this.assert(htmlText.includes('id="view-archive"'), 'Must contain Archive tab view (view-archive)');
+  }
+
+  // GWT 109.2: 冒險主畫面具備簡潔純粹的【⚔️ 開始遠征】按鈕且無囉嗦括號說明
+  async testGwt109_2_PrototypeHeroicBattleButtonWithoutRedundantText() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('⚔️ 開始遠征'), 'Battle button must display ⚔️ 開始遠征');
+    this.assert(!htmlText.includes('⚔️ 開始遠征 (❤️ 體力: 5/5'), 'Battle button must NOT have redundant bracket text');
+  }
+
+  // GWT 109.3: 樣板遵循 v6.0 手遊大字級標準與 Safe Area 安全避讓
+  async testGwt109_3_PrototypeTypographyAndSafeAreaStandards() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('env(safe-area-inset-top)'), 'Must include safe-area-inset-top');
+    this.assert(htmlText.includes('env(safe-area-inset-bottom)'), 'Must include safe-area-inset-bottom');
+    this.assert(htmlText.includes('--font-btn'), 'Must define standardized button typography token');
+    this.assert(htmlText.includes('--font-caption'), 'Must define standardized caption typography token');
+  }
+
+  // =========================================================================
+  // C-STORY-111: 冒險首頁「連續蜿蜒大地圖路徑」獨立實機概念樣板 (S-Curve Road Map)
+  // =========================================================================
+
+  // GWT 111.1: 獨立樣板具備 S 型連續蜿蜒道路 (SVG Path Track & Map Scroll Box)
+  async testGwt111_1_ContinuousRoadMapStructureAndSvgTrack() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('class="map-scroll-viewport"'), 'Must contain map-scroll-viewport for smooth scrolling');
+    this.assert(htmlText.includes('class="map-road-track"'), 'Must contain map-road-track container');
+    this.assert(htmlText.includes('class="map-svg-path"'), 'Must contain map-svg-path element for S-curve line');
+    this.assert(htmlText.includes('TOTAL_MAP_STAGES'), 'Script defines total stages on continuous map');
+    this.assert(htmlText.includes('ROAD_AMPLITUDE'), 'Script defines S-curve wave amplitude');
+  }
+
+  // GWT 111.2: 關卡節點狀態具備已通關(cleared)、當前進度(current)與鎖定(locked)
+  async testGwt111_2_StageNodeStatesAndFrontierAutoScroll() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('.map-node.cleared'), 'CSS defines cleared golden node with 3 stars');
+    this.assert(htmlText.includes('.map-node.current'), 'CSS defines current pulsing frontier node');
+    this.assert(htmlText.includes('.map-node.locked'), 'CSS defines locked future node');
+    this.assert(htmlText.includes('hero-frontier-badge'), 'Contains hero-frontier-badge for active progress indicator');
+    this.assert(htmlText.includes('scrollToFrontier'), 'Contains scrollToFrontier function for auto centering');
+  }
+
+  // GWT 111.3: 點擊地圖節點具備底部彈出簡報卡 (Stage Bottom Sheet) 與快速回刷出擊
+  async testGwt111_3_StageBottomSheetBriefingCard() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('class="stage-bottom-sheet"'), 'Must contain stage-bottom-sheet for quick replay');
+    this.assert(htmlText.includes('id="sheet-stage-name"'), 'Must contain sheet-stage-name for stage title');
+    this.assert(htmlText.includes('id="sheet-boss-avatar"'), 'Must contain sheet-boss-avatar for monster preview');
+    this.assert(htmlText.includes('launchSelectedStage()'), 'Contains launchSelectedStage function to launch mission');
+  }
+
+  // C-STORY-113 GWT 113.1: 一體化原畫世界畫布 (Integrated Landscape Artwork & Track Background)
+  async testGwt113_1_IntegratedArtWorldCanvas() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('assets/images/map_integrated_world_road.jpg'), 'Must link to map_integrated_world_road.jpg in track background');
+    this.assert(htmlText.includes('.map-road-track'), 'Track acts as the fixed virtual world canvas');
+  }
+
+  // C-STORY-113 GWT 113.2: 固定世界座標系與圖釘錨定 (Fixed World Canvas & Percentage Anchors)
+  async testGwt113_2_FixedWorldCanvasPinAnchoring() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('node.style.left = `${p.leftPct}%`'), 'Stage nodes use percentage anchors for left positioning');
+    this.assert(htmlText.includes('node.style.top = `${p.topPct}%`'), 'Stage nodes use percentage anchors for top positioning');
+  }
+
+  // C-STORY-113 GWT 113.3: 跨螢幕等比自適應與零跑位 (Uniform Scale & Seamless Scrolling)
+  async testGwt113_3_ResponsiveUniformScaleAndZeroDrift() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('max-width: 500px'), 'Track has centered max-width constraint for uniform mobile frame');
+    this.assert(htmlText.includes('scrollToFrontier'), 'Retains smooth frontier scroll behavior in world viewport');
+  }
+
+  // C-STORY-114 GWT 114.1: 實體石板路徑航點取樣與平滑樣條插值
+  async testGwt114_1_WaypointArrayDefinedAndUsed() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('ROAD_WAYPOINTS'), 'Defines calibrated ROAD_WAYPOINTS array');
+    this.assert(htmlText.includes('interpolateRoadX'), 'Implements interpolateRoadX smooth spline interpolation');
+  }
+
+  // C-STORY-114 GWT 114.2: 沙漠區段（19～25 關）精準吸附右側石板路
+  async testGwt114_2_DesertCurveStagesSitOnRightCliff() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('{ p: 0.48, x: 76 }') || htmlText.includes('x: 76'), 'Stage 25 calibrated waypoint set to 76% on right cliff road');
+  }
+
+  // C-STORY-114 GWT 114.3: 等比自適應與零跑位驗證
+  async testGwt114_3_ZeroPixelDriftAndSmoothInterpolation() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('Math.cos(t * Math.PI)'), 'Uses smooth cosine transition for zero jagged corners');
+    this.assert(htmlText.includes('leftPct = interpolateRoadX(progress)'), 'Stage loop invokes interpolateRoadX for accurate pin positioning');
+  }
+
+  // C-STORY-116 GWT 116.1: PC 寬螢幕雙欄響應式佈局與工作台容器
+  async testGwt116_1_SplitLayoutAndWorkbenchContainer() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('class="showcase-workspace"'), 'Must contain showcase-workspace container for PC split layout');
+    this.assert(htmlText.includes('id="path-workbench"'), 'Must contain path-workbench aside panel');
+    this.assert(htmlText.includes('class="wb-tabs-nav"'), 'Must contain wb-tabs-nav for tab switching');
+  }
+
+  // C-STORY-116 GWT 116.2: 粗略設定頁籤與頂點滑桿
+  async testGwt116_2_CoarseTuningTabAndWaypointsSliders() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('id="wb-tab-coarse"'), 'Must contain wb-tab-coarse tab content');
+    this.assert(htmlText.includes('id="rng-map-height"'), 'Must contain rng-map-height for total map height slider');
+    this.assert(htmlText.includes('onWaypointXChanged'), 'Contains onWaypointXChanged handler for dynamic waypoint tuning');
+    this.assert(htmlText.includes('recalculateAllPoints()'), 'Contains recalculateAllPoints function to apply spline changes');
+  }
+
+  // C-STORY-116 GWT 116.3: 精細設定頁籤、滑鼠直接拖曳與 LocalStorage 持久化
+  async testGwt116_3_FineTuningDragAndLocalStoragePersistence() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('id="wb-tab-fine"'), 'Must contain wb-tab-fine tab content');
+    this.assert(htmlText.includes('setPointerCapture'), 'Supports pointer capture for direct mouse drag-and-drop');
+    this.assert(htmlText.includes('saveCustomPath()'), 'Contains saveCustomPath function for persistence');
+    this.assert(htmlText.includes('copyPathCode()'), 'Contains copyPathCode function to export JavaScript array');
+    this.assert(htmlText.includes('resetPathToDefault()'), 'Contains resetPathToDefault function to restore factory defaults');
+  }
+
+  // C-STORY-117 GWT 117.1: 頂點列表防呆還原與可視化渲染
+  async testGwt117_1_WaypointsFallbackAndSafetyRender() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('DEFAULT_ROAD_WAYPOINTS'), 'Defines DEFAULT_ROAD_WAYPOINTS fallback');
+    this.assert(htmlText.includes('ROAD_WAYPOINTS.length < 2'), 'Includes fallback check when waypoints array is missing or empty');
+    this.assert(htmlText.includes('wb-waypoints-container'), 'Contains wb-waypoints-container element');
+  }
+
+  // C-STORY-117 GWT 117.2: 動態新增與刪除自訂頂點
+  async testGwt117_2_AddAndDeleteWaypointHandlers() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('addNewWaypoint()'), 'Contains addNewWaypoint function to insert anchor');
+    this.assert(htmlText.includes('deleteWaypoint('), 'Contains deleteWaypoint function to remove anchor');
+    this.assert(htmlText.includes('➕ 新增頂點'), 'Contains Add Waypoint button in workbench markup');
+  }
+
+  // C-STORY-117 GWT 117.3: 50～500 關章節切片架構支援
+  async testGwt117_3_Scale50To500ChapterSlicing() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('id="sel-total-stages"'), 'Contains total stages scale selector (50~500)');
+    this.assert(htmlText.includes('id="sel-active-chapter"'), 'Contains active chapter selector');
+    this.assert(htmlText.includes('STAGES_PER_CHAPTER'), 'Defines STAGES_PER_CHAPTER slice size');
+    this.assert(htmlText.includes('onTotalStagesChanged'), 'Contains onTotalStagesChanged handler');
+    this.assert(htmlText.includes('onChapterChanged'), 'Contains onChapterChanged handler');
   }
 }
 

@@ -68,6 +68,7 @@ def run_pipeline(tag):
         "index.html", "main.js", "README.md", "runner.html", "run_gwt_tests.py",
         "server.py", "style.css", "visual_tuning.css", "visual_tuning.json",
         "economy_studio.html", "economy_350_stages.csv", "raw_game_data_5tables.csv",
+        "ui_prototype_showcase.html",
         "review_equip_evolution.html", "review_knight_evolution.html",
         "review_samurai_evolution.html", "review_style_matrix_512.html",
         "review_style_tests.html", "review_tiles_matrix.html", "review_weapons.html",
