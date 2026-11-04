@@ -337,7 +337,13 @@ export class GwtRunner {
       this.testGwt123_1_AdventureHubLayoutAndStaminaRule.bind(this),
       this.testGwt123_2_ArmoryGachaAndStoreNoAdsBanner.bind(this),
       this.testGwt123_3_EquipmentHubReadabilityAndTileSync.bind(this),
-      this.testGwt123_4_CompendiumMultiTabAndEmptySlots.bind(this)
+      this.testGwt123_4_CompendiumMultiTabAndEmptySlots.bind(this),
+      // C-STORY-124: 皇室戰爭風格 UI 商業規格精準收斂 (UI Spec Alignment)
+      this.testGwt124_1_ArmoryGachaDualPullsAndRealValues.bind(this),
+      this.testGwt124_2_AdventureTopIntegratedCapsuleAndCleanHub.bind(this),
+      this.testGwt124_3_StarlessQuickStageDrawer.bind(this),
+      this.testGwt124_4_HeroTwoColumnGridAndStateSync.bind(this),
+      this.testGwt124_5_HeroDetailPopupArtworkAndDeployButton.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6208,9 +6214,8 @@ export class GwtRunner {
       } catch (e) {}
     }
     this.assert(!htmlText.includes('消耗 1 點 ❤️ 體力'), 'Strictly removed erroneous stamina deduction display');
-    this.assert(htmlText.includes('僅戰敗扣 1 點'), 'Explicitly enforces correct stamina rule: deducted only upon defeat');
-    this.assert(htmlText.includes('hub-hud-sidebar'), 'Includes vertical HUD icon sidebar on left and right like Clash Royale');
-    this.assert(htmlText.includes('hub-stage-stepper'), 'Includes compact stage step navigation controls');
+    this.assert(!htmlText.includes('消耗 1 點'), 'Strictly no stamina deduction text under battle button');
+    this.assert(htmlText.includes('hub-hud-sidebar'), 'Includes vertical HUD icon sidebar on left and right');
   }
 
   // C-STORY-123 GWT 123.2: 軍備與商店功能整合 (Armory Gacha & Store Banner)
@@ -6256,6 +6261,80 @@ export class GwtRunner {
     this.assert(htmlText.includes('comp-empty-cell'), 'Defines transparent empty cell placeholder without ugly background boards');
     this.assert(htmlText.includes('comp-group-section'), 'Groups compendium items into chapter or tier sections');
     this.assert(htmlText.includes('comp-tip-box'), 'Includes helpful tip clarifying collection unlock requirements');
+  }
+
+  // C-STORY-124 GWT 124.1: 軍備與科技數值 100% 對齊遊戲真實規格 (Armory Exact Values)
+  async testGwt124_1_ArmoryGachaDualPullsAndRealValues() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('單抽 🪙100'), 'Gacha machine offers 100 gold single pull matching game engine');
+    this.assert(htmlText.includes('十連抽 🪙1000'), 'Gacha machine offers 1,000 gold 10x pull without arbitrary discounts');
+    this.assert(htmlText.includes('必得應急道具'), 'Gacha explicitly highlights 10x guaranteed emergency bonus item');
+    this.assert(htmlText.includes('擴充 🪙2000'), 'Backpack expansion cost matches calculateWarehouseExpansionCost(0) = 2000');
+  }
+
+  // C-STORY-124 GWT 124.2: 冒險主頁頂部換關整併與純淨出擊介面 (Top Stage Bar & Clean Battle Hub)
+  async testGwt124_2_AdventureTopIntegratedCapsuleAndCleanHub() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('hub-chapter-header-box'), 'Top chapter header integrated into single capsule');
+    this.assert(htmlText.includes('hub-stage-arrow-btn'), 'Integrated prev/next arrow buttons inside top capsule');
+    this.assert(!htmlText.includes('hub-stage-stepper'), 'Removed squeezed redundant stepper under arena card');
+    this.assert(!htmlText.includes('波次機制'), 'Removed fictitious wave mechanic descriptions from stage modal');
+    this.assert(!htmlText.includes('戰敗扣 1 ❤️'), 'Completely removed stamina deduction mentions from deploy buttons');
+  }
+
+  // C-STORY-124 GWT 124.3: 換關抽屜無星星純淨網格 (Starless Quick Stage Drawer)
+  async testGwt124_3_StarlessQuickStageDrawer() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(!htmlText.includes('⭐⭐⭐'), 'Stripped all stars from quick stage drawer pending future scoring design');
+    this.assert(htmlText.includes('drawer-cell'), 'Drawers cleanly display stage numbers');
+  }
+
+  // C-STORY-124 GWT 124.4: 英雄雙列垂直排版、出擊外框聯動與外觀同步 (Hero 2-Col Grid & State Sync)
+  async testGwt124_4_HeroTwoColumnGridAndStateSync() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('grid-template-columns: repeat(2, 1fr)'), 'Hero list laid out in a 2-column vertical grid');
+    this.assert(htmlText.includes('card-hero-warrior'), 'Hero warrior card defined with unique ID');
+    this.assert(htmlText.includes('card-hero-merchant'), 'Hero merchant card defined with unique ID');
+    this.assert(htmlText.includes('classList.add(\'active-deployed\')'), 'Active hero deployment properly toggles highlight border');
+    this.assert(htmlText.includes('升級 🪙5000'), 'Hero upgrade cost matches true Lv.1 -> Lv.2 game cost (5,000 gold)');
+  }
+
+  // C-STORY-124 GWT 124.5: 英雄詳細資訊彈窗立繪與出擊按鈕補齊 (Hero Detail Popup Artwork & Deploy Button)
+  async testGwt124_5_HeroDetailPopupArtworkAndDeployButton() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('modal-hero-portrait'), 'Hero detail modal displays full artwork portrait alongside video');
+    this.assert(htmlText.includes('modal-bottom-deploy-btn'), 'Hero detail modal includes prominent bottom deploy button');
+    this.assert(htmlText.includes('deployFromModal()'), 'Bottom deploy button triggers deployment and modal dismissal');
   }
 }
 
