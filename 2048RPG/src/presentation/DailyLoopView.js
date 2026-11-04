@@ -95,7 +95,17 @@ export class DailyLoopView {
           this.showFloatingText(`🎉 簽到成功！獲得 ${res.reward.desc}`, '#facc15');
           this.renderAll();
         } else {
-          this.showFloatingText('⚠️ 今日已完成簽到，明天再來吧！', '#94a3b8');
+          // C-STORY-125: When already claimed, clicking closes the modal!
+          this.closeSignInModal();
+        }
+      });
+    }
+
+    // C-STORY-125: Clicking backdrop or anywhere when already signed in closes sign-in modal
+    if (this.modalSignIn) {
+      this.modalSignIn.addEventListener('click', (e) => {
+        if (e.target === this.modalSignIn || (this.dailyLoopManager && !this.dailyLoopManager.hasSignInPending())) {
+          this.closeSignInModal();
         }
       });
     }

@@ -183,12 +183,19 @@
     .tab-view {
       display: none;
       min-height: 100%;
+      height: 100%;
       padding-bottom: 24px;
     }
 
     .tab-view.active {
       display: block;
       animation: tabFadeIn 0.25s ease-out;
+    }
+
+    #view-adventure.active {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
     }
 
     @keyframes tabFadeIn {
@@ -387,8 +394,10 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: space-evenly;
+      height: 100%;
       padding: 10px 14px;
-      gap: 12px;
+      gap: 10px;
     }
 
     /* Chapter Title Header Bar with Integrated Stepper (Image 3 Specification) */
@@ -480,11 +489,11 @@
       color: #fff;
     }
 
-    /* Arena Master Layout: Left HUD Icon + Center Arena + Right HUD Icon */
+    /* Arena Master Layout: Left HUD Icon + Center Arena + Right HUD Icon (Aligned with Top Edge per Image 5) */
     .hub-battlefield-layout {
       width: 100%;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
       gap: 8px;
       margin-top: 2px;
@@ -674,14 +683,18 @@
       gap: 14px;
     }
 
-    /* Sub-tabs switch (裝備 / 英雄) */
+    /* Sub-tabs switch (裝備 / 英雄) - Sticky Header */
     .sub-tabs-bar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
       display: flex;
       background: #090d16;
       border: 1.5px solid #334155;
       border-radius: 16px;
       padding: 4px;
       gap: 4px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
     }
 
     .sub-tab-btn {
@@ -1375,7 +1388,7 @@
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       gap: 8px;
-      max-height: 280px;
+      max-height: 320px;
       overflow-y: auto;
       padding: 4px;
     }
@@ -1393,24 +1406,115 @@
       font-size: var(--font-body);
       color: #f8fafc;
       cursor: pointer;
+      position: relative;
+      transition: all 0.15s ease;
     }
 
     .drawer-cell.cleared {
       border-color: #10b981;
       color: #34d399;
+      background: rgba(16, 185, 129, 0.1);
     }
 
-    .drawer-cell.current {
-      background: #0284c7;
-      border-color: #38bdf8;
-      color: #fff;
-      box-shadow: 0 0 10px #38bdf8;
+    .drawer-cell.progress {
+      border-color: #f59e0b;
+      color: #fbbf24;
+      background: rgba(245, 158, 11, 0.15);
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+    }
+
+    .drawer-cell.selected {
+      background: #0284c7 !important;
+      border-color: #38bdf8 !important;
+      color: #fff !important;
+      box-shadow: 0 0 14px #38bdf8, inset 0 0 6px #ffffff;
+      outline: 2px solid #38bdf8;
     }
 
     .drawer-cell.locked {
       opacity: 0.35;
       cursor: not-allowed;
       border-color: #1e293b;
+      color: #64748b;
+    }
+
+    /* 7-Day Sign-in Modal Styles (Aligned with Real Game) */
+    .signin-grid-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    .signin-reward-card {
+      background: #1e293b;
+      border: 1.5px solid #334155;
+      border-radius: 14px;
+      padding: 8px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: var(--font-mini);
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .signin-reward-card.day-7 {
+      grid-column: span 2;
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(30, 41, 59, 0.95) 100%);
+      border-color: #fbbf24;
+      box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+    }
+
+    .signin-reward-card.claimed {
+      border-color: #10b981;
+      opacity: 0.65;
+    }
+
+    .signin-reward-card.today {
+      border-color: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+      transform: scale(1.02);
+    }
+
+    /* Daily Quests Modal Styles */
+    .quest-item-card {
+      background: #1e293b;
+      border: 1.5px solid #334155;
+      border-radius: 16px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    /* Enlarged Skill Demonstration & Concept Card */
+    .hero-skill-demo-large {
+      width: 100%;
+      height: 175px;
+      background: #090d16;
+      border-radius: 16px;
+      border: 1.5px solid #334155;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hero-skill-concept-card {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      text-align: center;
+      gap: 8px;
+      background: radial-gradient(circle at center, rgba(30, 41, 59, 0.8) 0%, rgba(9, 13, 22, 0.95) 100%);
     }
   </style>
 </head>
@@ -1462,28 +1566,18 @@
             <button class="cr-btn cr-btn-green btn-small" style="align-self:center; width:70%;" onclick="alert('🎉 恭喜解鎖【終身免廣告特權】！永久暢享無廣告遊戲體驗！')">NT$ 90.00 永久移除廣告</button>
           </div>
 
-          <!-- Daily Picks Grid -->
-          <h3 style="font-size:var(--font-h2); color:#38bdf8;">每日精選商品</h3>
-          <div class="shop-grid">
-            <div class="shop-item-card">
-              <div class="item-pedestal">💰</div>
-              <span style="font-size:var(--font-body); font-weight:800;">大袋金幣 (5000)</span>
-              <button class="cr-btn cr-btn-blue btn-small" style="width:100%;" onclick="alert('🪙 成功兌換 5,000 金幣！')">免費領取</button>
-            </div>
-            <div class="shop-item-card">
-              <div class="item-pedestal">🗡️</div>
-              <span style="font-size:var(--font-body); font-weight:800;">稀有泥雕寶箱</span>
-              <button class="cr-btn cr-btn-amber btn-small" style="width:100%;" onclick="alert('🎁 獲得 T05 秘銀闊劍！')">🪙 2,500</button>
-            </div>
-            <div class="shop-item-card">
-              <div class="item-pedestal">⚡</div>
-              <span style="font-size:var(--font-body); font-weight:800;">體力全滿藥劑</span>
-              <button class="cr-btn cr-btn-amber btn-small" style="width:100%;" onclick="alert('⚡ 體力已完全回滿！')">🪙 800</button>
-            </div>
-            <div class="shop-item-card">
-              <div class="item-pedestal">🎟️</div>
-              <span style="font-size:var(--font-body); font-weight:800;">副本特許通行券</span>
-              <button class="cr-btn cr-btn-green btn-small" style="width:100%;" onclick="alert('🎟️ 通行券已入袋！')">NT$ 30.00</button>
+          <!-- Daily Picks Grid (Strictly Aligned with Game: Daily Free Supplies Only) -->
+          <h3 style="font-size:var(--font-h2); color:#38bdf8;">每日皇家福利</h3>
+          <div class="shop-grid" style="grid-template-columns: 1fr;">
+            <div class="shop-item-card" style="flex-direction:row; justify-content:space-between; padding:16px 20px;">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div class="item-pedestal">📦</div>
+                <div>
+                  <h4 style="font-size:var(--font-body); font-weight:800; color:#f8fafc;">每日免費軍資箱 (+200🪙)</h4>
+                  <p style="font-size:var(--font-caption); color:#94a3b8;">王國軍資每日免費補給 (+200🪙)</p>
+                </div>
+              </div>
+              <button class="cr-btn cr-btn-blue btn-medium" onclick="alert('📦 成功領取每日免費軍資：+200 🪙！')">免費領取</button>
             </div>
           </div>
         </div>
@@ -1514,7 +1608,7 @@
             <button class="cr-btn cr-btn-green btn-small" onclick="alert('🔨 鐵匠鋪升級成功！')">升級 🪙800</button>
           </div>
 
-          <!-- 2. 裝備轉蛋機 (真實單抽100/十連抽1000與保底道具) -->
+          <!-- 2. 裝備轉蛋機 (標準化對稱按鈕，去除按鍵上重複說明文字) -->
           <div class="camp-talent-card" style="flex-direction:column; align-items:stretch; gap:8px;">
             <div style="display:flex; align-items:center; gap:12px;">
               <div class="talent-icon-box">🎰</div>
@@ -1525,7 +1619,7 @@
             </div>
             <div style="display:flex; gap:8px; width:100%;">
               <button class="cr-btn cr-btn-purple btn-small" style="flex:1;" onclick="alert('🎰 單抽 (🪙100)：獲得 T02 青銅刃 (4)！')">單抽 🪙100</button>
-              <button class="cr-btn cr-btn-amber btn-small" style="flex:1.4;" onclick="alert('🎰 十連抽 (🪙1,000)：獲得 10 件裝備！\n🎁 保底贈送應急道具：⏳ 時光沙漏 x1！')">十連抽 🪙1000<span style="font-size:0.6rem; display:block;">(必得應急道具)</span></button>
+              <button class="cr-btn cr-btn-amber btn-small" style="flex:1;" onclick="alert('🎰 十連抽 (🪙1,000)：獲得 10 件裝備！\n🎁 保底贈送應急道具：⏳ 時光沙漏 x1！')">十連抽 🪙1000</button>
             </div>
           </div>
 
@@ -1537,16 +1631,6 @@
               <p style="font-size:var(--font-caption); color:#94a3b8;">擴充 4 格裝備庫容量，通關金幣結算額外+20%</p>
             </div>
             <button class="cr-btn cr-btn-green btn-small" onclick="alert('🎒 行囊擴充成功！容量已提升至 28 格！')">擴充 🪙2000</button>
-          </div>
-
-          <!-- 4. 體力補給 (精簡) -->
-          <div class="camp-talent-card">
-            <div class="talent-icon-box">🍲</div>
-            <div style="flex:1;">
-              <h4 style="font-size:var(--font-body); font-weight:800;">營地補給處 LV.2</h4>
-              <p style="font-size:var(--font-caption); color:#94a3b8;">體力自然恢復時間縮短 3 分鐘</p>
-            </div>
-            <button class="cr-btn cr-btn-green btn-small" onclick="alert('🍲 補給處升級成功！')">升級 🪙5000</button>
           </div>
         </div>
       </section>
@@ -1573,9 +1657,9 @@
           <!-- Arena Master Layout: Left HUD Icon + Center Arena + Right HUD Icon -->
           <div class="hub-battlefield-layout">
             
-            <!-- Left Side HUD Action (Actual Implemented: Daily Sign-in) -->
+            <!-- Left Side HUD Action (Actual Implemented: Daily Sign-in Modal) -->
             <div class="hub-hud-sidebar">
-              <div class="hub-hud-icon-btn" onclick="alert('📅 每日簽到：已連續登入 5 天，獲得 500 金幣！')" title="每日簽到">
+              <div class="hub-hud-icon-btn" onclick="openDailySignInModal()" title="每日簽到">
                 <span class="icon-glyph">📅</span>
                 <span class="hud-badge-dot"></span>
               </div>
@@ -1591,9 +1675,9 @@
               </div>
             </div>
 
-            <!-- Right Side HUD Action (Actual Implemented: Daily Quests) -->
+            <!-- Right Side HUD Action (Actual Implemented: Daily Quests Modal) -->
             <div class="hub-hud-sidebar">
-              <div class="hub-hud-icon-btn" onclick="alert('📜 每日任務：合成50次裝備 (32/50)')" title="冒險任務">
+              <div class="hub-hud-icon-btn" onclick="openDailyQuestsModal()" title="冒險任務">
                 <span class="icon-glyph">📜</span>
                 <span class="hud-badge-dot"></span>
               </div>
@@ -1695,7 +1779,7 @@
 
           </div>
 
-          <!-- Sub-view 2: 英雄名單 -->
+          <!-- Sub-view 2: 英雄名單 (嚴格保留正統3英雄：戰士、戰地商人、精靈弓手) -->
           <div class="sub-view" id="subview-hero">
             <h3 style="font-size:var(--font-h1); color:#38bdf8; text-align:center;">王國英雄名單</h3>
             <div class="hero-list-container">
@@ -1716,12 +1800,12 @@
                 </div>
               </div>
 
-              <!-- 戰地商人 Hero Card -->
+              <!-- 戰地商人 Hero Card (連動佩戴 512 裝備外觀) -->
               <div class="hero-card" id="card-hero-merchant">
                 <div class="hero-hitbox-upper" onclick="openHeroDetailModal('merchant')">
                   <span class="hero-card-title">戰地商人 LV.1</span>
                   <div class="hero-avatar-box">
-                    <img id="avatar-merchant" src="assets/images/hero_knight/hero_01.png" alt="Merchant" />
+                    <img id="avatar-merchant" src="assets/images/hero_knight/hero_09.png" alt="Merchant" />
                     <div class="info-tag">i</div>
                   </div>
                   <div class="hero-skill-label">技能：黃金急召</div>
@@ -1732,12 +1816,12 @@
                 </div>
               </div>
 
-              <!-- 精靈弓箭手 Hero Card -->
+              <!-- 精靈弓箭手 Hero Card (連動佩戴 512 裝備外觀) -->
               <div class="hero-card" id="card-hero-archer">
                 <div class="hero-hitbox-upper" onclick="openHeroDetailModal('archer')">
                   <span class="hero-card-title">精靈弓手 LV.1</span>
                   <div class="hero-avatar-box">
-                    <img id="avatar-archer" src="assets/images/hero_knight/hero_03.png" alt="Archer" />
+                    <img id="avatar-archer" src="assets/images/hero_knight/hero_09.png" alt="Archer" />
                     <div class="info-tag">i</div>
                   </div>
                   <div class="hero-skill-label">技能：破甲重矢</div>
@@ -1745,22 +1829,6 @@
                 <div class="hero-actions-lower">
                   <button class="cr-btn cr-btn-blue" id="btn-deploy-archer" onclick="deployHero('archer')">出擊</button>
                   <button class="cr-btn cr-btn-green" onclick="alert('🪙 花費 5,000 金幣升級精靈弓箭手！')">升級 🪙5000</button>
-                </div>
-              </div>
-
-              <!-- 皇家聖騎士 Hero Card -->
-              <div class="hero-card" id="card-hero-paladin">
-                <div class="hero-hitbox-upper" onclick="openHeroDetailModal('paladin')">
-                  <span class="hero-card-title">聖騎士 LV.1</span>
-                  <div class="hero-avatar-box">
-                    <img id="avatar-paladin" src="assets/images/hero_knight/hero_07.png" alt="Paladin" />
-                    <div class="info-tag">i</div>
-                  </div>
-                  <div class="hero-skill-label">技能：正義聖盾</div>
-                </div>
-                <div class="hero-actions-lower">
-                  <button class="cr-btn cr-btn-blue" id="btn-deploy-paladin" onclick="deployHero('paladin')">出擊</button>
-                  <button class="cr-btn cr-btn-green" onclick="alert('🪙 花費 5,000 金幣升級聖騎士！')">升級 🪙5000</button>
                 </div>
               </div>
 
@@ -1871,47 +1939,143 @@
     </div>
 
     <!-- ========================================================
-         MODAL 2: 英雄詳細資訊 POPUP (HERO DETAIL WITH ARTWORK & VIDEO)
+         MODAL: 📅 每日簽到 · 七日之約 (C-STORY-125 1:1 對齊遊戲正式版)
+         ======================================================== -->
+    <div class="modal-overlay" id="modal-daily-signin" onclick="handleSignInOverlayClick(event)">
+      <div class="cr-modal-box" id="box-daily-signin">
+        <div class="modal-close-btn" onclick="closeDailySignInModal()">✕</div>
+        <div style="text-align:center;">
+          <h3 style="font-size:var(--font-h1); color:#38bdf8;">📅 每日簽到 · 七日之約</h3>
+          <p style="font-size:var(--font-caption); color:#94a3b8; margin-top:4px;" id="signin-hint-text">
+            每天登入簽到領取豐厚軍資，連續簽到解鎖神級大禮！
+          </p>
+        </div>
+
+        <div class="signin-grid-container" id="signin-cards-container">
+          <!-- Populated dynamically by JS -->
+        </div>
+
+        <button class="cr-btn cr-btn-green btn-large" id="btn-claim-signin" style="width:100%;" onclick="handleSignInButtonClick()">
+          <span>立即簽到領取獎勵</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         MODAL: 📜 每日活躍任務 (C-STORY-125 1:1 對齊遊戲正式版)
+         ======================================================== -->
+    <div class="modal-overlay" id="modal-daily-quests" onclick="if(event.target===this) closeDailyQuestsModal()">
+      <div class="cr-modal-box">
+        <div class="modal-close-btn" onclick="closeDailyQuestsModal()">✕</div>
+        <h3 style="font-size:var(--font-h1); color:#fbbf24; text-align:center;">📜 每日活躍任務</h3>
+
+        <!-- Activity Header -->
+        <div style="background:#090d16; border-radius:14px; padding:10px 14px; display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; justify-content:space-between; font-size:var(--font-caption); font-weight:800;">
+            <span style="color:#94a3b8;">今日活躍度：</span>
+            <span style="color:#38bdf8;" id="activity-points-val">75 / 100</span>
+          </div>
+          <div style="width:100%; height:10px; background:#1e293b; border-radius:5px; overflow:hidden;">
+            <div style="width:75%; height:100%; background:linear-gradient(90deg, #38bdf8, #818cf8);"></div>
+          </div>
+          <div style="display:flex; justify-content:flex-end;">
+            <button class="cr-btn cr-btn-disabled btn-small" id="btn-claim-quest-chest" onclick="alert('⚠️ 活躍度尚未達到 100 點！')">🎁 全勤大寶箱 (需100點)</button>
+          </div>
+        </div>
+
+        <!-- Quests List -->
+        <div style="display:flex; flex-direction:column; gap:8px;" id="daily-quests-container">
+          <div class="quest-item-card">
+            <div>
+              <div style="font-weight:800; font-size:var(--font-body); color:#f8fafc;">⚔️ 魔物清剿 (15/15)</div>
+              <div style="font-size:var(--font-caption); color:#94a3b8;">在冒險關卡中累計擊倒 15 隻魔物</div>
+            </div>
+            <button class="cr-btn cr-btn-green btn-small" onclick="alert('🎉 領取成功：+300 🪙，活躍度+25！')">領取 🪙300</button>
+          </div>
+          <div class="quest-item-card">
+            <div>
+              <div style="font-weight:800; font-size:var(--font-body); color:#f8fafc;">🛡️ 精良合成 (10/10)</div>
+              <div style="font-size:var(--font-caption); color:#94a3b8;">任意合成 10 次</div>
+            </div>
+            <button class="cr-btn cr-btn-green btn-small" onclick="alert('🎉 領取成功：+300 🪙，活躍度+25！')">領取 🪙300</button>
+          </div>
+          <div class="quest-item-card">
+            <div>
+              <div style="font-weight:800; font-size:var(--font-body); color:#f8fafc;">🪙 開採財富 (32/50)</div>
+              <div style="font-size:var(--font-caption); color:#94a3b8;">在冒險關卡中累計回收 50 枚金幣</div>
+            </div>
+            <button class="cr-btn cr-btn-disabled btn-small" disabled>進行中 (32/50)</button>
+          </div>
+        </div>
+
+        <button class="cr-btn cr-btn-purple btn-medium" style="width:100%;" onclick="closeDailyQuestsModal()">關閉任務</button>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         MODAL 2: 英雄詳細資訊 POPUP (HERO DETAIL WITH ARTWORK SWITCHER & VIDEO/CONCEPT)
          ======================================================== -->
     <div class="modal-overlay" id="modal-hero-detail" onclick="if(event.target===this) closeHeroDetailModal()">
-      <div class="cr-modal-box">
+      <div class="cr-modal-box" style="max-height:85vh; overflow-y:auto;">
         <div class="modal-close-btn" onclick="closeHeroDetailModal()">✕</div>
         
-        <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding-right:32px;">
           <div>
             <h3 style="font-size:var(--font-h1); color:#38bdf8;" id="modal-hero-title">戰士 (Warrior)</h3>
             <span style="font-size:var(--font-caption); color:#fbbf24;" id="modal-hero-level">等級：LV.5 (已達最高階)</span>
           </div>
-          <span style="font-size:var(--font-caption); font-weight:800; color:#cbd5e1;" id="modal-hero-status-tag">出擊中</span>
+          <span style="font-size:var(--font-caption); font-weight:800; color:#fbbf24;" id="modal-hero-status-tag">出擊中</span>
         </div>
 
-        <!-- Dual Showcase: Hero Artwork + Gameplay Skill Video -->
-        <div style="display:flex; gap:10px; align-items:center; background:#090d16; border-radius:16px; padding:8px; border:1.5px solid #334155;">
-          <!-- Hero Portrait Box -->
-          <div style="width:100px; height:155px; background:linear-gradient(180deg,#1e293b,#0f172a); border-radius:12px; border:2px solid #fbbf24; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; position:relative; box-shadow:0 0 10px rgba(251,191,36,0.25);">
-            <img id="modal-hero-portrait" src="assets/images/hero_knight/hero_09.png" style="width:90%; height:90%; object-fit:contain;" alt="Hero Portrait" />
-            <span style="position:absolute; bottom:3px; font-size:0.65rem; color:#fbbf24; font-weight:800; background:rgba(0,0,0,0.7); padding:1px 6px; border-radius:6px;" id="modal-hero-power-tag">戰力 512</span>
+        <!-- 1. Hero Appearance & Tier Switcher -->
+        <div style="display:flex; align-items:center; justify-content:space-between; background:#090d16; border-radius:16px; padding:8px 12px; border:1.5px solid #334155;">
+          <button class="hub-stage-arrow-btn" style="width:36px; height:40px;" onclick="stepHeroTierPreview(-1)">◀</button>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:58px; height:68px; background:linear-gradient(180deg,#1e293b,#0f172a); border-radius:12px; border:2px solid #fbbf24; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+              <img id="modal-hero-portrait" src="assets/images/hero_knight/hero_09.png" style="width:90%; height:90%; object-fit:contain;" alt="Hero Portrait" />
+            </div>
+            <div>
+              <div style="font-size:var(--font-caption); color:#94a3b8;">外觀形態預覽</div>
+              <div style="font-size:var(--font-body); font-weight:800; color:#fbbf24;" id="modal-hero-tier-label">Tier 9 (戰力 512)</div>
+            </div>
           </div>
-          <!-- Video Demonstration Box (Uses Provided MP4) -->
-          <div class="hero-video-box" style="flex:1; height:155px;">
-            <video id="hero-demo-video" src="assets/videos/skill_warrior_demo.mp4" autoplay loop muted playsinline></video>
+          <button class="hub-stage-arrow-btn" style="width:36px; height:40px;" onclick="stepHeroTierPreview(1)">▶</button>
+        </div>
+
+        <!-- 2. Roomy Skill Demonstration Showcase (Video Demo for Warrior, Animated Visual Concept for Others) -->
+        <div class="hero-skill-demo-large" id="modal-skill-showcase-box">
+          <!-- Video Demo Container -->
+          <video id="hero-demo-video" src="assets/videos/skill_warrior_demo.mp4" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:contain; display:block;"></video>
+          
+          <!-- Conceptual Graphic Container (Active when no video) -->
+          <div class="hero-skill-concept-card" id="hero-demo-concept" style="display:none;">
+            <div style="font-size:2.8rem; filter:drop-shadow(0 4px 10px rgba(251,191,36,0.5));" id="concept-icon-badge">🪙✨</div>
+            <div style="font-size:var(--font-h2); font-weight:800; color:#fbbf24;" id="concept-title">【黃金急召 實戰示意】</div>
+            <div style="font-size:var(--font-caption); color:#cbd5e1; max-width:90%; line-height:1.4;" id="concept-flow">
+              盤面金幣全量吸入 ➔ 瞬間折現換算入袋 ➔ 清空盤面騰出合成大空間
+            </div>
           </div>
         </div>
 
-        <!-- Skill Mechanism Details -->
+        <!-- 3. Skill Mechanism Details -->
         <div style="background:#090d16; border-radius:14px; padding:10px 12px; font-size:var(--font-caption); line-height:1.45;">
-          <div style="font-weight:800; color:#fbbf24; margin-bottom:4px;" id="modal-skill-title">⚔️ 專屬技能：十字碎裂</div>
-          <div style="color:#cbd5e1;" id="modal-skill-desc">
+          <div style="font-weight:800; color:#fbbf24;" id="modal-skill-title">⚔️ 專屬技能：十字碎裂</div>
+          <div style="color:#cbd5e1; margin-top:2px;" id="modal-skill-desc">
             以英雄為中心粉碎上下左右4格內的裝備與金幣（不傷魔物），滿盤瀕危時自動觸發保命。<br>
             <span style="color:#94a3b8;">⚠️ 碎裂的金幣直接粉碎消除，無法折現入袋。</span>
           </div>
           <div style="margin-top:6px; color:#38bdf8;" id="modal-skill-cd">冷卻回合：100 回合 (滿級極速)</div>
         </div>
 
-        <!-- Prominent Bottom Deploy Button (Requested in Feedback) -->
-        <button class="cr-btn cr-btn-amber btn-large" id="modal-bottom-deploy-btn" style="width:100%;" onclick="deployFromModal()">
-          <span>⚔️ 出擊中</span>
-        </button>
+        <!-- 4. Dual Bottom Action Buttons: Upgrade & Deploy -->
+        <div style="display:flex; gap:10px; width:100%; margin-top:2px;">
+          <button class="cr-btn cr-btn-disabled btn-large" id="modal-upgrade-btn" style="flex:1;" onclick="upgradeHeroFromModal()">
+            <span>已滿級</span>
+          </button>
+          <button class="cr-btn cr-btn-amber btn-large" id="modal-bottom-deploy-btn" style="flex:1.2;" onclick="deployFromModal()">
+            <span>⚔️ 出擊中</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1937,23 +2101,23 @@
        RIGHT DESKTOP SPECIFICATION & VERIFICATION PANEL
        ======================================================== -->
   <aside class="desktop-panel">
-    <h2>🎯 《2048 RPG》商業化主介面 v2.2 遊戲真數值收斂展示</h2>
+    <h2>🎯 《2048 RPG》商業化主介面 v2.3 正式版規格收斂展示</h2>
     
     <div class="spec-card">
-      <strong>📌 本次概念網頁收斂重點（C-STORY-124 - 100% 對齊遊戲真實數值與反饋）：</strong><br>
-      徹底杜絕概念 UI 與遊戲版本脫節，所有金額、科技樹、升級費、保底機制與棋盤連動皆 1:1 核對遊戲代碼！
+      <strong>📌 本次概念網頁收斂重點（C-STORY-125 - 100% 正式版規格與反饋對齊）：</strong><br>
+      貫徹手遊正式版規格，清理商店虛構商品、規格化轉蛋按鈕、平衡冒險縱向置中與邊緣對齊、選關抽屜完備 50 關狀態、完整導入七日簽到與每日任務彈窗，並重構英雄外觀切換與升級排版！
     </div>
 
     <div class="spec-card">
-      <strong>✨ 核心規格收斂落實（C-STORY-124）：</strong><br>
-      1. <strong>🎰 轉蛋機雙選項與保底</strong>：單抽 🪙100、十連抽 🪙1000（無折扣），十連抽<strong>必得戰略應急道具</strong>（時光沙漏 / 破壞戰槌 / 精準重弩）。<br>
-      2. <strong>⚔️ 冒險頂部膠囊整併</strong>：換關箭頭「◀」「▶」整併於頂部章節列兩端，中央為章節名稱與「Stage 12 ☰」選關按鈕，卡片下方擠壓按鍵全數移除。<br>
-      3. <strong>🚫 徹底去除體力字樣</strong>：出擊按鈕下方與情報彈窗完全不提任何體力扣除字眼。<br>
-      4. <strong>🧹 移除未規劃機能</strong>：特惠活動、公會、排行、副本等尚未實裝之按鈕全數移除，僅保留每日簽到與任務。<br>
-      5. <strong>⭐ 抽屜拔除星星</strong>：關卡抽屜改為純淨數字網格（通關為綠色、進度為亮藍、鎖定為 🔒），星星評分列為後續待辦。<br>
-      6. <strong>👥 英雄一列 2 個垂直網格</strong>：移除橫向滾動條，修復出擊黃框與按鈕聯動切換 Bug，升級費用對齊真數據（LV.1➔2 為 🪙5000）。<br>
-      7. <strong>🛡️ 英雄圖案與 512 裝備連動</strong>：上陣英雄外觀與戰力階級隨當前佩戴裝備（512）連動顯示高階形態。<br>
-      8. <strong>🖼️ 英雄詳細彈窗雙視覺</strong>：全身立繪大圖與技能實機影片並列展示，底部附帶大尺寸出擊切換按鈕。
+      <strong>✨ 核心規格收斂落實（C-STORY-125）：</strong><br>
+      1. <strong>💎 商店商品純淨化</strong>：移除稀有泥雕寶箱、體力全滿藥劑、副本特許通行券，僅保留遊戲實裝之「終身免廣告 PASS」與「每日免費軍資箱 (+200🪙)」。<br>
+      2. <strong>⛺ 軍備轉蛋按鈕規格化</strong>：去除按鍵上多餘的「(必得應急道具)」字樣，單抽與十連抽按鈕尺寸對稱；徹底移除「營地補給處」卡片。<br>
+      3. <strong>⚔️ 冒險版面平衡置中與上緣對齊</strong>：縱向空間平均分配置中；兩側 HUD 按鍵（📅 簽到、📜 任務）精準對齊中央關卡圖上緣（符應圖 5 規範）。<br>
+      4. <strong>📑 選關抽屜 50 關全標記</strong>：擴充至 50 關，標註「✔️ 已通關」、「🚩 進度」與「選擇中（高亮金框）」，未解鎖顯示 🔒 且不可點選。<br>
+      5. <strong>📅 每日簽到與任務連動正式版</strong>：彈出遊戲真實七日之約與活躍任務視窗；當今日已簽到時，點擊按鈕或點擊畫面遮罩任意處皆可關閉視窗。<br>
+      6. <strong>🛡️ 裝備子頁籤 Sticky 置頂</strong>：向下滾動時子頁籤列持續置頂釘選，永不移出視線。<br>
+      7. <strong>👥 三英雄 512 形態同步</strong>：移除虛構的聖騎士，佩戴 512 裝備時，戰士、商人、弓手頭像與外觀均同步連動 Tier 9 (512) 形態。<br>
+      8. <strong>🖼️ 英雄彈窗升級排版與切換</strong>：加大技能演示展示區；加入外觀階級切換預覽；補入「升級 🪙5,000」按鈕；無影片之英雄以概念圖示示意。
     </div>
 
     <div class="spec-card">
@@ -2058,25 +2222,30 @@
     renderAdventureStage();
   }
 
-  // 4. Quick Stage Drawer (Starless Pure Grid - C-STORY-124)
+  // 4. Quick Stage Drawer (1~50 Stages with Cleared Mark, Furthest Progress, and Selected Mark - C-STORY-125)
   function openQuickStageDrawer() {
     const drawer = document.getElementById('drawer-quick-stage');
     const grid = document.getElementById('quick-stage-grid');
     grid.innerHTML = '';
 
-    for (let s = 1; s <= 25; s++) {
+    for (let s = 1; s <= 50; s++) {
       const cell = document.createElement('div');
       cell.className = 'drawer-cell';
 
       if (s < MAX_UNLOCKED_STAGE) {
         cell.classList.add('cleared');
-        cell.innerHTML = `<span>${s}</span>`;
+        cell.innerHTML = `<span>${s}</span><span style="font-size:0.55rem; color:#34d399;">✔️</span>`;
       } else if (s === MAX_UNLOCKED_STAGE) {
-        cell.classList.add('current');
-        cell.innerHTML = `<span>${s}</span><span style="font-size:0.6rem;">進度</span>`;
+        cell.classList.add('progress');
+        cell.innerHTML = `<span>${s}</span><span style="font-size:0.52rem; color:#fbbf24;">🚩進度</span>`;
       } else {
         cell.classList.add('locked');
         cell.innerHTML = `<span>🔒</span>`;
+      }
+
+      if (s === currentSelectedStage) {
+        cell.classList.add('selected');
+        cell.innerHTML = `<span>${s}</span><span style="font-size:0.52rem; color:#ffffff;">選擇中</span>`;
       }
 
       cell.onclick = () => {
@@ -2099,6 +2268,107 @@
     document.getElementById('drawer-quick-stage').classList.remove('active');
   }
 
+  // 4.5. Daily Sign-In & Daily Quests Retention Modals (C-STORY-125 1:1 Game Spec)
+  let signInClaimedToday = false;
+
+  const SIGNIN_REWARDS_DATA = [
+    { day: 1, gold: 1000, icon: '🪙', desc: '1,000' },
+    { day: 2, gold: 1200, icon: '🪙', desc: '1,200' },
+    { day: 3, gold: 1500, icon: '🪙', desc: '1,500' },
+    { day: 4, gold: 1800, icon: '🪙', desc: '1,800' },
+    { day: 5, gold: 2200, icon: '🪙', desc: '2,200 (今日)' },
+    { day: 6, gold: 3000, icon: '🪙', desc: '3,000' },
+    { day: 7, gold: 5000, icon: '🎁', desc: '5000 + 🔨x2 + ⏳x2' }
+  ];
+
+  function renderSignInCards() {
+    const container = document.getElementById('signin-cards-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    SIGNIN_REWARDS_DATA.forEach((r, idx) => {
+      const card = document.createElement('div');
+      card.className = 'signin-reward-card';
+      if (r.day === 7) card.classList.add('day-7');
+
+      if (r.day < 5) {
+        card.classList.add('claimed');
+        card.innerHTML = `
+          <div style="color:#94a3b8; font-weight:700;">第${r.day}天</div>
+          <div style="font-size:1.3rem;">${r.icon}</div>
+          <div style="color:#34d399; font-weight:800;">${r.desc}</div>
+          <div style="color:#34d399; font-size:0.6rem;">✔️ 已領</div>
+        `;
+      } else if (r.day === 5) {
+        card.classList.add('today');
+        if (signInClaimedToday) card.classList.add('claimed');
+        card.innerHTML = `
+          <div style="color:#38bdf8; font-weight:800;">第${r.day}天</div>
+          <div style="font-size:1.3rem;">${r.icon}</div>
+          <div style="color:#fbbf24; font-weight:900;">${r.desc}</div>
+          <div style="color:${signInClaimedToday ? '#34d399' : '#38bdf8'}; font-size:0.6rem;">${signInClaimedToday ? '✔️ 已領' : '✨ 可領'}</div>
+        `;
+      } else {
+        card.innerHTML = `
+          <div style="color:#64748b; font-weight:700;">第${r.day}天</div>
+          <div style="font-size:1.3rem; opacity:0.5;">${r.icon}</div>
+          <div style="color:#94a3b8; font-weight:700;">${r.desc}</div>
+          <div style="color:#64748b; font-size:0.6rem;">🔒 未到</div>
+        `;
+      }
+
+      container.appendChild(card);
+    });
+  }
+
+  function openDailySignInModal() {
+    renderSignInCards();
+    const btn = document.getElementById('btn-claim-signin');
+    const hint = document.getElementById('signin-hint-text');
+    if (signInClaimedToday) {
+      btn.className = 'cr-btn cr-btn-amber btn-large';
+      btn.innerHTML = '<span>今日已簽到，明日再來</span>';
+      hint.textContent = '✅ 今日已完成簽到，明天再來吧！點擊畫面任何一處皆可關閉。';
+    } else {
+      btn.className = 'cr-btn cr-btn-green btn-large';
+      btn.innerHTML = '<span>立即簽到領取獎勵</span>';
+      hint.textContent = '每天登入簽到領取豐厚軍資，連續簽到解鎖神級大禮！';
+    }
+    document.getElementById('modal-daily-signin').classList.add('active');
+  }
+
+  function closeDailySignInModal() {
+    document.getElementById('modal-daily-signin').classList.remove('active');
+  }
+
+  function handleSignInButtonClick() {
+    if (!signInClaimedToday) {
+      signInClaimedToday = true;
+      alert('🎉 簽到成功！獲得 第5天獎勵：金幣 x2,200！');
+      openDailySignInModal(); // re-render state
+    } else {
+      // User rule: When already signed in, clicking this button closes the modal!
+      closeDailySignInModal();
+    }
+  }
+
+  function handleSignInOverlayClick(e) {
+    // If today is already signed in, clicking anywhere closes the modal!
+    if (signInClaimedToday) {
+      closeDailySignInModal();
+    } else if (e.target.id === 'modal-daily-signin') {
+      closeDailySignInModal();
+    }
+  }
+
+  function openDailyQuestsModal() {
+    document.getElementById('modal-daily-quests').classList.add('active');
+  }
+
+  function closeDailyQuestsModal() {
+    document.getElementById('modal-daily-quests').classList.remove('active');
+  }
+
   // 5. Stage Detail POPUP (Clean Battle Objective, No Stamina Mention)
   function openStageDetailModal() {
     const data = getStageDef(currentSelectedStage);
@@ -2115,12 +2385,13 @@
   }
 
   function launchStageBattle() {
-    const heroNameMap = { 'warrior': '戰士', 'merchant': '戰地商人', 'archer': '精靈弓箭手', 'paladin': '聖騎士' };
+    const heroNameMap = { 'warrior': '戰士', 'merchant': '戰地商人', 'archer': '精靈弓箭手' };
     alert(`⚔️ 正式進入關卡戰鬥！\n關卡：Stage ${currentSelectedStage}\n上陣英雄：${heroNameMap[activeDeployedHero] || activeDeployedHero}\n佩戴裝備：${activeDeployedGear.name}`);
   }
 
-  // 6. Hero Detail Modal with Dual Visuals (Full Artwork + Video) & Deploy Action
+  // 6. Hero Detail Modal with Appearance Switcher, Roomy Video / Conceptual Demo, Upgrade & Deploy
   let modalHeroSelected = 'warrior';
+  let modalHeroPreviewTierIdx = 2; // Default to Tier 9 (512 power)
 
   const HERO_CONFIGS = {
     warrior: {
@@ -2129,8 +2400,13 @@
       skillTitle: '⚔️ 專屬技能：十字碎裂',
       skillDesc: '以英雄為中心粉碎上下左右4格內的裝備與金幣（不傷魔物），滿盤瀕危時自動觸發保命。<br><span style="color:#94a3b8;">⚠️ 碎裂的金幣直接粉碎消除，無法折現入袋。</span>',
       cd: '冷卻回合：100 回合 (滿級極速)',
-      avatar: 'assets/images/hero_knight/hero_09.png', // 512 equipment evolved form
-      powerTag: '戰力 512'
+      isMaxLevel: true,
+      upgradeCost: 0,
+      tiers: [
+        { label: 'Tier 1 (戰力 2)', img: 'assets/images/hero_knight/hero_01.png' },
+        { label: 'Tier 5 (戰力 32)', img: 'assets/images/hero_knight/hero_05.png' },
+        { label: 'Tier 9 (戰力 512)', img: 'assets/images/hero_knight/hero_09.png' }
+      ]
     },
     merchant: {
       title: '戰地商人 (Royal Merchant)',
@@ -2138,8 +2414,13 @@
       skillTitle: '🪙 專屬技能：黃金急召',
       skillDesc: '瞬間強制回收盤面上所有的金幣方塊並直接折現入袋，騰出空格；滿盤瀕危時自動觸發保命。',
       cd: '冷卻回合：500 回合 (LV.1)',
-      avatar: 'assets/images/hero_knight/hero_01.png',
-      powerTag: '戰力 2'
+      isMaxLevel: false,
+      upgradeCost: 5000,
+      tiers: [
+        { label: 'Tier 1 (戰力 2)', img: 'assets/images/hero_knight/hero_01.png' },
+        { label: 'Tier 5 (戰力 32)', img: 'assets/images/hero_knight/hero_05.png' },
+        { label: 'Tier 9 (戰力 512)', img: 'assets/images/hero_knight/hero_09.png' }
+      ]
     },
     archer: {
       title: '精靈弓箭手 (Elf Archer)',
@@ -2147,24 +2428,37 @@
       skillTitle: '🏹 專屬技能：破甲重矢',
       skillDesc: '鎖定全場數值最大的魔物：若大於等於4則數值折半；若為2則直接射殺。純主動進攻，無被動保命。',
       cd: '冷卻回合：500 回合 (LV.1)',
-      avatar: 'assets/images/hero_knight/hero_03.png',
-      powerTag: '戰力 4'
-    },
-    paladin: {
-      title: '皇家聖騎士 (Paladin)',
-      level: '等級：LV.1',
-      skillTitle: '🛡️ 專屬技能：正義聖盾',
-      skillDesc: '創造神聖庇護護盾阻擋致命傷害，將周圍敵方弱點暴露為青銅裝備素材。',
-      cd: '冷卻回合：500 回合 (LV.1)',
-      avatar: 'assets/images/hero_knight/hero_07.png',
-      powerTag: '戰力 128'
+      isMaxLevel: false,
+      upgradeCost: 5000,
+      tiers: [
+        { label: 'Tier 1 (戰力 2)', img: 'assets/images/hero_knight/hero_01.png' },
+        { label: 'Tier 5 (戰力 32)', img: 'assets/images/hero_knight/hero_03.png' },
+        { label: 'Tier 9 (戰力 512)', img: 'assets/images/hero_knight/hero_09.png' }
+      ]
     }
   };
 
+  function updateHeroAppearancePreview() {
+    const conf = HERO_CONFIGS[modalHeroSelected] || HERO_CONFIGS.warrior;
+    const tierData = conf.tiers[modalHeroPreviewTierIdx] || conf.tiers[0];
+    document.getElementById('modal-hero-portrait').src = tierData.img;
+    document.getElementById('modal-hero-tier-label').textContent = tierData.label;
+  }
+
+  function stepHeroTierPreview(delta) {
+    const conf = HERO_CONFIGS[modalHeroSelected] || HERO_CONFIGS.warrior;
+    modalHeroPreviewTierIdx += delta;
+    if (modalHeroPreviewTierIdx < 0) modalHeroPreviewTierIdx = conf.tiers.length - 1;
+    if (modalHeroPreviewTierIdx >= conf.tiers.length) modalHeroPreviewTierIdx = 0;
+    updateHeroAppearancePreview();
+  }
+
   function openHeroDetailModal(heroKey) {
     modalHeroSelected = heroKey;
+    modalHeroPreviewTierIdx = 2; // Default to Tier 9 (512)
     const modal = document.getElementById('modal-hero-detail');
     const video = document.getElementById('hero-demo-video');
+    const conceptCard = document.getElementById('hero-demo-concept');
     const conf = HERO_CONFIGS[heroKey] || HERO_CONFIGS.warrior;
 
     document.getElementById('modal-hero-title').textContent = conf.title;
@@ -2173,20 +2467,50 @@
     document.getElementById('modal-skill-desc').innerHTML = conf.skillDesc;
     document.getElementById('modal-skill-cd').textContent = conf.cd;
 
-    // Set full-body portrait and power tag
-    document.getElementById('modal-hero-portrait').src = conf.avatar;
-    document.getElementById('modal-hero-power-tag').textContent = conf.powerTag;
+    updateHeroAppearancePreview();
 
+    // Video Demo for Warrior; High-End Conceptual Skill Cards for Merchant & Archer
     if (heroKey === 'warrior') {
       video.style.display = 'block';
+      conceptCard.style.display = 'none';
       video.play().catch(() => {});
-    } else {
+    } else if (heroKey === 'merchant') {
       video.style.display = 'none';
+      video.pause();
+      conceptCard.style.display = 'flex';
+      document.getElementById('concept-icon-badge').textContent = '🪙✨';
+      document.getElementById('concept-title').textContent = '【黃金急召 實戰示意】';
+      document.getElementById('concept-flow').innerHTML = '全場金幣瞬間強制折現入袋 ➔ 獲得大量財富 ➔ 極速騰出盤面空格';
+    } else if (heroKey === 'archer') {
+      video.style.display = 'none';
+      video.pause();
+      conceptCard.style.display = 'flex';
+      document.getElementById('concept-icon-badge').textContent = '🏹🎯';
+      document.getElementById('concept-title').textContent = '【破甲重矢 實戰示意】';
+      document.getElementById('concept-flow').innerHTML = '貫穿障礙鎖定全場最大魔物 ➔ 數值直接減半 / 數值2魔物秒殺';
     }
 
-    // Update Deploy Status & Buttons
+    // Update Bottom Action Buttons
+    const upgradeBtn = document.getElementById('modal-upgrade-btn');
+    if (conf.isMaxLevel) {
+      upgradeBtn.className = 'cr-btn cr-btn-disabled btn-large';
+      upgradeBtn.innerHTML = '<span>已滿級</span>';
+      upgradeBtn.onclick = null;
+    } else {
+      upgradeBtn.className = 'cr-btn cr-btn-green btn-large';
+      upgradeBtn.innerHTML = `<span>升級 🪙${conf.upgradeCost}</span>`;
+      upgradeBtn.onclick = upgradeHeroFromModal;
+    }
+
     updateModalDeployButtons();
     modal.classList.add('active');
+  }
+
+  function upgradeHeroFromModal() {
+    const conf = HERO_CONFIGS[modalHeroSelected];
+    if (conf && !conf.isMaxLevel) {
+      alert(`🔨 成功花費 🪙${conf.upgradeCost} 升級 ${conf.title}！`);
+    }
   }
 
   function updateModalDeployButtons() {
@@ -2219,22 +2543,20 @@
     const heroNameMap = { 
       'warrior': '戰士 (LV.5)', 
       'merchant': '戰地商人 (LV.1)', 
-      'archer': '精靈弓箭手 (LV.1)',
-      'paladin': '皇家聖騎士 (LV.1)'
+      'archer': '精靈弓箭手 (LV.1)'
     };
     const heroImgMap = {
       'warrior': 'assets/images/hero_knight/hero_09.png', // 512 equipment evolved form
-      'merchant': 'assets/images/hero_knight/hero_01.png',
-      'archer': 'assets/images/hero_knight/hero_03.png',
-      'paladin': 'assets/images/hero_knight/hero_07.png'
+      'merchant': 'assets/images/hero_knight/hero_09.png', // 512 equipment evolved form
+      'archer': 'assets/images/hero_knight/hero_09.png'   // 512 equipment evolved form
     };
 
     // 1. Update top deployment slot
     document.getElementById('deploy-hero-name').textContent = heroNameMap[heroKey];
     document.getElementById('deploy-hero-img').src = heroImgMap[heroKey];
 
-    // 2. Synchronize all 4 hero cards in 2-column grid
-    const allHeroes = ['warrior', 'merchant', 'archer', 'paladin'];
+    // 2. Synchronize all 3 hero cards in 2-column grid
+    const allHeroes = ['warrior', 'merchant', 'archer'];
     allHeroes.forEach(k => {
       const card = document.getElementById(`card-hero-${k}`);
       const btn = document.getElementById(`btn-deploy-${k}`);
@@ -2311,17 +2633,15 @@
     heroes: {
       title: '英雄陣營總覽',
       tip: '💡 提示：在關卡中「成功合成出」或於酒館解鎖之英雄方可收錄；未滿列留空透明。',
-      total: 4,
+      total: 3,
       unlocked: 3,
       groups: [
         {
           groupName: '王國遠征勇者',
           items: [
-            { name: '戰士', icon: '🙂', val: 'LV.5', unlocked: true, avatar: 'assets/images/hero_knight/hero_05.png' },
-            { name: '戰地商人', icon: '🙂', val: 'LV.1', unlocked: true, avatar: 'assets/images/hero_knight/hero_01.png' },
-            { name: '精靈弓箭手', icon: '🙂', val: 'LV.1', unlocked: true, avatar: 'assets/images/hero_knight/hero_03.png' },
-            { name: '皇家聖騎士', icon: '❓', val: 'LV.1', unlocked: false }
-            // 4 items, 5th and 6th are transparent empty cells
+            { name: '戰士', icon: '🙂', val: 'LV.5', unlocked: true, avatar: 'assets/images/hero_knight/hero_09.png' },
+            { name: '戰地商人', icon: '🙂', val: 'LV.1', unlocked: true, avatar: 'assets/images/hero_knight/hero_09.png' },
+            { name: '精靈弓箭手', icon: '🙂', val: 'LV.1', unlocked: true, avatar: 'assets/images/hero_knight/hero_09.png' }
           ]
         }
       ]

@@ -343,7 +343,13 @@ export class GwtRunner {
       this.testGwt124_2_AdventureTopIntegratedCapsuleAndCleanHub.bind(this),
       this.testGwt124_3_StarlessQuickStageDrawer.bind(this),
       this.testGwt124_4_HeroTwoColumnGridAndStateSync.bind(this),
-      this.testGwt124_5_HeroDetailPopupArtworkAndDeployButton.bind(this)
+      this.testGwt124_5_HeroDetailPopupArtworkAndDeployButton.bind(this),
+      // C-STORY-125: UI 原型全域介面精修與正式版規格對齊 (Official Game Spec Alignment & Layout Refinement)
+      this.testGwt125_1_ShopCleanAndGachaStandardizedButtons.bind(this),
+      this.testGwt125_2_AdventureCenteringAndTopEdgeAlignment.bind(this),
+      this.testGwt125_3_QuickStageDrawer50StagesAndSelectedMark.bind(this),
+      this.testGwt125_4_DailyRetentionModalsAndAnywhereClose.bind(this),
+      this.testGwt125_5_GearStickyTabsHeroDetailAndSync.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6335,6 +6341,82 @@ export class GwtRunner {
     this.assert(htmlText.includes('modal-hero-portrait'), 'Hero detail modal displays full artwork portrait alongside video');
     this.assert(htmlText.includes('modal-bottom-deploy-btn'), 'Hero detail modal includes prominent bottom deploy button');
     this.assert(htmlText.includes('deployFromModal()'), 'Bottom deploy button triggers deployment and modal dismissal');
+  }
+
+  // C-STORY-125 GWT 125.1: 商店商品純淨化與軍備按鍵規格化 (Shop & Camp Cleanup)
+  async testGwt125_1_ShopCleanAndGachaStandardizedButtons() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    const shopSection = htmlText.split('id="view-shop"')[1]?.split('</section>')[0] || '';
+    const campSection = htmlText.split('id="view-camp"')[1]?.split('</section>')[0] || '';
+
+    this.assert(shopSection.includes('每日免費軍資箱 (+200🪙)'), 'Shop contains authentic game daily free supply gift');
+    this.assert(!shopSection.includes('稀有泥雕寶箱'), 'Shop cleanly removed unreleased Rare Clay Chest');
+    this.assert(!shopSection.includes('體力全滿藥劑'), 'Shop cleanly removed unreleased Stamina Potion');
+    this.assert(!shopSection.includes('副本特許通行券'), 'Shop cleanly removed unreleased Dungeon Permit');
+    this.assert(!campSection.includes('營地補給處'), 'Camp cleanly removed unreviewed Camp Supply facility');
+  }
+
+  // C-STORY-125 GWT 125.2: 冒險主頁垂直置中與按鍵對齊關卡圖上緣 (Adventure Alignment & Centering)
+  async testGwt125_2_AdventureCenteringAndTopEdgeAlignment() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('justify-content: space-evenly'), 'Adventure container vertically balanced and centered');
+    this.assert(htmlText.includes('align-items: flex-start'), 'Side HUD action buttons align horizontally with the top edge of arena card per Image 5');
+  }
+
+  // C-STORY-125 GWT 125.3: 快速選關抽屜完整數量、通關標記與目前選擇 (Enhanced Stage Drawer)
+  async testGwt125_3_QuickStageDrawer50StagesAndSelectedMark() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('s <= 50'), 'Quick stage drawer displays 50 stages');
+    this.assert(htmlText.includes('drawer-cell cleared') || htmlText.includes('cell.classList.add(\'cleared\')'), 'Cleared stages marked with green cleared badge');
+    this.assert(htmlText.includes('drawer-cell selected') || htmlText.includes('cell.classList.add(\'selected\')'), 'Selected stage clearly highlighted with glowing border and indicator');
+  }
+
+  // C-STORY-125 GWT 125.4: 每日簽到與任務連動遊戲版 UI 及全螢幕點擊關閉 (Daily Retention Modals)
+  async testGwt125_4_DailyRetentionModalsAndAnywhereClose() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('modal-daily-signin'), 'Showcase integrates authentic 7-Day Login retention modal');
+    this.assert(htmlText.includes('modal-daily-quests'), 'Showcase integrates authentic Daily Quests modal');
+    this.assert(htmlText.includes('今日已簽到，明日再來'), 'Sign-in modal changes button text once claimed today');
+    this.assert(htmlText.includes('handleSignInOverlayClick'), 'Clicking anywhere when signed in closes the retention modal');
+  }
+
+  // C-STORY-125 GWT 125.5: 裝備置頂頁籤、三英雄外觀連動與彈窗升級排版 (Gear Sticky Tabs & Hero Detail)
+  async testGwt125_5_GearStickyTabsHeroDetailAndSync() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('position: sticky'), 'Sub-tabs bar uses sticky positioning so it remains visible when scrolling');
+    this.assert(!htmlText.includes('card-hero-paladin'), 'Paladin removed, strictly adhering to the 3 canon heroes');
+    this.assert(htmlText.includes('stepHeroTierPreview'), 'Hero detail modal supports switching and previewing appearance tiers');
+    this.assert(htmlText.includes('modal-upgrade-btn'), 'Hero detail modal includes upgrade button alongside deploy button');
   }
 }
 
