@@ -1,0 +1,2394 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>《2048 RPG：王國遠征》皇室戰爭風格商業化主架構 (UI Concept v2.0)</title>
+  <style>
+    /* ========================================================
+       1. GLOBAL DESIGN TOKENS & RESET
+       ======================================================== */
+    :root {
+      /* Typography System */
+      --font-display: 1.55rem;
+      --font-h1: 1.25rem;
+      --font-h2: 1.05rem;
+      --font-body: 0.90rem;
+      --font-caption: 0.75rem;
+      --font-mini: 0.68rem;
+
+      /* Color Palette Matrix */
+      --bg-dark: #090d16;
+      --bg-surface: #111827;
+      --bg-card: #1e293b;
+      --bg-card-sub: #172033;
+      --border-card: #334155;
+      --border-accent: #38bdf8;
+
+      /* Button Color Matrix */
+      --btn-blue-top: #38bdf8;
+      --btn-blue-bot: #0284c7;
+      --btn-blue-shadow: #0369a1;
+
+      --btn-green-top: #4ade80;
+      --btn-green-bot: #16a34a;
+      --btn-green-shadow: #15803d;
+
+      --btn-amber-top: #fbbf24;
+      --btn-amber-bot: #d97706;
+      --btn-amber-shadow: #b45309;
+
+      --btn-purple-top: #a78bfa;
+      --btn-purple-bot: #6366f1;
+      --btn-purple-shadow: #4338ca;
+
+      --btn-disabled-bg: #334155;
+      --btn-disabled-text: #64748b;
+      --btn-disabled-shadow: #1e293b;
+
+      /* Text Colors */
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --text-gold: #fbbf24;
+      --text-accent: #38bdf8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background: #060911;
+      color: var(--text-main);
+      font-family: 'PingFang TC', 'Microsoft JhengHei', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      overflow-x: hidden;
+    }
+
+    /* Outer Desktop Showcase Container */
+    .showcase-layout {
+      display: flex;
+      gap: 24px;
+      max-width: 1280px;
+      width: 100%;
+      height: 94vh;
+      max-height: 960px;
+    }
+
+    /* Left Phone Mockup */
+    .phone-mockup {
+      width: 414px;
+      min-width: 414px;
+      height: 100%;
+      background: #020617;
+      border-radius: 44px;
+      border: 8px solid #1e293b;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(56, 189, 248, 0.2);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Phone Speaker / Dynamic Island Notch */
+    .phone-notch {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 110px;
+      height: 20px;
+      background: #000;
+      border-radius: 12px;
+      z-index: 100;
+    }
+
+    /* Top Persistent Resource Header */
+    .phone-header {
+      padding: 34px 16px 8px 16px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(15, 23, 42, 0.85) 100%);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 40;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(8px);
+    }
+
+    .resource-capsule {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #090d16;
+      border: 1.5px solid #334155;
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: var(--font-caption);
+      font-weight: 800;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+      cursor: pointer;
+    }
+
+    .resource-capsule.gold {
+      border-color: #d97706;
+      color: #fbbf24;
+    }
+
+    .resource-capsule.stamina {
+      border-color: #ef4444;
+      color: #f87171;
+    }
+
+    .settings-btn {
+      width: 32px;
+      height: 32px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    /* Main Content Body (Switchable Views) */
+    .phone-body {
+      flex: 1;
+      position: relative;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background-color: #070b14;
+      background-image: 
+        radial-gradient(circle at 50% 25%, rgba(19, 29, 51, 0.9) 0%, rgba(7, 11, 20, 0.95) 100%),
+        radial-gradient(rgba(56, 189, 248, 0.08) 1.5px, transparent 1.5px),
+        radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 100% 100%, 24px 24px, 48px 48px;
+      background-position: 0 0, 0 0, 12px 12px;
+    }
+
+    .phone-body::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab-view {
+      display: none;
+      min-height: 100%;
+      padding-bottom: 24px;
+    }
+
+    .tab-view.active {
+      display: block;
+      animation: tabFadeIn 0.25s ease-out;
+    }
+
+    @keyframes tabFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Bottom Navigation Bar (5 Primary Tabs) */
+    .phone-nav-bar {
+      height: 72px;
+      background: #090d16;
+      border-top: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 4px;
+      z-index: 50;
+      box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.6);
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      padding: 6px 0;
+    }
+
+    .nav-item .nav-icon {
+      font-size: 1.35rem;
+      transition: transform 0.2s ease;
+      filter: grayscale(0.6) opacity(0.8);
+    }
+
+    .nav-item .nav-text {
+      font-size: var(--font-caption);
+      font-weight: 700;
+    }
+
+    .nav-item.active {
+      color: #38bdf8;
+    }
+
+    .nav-item.active .nav-icon {
+      transform: translateY(-4px) scale(1.18);
+      filter: none;
+      text-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
+    }
+
+    .nav-item.active::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      width: 18px;
+      height: 3px;
+      background: #38bdf8;
+      border-radius: 2px;
+      box-shadow: 0 0 8px #38bdf8;
+    }
+
+    /* Right Control & Exploration Panel */
+    .desktop-panel {
+      flex: 1;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 24px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    .desktop-panel h2 {
+      font-size: var(--font-h1);
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .spec-card {
+      background: #1e293b;
+      border-left: 4px solid #38bdf8;
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: var(--font-body);
+      line-height: 1.55;
+      color: #cbd5e1;
+    }
+
+    .spec-card strong {
+      color: #f8fafc;
+    }
+
+    /* ========================================================
+       2. REUSABLE CR BUTTON DESIGN SYSTEM
+       ======================================================== */
+    .cr-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-weight: 800;
+      color: #ffffff !important;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85), 0 2px 4px rgba(0, 0, 0, 0.6);
+      border-radius: 14px;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.08s ease, filter 0.15s ease;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .cr-btn:active:not(.disabled) {
+      transform: translateY(3px) !important;
+      filter: brightness(0.92);
+    }
+
+    /* 🟢 Green Confirm / Upgrade Button */
+    .cr-btn-green {
+      background: linear-gradient(180deg, var(--btn-green-top) 0%, var(--btn-green-bot) 100%);
+      box-shadow: 0 4px 0 var(--btn-green-shadow), 0 6px 14px rgba(22, 163, 74, 0.45);
+    }
+    .cr-btn-green:active:not(.disabled) {
+      box-shadow: 0 1px 0 var(--btn-green-shadow);
+    }
+
+    /* 🔵 Blue Combat / Deploy Button */
+    .cr-btn-blue {
+      background: linear-gradient(180deg, var(--btn-blue-top) 0%, var(--btn-blue-bot) 100%);
+      box-shadow: 0 4px 0 var(--btn-blue-shadow), 0 6px 14px rgba(2, 132, 199, 0.45);
+    }
+    .cr-btn-blue:active:not(.disabled) {
+      box-shadow: 0 1px 0 var(--btn-blue-shadow);
+    }
+
+    /* 🟠 Amber Active / In-Use Button */
+    .cr-btn-amber {
+      background: linear-gradient(180deg, var(--btn-amber-top) 0%, var(--btn-amber-bot) 100%);
+      box-shadow: 0 4px 0 var(--btn-amber-shadow), 0 6px 14px rgba(217, 119, 6, 0.45);
+    }
+    .cr-btn-amber:active:not(.disabled) {
+      box-shadow: 0 1px 0 var(--btn-amber-shadow);
+    }
+
+    /* 🟣 Purple Auxiliary / Unequip Button */
+    .cr-btn-purple {
+      background: linear-gradient(180deg, var(--btn-purple-top) 0%, var(--btn-purple-bot) 100%);
+      box-shadow: 0 4px 0 var(--btn-purple-shadow), 0 6px 14px rgba(99, 102, 241, 0.45);
+    }
+    .cr-btn-purple:active:not(.disabled) {
+      box-shadow: 0 1px 0 var(--btn-purple-shadow);
+    }
+
+    /* ⚫ Gray Disabled / Maxed Button */
+    .cr-btn-disabled, .cr-btn.disabled {
+      background: var(--btn-disabled-bg) !important;
+      color: var(--btn-disabled-text) !important;
+      text-shadow: none !important;
+      box-shadow: 0 3px 0 var(--btn-disabled-shadow) !important;
+      cursor: not-allowed !important;
+      filter: grayscale(0.8);
+    }
+
+    /* Standardized Button Sizes */
+    .btn-large {
+      height: 52px;
+      padding: 0 28px;
+      font-size: var(--font-h1);
+    }
+
+    .btn-medium {
+      height: 38px;
+      padding: 0 16px;
+      font-size: var(--font-body);
+    }
+
+    .btn-small {
+      height: 30px;
+      padding: 0 10px;
+      font-size: var(--font-caption);
+    }
+
+    /* ========================================================
+       3. VIEW 1: ⚔️ ADVENTURE / BATTLE HUB (CR FOCUS ARENA)
+       ======================================================== */
+    .hub-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 14px;
+      gap: 10px;
+    }
+
+    /* Chapter Title Header Bar (Clickable -> Quick Switch Drawer) */
+    .hub-chapter-header {
+      width: 100%;
+      background: linear-gradient(90deg, rgba(30, 41, 59, 0.6) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(30, 41, 59, 0.6) 100%);
+      border: 1.5px solid #334155;
+      border-radius: 16px;
+      padding: 8px 14px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+
+    .hub-chapter-header:hover {
+      border-color: #38bdf8;
+      background: rgba(30, 41, 59, 1);
+    }
+
+    .hub-chapter-header .chapter-tag {
+      font-size: var(--font-caption);
+      color: #94a3b8;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .hub-chapter-header .stage-title {
+      font-size: var(--font-display);
+      font-weight: 900;
+      color: #fbbf24;
+      text-shadow: 0 2px 8px rgba(251, 191, 36, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .hub-chapter-header .quick-hint {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: var(--font-mini);
+      background: rgba(56, 189, 248, 0.2);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 2px 6px;
+      border-radius: 8px;
+      color: #38bdf8;
+    }
+
+    /* Arena Master Layout: Left HUD Icons + Center Arena + Right HUD Icons */
+    .hub-battlefield-layout {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    /* Side HUD Icon Column (Clash Royale Style Vertical Action Icons) */
+    .hub-hud-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .hub-hud-icon-btn {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #334155;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      transition: transform 0.1s ease, border-color 0.2s ease;
+    }
+
+    .hub-hud-icon-btn:hover {
+      border-color: #38bdf8;
+      transform: scale(1.06);
+    }
+
+    .hub-hud-icon-btn:active {
+      transform: scale(0.95);
+    }
+
+    .hub-hud-icon-btn .icon-glyph {
+      font-size: 1.6rem;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+    }
+
+    .hub-hud-icon-btn .hud-badge-dot {
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      width: 12px;
+      height: 12px;
+      background: #ef4444;
+      border: 2px solid #0f172a;
+      border-radius: 50%;
+      box-shadow: 0 0 6px #ef4444;
+    }
+
+    /* Center Stage Focus Column */
+    .hub-center-arena-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Arena Stage Artwork Box (Compact Clash Royale Arena) */
+    .stage-artwork-card {
+      width: 100%;
+      max-width: 250px;
+      height: 220px;
+      background: linear-gradient(180deg, #1e293b 0%, #090d16 100%);
+      border: 3px solid #fbbf24;
+      border-radius: 22px;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.7), 0 0 18px rgba(251, 191, 36, 0.25);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stage-artwork-card:hover {
+      transform: scale(1.02);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.8), 0 0 26px rgba(251, 191, 36, 0.4);
+    }
+
+    .stage-artwork-card .arena-bg-img {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.35;
+    }
+
+    .stage-artwork-card .arena-boss-icon {
+      font-size: 4.2rem;
+      z-index: 2;
+      filter: drop-shadow(0 8px 16px rgba(0,0,0,0.7));
+      animation: floatBoss 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes floatBoss {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-8px); }
+    }
+
+    .stage-artwork-card .arena-badge {
+      position: absolute;
+      bottom: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid #fbbf24;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: var(--font-caption);
+      color: #fbbf24;
+      font-weight: 800;
+      z-index: 2;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    }
+
+    /* Compact Stage Stepper Nav (Left/Right Arrows integrated neatly below/around card) */
+    .hub-stage-stepper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .stage-nav-arrow-compact {
+      width: 38px;
+      height: 30px;
+      background: rgba(30, 41, 59, 0.9);
+      border: 1.5px solid #475569;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      color: #f8fafc;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    .stage-nav-arrow-compact:active:not(.disabled) {
+      transform: scale(0.92);
+      background: #0284c7;
+    }
+
+    .stage-nav-arrow-compact.disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      border-color: #1e293b;
+    }
+
+    /* Giant Deploy Button */
+    .hub-deploy-section {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .btn-battle-heroic {
+      width: 88%;
+      height: 60px;
+      font-size: var(--font-display);
+      border-radius: 20px;
+    }
+
+    /* Stage Brief Info Capsule (Clickable -> Detail POPUP, Balanced & Symmetrical) */
+    .hub-stage-brief {
+      width: 92%;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1.5px solid #334155;
+      border-radius: 16px;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+      transition: border-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .hub-stage-brief:hover {
+      border-color: #38bdf8;
+      transform: translateY(-1px);
+    }
+
+    .brief-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      text-align: center;
+    }
+
+    .brief-col .label {
+      font-size: var(--font-caption);
+      color: #94a3b8;
+    }
+
+    .brief-col .val {
+      font-size: var(--font-h2);
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    /* ========================================================
+       4. VIEW 2: 🛡️ GEAR & HEROES (DUAL SUB-TABS)
+       ======================================================== */
+    .gear-container {
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px;
+      gap: 14px;
+    }
+
+    /* Sub-tabs switch (裝備 / 英雄) */
+    .sub-tabs-bar {
+      display: flex;
+      background: #090d16;
+      border: 1.5px solid #334155;
+      border-radius: 16px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .sub-tab-btn {
+      flex: 1;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: var(--font-body);
+      font-weight: 800;
+      color: #94a3b8;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .sub-tab-btn.active {
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      color: #38bdf8;
+      border: 1px solid #38bdf8;
+      box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+    }
+
+    /* Sub-view Section */
+    .sub-view {
+      display: none;
+    }
+
+    .sub-view.active {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      animation: tabFadeIn 0.2s ease-out;
+    }
+
+    /* Active Deployment Module (出擊設置) */
+    .active-deploy-box {
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      border: 1.5px solid #334155;
+      border-radius: 20px;
+      padding: 14px 16px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    }
+
+    .deploy-module-title {
+      font-size: var(--font-h1);
+      font-weight: 800;
+      color: #fbbf24;
+      text-align: center;
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+    }
+
+    .deploy-slots-row {
+      display: flex;
+      justify-content: space-around;
+      gap: 12px;
+    }
+
+    .deploy-slot-card {
+      flex: 1;
+      background: #111827;
+      border: 1.5px solid #334155;
+      border-radius: 16px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+    }
+
+    .deploy-slot-card .slot-name {
+      font-size: var(--font-body);
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    .deploy-slot-card .slot-visual {
+      width: 72px;
+      height: 72px;
+      background: #090d16;
+      border-radius: 14px;
+      border: 2px solid #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+    }
+
+    .deploy-slot-card .slot-visual img {
+      width: 90%;
+      height: 90%;
+      object-fit: contain;
+    }
+
+    /* Standardized Action Buttons in Inventory (一鍵合成、轉蛋機、擴充) */
+    .inventory-actions-bar {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .inventory-actions-bar .cr-btn {
+      flex: 1;
+      height: 38px;
+      font-size: var(--font-caption);
+      border-radius: 12px;
+      padding: 0 4px;
+    }
+
+    /* Gear Grid (Ensures 4 columns fit without overflow) */
+    .gear-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      background: #090d16;
+      border: 1.5px solid #1e293b;
+      border-radius: 18px;
+      padding: 10px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .gear-cell {
+      aspect-ratio: 1;
+      background: #1e293b;
+      border: 2px solid #334155;
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: pointer;
+      box-sizing: border-box;
+      transition: all 0.15s ease;
+      overflow: hidden;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
+    }
+
+    .gear-cell:hover {
+      border-color: #38bdf8;
+      transform: scale(1.04);
+      z-index: 2;
+    }
+
+    .gear-cell img {
+      width: 82%;
+      height: 82%;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+    }
+
+    /* Match battle equipment tile value badge */
+    .gear-cell .gear-val {
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      font-size: 0.85rem;
+      font-weight: 900;
+      color: #ffffff;
+      text-shadow: 0 1px 3px #000, 0 0 4px #000;
+      letter-spacing: -0.5px;
+    }
+
+    /* Specific Tier Background Tints Matching Battle Tiles */
+    .gear-cell.tier-2 { background: linear-gradient(135deg, #1e3a8a, #0f172a); border-color: #3b82f6; }
+    .gear-cell.tier-4 { background: linear-gradient(135deg, #1d4ed8, #1e293b); border-color: #60a5fa; }
+    .gear-cell.tier-8 { background: linear-gradient(135deg, #065f46, #0f172a); border-color: #10b981; }
+    .gear-cell.tier-16 { background: linear-gradient(135deg, #047857, #1e293b); border-color: #34d399; }
+    .gear-cell.tier-32 { background: linear-gradient(135deg, #b45309, #0f172a); border-color: #f59e0b; }
+    .gear-cell.tier-64 { background: linear-gradient(135deg, #c2410c, #1e293b); border-color: #fb923c; }
+    .gear-cell.tier-128 { background: linear-gradient(135deg, #b91c1c, #0f172a); border-color: #f87171; }
+    .gear-cell.tier-256 { background: linear-gradient(135deg, #7c2d12, #1e293b); border-color: #fbbf24; }
+    .gear-cell.tier-512 { background: linear-gradient(135deg, #581c87, #0f172a); border-color: #c084fc; box-shadow: 0 0 10px rgba(192, 132, 252, 0.4); }
+
+    /* ========================================================
+       5. HERO CARDS (ENLARGED HITBOX SPEC)
+       ======================================================== */
+    .hero-list-container {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+
+    .hero-card {
+      min-width: 170px;
+      flex: 1;
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #334155;
+      border-radius: 20px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.5);
+    }
+
+    .hero-card.active-deployed {
+      border-color: #fbbf24;
+      box-shadow: 0 0 16px rgba(251, 191, 36, 0.35);
+    }
+
+    /* ENLARGED TOP HITBOX (Purple Dashed Area in Spec) */
+    .hero-hitbox-upper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      background: rgba(30, 41, 59, 0.4);
+      border: 1.5px dashed rgba(167, 139, 250, 0.4);
+      border-radius: 14px;
+      padding: 8px 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .hero-hitbox-upper:hover {
+      background: rgba(167, 139, 250, 0.15);
+      border-color: #a78bfa;
+    }
+
+    .hero-card-title {
+      font-size: var(--font-h2);
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    .hero-avatar-box {
+      width: 76px;
+      height: 76px;
+      background: #090d16;
+      border-radius: 16px;
+      border: 2px solid #475569;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-avatar-box img {
+      width: 90%;
+      height: 90%;
+      object-fit: contain;
+    }
+
+    .hero-avatar-box .info-tag {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 18px;
+      height: 18px;
+      background: rgba(56, 189, 248, 0.85);
+      border-radius: 50%;
+      font-size: 0.65rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #042f2e;
+    }
+
+    .hero-skill-label {
+      font-size: var(--font-caption);
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      text-align: center;
+      width: 90%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Lower Action Buttons (Distinct from Upper Hitbox) */
+    .hero-actions-lower {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: auto;
+    }
+
+    .hero-actions-lower .cr-btn {
+      width: 100%;
+      height: 34px;
+      font-size: var(--font-caption);
+    }
+
+    /* ========================================================
+       6. VIEW 3: 💎 SHOP (CR SPECIAL OFFERS & VISUAL FLAIR)
+       ======================================================== */
+    .shop-container {
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px;
+      gap: 14px;
+    }
+
+    .shop-banner {
+      width: 100%;
+      height: 140px;
+      background: radial-gradient(circle at 50% 40%, #7c3aed 0%, #1e1b4b 100%);
+      border: 2px solid #a78bfa;
+      border-radius: 20px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4);
+      overflow: hidden;
+    }
+
+    .shop-banner-tag {
+      font-size: var(--font-caption);
+      color: #f8fafc;
+      font-weight: 800;
+      background: rgba(0,0,0,0.5);
+      padding: 3px 8px;
+      border-radius: 8px;
+      align-self: flex-start;
+    }
+
+    .shop-banner-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .shop-card-pedestal {
+      width: 60px;
+      height: 75px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid #fbbf24;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 14px rgba(251, 191, 36, 0.6);
+      transform: rotate(-3deg);
+    }
+
+    .shop-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .shop-item-card {
+      background: #1e293b;
+      border: 1.5px solid #334155;
+      border-radius: 16px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+    }
+
+    .shop-item-card .item-pedestal {
+      width: 64px;
+      height: 64px;
+      background: #0f172a;
+      border-radius: 14px;
+      border: 1px solid #475569;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+
+    /* ========================================================
+       7. VIEW 4: ⛺ CAMP / ARMORY (FORGE & PASSIVES)
+       ======================================================== */
+    .camp-container {
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px;
+      gap: 14px;
+    }
+
+    .camp-banner {
+      width: 100%;
+      height: 120px;
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #f59e0b;
+      border-radius: 20px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      box-shadow: 0 6px 16px rgba(245, 158, 11, 0.25);
+    }
+
+    .camp-talent-card {
+      background: #1e293b;
+      border: 1.5px solid #334155;
+      border-radius: 16px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .talent-icon-box {
+      width: 48px;
+      height: 48px;
+      background: #0f172a;
+      border: 1px solid #38bdf8;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+    }
+
+    /* ========================================================
+       8. VIEW 5: 📕 COMPENDIUM (CATALOG & MULTI-TABS)
+       ======================================================== */
+    .compendium-container {
+      display: flex;
+      flex-direction: column;
+      padding: 12px 14px;
+      gap: 12px;
+    }
+
+    /* Compendium Sub-tabs */
+    .comp-tabs-bar {
+      display: flex;
+      background: #090d16;
+      border: 1.5px solid #334155;
+      border-radius: 16px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .comp-tab-btn {
+      flex: 1;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      font-size: var(--font-caption);
+      font-weight: 800;
+      color: #94a3b8;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .comp-tab-btn.active {
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      color: #38bdf8;
+      border: 1px solid #38bdf8;
+      box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+    }
+
+    /* Compendium Tip Banner */
+    .comp-tip-box {
+      background: rgba(15, 23, 42, 0.85);
+      border-left: 3px solid #38bdf8;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: var(--font-mini);
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+
+    .compendium-progress-bar {
+      width: 100%;
+      background: #090d16;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      height: 22px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+    }
+
+    .progress-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 58%;
+      background: linear-gradient(90deg, #38bdf8, #818cf8);
+    }
+
+    .progress-text {
+      position: relative;
+      font-size: var(--font-caption);
+      font-weight: 800;
+      color: #f8fafc;
+      z-index: 2;
+    }
+
+    /* Chapter / Category Group Section */
+    .comp-group-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .comp-group-title {
+      font-size: var(--font-body);
+      font-weight: 800;
+      color: #fbbf24;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-left: 4px;
+      border-left: 3px solid #f59e0b;
+    }
+
+    .compendium-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      width: 100%;
+    }
+
+    .compendium-card {
+      background: #1e293b;
+      border: 1.5px solid #334155;
+      border-radius: 14px;
+      padding: 10px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      min-height: 94px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .compendium-card:hover {
+      border-color: #38bdf8;
+      transform: scale(1.04);
+    }
+
+    .compendium-card.locked {
+      filter: grayscale(1) opacity(0.5);
+    }
+
+    /* Transparent Empty Cell (User Spec: 湊不滿數量的就留空，不要有底板) */
+    .comp-empty-cell {
+      visibility: hidden;
+      pointer-events: none;
+      min-height: 94px;
+    }
+
+    /* ========================================================
+       9. POPUP MODALS & BOTTOM SHEETS (CR STYLE)
+       ======================================================== */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.active {
+      display: flex;
+      animation: modalFadeIn 0.2s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .cr-modal-box {
+      width: 100%;
+      max-width: 360px;
+      background: #111827;
+      border: 2px solid #38bdf8;
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9), 0 0 24px rgba(56, 189, 248, 0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+    }
+
+    .modal-close-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 30px;
+      height: 30px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      cursor: pointer;
+      color: #94a3b8;
+    }
+
+    /* Hero Detail Popup with Video */
+    .hero-video-box {
+      width: 100%;
+      height: 165px;
+      background: #000;
+      border-radius: 14px;
+      border: 1.5px solid #475569;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hero-video-box video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Quick Stage Drawer (Bottom Sheet) */
+    .drawer-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 210;
+      display: none;
+      align-items: flex-end;
+    }
+
+    .drawer-overlay.active {
+      display: flex;
+    }
+
+    .drawer-sheet {
+      width: 100%;
+      max-height: 70%;
+      background: #111827;
+      border-top: 3px solid #fbbf24;
+      border-radius: 24px 24px 0 0;
+      padding: 18px 16px 28px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      animation: sheetSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
+    }
+
+    @keyframes sheetSlideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .drawer-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      max-height: 280px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+
+    .drawer-cell {
+      height: 48px;
+      background: #1e293b;
+      border: 1.5px solid #334155;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: var(--font-body);
+      color: #f8fafc;
+      cursor: pointer;
+    }
+
+    .drawer-cell.cleared {
+      border-color: #10b981;
+      color: #34d399;
+    }
+
+    .drawer-cell.current {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #fff;
+      box-shadow: 0 0 10px #38bdf8;
+    }
+
+    .drawer-cell.locked {
+      opacity: 0.35;
+      cursor: not-allowed;
+      border-color: #1e293b;
+    }
+  </style>
+</head>
+<body>
+
+<div class="showcase-layout">
+
+  <!-- ========================================================
+       MOBILE PHONE SCREEN MOCKUP
+       ======================================================== -->
+  <div class="phone-mockup">
+    <!-- Top Notch -->
+    <div class="phone-notch"></div>
+
+    <!-- Top Persistent Resources Bar -->
+    <header class="phone-header">
+      <div class="resource-capsule stamina" onclick="alert('❤️ 體力：5/5（每20分鐘自然恢復1點）')">
+        <span>❤️</span>
+        <span id="txt-stamina">5 / 5</span>
+      </div>
+      <div class="resource-capsule gold" onclick="alert('🪙 金幣：445,699\n點擊可進入商城儲值！')">
+        <span>🪙</span>
+        <span id="txt-gold">445,699 +</span>
+      </div>
+      <div class="settings-btn" onclick="alert('⚙️ 設定：音樂音效、語言切換、存檔同步')">⚙️</div>
+    </header>
+
+    <!-- Phone Body (5 Switchable Views) -->
+    <main class="phone-body">
+
+      <!-- ==========================================
+           TAB 1: 💎 商店頁 (SHOP)
+           ========================================== -->
+      <section class="tab-view" id="view-shop">
+        <div class="shop-container">
+          <!-- Featured Banner: No Ads Pass -->
+          <div class="shop-banner">
+            <span class="shop-banner-tag">🛡️ 尊爵終身特權 · 永久免廣告</span>
+            <div class="shop-banner-center">
+              <div class="shop-card-pedestal">
+                <span style="font-size:2rem;">🚫📺</span>
+                <span style="font-size:0.65rem; color:#fbbf24; font-weight:900;">NO ADS</span>
+              </div>
+              <div>
+                <h3 style="font-size:var(--font-h1); color:#fff;">終身免廣告特權</h3>
+                <p style="font-size:var(--font-caption); color:#cbd5e1;">不再受任何廣告干擾 + 每日加贈體力</p>
+              </div>
+            </div>
+            <button class="cr-btn cr-btn-green btn-small" style="align-self:center; width:70%;" onclick="alert('🎉 恭喜解鎖【終身免廣告特權】！永久暢享無廣告遊戲體驗！')">NT$ 90.00 永久移除廣告</button>
+          </div>
+
+          <!-- Daily Picks Grid -->
+          <h3 style="font-size:var(--font-h2); color:#38bdf8;">每日精選商品</h3>
+          <div class="shop-grid">
+            <div class="shop-item-card">
+              <div class="item-pedestal">💰</div>
+              <span style="font-size:var(--font-body); font-weight:800;">大袋金幣 (5000)</span>
+              <button class="cr-btn cr-btn-blue btn-small" style="width:100%;" onclick="alert('🪙 成功兌換 5,000 金幣！')">免費領取</button>
+            </div>
+            <div class="shop-item-card">
+              <div class="item-pedestal">🗡️</div>
+              <span style="font-size:var(--font-body); font-weight:800;">稀有泥雕寶箱</span>
+              <button class="cr-btn cr-btn-amber btn-small" style="width:100%;" onclick="alert('🎁 獲得 T05 秘銀闊劍！')">🪙 2,500</button>
+            </div>
+            <div class="shop-item-card">
+              <div class="item-pedestal">⚡</div>
+              <span style="font-size:var(--font-body); font-weight:800;">體力全滿藥劑</span>
+              <button class="cr-btn cr-btn-amber btn-small" style="width:100%;" onclick="alert('⚡ 體力已完全回滿！')">🪙 800</button>
+            </div>
+            <div class="shop-item-card">
+              <div class="item-pedestal">🎟️</div>
+              <span style="font-size:var(--font-body); font-weight:800;">副本特許通行券</span>
+              <button class="cr-btn cr-btn-green btn-small" style="width:100%;" onclick="alert('🎟️ 通行券已入袋！')">NT$ 30.00</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           TAB 2: ⛺ 軍備頁 (ARMORY / CAMP)
+           ========================================== -->
+      <section class="tab-view" id="view-camp">
+        <div class="camp-container">
+          <div class="camp-banner">
+            <div>
+              <h3 style="font-size:var(--font-h1); color:#fbbf24;">王國前進營地</h3>
+              <p style="font-size:var(--font-caption); color:#cbd5e1;">升級打鐵科技、抽裝備與行囊強化</p>
+            </div>
+            <span style="font-size:3.5rem;">⛺</span>
+          </div>
+
+          <h3 style="font-size:var(--font-h2); color:#38bdf8;">營地科技與設施</h3>
+          
+          <!-- 1. 鐵匠鋪 (提升科技) -->
+          <div class="camp-talent-card">
+            <div class="talent-icon-box">🔨</div>
+            <div style="flex:1;">
+              <h4 style="font-size:var(--font-body); font-weight:800;">皇家鐵匠鋪 LV.3</h4>
+              <p style="font-size:var(--font-caption); color:#94a3b8;">初始棋盤生成裝備基礎階級提升至 T02</p>
+            </div>
+            <button class="cr-btn cr-btn-green btn-small" onclick="alert('🔨 鐵匠鋪升級成功！')">升級 🪙8000</button>
+          </div>
+
+          <!-- 2. 裝備轉蛋機 (新補入) -->
+          <div class="camp-talent-card">
+            <div class="talent-icon-box">🎰</div>
+            <div style="flex:1;">
+              <h4 style="font-size:var(--font-body); font-weight:800;">裝備轉蛋機</h4>
+              <p style="font-size:var(--font-caption); color:#94a3b8;">隨機抽取高階泥雕神兵與鍛造素材</p>
+            </div>
+            <button class="cr-btn cr-btn-purple btn-small" onclick="alert('🎰 投入 5,000 金幣轉蛋！恭喜獲得 T06 皇家重甲！')">抽取 🪙5000</button>
+          </div>
+
+          <!-- 3. 軍需背包 (與轉蛋產物相關) -->
+          <div class="camp-talent-card">
+            <div class="talent-icon-box">🎒</div>
+            <div style="flex:1;">
+              <h4 style="font-size:var(--font-body); font-weight:800;">軍需行囊 LV.4</h4>
+              <p style="font-size:var(--font-caption); color:#94a3b8;">背包上限+4格，通關金幣結算額外+20%</p>
+            </div>
+            <button class="cr-btn cr-btn-green btn-small" onclick="alert('🎒 行囊升級成功！')">升級 🪙12000</button>
+          </div>
+
+          <!-- 4. 體力補給 (精簡) -->
+          <div class="camp-talent-card">
+            <div class="talent-icon-box">🍲</div>
+            <div style="flex:1;">
+              <h4 style="font-size:var(--font-body); font-weight:800;">營地補給處 LV.2</h4>
+              <p style="font-size:var(--font-caption); color:#94a3b8;">體力自然恢復時間縮短 3 分鐘</p>
+            </div>
+            <button class="cr-btn cr-btn-green btn-small" onclick="alert('🍲 補給處升級成功！')">升級 🪙5000</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           TAB 3: ⚔️ 冒險主頁 (ADVENTURE HUB) - DEFAULT
+           ========================================== -->
+      <section class="tab-view active" id="view-adventure">
+        <div class="hub-container">
+          
+          <!-- Top Chapter Header (Clickable -> Quick Switch Drawer) -->
+          <div class="hub-chapter-header" onclick="openQuickStageDrawer()">
+            <div class="chapter-tag" id="hub-chap-tag">第一章：林地平原</div>
+            <div class="stage-title">
+              <span id="hub-stage-num">Stage 12</span>
+              <span>⚔️</span>
+            </div>
+            <div class="quick-hint">選關 ☰</div>
+          </div>
+
+          <!-- Arena Master Layout: Left HUD Icons + Center Stage Arena + Right HUD Icons -->
+          <div class="hub-battlefield-layout">
+            
+            <!-- Left Side HUD Actions (Clash Royale Style Vertical Icons) -->
+            <div class="hub-hud-sidebar">
+              <div class="hub-hud-icon-btn" onclick="alert('📅 每日簽到：已連續登入 5 天，獲得 500 金幣！')" title="每日簽到">
+                <span class="icon-glyph">📅</span>
+                <span class="hud-badge-dot"></span>
+              </div>
+              <div class="hub-hud-icon-btn" onclick="alert('🎁 限時特惠：首儲加贈 300% 泥雕寶箱！')" title="特惠活動">
+                <span class="icon-glyph">🎁</span>
+              </div>
+              <div class="hub-hud-icon-btn" onclick="alert('🏆 王國天梯榜：目前第 88 名 (傲視群雄)')" title="排行名次">
+                <span class="icon-glyph">🏆</span>
+              </div>
+            </div>
+
+            <!-- Center Stage Focus Arena Column -->
+            <div class="hub-center-arena-column">
+              <!-- Center Artwork Box (Clickable -> Quick Switch Drawer) -->
+              <div class="stage-artwork-card" onclick="openQuickStageDrawer()">
+                <img class="arena-bg-img" src="assets/images/map_integrated_world_road.jpg" alt="Arena Background" />
+                <div class="arena-boss-icon" id="arena-boss-icon">🐺</div>
+                <div class="arena-badge" id="arena-boss-name">首領：森林巨狼 (64)</div>
+              </div>
+
+              <!-- Compact Stage Stepper Controls -->
+              <div class="hub-stage-stepper">
+                <button class="stage-nav-arrow-compact" id="btn-stage-prev" onclick="changeStageByStep(-1)">◀ 上一關</button>
+                <span style="font-size:var(--font-caption); color:#94a3b8; font-weight:700;">快速切換</span>
+                <button class="stage-nav-arrow-compact" id="btn-stage-next" onclick="changeStageByStep(1)">下一關 ▶</button>
+              </div>
+            </div>
+
+            <!-- Right Side HUD Actions -->
+            <div class="hub-hud-sidebar">
+              <div class="hub-hud-icon-btn" onclick="alert('📜 冒險任務：合成50次裝備 (32/50)')" title="冒險任務">
+                <span class="icon-glyph">📜</span>
+                <span class="hud-badge-dot"></span>
+              </div>
+              <div class="hub-hud-icon-btn" onclick="alert('🎯 史萊姆討伐副本：今日剩餘次數 2/2')" title="副本試煉">
+                <span class="icon-glyph">🎯</span>
+              </div>
+              <div class="hub-hud-icon-btn" onclick="alert('🛡️ 騎士公會：公會每日簽到完成！')" title="騎士公會">
+                <span class="icon-glyph">🛡️</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Stage Brief Info Bar (Clickable -> Stage Detail POPUP, Symmetrical) -->
+          <div class="hub-stage-brief" onclick="openStageDetailModal()">
+            <div class="brief-col">
+              <span class="label">推薦戰力</span>
+              <span class="val" id="brief-rec-power">2048 裝備</span>
+            </div>
+            <div style="width:1.5px; height:24px; background:#334155; opacity:0.6;"></div>
+            <div class="brief-col">
+              <span class="label">首通金幣獎勵</span>
+              <span class="val" style="color:#fbbf24;" id="brief-first-gold">🪙 1,560</span>
+            </div>
+            <div style="width:1.5px; height:24px; background:#334155; opacity:0.6;"></div>
+            <div class="brief-col">
+              <span class="label">關卡詳細情報</span>
+              <span class="val" style="color:#38bdf8; font-size:var(--font-body);">詳情 ℹ️</span>
+            </div>
+          </div>
+
+          <!-- Giant Heroic Deploy Button -->
+          <div class="hub-deploy-section">
+            <button class="cr-btn cr-btn-blue btn-battle-heroic" onclick="launchStageBattle()">
+              <span>⚔️ 出擊！</span>
+            </button>
+            <span style="font-size:var(--font-caption); color:#38bdf8; font-weight:700;">🛡️ 戰鬥無消耗 · 僅戰敗扣 1 點 ❤️ 體力</span>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==========================================
+           TAB 4: 🛡️ 裝備與英雄 (GEAR & HEROES)
+           ========================================== -->
+      <section class="tab-view" id="view-gear">
+        <div class="gear-container">
+          
+          <!-- Sub-tabs Switch -->
+          <div class="sub-tabs-bar">
+            <div class="sub-tab-btn active" id="btn-sub-gear" onclick="switchGearSubTab('gear')">
+              <span>🛡️</span>
+              <span>裝備庫</span>
+            </div>
+            <div class="sub-tab-btn" id="btn-sub-hero" onclick="switchGearSubTab('hero')">
+              <span>🙂</span>
+              <span>英雄名單</span>
+            </div>
+          </div>
+
+          <!-- Sub-view 1: 裝備庫 -->
+          <div class="sub-view active" id="subview-gear">
+            
+            <!-- Active Deployment Module -->
+            <div class="active-deploy-box">
+              <div class="deploy-module-title">⚔️ 出擊設置</div>
+              <div class="deploy-slots-row">
+                <!-- Gear Slot (Without redundant Txx) -->
+                <div class="deploy-slot-card">
+                  <span class="slot-name">配戴裝備</span>
+                  <div class="slot-visual">
+                    <img id="deploy-gear-img" src="assets/images/equipment_clay/equip_09.png" alt="Equipped Gear" />
+                  </div>
+                  <span style="font-size:var(--font-caption); font-weight:800; color:#fbbf24;" id="deploy-gear-name">聖殿光刃 (512)</span>
+                  <button class="cr-btn cr-btn-purple btn-medium" style="width:85%;" onclick="unequipActiveGear()">解除</button>
+                </div>
+
+                <!-- Hero Slot -->
+                <div class="deploy-slot-card">
+                  <span class="slot-name">上陣英雄</span>
+                  <div class="slot-visual">
+                    <img id="deploy-hero-img" src="assets/images/hero_knight/hero_05.png" alt="Equipped Hero" />
+                  </div>
+                  <span style="font-size:var(--font-caption); font-weight:800; color:#38bdf8;" id="deploy-hero-name">戰士 (LV.5)</span>
+                  <button class="cr-btn cr-btn-amber btn-medium" style="width:85%;" onclick="switchGearSubTab('hero')">更換</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Standardized Inventory Actions (Order: 1. 轉蛋, 2. 擴充, 3. 一鍵合成) -->
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:var(--font-h2); font-weight:800; color:#cbd5e1;">持有裝備庫</span>
+              <span style="font-size:var(--font-caption); color:#94a3b8;">容量：8 / 24</span>
+            </div>
+
+            <div class="inventory-actions-bar">
+              <button class="cr-btn cr-btn-purple" onclick="alert('🎁 前往裝備轉蛋機！')">🎁 裝備轉蛋</button>
+              <button class="cr-btn cr-btn-blue" onclick="alert('📦 花費 1,000 金幣擴充 4 格背包！')">📦 擴充容量</button>
+              <button class="cr-btn cr-btn-green" onclick="alert('✨ 一鍵合成：已自動合併相同裝備！')">✨ 一鍵合成</button>
+            </div>
+
+            <!-- Gear Grid (Bounded, no overflow) -->
+            <div class="gear-grid" id="gear-grid-container">
+              <!-- Dynamically populated -->
+            </div>
+
+          </div>
+
+          <!-- Sub-view 2: 英雄名單 -->
+          <div class="sub-view" id="subview-hero">
+            <h3 style="font-size:var(--font-h1); color:#38bdf8; text-align:center;">王國英雄名單</h3>
+            <div class="hero-list-container">
+              
+              <!-- 戰士 Hero Card -->
+              <div class="hero-card active-deployed">
+                <!-- ENLARGED TOP HITBOX -->
+                <div class="hero-hitbox-upper" onclick="openHeroDetailModal('warrior')">
+                  <span class="hero-card-title">戰士 LV.5</span>
+                  <div class="hero-avatar-box">
+                    <img src="assets/images/hero_knight/hero_05.png" alt="Warrior" />
+                    <div class="info-tag">i</div>
+                  </div>
+                  <div class="hero-skill-label">技能：十字碎裂</div>
+                </div>
+                <!-- Lower Action Buttons -->
+                <div class="hero-actions-lower">
+                  <button class="cr-btn cr-btn-amber" id="btn-deploy-warrior">出擊中</button>
+                  <button class="cr-btn cr-btn-disabled" disabled>已滿級</button>
+                </div>
+              </div>
+
+              <!-- 戰地商人 Hero Card -->
+              <div class="hero-card">
+                <!-- ENLARGED TOP HITBOX -->
+                <div class="hero-hitbox-upper" onclick="openHeroDetailModal('merchant')">
+                  <span class="hero-card-title">戰地商人 LV.1</span>
+                  <div class="hero-avatar-box">
+                    <img src="assets/images/hero_knight/hero_01.png" alt="Merchant" />
+                    <div class="info-tag">i</div>
+                  </div>
+                  <div class="hero-skill-label">技能：黃金急召</div>
+                </div>
+                <!-- Lower Action Buttons -->
+                <div class="hero-actions-lower">
+                  <button class="cr-btn cr-btn-blue" onclick="deployHero('merchant')">出擊</button>
+                  <button class="cr-btn cr-btn-green" onclick="alert('🪙 花費 50,000 金幣升級戰地商人！')">升級 🪙50000</button>
+                </div>
+              </div>
+
+              <!-- 精靈弓箭手 Hero Card -->
+              <div class="hero-card">
+                <!-- ENLARGED TOP HITBOX -->
+                <div class="hero-hitbox-upper" onclick="openHeroDetailModal('archer')">
+                  <span class="hero-card-title">精靈弓手 LV.1</span>
+                  <div class="hero-avatar-box">
+                    <img src="assets/images/hero_knight/hero_03.png" alt="Archer" />
+                    <div class="info-tag">i</div>
+                  </div>
+                  <div class="hero-skill-label">技能：破甲重矢</div>
+                </div>
+                <!-- Lower Action Buttons -->
+                <div class="hero-actions-lower">
+                  <button class="cr-btn cr-btn-blue" onclick="deployHero('archer')">出擊</button>
+                  <button class="cr-btn cr-btn-green" onclick="alert('🪙 花費 50,000 金幣升級精靈弓箭手！')">升級 🪙50000</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==========================================
+           TAB 5: 📕 圖鑑頁 (COMPENDIUM)
+           ========================================== -->
+      <section class="tab-view" id="view-compendium">
+        <div class="compendium-container">
+          
+          <!-- Sub-tabs Bar for Compendium -->
+          <div class="comp-tabs-bar">
+            <div class="comp-tab-btn active" id="btn-comp-monsters" onclick="switchCompTab('monsters')">
+              <span>👾</span>
+              <span>魔物圖鑑</span>
+            </div>
+            <div class="comp-tab-btn" id="btn-comp-heroes" onclick="switchCompTab('heroes')">
+              <span>⚔️</span>
+              <span>英雄圖鑑</span>
+            </div>
+            <div class="comp-tab-btn" id="btn-comp-gears" onclick="switchCompTab('gears')">
+              <span>🛡️</span>
+              <span>裝備圖鑑</span>
+            </div>
+          </div>
+
+          <!-- Collection Conditions Tip Banner -->
+          <div class="comp-tip-box" id="comp-tip-text">
+            💡 提示：於冒險中遭遇過魔物即可解鎖；未滿欄位直接留空不設底板。
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="font-size:var(--font-h2); color:#fbbf24;" id="comp-view-title">魔物收集總覽</h3>
+            <span style="font-size:var(--font-caption); color:#94a3b8;" id="comp-progress-label">完成度</span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="compendium-progress-bar">
+            <div class="progress-fill" id="comp-progress-fill"></div>
+            <span class="progress-text" id="comp-progress-text">已解鎖 6 / 9 (67%)</span>
+          </div>
+
+          <!-- Compendium Chapters Container (Dynamically Populated) -->
+          <div id="compendium-content-area" style="display:flex; flex-direction:column; gap:14px;">
+            <!-- Chapter sections appended by JavaScript -->
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar (5 Primary Tabs) -->
+    <nav class="phone-nav-bar">
+      <div class="nav-item" onclick="switchMainTab('shop')">
+        <span class="nav-icon">💎</span>
+        <span class="nav-text">商店</span>
+      </div>
+      <div class="nav-item" onclick="switchMainTab('camp')">
+        <span class="nav-icon">⛺</span>
+        <span class="nav-text">軍備</span>
+      </div>
+      <div class="nav-item active" onclick="switchMainTab('adventure')">
+        <span class="nav-icon">⚔️</span>
+        <span class="nav-text">冒險</span>
+      </div>
+      <div class="nav-item" onclick="switchMainTab('gear')">
+        <span class="nav-icon">🛡️</span>
+        <span class="nav-text">裝備</span>
+      </div>
+      <div class="nav-item" onclick="switchMainTab('compendium')">
+        <span class="nav-icon">📕</span>
+        <span class="nav-text">圖鑑</span>
+      </div>
+    </nav>
+
+    <!-- ========================================================
+         MODAL 1: 關卡詳細資訊 POPUP (STAGE DETAIL)
+         ======================================================== -->
+    <div class="modal-overlay" id="modal-stage-detail" onclick="if(event.target===this) closeStageDetailModal()">
+      <div class="cr-modal-box">
+        <div class="modal-close-btn" onclick="closeStageDetailModal()">✕</div>
+        <h3 style="font-size:var(--font-h1); color:#fbbf24; text-align:center;" id="modal-stage-title">Stage 12 · 關卡情報</h3>
+        
+        <div style="background:#1e293b; border-radius:14px; padding:12px; display:flex; gap:12px; align-items:center;">
+          <span style="font-size:3rem;" id="modal-boss-avatar">🐺</span>
+          <div>
+            <h4 style="font-size:var(--font-h2); color:#f8fafc;" id="modal-boss-name">首領：森林巨狼</h4>
+            <p style="font-size:var(--font-caption); color:#94a3b8;">生命數值：<span style="color:#ef4444; font-weight:800;" id="modal-boss-val">64</span></p>
+            <p style="font-size:var(--font-caption); color:#94a3b8;">波次機制：共 2 波怪群</p>
+          </div>
+        </div>
+
+        <div style="background:#090d16; border-radius:12px; padding:10px; font-size:var(--font-caption); color:#cbd5e1; line-height:1.5;">
+          <div>🪙 首通獎勵：<strong style="color:#fbbf24;" id="modal-gold-reward">1,560 金幣</strong></div>
+          <div>🛡️ 潛在掉落：泥盾靴 (8)、青銅刃 (4)</div>
+          <div>💡 攻略提示：使用戰士十字碎裂清除四周卡位金幣！</div>
+        </div>
+
+        <button class="cr-btn cr-btn-blue btn-large" style="width:100%;" onclick="closeStageDetailModal(); launchStageBattle();">
+          <span>⚔️ 出擊遠征 (戰敗扣 1 ❤️)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         MODAL 2: 英雄詳細資訊 POPUP (HERO DETAIL WITH VIDEO)
+         ======================================================== -->
+    <div class="modal-overlay" id="modal-hero-detail" onclick="if(event.target===this) closeHeroDetailModal()">
+      <div class="cr-modal-box">
+        <div class="modal-close-btn" onclick="closeHeroDetailModal()">✕</div>
+        
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <h3 style="font-size:var(--font-h1); color:#38bdf8;" id="modal-hero-title">戰士 (Warrior)</h3>
+            <span style="font-size:var(--font-caption); color:#fbbf24;" id="modal-hero-level">等級：LV.5 (已達最高階)</span>
+          </div>
+          <button class="cr-btn cr-btn-amber btn-small" id="modal-hero-btn-deploy" onclick="deployFromModal()">出擊中</button>
+        </div>
+
+        <!-- Video Demonstration Box (Uses Provided MP4) -->
+        <div class="hero-video-box">
+          <video id="hero-demo-video" src="assets/videos/skill_warrior_demo.mp4" autoplay loop muted playsinline></video>
+        </div>
+
+        <!-- Skill Mechanism Details -->
+        <div style="background:#090d16; border-radius:14px; padding:10px 12px; font-size:var(--font-caption); line-height:1.45;">
+          <div style="font-weight:800; color:#fbbf24; margin-bottom:4px;" id="modal-skill-title">⚔️ 專屬技能：十字碎裂</div>
+          <div style="color:#cbd5e1;" id="modal-skill-desc">
+            以英雄為中心粉碎上下左右4格內的裝備與金幣（不傷魔物），滿盤瀕危時自動觸發保命。<br>
+            <span style="color:#94a3b8;">⚠️ 碎裂的金幣直接粉碎消除，無法折現入袋。</span>
+          </div>
+          <div style="margin-top:6px; color:#38bdf8;" id="modal-skill-cd">冷卻回合：100 回合 (滿級極速)</div>
+        </div>
+
+        <div style="display:flex; gap:8px;">
+          <button class="cr-btn cr-btn-disabled btn-medium" style="flex:1;" disabled>已達最高等級</button>
+          <button class="cr-btn cr-btn-purple btn-medium" style="flex:1;" onclick="closeHeroDetailModal()">關閉資訊</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         DRAWER: 關卡快速換關抽屜 (QUICK STAGE DRAWER)
+         ======================================================== -->
+    <div class="drawer-overlay" id="drawer-quick-stage" onclick="if(event.target===this) closeQuickStageDrawer()">
+      <div class="drawer-sheet">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="font-size:var(--font-h1); color:#fbbf24;">快速跳轉關卡</h3>
+          <span style="font-size:var(--font-caption); color:#94a3b8;">點選已通關關卡進行切換</span>
+        </div>
+        <div class="drawer-grid" id="quick-stage-grid">
+          <!-- Dynamically populated with 25 stages -->
+        </div>
+        <button class="cr-btn cr-btn-purple btn-medium" style="width:100%;" onclick="closeQuickStageDrawer()">完成關閉</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========================================================
+       RIGHT DESKTOP SPECIFICATION & VERIFICATION PANEL
+       ======================================================== -->
+  <aside class="desktop-panel">
+    <h2>🎯 《2048 RPG》商業化主介面 v2.1 深度精化展示</h2>
+    
+    <div class="spec-card">
+      <strong>📌 本次概念網頁精化重點（依據 5 大頁面反饋深度調整）：</strong><br>
+      完全不影響既有 S-Curve 樣條地圖與主遊戲程式碼，專為落實皇室戰爭（Clash Royale）風格打造！
+    </div>
+
+    <div class="spec-card">
+      <strong>✨ 核心反饋精化落實（C-STORY-123）：</strong><br>
+      1. <strong>💎 商店頁面</strong>：頂部橫幅更新為手遊標配「<strong>終身免廣告特權 (No Ads Pass)</strong>」，每日精選維持質感圖標。<br>
+      2. <strong>⛺ 軍備頁面</strong>：補入「<strong>裝備轉蛋機</strong>」，4 項功能順序規範為：① 皇家鐵匠鋪 ➔ ② 裝備轉蛋機 ➔ ③ 軍需行囊 ➔ ④ 營地補給處。<br>
+      3. <strong>⚔️ 冒險主頁</strong>：<br>
+      &nbsp;&nbsp;• <strong>嚴格校正體力扣除規範</strong>：徹底撤除「消耗 1 點體力」錯誤標示，落實「<strong>戰鬥無消耗 · 僅戰敗扣 1 點體力</strong>」！<br>
+      &nbsp;&nbsp;• <strong>雙側垂直 ICON 浮動列</strong>：比照皇室戰爭，設置每日簽到、特惠活動、排行榜、冒險任務等精美圖示。<br>
+      &nbsp;&nbsp;• <strong>質感底圖紋理</strong>：背景加入精緻微格紋暗紋底圖，擺脫生硬純黑。<br>
+      &nbsp;&nbsp;• <strong>左右換關按鍵緊湊化</strong>，關卡簡易資訊條兩端平衡對稱。<br>
+      4. <strong>🛡️ 裝備頁面</strong>：<br>
+      &nbsp;&nbsp;• 移除多餘「Txx」階級贅字，簡化為清晰名稱與等級數值。<br>
+      &nbsp;&nbsp;• 「解除」與「更換」按鈕加大、採用<strong>白字加立體陰影</strong>改善易讀性。<br>
+      &nbsp;&nbsp;• 功能按鍵順序調整為：<strong>① 裝備轉蛋 ➔ ② 擴充容量 ➔ ③ 一鍵合成</strong>。<br>
+      &nbsp;&nbsp;• 裝備格子比照關卡合成方塊，具備<strong>對應階級稀有度底色</strong>與清晰數字，4 列網格完全不超出右側邊界。<br>
+      5. <strong>📕 圖鑑頁面</strong>：<br>
+      &nbsp;&nbsp;• 頂部提供【魔物圖鑑】、【英雄圖鑑】、【裝備圖鑑】三種子分頁切換。<br>
+      &nbsp;&nbsp;• 提示說明收集規則（魔物遭遇過即解鎖、英雄與裝備在戰鬥中合成過即解鎖）。<br>
+      &nbsp;&nbsp;• 依章節/階級分組展示，<strong>未滿 3 列的空格完全透明留空，不繪製底板</strong>。
+    </div>
+
+    <div class="spec-card">
+      <strong>🎨 按鈕與字級 Design System 規範：</strong><br>
+      • <span style="color:#38bdf8; font-weight:800;">科技藍</span>：出擊 / 戰鬥相關按鈕<br>
+      • <span style="color:#4ade80; font-weight:800;">肯定綠</span>：升級 / 合成 / 免費領取按鈕<br>
+      • <span style="color:#fbbf24; font-weight:800;">琥珀橙</span>：出擊中 / 鎖定狀態按鈕<br>
+      • <span style="color:#a78bfa; font-weight:800;">秘銀紫</span>：解除 / 輔助操作按鈕<br>
+      • <span style="color:#64748b; font-weight:800;">深灰階</span>：禁用 / 已滿級 / 未解鎖按鈕
+    </div>
+  </aside>
+
+</div>
+
+<script>
+  // ========================================================
+  // STATE MANAGEMENT FOR SHOWCASE V2.0
+  // ========================================================
+  const MAX_UNLOCKED_STAGE = 25; // Player current progress gate
+  let currentSelectedStage = 12;
+  let activeDeployedHero = 'warrior';
+  let activeDeployedGear = { name: '聖殿光刃 (512)', img: 'assets/images/equipment_clay/equip_09.png' };
+  let currentCompTab = 'monsters';
+
+  const STAGE_CONFIGS = {
+    1: { name: '史萊姆草地', bossIcon: '🟢', bossName: '草地史萊姆', val: 8, power: '16 裝備', gold: 1000 },
+    5: { name: '毒菇沼澤', bossIcon: '🍄', bossName: '劇毒大毒菇', val: 32, power: '64 裝備', gold: 1200 },
+    10: { name: '哥布林前哨', bossIcon: '👺', bossName: '哥布林長老', val: 64, power: '256 裝備', gold: 1400 },
+    12: { name: '林中小徑', bossIcon: '🐺', bossName: '森林巨狼', val: 64, power: '2048 裝備', gold: 1560 },
+    15: { name: '荒漠土匪營', bossIcon: '🦂', bossName: '沙漠巨蠍', val: 128, power: '1024 裝備', gold: 1800 },
+    20: { name: '綠洲古遺蹟', bossIcon: '🕷️', bossName: '古墓石蛛', val: 256, power: '2048 裝備', gold: 2200 },
+    25: { name: '荒漠最高峰', bossIcon: '👑', bossName: '荒漠霸王龍', val: 512, power: '4096 裝備', gold: 3000 }
+  };
+
+  function getStageDef(s) {
+    if (STAGE_CONFIGS[s]) return STAGE_CONFIGS[s];
+    return {
+      name: `幽暗密林 ${s}`,
+      bossIcon: (s % 5 === 0) ? '👹' : '🐺',
+      bossName: (s % 5 === 0) ? `密林首領 S${s}` : `狂暴野獸 S${s}`,
+      val: Math.min(512, Math.pow(2, Math.floor(s / 3) + 2)),
+      power: `${Math.pow(2, Math.floor(s / 3) + 3)} 裝備`,
+      gold: 1000 + s * 45
+    };
+  }
+
+  // 1. Bottom Main Navigation Tab Switching
+  function switchMainTab(tabKey) {
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-view').forEach(el => el.classList.remove('active'));
+
+    const tabIndices = { 'shop': 0, 'camp': 1, 'adventure': 2, 'gear': 3, 'compendium': 4 };
+    const navItems = document.querySelectorAll('.nav-item');
+    if (navItems[tabIndices[tabKey]]) {
+      navItems[tabIndices[tabKey]].classList.add('active');
+    }
+
+    const viewEl = document.getElementById(`view-${tabKey}`);
+    if (viewEl) viewEl.classList.add('active');
+  }
+
+  // 2. Gear & Hero Sub-tab Switching
+  function switchGearSubTab(subKey) {
+    document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.sub-view').forEach(v => v.classList.remove('active'));
+
+    document.getElementById(`btn-sub-${subKey}`).classList.add('active');
+    document.getElementById(`subview-${subKey}`).classList.add('active');
+  }
+
+  // 3. Stage Switching Logic (Enforced Unlocked Range Gate)
+  function renderAdventureStage() {
+    const data = getStageDef(currentSelectedStage);
+    document.getElementById('hub-stage-num').textContent = `Stage ${currentSelectedStage}`;
+    document.getElementById('arena-boss-icon').textContent = data.bossIcon;
+    document.getElementById('arena-boss-name').textContent = `首領：${data.bossName} (${data.val})`;
+    document.getElementById('brief-rec-power').textContent = data.power;
+    document.getElementById('brief-first-gold').textContent = `🪙 ${data.gold.toLocaleString()}`;
+
+    // Update Nav Arrows Disabled States
+    const prevBtn = document.getElementById('btn-stage-prev');
+    const nextBtn = document.getElementById('btn-stage-next');
+    if (currentSelectedStage <= 1) {
+      prevBtn.classList.add('disabled');
+    } else {
+      prevBtn.classList.remove('disabled');
+    }
+
+    if (currentSelectedStage >= MAX_UNLOCKED_STAGE) {
+      nextBtn.classList.add('disabled');
+    } else {
+      nextBtn.classList.remove('disabled');
+    }
+  }
+
+  function changeStageByStep(step) {
+    const target = currentSelectedStage + step;
+    if (target < 1 || target > MAX_UNLOCKED_STAGE) {
+      return; // Gatekept!
+    }
+    currentSelectedStage = target;
+    renderAdventureStage();
+  }
+
+  // 4. Quick Stage Drawer
+  function openQuickStageDrawer() {
+    const drawer = document.getElementById('drawer-quick-stage');
+    const grid = document.getElementById('quick-stage-grid');
+    grid.innerHTML = '';
+
+    for (let s = 1; s <= 25; s++) {
+      const cell = document.createElement('div');
+      cell.className = 'drawer-cell';
+      cell.textContent = s;
+
+      if (s < MAX_UNLOCKED_STAGE) {
+        cell.classList.add('cleared');
+        cell.innerHTML = `<span>${s}</span><span style="font-size:0.6rem;">⭐⭐⭐</span>`;
+      } else if (s === MAX_UNLOCKED_STAGE) {
+        cell.classList.add('current');
+        cell.innerHTML = `<span>${s}</span><span style="font-size:0.6rem;">進度</span>`;
+      } else {
+        cell.classList.add('locked');
+        cell.innerHTML = `<span>🔒</span>`;
+      }
+
+      cell.onclick = () => {
+        if (s > MAX_UNLOCKED_STAGE) {
+          alert('🔒 該關卡尚未解鎖！');
+          return;
+        }
+        currentSelectedStage = s;
+        renderAdventureStage();
+        closeQuickStageDrawer();
+      };
+
+      grid.appendChild(cell);
+    }
+
+    drawer.classList.add('active');
+  }
+
+  function closeQuickStageDrawer() {
+    document.getElementById('drawer-quick-stage').classList.remove('active');
+  }
+
+  // 5. Stage Detail POPUP
+  function openStageDetailModal() {
+    const data = getStageDef(currentSelectedStage);
+    document.getElementById('modal-stage-title').textContent = `Stage ${currentSelectedStage} · 關卡情報`;
+    document.getElementById('modal-boss-avatar').textContent = data.bossIcon;
+    document.getElementById('modal-boss-name').textContent = `首領：${data.bossName}`;
+    document.getElementById('modal-boss-val').textContent = data.val;
+    document.getElementById('modal-gold-reward').textContent = `${data.gold.toLocaleString()} 金幣`;
+    document.getElementById('modal-stage-detail').classList.add('active');
+  }
+
+  function closeStageDetailModal() {
+    document.getElementById('modal-stage-detail').classList.remove('active');
+  }
+
+  function launchStageBattle() {
+    alert(`⚔️ 正式進入關卡戰鬥！\n關卡：Stage ${currentSelectedStage}\n上陣英雄：${activeDeployedHero === 'warrior' ? '戰士' : activeDeployedHero}\n佩戴裝備：${activeDeployedGear.name}\n（🛡️ 戰鬥無消耗 · 僅戰敗扣 1 點 ❤️ 體力）`);
+  }
+
+  // 6. Hero Detail Modal with Video
+  let modalHeroSelected = 'warrior';
+
+  function openHeroDetailModal(heroKey) {
+    modalHeroSelected = heroKey;
+    const modal = document.getElementById('modal-hero-detail');
+    const video = document.getElementById('hero-demo-video');
+
+    if (heroKey === 'warrior') {
+      document.getElementById('modal-hero-title').textContent = '戰士 (Warrior)';
+      document.getElementById('modal-hero-level').textContent = '等級：LV.5 (已達最高階)';
+      document.getElementById('modal-skill-title').textContent = '⚔️ 專屬技能：十字碎裂';
+      document.getElementById('modal-skill-desc').innerHTML = '以英雄為中心粉碎上下左右4格內的裝備與金幣（不傷魔物），滿盤瀕危時自動觸發保命。<br><span style="color:#94a3b8;">⚠️ 碎裂的金幣直接粉碎消除，無法折現入袋。</span>';
+      document.getElementById('modal-skill-cd').textContent = '冷卻回合：100 回合 (滿級極速)';
+      video.style.display = 'block';
+      video.play().catch(() => {});
+    } else if (heroKey === 'merchant') {
+      document.getElementById('modal-hero-title').textContent = '戰地商人 (Royal Merchant)';
+      document.getElementById('modal-hero-level').textContent = '等級：LV.1';
+      document.getElementById('modal-skill-title').textContent = '🪙 專屬技能：黃金急召';
+      document.getElementById('modal-skill-desc').innerHTML = '瞬間強制回收盤面上所有的金幣方塊並直接折現入袋，騰出空格；滿盤瀕危時自動觸發保命。';
+      document.getElementById('modal-skill-cd').textContent = '冷卻回合：500 回合 (LV.1)';
+      video.style.display = 'none'; // Replaced with visual
+    } else {
+      document.getElementById('modal-hero-title').textContent = '精靈弓箭手 (Elf Archer)';
+      document.getElementById('modal-hero-level').textContent = '等級：LV.1';
+      document.getElementById('modal-skill-title').textContent = '🏹 專屬技能：破甲重矢';
+      document.getElementById('modal-skill-desc').innerHTML = '鎖定全場數值最大的魔物：若大於等於4則數值折半；若為2則直接射殺。純主動進攻，無被動保命。';
+      document.getElementById('modal-skill-cd').textContent = '冷卻回合：500 回合 (LV.1)';
+      video.style.display = 'none';
+    }
+
+    const deployBtn = document.getElementById('modal-hero-btn-deploy');
+    if (activeDeployedHero === heroKey) {
+      deployBtn.className = 'cr-btn cr-btn-amber btn-small';
+      deployBtn.textContent = '出擊中';
+    } else {
+      deployBtn.className = 'cr-btn cr-btn-blue btn-small';
+      deployBtn.textContent = '出擊';
+    }
+
+    modal.classList.add('active');
+  }
+
+  function closeHeroDetailModal() {
+    const video = document.getElementById('hero-demo-video');
+    video.pause();
+    document.getElementById('modal-hero-detail').classList.remove('active');
+  }
+
+  function deployHero(heroKey) {
+    activeDeployedHero = heroKey;
+    const heroNameMap = { 'warrior': '戰士 (LV.5)', 'merchant': '戰地商人 (LV.1)', 'archer': '精靈弓箭手 (LV.1)' };
+    const heroImgMap = {
+      'warrior': 'assets/images/hero_knight/hero_05.png',
+      'merchant': 'assets/images/hero_knight/hero_01.png',
+      'archer': 'assets/images/hero_knight/hero_03.png'
+    };
+    document.getElementById('deploy-hero-name').textContent = heroNameMap[heroKey];
+    document.getElementById('deploy-hero-img').src = heroImgMap[heroKey];
+
+    // Refresh hero cards in subview
+    const btnWarrior = document.getElementById('btn-deploy-warrior');
+    if (btnWarrior) {
+      if (heroKey === 'warrior') {
+        btnWarrior.className = 'cr-btn cr-btn-amber';
+        btnWarrior.textContent = '出擊中';
+      } else {
+        btnWarrior.className = 'cr-btn cr-btn-blue';
+        btnWarrior.textContent = '出擊';
+      }
+    }
+    alert(`⚔️ 已成功指派 ${heroNameMap[heroKey]} 上陣出擊！`);
+  }
+
+  function deployFromModal() {
+    deployHero(modalHeroSelected);
+    closeHeroDetailModal();
+  }
+
+  function unequipActiveGear() {
+    alert('🛡️ 已解除佩戴裝備！');
+  }
+
+  // 7. Compendium Sub-tab Switching & Grouped Chapter Rendering
+  function switchCompTab(tabKey) {
+    currentCompTab = tabKey;
+    document.querySelectorAll('.comp-tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`btn-comp-${tabKey}`).classList.add('active');
+    renderCompendiumView();
+  }
+
+  const COMPENDIUM_DATA = {
+    monsters: {
+      title: '魔物收集總覽',
+      tip: '💡 提示：於冒險關卡中「遭遇現身」即算解鎖；未滿 3 格列直接透明留空，不繪製底板。',
+      total: 9,
+      unlocked: 6,
+      groups: [
+        {
+          groupName: '第一章：林地平原',
+          items: [
+            { name: '草地史萊姆', icon: '🟢', val: 8, unlocked: true },
+            { name: '小魔蝠', icon: '🦇', val: 16, unlocked: true },
+            { name: '劇毒大毒菇', icon: '🍄', val: 32, unlocked: true },
+            { name: '森林巨狼', icon: '🐺', val: 64, unlocked: true }
+          ]
+        },
+        {
+          groupName: '第二章：荒漠峽谷',
+          items: [
+            { name: '哥布林長老', icon: '👺', val: 64, unlocked: true },
+            { name: '沙漠巨蠍', icon: '🦂', val: 128, unlocked: true }
+            // 2 items, 3rd is empty cell (transparent without background board)
+          ]
+        },
+        {
+          groupName: '第三章：古墓地宮',
+          items: [
+            { name: '古墓石蛛', icon: '🕷️', val: 256, unlocked: false },
+            { name: '荒漠霸王龍', icon: '👑', val: 512, unlocked: false },
+            { name: '終焉魔神', icon: '👹', val: 1024, unlocked: false }
+          ]
+        }
+      ]
+    },
+    heroes: {
+      title: '英雄陣營總覽',
+      tip: '💡 提示：在關卡中「成功合成出」或於酒館解鎖之英雄方可收錄；未滿列留空透明。',
+      total: 4,
+      unlocked: 3,
+      groups: [
+        {
+          groupName: '王國遠征勇者',
+          items: [
+            { name: '戰士', icon: '🙂', val: 'LV.5', unlocked: true, avatar: 'assets/images/hero_knight/hero_05.png' },
+            { name: '戰地商人', icon: '🙂', val: 'LV.1', unlocked: true, avatar: 'assets/images/hero_knight/hero_01.png' },
+            { name: '精靈弓箭手', icon: '🙂', val: 'LV.1', unlocked: true, avatar: 'assets/images/hero_knight/hero_03.png' },
+            { name: '皇家聖騎士', icon: '❓', val: 'LV.1', unlocked: false }
+            // 4 items, 5th and 6th are transparent empty cells
+          ]
+        }
+      ]
+    },
+    gears: {
+      title: '神兵裝備總覽',
+      tip: '💡 提示：在棋盤合成出、或由轉蛋獲得之裝備方可解鎖；具有對應等級戰鬥底色。',
+      total: 9,
+      unlocked: 9,
+      groups: [
+        {
+          groupName: '初階泥雕神兵 (T01 ~ T03)',
+          items: [
+            { name: '泥木劍', img: 'assets/images/equipment_clay/equip_01.png', val: 2, unlocked: true },
+            { name: '青銅刃', img: 'assets/images/equipment_clay/equip_02.png', val: 4, unlocked: true },
+            { name: '泥盾靴', img: 'assets/images/equipment_clay/equip_03.png', val: 8, unlocked: true }
+          ]
+        },
+        {
+          groupName: '精煉金屬裝備 (T04 ~ T06)',
+          items: [
+            { name: '鐵甲胸鎧', img: 'assets/images/equipment_clay/equip_04.png', val: 16, unlocked: true },
+            { name: '秘銀闊劍', img: 'assets/images/equipment_clay/equip_05.png', val: 32, unlocked: true },
+            { name: '皇家重甲', img: 'assets/images/equipment_clay/equip_06.png', val: 64, unlocked: true }
+          ]
+        },
+        {
+          groupName: '傳奇神域聖武 (T07 ~ T09)',
+          items: [
+            { name: '榮耀法靴', img: 'assets/images/equipment_clay/equip_07.png', val: 128, unlocked: true },
+            { name: '輝煌神盾', img: 'assets/images/equipment_clay/equip_08.png', val: 256, unlocked: true },
+            { name: '聖殿光刃', img: 'assets/images/equipment_clay/equip_09.png', val: 512, unlocked: true }
+          ]
+        }
+      ]
+    }
+  };
+
+  function renderCompendiumView() {
+    const data = COMPENDIUM_DATA[currentCompTab];
+    document.getElementById('comp-view-title').textContent = data.title;
+    document.getElementById('comp-tip-text').textContent = data.tip;
+
+    const pct = Math.round((data.unlocked / data.total) * 100);
+    document.getElementById('comp-progress-fill').style.width = `${pct}%`;
+    document.getElementById('comp-progress-text').textContent = `已解鎖 ${data.unlocked} / ${data.total} (${pct}%)`;
+
+    const area = document.getElementById('compendium-content-area');
+    area.innerHTML = '';
+
+    data.groups.forEach(grp => {
+      const sec = document.createElement('div');
+      sec.className = 'comp-group-section';
+
+      const title = document.createElement('div');
+      title.className = 'comp-group-title';
+      title.textContent = grp.groupName;
+      sec.appendChild(title);
+
+      const grid = document.createElement('div');
+      grid.className = 'compendium-grid';
+
+      grp.items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'compendium-card' + (item.unlocked ? '' : ' locked');
+
+        let visualHtml = '';
+        if (item.img) {
+          visualHtml = `<img src="${item.img}" style="width:50px; height:50px; object-fit:contain;" alt="${item.name}" />`;
+        } else if (item.avatar) {
+          visualHtml = `<img src="${item.avatar}" style="width:48px; height:48px; object-fit:contain;" alt="${item.name}" />`;
+        } else {
+          visualHtml = `<span style="font-size:2.2rem;">${item.unlocked ? item.icon : '❓'}</span>`;
+        }
+
+        card.innerHTML = `
+          ${visualHtml}
+          <span style="font-size:var(--font-caption); font-weight:800; color:#f8fafc; text-align:center;">${item.unlocked ? item.name : '未解鎖'}</span>
+          <span style="font-size:var(--font-mini); color:#fbbf24; font-weight:700;">${item.unlocked ? '數值: ' + item.val : '???'}</span>
+        `;
+
+        card.onclick = () => {
+          if (!item.unlocked) {
+            alert('🔒 該項目尚未解鎖！請推進冒險或合成出對應項目。');
+          } else {
+            alert(`📖 【圖鑑情報】\n名稱：${item.name}\n數值階級：${item.val}\n解鎖狀態：已收錄進王國圖鑑！`);
+          }
+        };
+
+        grid.appendChild(card);
+      });
+
+      // User Requirement: 湊不滿 3 列數量的就留空，不要有底板
+      const remainder = grp.items.length % 3;
+      if (remainder !== 0) {
+        const emptyNeeded = 3 - remainder;
+        for (let i = 0; i < emptyNeeded; i++) {
+          const emptyCell = document.createElement('div');
+          emptyCell.className = 'comp-empty-cell';
+          grid.appendChild(emptyCell);
+        }
+      }
+
+      sec.appendChild(grid);
+      area.appendChild(sec);
+    });
+  }
+
+  // 8. Populate Gear Grid with Authentic Battle Tile Tints
+  function initGearGrid() {
+    const gearGrid = document.getElementById('gear-grid-container');
+    gearGrid.innerHTML = '';
+    const gears = [2, 4, 8, 16, 32, 64, 128, 256];
+    gears.forEach((val, idx) => {
+      const cell = document.createElement('div');
+      cell.className = `gear-cell tier-${val}`;
+      const imgIdx = String(idx + 1).padStart(2, '0');
+      cell.innerHTML = `
+        <img src="assets/images/equipment_clay/equip_${imgIdx}.png" alt="Gear ${val}" />
+        <span class="gear-val">${val}</span>
+      `;
+      cell.onclick = () => alert(`🛡️ 點選裝備：${val} 階裝備 (已著色為戰鬥底板色)`);
+      gearGrid.appendChild(cell);
+    });
+  }
+
+  // Initialization
+  window.addEventListener('DOMContentLoaded', () => {
+    renderAdventureStage();
+    initGearGrid();
+    renderCompendiumView();
+  });
+</script>
+
+</body>
+</html>

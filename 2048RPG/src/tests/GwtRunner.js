@@ -332,7 +332,12 @@ export class GwtRunner {
       this.testGwt122_1_FiveNavTabsAndVisualFlourish.bind(this),
       this.testGwt122_2_AdventureHubQuickSwitchAndDetailModal.bind(this),
       this.testGwt122_3_LargeHitboxHeroCardAndVideoModal.bind(this),
-      this.testGwt122_4_DesignSystemButtonColorMatrix.bind(this)
+      this.testGwt122_4_DesignSystemButtonColorMatrix.bind(this),
+      // C-STORY-123: 皇室戰爭風格 UI 原型全頁面深度精化 (Showcase 2.0 Refinement)
+      this.testGwt123_1_AdventureHubLayoutAndStaminaRule.bind(this),
+      this.testGwt123_2_ArmoryGachaAndStoreNoAdsBanner.bind(this),
+      this.testGwt123_3_EquipmentHubReadabilityAndTileSync.bind(this),
+      this.testGwt123_4_CompendiumMultiTabAndEmptySlots.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6192,6 +6197,67 @@ export class GwtRunner {
     this.assert(htmlText.includes('.cr-btn-disabled'), 'Standardized disabled/maxed button');
     this.assert(htmlText.includes('--font-display:'), 'Defines typography template scale');
   }
+
+  // C-STORY-123 GWT 123.1: 冒險主頁體力規範與兩側活動浮動列佈局 (Adventure Hub Layout & Stamina Rule)
+  async testGwt123_1_AdventureHubLayoutAndStaminaRule() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(!htmlText.includes('消耗 1 點 ❤️ 體力'), 'Strictly removed erroneous stamina deduction display');
+    this.assert(htmlText.includes('僅戰敗扣 1 點'), 'Explicitly enforces correct stamina rule: deducted only upon defeat');
+    this.assert(htmlText.includes('hub-hud-sidebar'), 'Includes vertical HUD icon sidebar on left and right like Clash Royale');
+    this.assert(htmlText.includes('hub-stage-stepper'), 'Includes compact stage step navigation controls');
+  }
+
+  // C-STORY-123 GWT 123.2: 軍備與商店功能整合 (Armory Gacha & Store Banner)
+  async testGwt123_2_ArmoryGachaAndStoreNoAdsBanner() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('終身免廣告特權'), 'Store featured banner updated to No Ads Pass');
+    this.assert(htmlText.includes('裝備轉蛋機'), 'Armory includes gear gacha machine facility');
+    this.assert(htmlText.includes('皇家鐵匠鋪'), 'Armory includes royal forge technology');
+    this.assert(htmlText.includes('軍需行囊'), 'Armory includes military backpack facility');
+  }
+
+  // C-STORY-123 GWT 123.3: 裝備庫熱區加大、按鍵重排與方塊一致性 (Equipment Hub & Button Readability)
+  async testGwt123_3_EquipmentHubReadabilityAndTileSync() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(!htmlText.includes('T09 聖殿光刃'), 'Removed redundant Txx prefix in equipped slot');
+    this.assert(htmlText.includes('聖殿光刃 (512)'), 'Keeps clean equipment name and power');
+    this.assert(htmlText.includes('tier-2'), 'Gear cells styled with authentic battle tile tier gradient classes');
+    this.assert(htmlText.includes('text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85)'), 'Buttons styled with white text and strong drop shadows for optimal readability');
+  }
+
+  // C-STORY-123 GWT 123.4: 圖鑑多維度分頁、關卡分組與空白無底板展示 (Collection Multi-Tab & Grouping)
+  async testGwt123_4_CompendiumMultiTabAndEmptySlots() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('switchCompTab('), 'Defines compendium subtab switcher for monsters, heroes and gears');
+    this.assert(htmlText.includes('comp-empty-cell'), 'Defines transparent empty cell placeholder without ugly background boards');
+    this.assert(htmlText.includes('comp-group-section'), 'Groups compendium items into chapter or tier sections');
+    this.assert(htmlText.includes('comp-tip-box'), 'Includes helpful tip clarifying collection unlock requirements');
+  }
 }
+
 
 
