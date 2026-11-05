@@ -2132,21 +2132,20 @@
        RIGHT DESKTOP SPECIFICATION & VERIFICATION PANEL
        ======================================================== -->
   <aside class="desktop-panel">
-    <h2>🎯 《2048 RPG》商業化主介面 v2.4 盤面比例與英雄彈窗重構展示</h2>
+    <h2>🎯 《2048 RPG》商業化主介面 v2.5 英雄專屬裝備圖鑑展示</h2>
     
     <div class="spec-card">
-      <strong>📌 本次概念網頁收斂重點（C-STORY-126 - 盤面長方形比例、英雄彈窗與圖鑑獨立收合）：</strong><br>
-      落實戰鬥盤面長方形比例 (5:6) 與圖片放大，重構英雄詳細資訊彈窗（文字在上展示在下、按鈕左右對調、移除多餘標籤），並將英雄圖鑑拆分為獨立收合列表，全數點亮 2~512 解鎖形態！
+      <strong>📌 本次概念網頁收斂重點（C-STORY-128 - 圖鑑裝備分頁英雄體系重整）：</strong><br>
+      去除細碎階級小組，重構為「英雄專屬裝備體系」架構。現階段完整展示「⚔️ 鐵甲狂戰士專屬裝備（刀劍與重裝 2～512）」，並預留弓箭手戰弓與商人秘寶規劃區塊！
     </div>
 
     <div class="spec-card">
-      <strong>✨ 核心規格收斂落實（C-STORY-126）：</strong><br>
-      1. <strong>📐 盤面 5:6 直向長方形比例</strong>：背包格子 (`.gear-cell`)、出擊欄位 (`.slot-visual`) 與英雄頭像框 (`.hero-avatar-box`) 全面改為 5:6 長方形，圖片放大呼應戰鬥盤面。<br>
-      2. <strong>🏷️ 英雄彈窗移除多餘標籤</strong>：徹底拔除右上角「出擊中/未上陣」標籤，等級字體放大至清晰的 1rem。<br>
-      3. <strong>🖼️ 英雄彈窗立繪放大與順序調整</strong>：移除小箭頭，立繪框大幅放大呈現大器姿態；技能文字說明置於上方，技能動態演示置於下方。<br>
-      4. <strong>🔄 英雄彈窗按鍵左右對調</strong>：左側為「⚔️ 出擊」、右側為「🔨 升級 🪙5000」，防溢出自適應設計，便利右手單手操作。<br>
-      5. <strong>📖 圖鑑英雄獨立收合與 512 全開</strong>：戰士、商人、弓手拆為獨立區塊列表，點擊標題可摺疊/展開；解鎖至 512 則 2~512 共 9 階圖片全部點亮解鎖；未解鎖英雄不顯示外觀圖片。<br>
-      6. <strong>💎 商店與選關規格持續鎖定</strong>：純淨化商品、50 關選關抽屜標記與全域任意點擊關閉簽到視窗全線維持生效。
+      <strong>✨ 核心規格收斂落實（C-STORY-128）：</strong><br>
+      1. <strong>⚔️ 戰士專屬神兵 2～512 全階呈獻</strong>：泥木劍(2) 至 聖殿光刃(512) 共 9 階神兵一體化收錄於戰士專屬群組，直向 5:6 盤面比例與戰鬥漸層底色。<br>
+      2. <strong>🏹 預留長線職業裝備規劃</strong>：預列弓箭手戰弓、商人秘寶專屬裝備群組，標註「規劃中」且未解鎖不渲染圖片。<br>
+      3. <strong>📂 折疊收合手感一致</strong>：裝備分頁同享英雄圖鑑的點擊標題收合/展開 (Accordion) 互動機制。<br>
+      4. <strong>📐 全介面直向長方形與放大設定</strong>：裝備庫、出擊欄位與英雄卡片 5:6 比例長方形與放大樣式全數穩定生效。<br>
+      5. <strong>🚀 獨立雙擊啟動 BAT</strong>：根目錄 `start_prototype_showcase.bat` 雙擊即可一鍵瀏覽，無需後台 TASKS。
     </div>
 
     <div class="spec-card">
@@ -2731,33 +2730,38 @@
       ]
     },
     gears: {
-      title: '神兵裝備總覽',
-      tip: '💡 提示：在棋盤合成出、或由轉蛋獲得之裝備方可解鎖；具有對應等級戰鬥底色。',
+      title: '英雄專屬神兵總覽',
+      tip: '💡 提示：未來各英雄將擁有獨立專屬裝備體系（如戰士刀劍、弓手戰弓、商人秘寶）。現階段以戰士裝備完整示意；點擊標題可摺疊/展開。',
       total: 9,
       unlocked: 9,
       groups: [
         {
-          groupName: '初階泥雕神兵 (T01 ~ T03)',
+          groupName: '⚔️ 鐵甲狂戰士專屬裝備 (Swords & Armor)',
+          unlockedRatio: '9/9 解鎖',
           items: [
             { name: '泥木劍', img: 'assets/images/equipment_clay/equip_01.png', val: 2, unlocked: true },
             { name: '青銅刃', img: 'assets/images/equipment_clay/equip_02.png', val: 4, unlocked: true },
-            { name: '泥盾靴', img: 'assets/images/equipment_clay/equip_03.png', val: 8, unlocked: true }
-          ]
-        },
-        {
-          groupName: '精煉金屬裝備 (T04 ~ T06)',
-          items: [
+            { name: '泥盾靴', img: 'assets/images/equipment_clay/equip_03.png', val: 8, unlocked: true },
             { name: '鐵甲胸鎧', img: 'assets/images/equipment_clay/equip_04.png', val: 16, unlocked: true },
             { name: '秘銀闊劍', img: 'assets/images/equipment_clay/equip_05.png', val: 32, unlocked: true },
-            { name: '皇家重甲', img: 'assets/images/equipment_clay/equip_06.png', val: 64, unlocked: true }
-          ]
-        },
-        {
-          groupName: '傳奇神域聖武 (T07 ~ T09)',
-          items: [
+            { name: '皇家重甲', img: 'assets/images/equipment_clay/equip_06.png', val: 64, unlocked: true },
             { name: '榮耀法靴', img: 'assets/images/equipment_clay/equip_07.png', val: 128, unlocked: true },
             { name: '輝煌神盾', img: 'assets/images/equipment_clay/equip_08.png', val: 256, unlocked: true },
             { name: '聖殿光刃', img: 'assets/images/equipment_clay/equip_09.png', val: 512, unlocked: true }
+          ]
+        },
+        {
+          groupName: '🏹 精靈弓箭手專屬裝備 (Bows & Quivers) [預定規劃]',
+          unlockedRatio: '規劃中',
+          items: [
+            { name: '巡林戰弓體系', val: '規劃中', unlocked: false }
+          ]
+        },
+        {
+          groupName: '🪙 戰地商人專屬裝備 (Relics & Gold) [預定規劃]',
+          unlockedRatio: '規劃中',
+          items: [
+            { name: '商隊秘寶體系', val: '規劃中', unlocked: false }
           ]
         }
       ]
@@ -2800,7 +2804,8 @@
 
       grp.items.forEach(item => {
         const card = document.createElement('div');
-        card.className = 'compendium-card' + (item.unlocked ? '' : ' locked');
+        const tierClass = (typeof item.val === 'number' && item.unlocked) ? ` tier-${item.val}` : '';
+        card.className = 'compendium-card' + tierClass + (item.unlocked ? '' : ' locked');
 
         let visualHtml = '';
         if (!item.unlocked) {

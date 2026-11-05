@@ -358,7 +358,11 @@ export class GwtRunner {
       this.testGwt126_5_CompendiumTiersUnlockRuleAndHiddenUnreleased.bind(this),
       // C-STORY-127: 修復展示頁腳本語法錯誤與新增一鍵啟動 BAT 批次檔
       this.testGwt127_1_ScriptZeroSyntaxErrorsAndGlobalFunctions.bind(this),
-      this.testGwt127_2_ConvenientLaunchBatFilesExist.bind(this)
+      this.testGwt127_2_ConvenientLaunchBatFilesExist.bind(this),
+      // C-STORY-128: 圖鑑裝備分頁重整（以英雄專屬裝備體系為架構，先以戰士神兵示意）
+      this.testGwt128_1_CompendiumGearHeroBasedGrouping.bind(this),
+      this.testGwt128_2_WarriorGearsFullNineTiersCoverage.bind(this),
+      this.testGwt128_3_CompendiumGearFutureArchetypesPlanned.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6542,6 +6546,52 @@ export class GwtRunner {
       } catch (e) {}
     }
     this.assert(htmlText.includes('start "" "%TARGET_HTML%"') || htmlText.includes('ui_prototype_showcase_2.html'), 'start_showcase.bat launcher exists and invokes default browser');
+  }
+
+  // =========================================================================
+  // C-STORY-128: 圖鑑裝備分頁重整（以英雄專屬裝備體系為架構，先以戰士神兵示意）
+  // =========================================================================
+
+  // C-STORY-128 GWT 128.1: 裝備圖鑑移除細碎階級分組、重構為英雄專屬體系
+  async testGwt128_1_CompendiumGearHeroBasedGrouping() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(!htmlText.includes('初階泥雕神兵 (T01 ~ T03)'), 'Removed granular low-tier gear groupings');
+    this.assert(!htmlText.includes('精煉金屬裝備 (T04 ~ T06)'), 'Removed granular mid-tier gear groupings');
+    this.assert(!htmlText.includes('傳奇神域聖武 (T07 ~ T09)'), 'Removed granular high-tier gear groupings');
+    this.assert(htmlText.includes('⚔️ 鐵甲狂戰士專屬裝備 (Swords & Armor)'), 'Restructured into hero archetype dedicated gear system');
+  }
+
+  // C-STORY-128 GWT 128.2: 狂戰士刀劍與重裝 2～512 共 9 階完整呈獻且具備階級底色
+  async testGwt128_2_WarriorGearsFullNineTiersCoverage() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('聖殿光刃') && htmlText.includes('val: 512'), 'Warrior gear line includes Tier 9 512 legendary weapon');
+    this.assert(htmlText.includes('泥木劍') && htmlText.includes('val: 2'), 'Warrior gear line includes Tier 1 2 weapon');
+    this.assert(htmlText.includes('tierClass'), 'Compendium cards dynamically inject battle tier color class');
+  }
+
+  // C-STORY-128 GWT 128.3: 預留弓箭手與商人專屬裝備規劃區塊且規劃中不渲染圖片
+  async testGwt128_3_CompendiumGearFutureArchetypesPlanned() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('🏹 精靈弓箭手專屬裝備 (Bows & Quivers) [預定規劃]'), 'Planned section for Elf Archer bow gear line');
+    this.assert(htmlText.includes('🪙 戰地商人專屬裝備 (Relics & Gold) [預定規劃]'), 'Planned section for Royal Merchant relic gear line');
   }
 }
 
