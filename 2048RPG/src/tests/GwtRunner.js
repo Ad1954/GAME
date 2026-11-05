@@ -349,7 +349,13 @@ export class GwtRunner {
       this.testGwt125_2_AdventureCenteringAndTopEdgeAlignment.bind(this),
       this.testGwt125_3_QuickStageDrawer50StagesAndSelectedMark.bind(this),
       this.testGwt125_4_DailyRetentionModalsAndAnywhereClose.bind(this),
-      this.testGwt125_5_GearStickyTabsHeroDetailAndSync.bind(this)
+      this.testGwt125_5_GearStickyTabsHeroDetailAndSync.bind(this),
+      // C-STORY-126: 長方形盤面比例、英雄彈窗排版重構與圖鑑英雄獨立收合 (Rectangular Grid Ratio, Hero Modal Overhaul & Collapsible Hero Compendium)
+      this.testGwt126_1_RectangularAspectRatiosAndScaling.bind(this),
+      this.testGwt126_2_HeroDetailModalTypographyAndNoStatusTag.bind(this),
+      this.testGwt126_3_HeroDetailModalLayoutOrderAndSwappedButtons.bind(this),
+      this.testGwt126_4_CompendiumHeroSeparateAccordionsAndCollapse.bind(this),
+      this.testGwt126_5_CompendiumTiersUnlockRuleAndHiddenUnreleased.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6415,8 +6421,91 @@ export class GwtRunner {
     }
     this.assert(htmlText.includes('position: sticky'), 'Sub-tabs bar uses sticky positioning so it remains visible when scrolling');
     this.assert(!htmlText.includes('card-hero-paladin'), 'Paladin removed, strictly adhering to the 3 canon heroes');
-    this.assert(htmlText.includes('stepHeroTierPreview'), 'Hero detail modal supports switching and previewing appearance tiers');
     this.assert(htmlText.includes('modal-upgrade-btn'), 'Hero detail modal includes upgrade button alongside deploy button');
+  }
+
+  // =========================================================================
+  // C-STORY-126: 長方形盤面比例、英雄彈窗排版重構與圖鑑英雄獨立收合
+  // =========================================================================
+
+  // C-STORY-126 GWT 126.1: 盤面 5:6 直向長方形比例與素材放大呼應 (Aspect Ratio 5/6 & Scale)
+  async testGwt126_1_RectangularAspectRatiosAndScaling() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('aspect-ratio: 5 / 6'), 'Defines 5:6 rectangular ratio matching battle tiles');
+    this.assert(htmlText.includes('.gear-cell') && htmlText.includes('transform: scale(1.15)'), 'Gear cell art scales up to avoid excessive borders');
+    this.assert(htmlText.includes('.deploy-slot-card .slot-visual') && htmlText.includes('aspect-ratio: 5 / 6'), 'Deployment slot visual card uses 5:6 rectangular ratio');
+    this.assert(htmlText.includes('.hero-avatar-box') && htmlText.includes('aspect-ratio: 5 / 6'), 'Hero avatar box adopts 5:6 rectangular ratio');
+  }
+
+  // C-STORY-126 GWT 126.2: 英雄詳細彈窗字體放大與徹底移除多餘標籤 (Modal Typography & No Status Tag)
+  async testGwt126_2_HeroDetailModalTypographyAndNoStatusTag() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('id="modal-hero-level"') && htmlText.includes('font-size:1rem;'), 'Hero modal level text enlarged to prominent 1rem');
+    this.assert(!htmlText.includes('id="modal-hero-status-tag"'), 'Redundant status tag cleanly stripped from modal top-right');
+  }
+
+  // C-STORY-126 GWT 126.3: 英雄彈窗內容文字在上展示在下、按鈕左右對調 (Modal Layout & Swapped Buttons)
+  async testGwt126_3_HeroDetailModalLayoutOrderAndSwappedButtons() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    const modalSection = htmlText.split('id="modal-hero-detail"')[1]?.split('<!-- ========================================================')[0] || '';
+    
+    // Check that skill description comes BEFORE skill showcase
+    const descIdx = modalSection.indexOf('id="modal-skill-desc"');
+    const demoIdx = modalSection.indexOf('id="modal-skill-showcase-box"');
+    this.assert(descIdx !== -1 && demoIdx !== -1 && descIdx < demoIdx, 'Skill description text is displayed ABOVE skill demonstration box');
+
+    // Check bottom button order: Deploy on Left, Upgrade on Right
+    const deployBtnIdx = modalSection.indexOf('id="modal-bottom-deploy-btn"');
+    const upgradeBtnIdx = modalSection.indexOf('id="modal-upgrade-btn"');
+    this.assert(deployBtnIdx !== -1 && upgradeBtnIdx !== -1 && deployBtnIdx < upgradeBtnIdx, 'Modal bottom buttons swapped: Deploy on Left, Upgrade on Right');
+  }
+
+  // C-STORY-126 GWT 126.4: 圖鑑英雄獨立分組與點擊標題摺疊收合 (Compendium Hero Accordion)
+  async testGwt126_4_CompendiumHeroSeparateAccordionsAndCollapse() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('⚔️ 鐵甲狂戰士 (Warrior)'), 'Compendium heroes lists Warrior separately');
+    this.assert(htmlText.includes('🪙 戰地商人 (Royal Merchant)'), 'Compendium heroes lists Merchant separately');
+    this.assert(htmlText.includes('🏹 精靈弓箭手 (Elf Archer)'), 'Compendium heroes lists Archer separately');
+    this.assert(htmlText.includes('grid.classList.toggle(\'collapsed\')'), 'Clicking hero title toggles collapsed class for accordion behavior');
+    this.assert(htmlText.includes('collapse-arrow'), 'Compendium titles display toggle arrow for visual state');
+  }
+
+  // C-STORY-126 GWT 126.5: 圖鑑 512 全階級點亮解鎖與未解鎖英雄不顯示圖片 (Unlock Rule & Hidden Locked Art)
+  async testGwt126_5_CompendiumTiersUnlockRuleAndHiddenUnreleased() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('9/9 解鎖'), 'Heroes reaching 512 have all 9 tiers unlocked');
+    this.assert(htmlText.includes('聖殿戰神') && htmlText.includes('val: 512'), 'Tier 9 (512) unlocked and listed in compendium');
+    this.assert(htmlText.includes('if (!item.unlocked)') && htmlText.includes('🔒'), 'Unreleased or locked heroes do NOT render image artworks');
   }
 }
 
