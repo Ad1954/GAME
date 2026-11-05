@@ -355,7 +355,10 @@ export class GwtRunner {
       this.testGwt126_2_HeroDetailModalTypographyAndNoStatusTag.bind(this),
       this.testGwt126_3_HeroDetailModalLayoutOrderAndSwappedButtons.bind(this),
       this.testGwt126_4_CompendiumHeroSeparateAccordionsAndCollapse.bind(this),
-      this.testGwt126_5_CompendiumTiersUnlockRuleAndHiddenUnreleased.bind(this)
+      this.testGwt126_5_CompendiumTiersUnlockRuleAndHiddenUnreleased.bind(this),
+      // C-STORY-127: 修復展示頁腳本語法錯誤與新增一鍵啟動 BAT 批次檔
+      this.testGwt127_1_ScriptZeroSyntaxErrorsAndGlobalFunctions.bind(this),
+      this.testGwt127_2_ConvenientLaunchBatFilesExist.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6506,6 +6509,39 @@ export class GwtRunner {
     this.assert(htmlText.includes('9/9 解鎖'), 'Heroes reaching 512 have all 9 tiers unlocked');
     this.assert(htmlText.includes('聖殿戰神') && htmlText.includes('val: 512'), 'Tier 9 (512) unlocked and listed in compendium');
     this.assert(htmlText.includes('if (!item.unlocked)') && htmlText.includes('🔒'), 'Unreleased or locked heroes do NOT render image artworks');
+  }
+
+  // =========================================================================
+  // C-STORY-127: 修復展示頁腳本語法錯誤與新增一鍵啟動 BAT 批次檔
+  // =========================================================================
+
+  // C-STORY-127 GWT 127.1: 展示頁腳本零語法錯誤且全域功能齊備 (Zero Syntax Errors)
+  async testGwt127_1_ScriptZeroSyntaxErrorsAndGlobalFunctions() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    // Verify no isolated syntax fragments
+    this.assert(!htmlText.includes("bottomBtn.innerHTML = '<span>⚔️ 指派此英雄出擊</span>';\n    }\n  }\n      bottomBtn"), 'No redundant orphan block in script');
+    this.assert(htmlText.includes('function closeHeroDetailModal()'), 'closeHeroDetailModal properly defined');
+    this.assert(htmlText.includes('function switchMainTab('), 'switchMainTab properly defined');
+    this.assert(htmlText.includes('function switchGearSubTab('), 'switchGearSubTab properly defined');
+    this.assert(htmlText.includes('function openHeroDetailModal('), 'openHeroDetailModal properly defined');
+  }
+
+  // C-STORY-127 GWT 127.2: 一鍵啟動批次檔存在且支援快速啟動展示 (Convenient Bat Launchers)
+  async testGwt127_2_ConvenientLaunchBatFilesExist() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./start_showcase.bat');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('start "" "%TARGET_HTML%"') || htmlText.includes('ui_prototype_showcase_2.html'), 'start_showcase.bat launcher exists and invokes default browser');
   }
 }
 
