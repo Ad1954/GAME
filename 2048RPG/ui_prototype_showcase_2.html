@@ -875,6 +875,12 @@
     .gear-cell.tier-64 { background: linear-gradient(135deg, #c2410c, #1e293b); border-color: #fb923c; }
     .gear-cell.tier-128 { background: linear-gradient(135deg, #b91c1c, #0f172a); border-color: #f87171; }
     .gear-cell.tier-256 { background: linear-gradient(135deg, #7c2d12, #1e293b); border-color: #fbbf24; }
+    
+    .gear-cell.tier-1024, .compendium-card.tier-1024 { background: linear-gradient(135deg, #831843, #0f172a); border-color: #f472b6; }
+    .gear-cell.tier-2048, .compendium-card.tier-2048 { background: linear-gradient(135deg, #1e1b4b, #0f172a); border-color: #818cf8; box-shadow: 0 0 12px rgba(129, 140, 248, 0.4); }
+    .gear-cell.tier-4096, .compendium-card.tier-4096 { background: linear-gradient(135deg, #311042, #0f172a); border-color: #c026d3; }
+    .gear-cell.tier-8192, .compendium-card.tier-8192 { background: linear-gradient(135deg, #450a0a, #0f172a); border-color: #e11d48; }
+
     .gear-cell.tier-512 { background: linear-gradient(135deg, #581c87, #0f172a); border-color: #c084fc; box-shadow: 0 0 10px rgba(192, 132, 252, 0.4); }
 
     /* ========================================================
@@ -1593,6 +1599,32 @@
     .lang-en .nav-item span {
       font-size: 0.68rem;
     }
+  
+    /* Version Changelog Box in Settings Modal */
+    .version-changelog-box {
+      max-height: 180px;
+      overflow-y: auto;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+      text-align: left;
+    }
+    .version-changelog-box::-webkit-scrollbar { width: 5px; }
+    .version-changelog-box::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 4px; }
+    .version-changelog-box::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    .version-changelog-box::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    .changelog-item { margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed rgba(255, 255, 255, 0.1); }
+    .changelog-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+    .changelog-badge { font-weight: 800; color: #38bdf8; font-size: 0.82rem; margin-bottom: 2px; }
+    .changelog-title { font-weight: 700; color: #f1f5f9; font-size: 0.82rem; margin-bottom: 4px; }
+    .changelog-list { margin: 0; padding-left: 16px; color: #94a3b8; font-size: 0.76rem; }
+    .changelog-list li { margin-bottom: 2px; }
+
   </style>
 </head>
 <body>
@@ -1691,18 +1723,7 @@
               <button class="cr-btn cr-btn-green btn-small" id="shop-btn-gold-price" style="width:100%;" onclick="alert('💰 儲值成功：獲得 50,000 🪙 + 首購贈禮 5,000 🪙！')">NT$ 60 儲值金幣</button>
             </div>
 
-            <!-- 6. Master Chapters Expansion (Full Width) -->
-            <div class="shop-item-card" style="grid-column: span 2; flex-direction:row; justify-content:space-between; padding:12px 16px;">
-              <div style="display:flex; align-items:center; gap:14px;">
-                <div class="item-pedestal">🗺️</div>
-                <div>
-                  <h4 style="font-size:var(--font-body); font-weight:800; color:#f8fafc;" id="shop-txt-chapter-title" data-i18n="shop_chapter_title">第 4~8 章大師擴展包</h4>
-                  <p style="font-size:var(--font-caption); color:#94a3b8;" id="shop-txt-chapter-desc" data-i18n="shop_chapter_desc">突破前三章試煉！直通深淵、滅世黑曜巨龍與終焉神域！</p>
-                  <div style="font-size:var(--font-mini); color:#38bdf8; font-weight:700;">✔ 解鎖後續 320 道關卡  ✔ 開啟大師級裝備掉落</div>
-                </div>
-              </div>
-              <button class="cr-btn cr-btn-purple btn-medium" id="shop-btn-chapter-price" style="padding:0 12px;" onclick="alert('🗺️ 成功購買【第 4~8 章大師擴展包】！全 350 道關卡正式全面解鎖！')">NT$ 120 購買解鎖</button>
-            </div>
+
           </div>
         </div>
       </section>
@@ -1919,7 +1940,7 @@
                   <div class="hero-skill-label">技能：十字碎裂</div>
                 </div>
                 <div class="hero-actions-lower">
-                  <button class="cr-btn cr-btn-amber" id="btn-deploy-warrior" onclick="deployHero('warrior')">出擊中</button>
+                  <button class="cr-btn cr-btn-amber" id="btn-deploy-warrior" onclick="deployHero('warrior')">上陣中</button>
                   <button class="cr-btn cr-btn-disabled" disabled>已滿級</button>
                 </div>
               </div>
@@ -1935,7 +1956,7 @@
                   <div class="hero-skill-label">技能：黃金急召</div>
                 </div>
                 <div class="hero-actions-lower">
-                  <button class="cr-btn cr-btn-blue" id="btn-deploy-merchant" onclick="deployHero('merchant')">出擊</button>
+                  <button class="cr-btn cr-btn-blue" id="btn-deploy-merchant" onclick="deployHero('merchant')">指派上陣</button>
                   <button class="cr-btn cr-btn-green" onclick="alert('🪙 花費 5,000 金幣升級戰地商人！')">升級 🪙5000</button>
                 </div>
               </div>
@@ -1951,7 +1972,7 @@
                   <div class="hero-skill-label">技能：破甲重矢</div>
                 </div>
                 <div class="hero-actions-lower">
-                  <button class="cr-btn cr-btn-blue" id="btn-deploy-archer" onclick="deployHero('archer')">出擊</button>
+                  <button class="cr-btn cr-btn-blue" id="btn-deploy-archer" onclick="deployHero('archer')">指派上陣</button>
                   <button class="cr-btn cr-btn-green" onclick="alert('🪙 花費 5,000 金幣升級精靈弓箭手！')">升級 🪙5000</button>
                 </div>
               </div>
@@ -2037,27 +2058,48 @@
          MODAL 1: 關卡詳細資訊 POPUP (STAGE DETAIL)
          ======================================================== -->
     <div class="modal-overlay" id="modal-stage-detail" onclick="if(event.target===this) closeStageDetailModal()">
-      <div class="cr-modal-box">
+      <div class="cr-modal-box" style="gap:10px; max-height:88vh; overflow-y:auto;">
         <div class="modal-close-btn" onclick="closeStageDetailModal()">✕</div>
         <h3 style="font-size:var(--font-h1); color:#fbbf24; text-align:center;" id="modal-stage-title">Stage 12 · 關卡情報</h3>
         
-        <div style="background:#1e293b; border-radius:14px; padding:12px; display:flex; gap:12px; align-items:center;">
-          <span style="font-size:3rem;" id="modal-boss-avatar">🐺</span>
-          <div>
-            <h4 style="font-size:var(--font-h2); color:#f8fafc;" id="modal-boss-name">首領：森林巨狼</h4>
-            <p style="font-size:var(--font-caption); color:#94a3b8;">首領戰力：<span style="color:#ef4444; font-weight:800;" id="modal-boss-val">64</span></p>
-            <p style="font-size:var(--font-caption); color:#38bdf8;">作戰目標：消滅盤面所有魔物</p>
+        <!-- 怪物資訊 -->
+        <div style="background:#1e293b; border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; gap:12px; align-items:center;">
+            <span style="font-size:2.6rem;" id="modal-boss-avatar">🐺</span>
+            <div style="flex:1;">
+              <h4 style="font-size:var(--font-h2); color:#f8fafc; margin-bottom:2px;" id="modal-boss-name">首領：森林巨狼 (64)</h4>
+              <p style="font-size:var(--font-caption); color:#38bdf8;" id="modal-stage-objective">作戰目標：消滅盤面所有魔物</p>
+            </div>
+          </div>
+          <!-- 其他怪物 (總數 4 隻) -->
+          <div style="background:#0f172a; border-radius:8px; padding:8px 10px; font-size:var(--font-caption);">
+            <div style="color:#94a3b8; font-weight:700; margin-bottom:4px;">其他魔物 (4隻)：</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;" id="modal-minions-list">
+              <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🦇 洞穴蝙蝠 (16)</span>
+              <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🐗 毒牙野豬 (16)</span>
+              <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🐍 沼澤毒蛇 (8)</span>
+              <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🕷️ 刺針蜘蛛 (8)</span>
+            </div>
           </div>
         </div>
 
-        <div style="background:#090d16; border-radius:12px; padding:10px; font-size:var(--font-caption); color:#cbd5e1; line-height:1.5;">
-          <div>🪙 首通獎勵：<strong style="color:#fbbf24;" id="modal-gold-reward">1,560 金幣</strong></div>
-          <div>🛡️ 潛在掉落：泥盾靴 (8)、青銅刃 (4)</div>
-          <div>💡 攻略提示：使用戰士十字碎裂清除四周卡位金幣！</div>
+        <!-- 場景資源與獎勵 -->
+        <div style="background:#090d16; border-radius:12px; padding:10px 12px; font-size:var(--font-caption); color:#cbd5e1; display:flex; flex-direction:column; gap:6px;">
+          <div>
+            <div style="color:#38bdf8; font-weight:700; margin-bottom:4px;">場景資源 (裝備品 3 格)：</div>
+            <div style="display:flex; gap:8px;" id="modal-stage-gears">
+              <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">泥盾靴 (8)</span>
+              <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">青銅刃 (4)</span>
+              <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">泥木劍 (2)</span>
+            </div>
+          </div>
+          <div style="margin-top:2px;">🪙 初次通關獎勵：<strong style="color:#fbbf24; font-size:var(--font-body);" id="modal-gold-reward">1,560 金幣</strong></div>
+          <div style="font-size:var(--font-mini); color:#94a3b8;">💡 攻略提示：使用戰士十字碎裂清除四周卡位金幣！</div>
         </div>
 
+        <!-- 統一按鈕文字為「出擊」 -->
         <button class="cr-btn cr-btn-blue btn-large" style="width:100%;" onclick="closeStageDetailModal(); launchStageBattle();">
-          <span>⚔️ 出擊遠征</span>
+          <span id="modal-stage-btn-deploy" data-i18n="btn_stage_deploy">⚔️ 出擊</span>
         </button>
       </div>
     </div>
@@ -2106,6 +2148,521 @@
             <option value="minimal">⬛ 極簡深邃 (Minimal)</option>
           </select>
         </div>
+
+        <hr style="border: 0; border-top: 1px solid rgba(56, 189, 248, 0.2); margin: 6px 0;">
+        <div class="setting-section-header" style="margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 0.92rem; font-weight: 800; color: #38bdf8;" id="settings-txt-log-title" data-i18n="settings_log_title">📜 版本更新履歷</span>
+          <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v6.9.1</span>
+        </div>
+                  <div class="setting-section-header" style="margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.92rem; font-weight: 800; color: #38bdf8;">📜 版本更新履歷</span>
+            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v5.8.4</span>
+          </div>
+          <div class="version-changelog-box" id="version-changelog-box">
+            <!-- C-STORY-108 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-108 (最新)</div>
+              <div class="changelog-title">破壞戰槌規則調優：排除魔物/英雄 ＆ 點選金幣智慧直接兌現且不耗戰槌</div>
+              <ul class="changelog-list">
+                <li>🛡️ 排除魔物與勇者秒殺：破壞戰槌嚴格禁止點擊魔物或勇者，阻擋無效消耗，確立精準重弩唯一的秒怪殺手地位。</li>
+                <li>🪙 金幣智慧直接領取：點選金幣方塊不粉碎浪費，自動執行全額領取兌現入袋並騰出空格，且 100% 保留戰槌數量不扣除！</li>
+              </ul>
+            </div>
+            <!-- C-STORY-107 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-107</div>
+              <div class="changelog-title">每日任務「精良合成」優化為「任意合成 10 次」 ＆ 盤面/倉庫合成即時觸發修復</div>
+              <ul class="changelog-list">
+                <li>🛡️ 每日合成任務改為「任意合成 10 次」：移除單次 128 高階限制，改為累計任意合成 10 次即可領取 300 🪙 與 25 活躍度！</li>
+                <li>⚡ 盤面滑動與倉庫合成全線觸發：修復關卡滑動合成與倉庫手動/一鍵合成未派發 TILE_MERGED 事件的問題，每次合成皆即時更新每日任務進度。</li>
+              </ul>
+            </div>
+            <!-- C-STORY-106 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-106</div>
+              <div class="changelog-title">48 階王國軍備科技擴充 (270萬深水庫) ＆ 全 350 關 800 回合節奏平衡對齊</div>
+              <ul class="changelog-list">
+                <li>🏛️ 科技上限擴充至 48 階 (8 大週期)：盤面基礎產出最高突破至 [512, 1024, 2048]，前期 Cycle 1~2 降價更親民 (僅需 2.4萬 G)，中後期阶梯陡峭拉升至總額 270萬 G！</li>
+                <li>🗡️ 大突破裝備持有門檻雙向支援：每 6 階大突破檢查玩家「穿戴中或背包內持有」之最高裝備 (16 ➔ 65536)，引導裝備與科技雙軌養成。</li>
+                <li>⚖️ 全 350 關出擊參考指標對齊：以第 350 關 800 回合內討伐完成為基準，更新全關卡純參考建議戰力與建議科技階級（挑戰關卡 100% 自由無限制，可隨時裸裝出擊）。</li>
+              </ul>
+            </div>
+            <!-- C-STORY-102 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-102</div>
+              <div class="changelog-title">經濟數值可視化調校工作台 (Economy Studio) ＆ 350 關 CSV 報表 ＆ 26.5萬科技深水庫</div>
+              <ul class="changelog-list">
+                <li>📊 單檔免開 CMD 經濟調校工作台 (economy_studio.html)：支援即時調整每日福利、關卡獎勵斜率、科技倍率、十連抽動態定價與章節勝率，即時繪製收支曲線與匯出 CSV！</li>
+                <li>🎁 每日 3~5 次十連抽福利升級：簽到首日 1,000G 起跳、第 7 天 5,000G＋雙倍戰槌與沙漏；100 活躍全勤寶箱升級發放 600G＋精準重弩 x2＋破壞戰槌 x1！</li>
+                <li>🏛️ 24 階科技深水庫重構 (總額 265,000G)：四大突破升級為 5,000 / 15,000 / 35,000 / 80,000G，有效吸收中後期金幣產出，防止關卡難度過早崩塌。</li>
+              </ul>
+            </div>
+            <!-- C-STORY-101 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-101</div>
+              <div class="changelog-title">每日留存與活躍循環系統（7日簽到 ＆ 每日任務 ＆ 商店免費補給）</div>
+              <ul class="changelog-list">
+                <li>📅 七日之約連續簽到：每天進入大廳領取階梯遞增金幣，第 7 天發放 2000 金幣與「破壞戰槌」神級戰鬥道具，首次登入自動引導彈窗！</li>
+                <li>📜 每日活躍任務矩陣：四項推關順手達成的目標（消滅魔物、合成高階士兵/裝備、開採金幣、遠征場次），每項提供專屬金幣產出與活躍度點數！</li>
+                <li>🏆 100 活躍度全勤大寶箱：當天完成任務填滿 100 活躍度，即刻領取 500 金幣與「精準重弩」大獎，每日 00:00 自動無感跨天重置！</li>
+                <li>📦 皇家寶庫每日免費軍資：商店頂部常駐每日 200 金幣免費補給箱，大廳各活動入口配備智慧紅點提示，養成目標清晰明確。</li>
+              </ul>
+            </div>
+            <!-- C-STORY-100 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-100</div>
+              <div class="changelog-title">商人技能無金幣前置安全攔截 ＆ 破甲重矢 18 片輕量化 ＆ 三大職業專屬必殺音效實裝</div>
+              <ul class="changelog-list">
+                <li>🪙 商人急召無金幣前置攔截：盤面無金幣時主動施放技能，跳出「⚠️ 盤面無金幣可供回收！」警示漂字並立即安全返回，杜絕虛假觸發演出與空放問題，充能完整保留。</li>
+                <li>🏹 破甲重矢 18 片岩石碎片輕量化：命中魔物瞬間的碎片粒子嚴格精簡為 18 片，並移除耗能軟體高斯模糊，徹底消除爆片瞬間 0.4~0.8 秒真實繪圖負擔導致的卡頓。</li>
+                <li>🎵 三大職業專屬 Web Audio 合成音效：徹底移除誤用的戰敗音效，戰士配備「重低音震波裂地音」、弓箭手配備「破空尖嘯貫穿音」、商人配備「五度純金連續琶音」，打擊感與辨識度大幅提升。</li>
+              </ul>
+            </div>
+            <!-- C-STORY-099 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-099</div>
+              <div class="changelog-title">瀕死被動自救有效性智慧判定 ＆ 完整必殺技動態特效聯動</div>
+              <ul class="changelog-list">
+                <li>🏹 弓箭手自救智慧門檻：最強魔物為數字 2（可一擊秒殺消塊騰出空位）時才觸發破甲重矢自救；若大於 2 則保留 100% 充能不白白浪費，徹底杜絕大招演完依然戰敗的負面體驗</li>
+                <li>⚔️ 戰士與商人自救前置檢核：戰士十字周邊必須存在裝備或金幣、商人盤面必須存在金幣時才觸發自救，確保每一次自救必定實質開闢生路</li>
+                <li>💥 絕處逢生動態特效完整派發：瀕死自救成功時全面調用 CombatVfxEngine，完整播放 120px 激光十字岩崩、天頂極光流星秒殺或 3D 金幣狂潮物理特效，逆轉絕境體驗拉滿</li>
+              </ul>
+            </div>
+            <!-- C-STORY-098 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-098</div>
+              <div class="changelog-title">必殺技畫布動態網格錨定修復 ＆ 生命週期防死鎖防護</div>
+              <ul class="changelog-list">
+                <li>🎯 消除左上偏移：畫布自動計算網格相對於父容器的真實 Offset，消滅 Flex 置中導致的 20~40px 左上位移；並支援 data-r 與 data-row 雙重選擇器，100% 精準錨定於英雄角色方塊中心</li>
+                <li>🛡️ 阻斷性死鎖根除：修復 vfxLayer 未定義拋出例外中斷解鎖的缺陷，全面實裝 try...finally 強制解鎖保證，並於關卡進入與退關流程中加入防禦性操作鎖重置，徹底告別操作卡死</li>
+              </ul>
+            </div>
+            <!-- C-STORY-097 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-097</div>
+              <div class="changelog-title">三大職業必殺技高階視覺特效同步移植（大地岩崩、零延遲流星、3D立體翻轉金幣）</div>
+              <ul class="changelog-list">
+                <li>⚔️ 戰士十字碎裂大地岩崩：貫穿十字激光精準定版 120px，粉碎演出全面升級為赭石棕、焦褐、土黃色系之三角形岩崩碎石，盤面邊緣自動截斷光束且不產生無效邊界外爆炸</li>
+                <li>🏹 弓箭手破甲重矢精準離弦：修正初始尾跡溢出錯覺，巨矢自英雄方塊核心沖天，配合 450ms 天頂滯空蓄力感與零延遲碰撞引爆機制，跨盤面打擊感毫秒級精準同步</li>
+                <li>🪙 商人黃金急召3D純金狂潮：告別抽象星光，全面實裝 3D Cel-Shaded 翻轉自旋立體金幣（Tumbling Coins），自帶雙層金屬反光厚度，向上噴發並以拋物弧線奔湧吸入頂部錢包</li>
+              </ul>
+            </div>
+            <!-- C-STORY-096 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-096</div>
+              <div class="changelog-title">Canvas 2D 物理光影與能量爆破引擎（告別 Demo 級特效）</div>
+              <ul class="changelog-list">
+                <li>✨ Canvas 60FPS 物理引擎：建構專屬 CombatVfxEngine，徹底淘汰 Emoji 與陽春細線，實現商業級打擊光效</li>
+                <li>⚔️ 十字碎裂月牙光刃：英雄中心瞬間爆發 4 道帶有金紅光暈（Bloom Glow）的月牙巨氣刃，命中格子引發震盪波與 35 顆衰減碎石火花</li>
+                <li>🏹 破甲重矢魔法流星：高能翡翠光束沖天再疾速墜擊魔物，命中爆發雙重衝擊波圈與 55 顆烈焰光塵粒子，強光覆蓋時折半數字</li>
+                <li>🪙 黃金急召金幣吸入：全場金幣彈跳觸發圓形震波，化為燦金光球群沿物理弧線吸入頂部錢包</li>
+              </ul>
+            </div>
+            <!-- C-STORY-095 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-095</div>
+              <div class="changelog-title">超必殺 Cut-in 特寫演出 ＆ 三大職業方塊動態爆破系統</div>
+              <ul class="changelog-list">
+                <li>🔥 口袋快打風超燃 Cut-in：發動大招時切入 2 頭身黏土高舉神兵去背立繪與燃燒氣芒，半透明背景不遮蔽盤面</li>
+                <li>⚔️ 十字碎裂刀氣四射：英雄中心射出四向金紅刀氣波，命中裝備與金幣引發劇烈震顫爆破後清空</li>
+                <li>🏹 破甲重矢天頂墜砸：魔法巨矢沖天射出、自畫面外垂直砸落目標魔物，趁濃煙火光遮擋瞬間折半數值</li>
+                <li>🪙 黃金急召金幣彈跳：全盤金幣方塊向上彈跳躍起，化為金色流光粒子吸入錢包，跳錢折現</li>
+              </ul>
+            </div>
+            <!-- C-STORY-094 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-094</div>
+              <div class="changelog-title">測試輔助開關：技能開場即滿額就緒 ＆ 正式版撤除列管</div>
+              <ul class="changelog-list">
+                <li>🛠️ 測試專用開關：於設定彈窗提供【技能開場即就緒】切換開關，狀態即時儲存於本機</li>
+                <li>⚡ 開局能量全滿：開啟後進入任何關卡，隊長技能立即充飽 100% 能量並啟動金光呼吸，開場第一步即可手動施放大招</li>
+                <li>📋 正式版撤除列管：已將此測試開關登錄至《商業版正式發布前置清理清單》，確保正式對外版本純淨拔除</li>
+              </ul>
+            </div>
+            <!-- C-STORY-093 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-093</div>
+              <div class="changelog-title">角色特殊能力系統 ＆ 三大職業流派與冷卻步數科技</div>
+              <ul class="changelog-list">
+                <li>👑 三大職業自由切換：大廳「角色」專區實裝戰士、精靈弓箭手、皇家商人三大經典流派自由切換</li>
+                <li>🗡️ 戰士【十字碎裂】：以英雄為中心粉碎上下左右4格裝備與金幣（不傷魔物），滿盤瀕危時自動觸發保命</li>
+                <li>🏹 弓箭手【破甲重矢】：鎖定全場最強 Boss 重創折半（=2 則直接秒殺），純主動進攻大招，無被動保命</li>
+                <li>🪙 商人【黃金急召】：瞬間強制回收盤面所有金幣折現入袋，騰出空格；滿盤瀕危時自動觸發保命</li>
+                <li>⏳ 高階金幣冷卻科技：技能開局從 0 步累積，基礎需 500 回合，可消耗巨額金幣逐步縮減至 100 回合</li>
+                <li>🎯 重弩道具全面調優：無視魔物數值大小直接射殺任意指定魔物，確立跳關殺手鐧地位</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-092 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-092</div>
+              <div class="changelog-title">正式對外商業發布前置清理清單與過渡代碼封存規範</div>
+              <ul class="changelog-list">
+                <li>📋 正式發布清理清單立案：建立發布工程師專用 Pre-Launch Checklist，列管拔除測試期過渡邏輯</li>
+                <li>🛡️ 測試代碼零殘留保護：明確規定正式版拔除 C-STORY-090 單次遷移代碼，依賴純淨 Fallback 確保玩家自訂設定永不被覆蓋</li>
+                <li>🛠️ 物資調試專區管制：規範營地測試物資於公開營運環境切換為隱藏，維護商業數值健全</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-091 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-091</div>
+              <div class="changelog-title">版本更新履歷即時聯動 ＆ 三位一體同步機制建立</div>
+              <ul class="changelog-list">
+                <li>📜 履歷全面同步實裝：設定彈窗完整補齊 C-STORY-087 ~ C-STORY-090 更新履歷，徹底消除「新舊不符」現象</li>
+                <li>🔄 強制聯動同步清單：建立規格文檔、遊戲內履歷與發布管線三位一體同步機制，確保每次更新版本透明公開</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-090 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-090</div>
+              <div class="changelog-title">舊存檔外觀單次自動遷移升級至 v5.2 黏土視覺標準</div>
+              <ul class="changelog-list">
+                <li>✨ 舊玩家無縫遷移：加入一次性版本遷移機制，舊設備開啟自動將外觀設定升級為「微縮模型 ＋ 王國遠征 ＋ 新版純圖」</li>
+                <li>💾 個性化選擇保留：單次升級完成後標記旗標，後續玩家於設定手動切換之風格偏好完全予以保留</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-089 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-089</div>
+              <div class="changelog-title">全域預設外觀視覺升級為「微縮模型 ＋ 王國遠征」桌遊質感</div>
+              <ul class="changelog-list">
+                <li>👑 新玩家預設外觀調整：圖標風格預設為「微縮模型 (黏土浮雕風)」、底板預設為「王國遠征 (深藍暗夜石板)」、方塊文字預設為「新版純圖」</li>
+                <li>🎨 沉浸桌遊公仔體驗：無需手動調整設定，初次踏入王國即可享受高辨識度 3D 黏土微縮戰場</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-088 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-088</div>
+              <div class="changelog-title">iOS / 平板跨裝置自適應優化 ＆ PC 桌面模擬器隔離</div>
+              <ul class="changelog-list">
+                <li>📱 iPhone 14 動態島安全區避讓：頂欄採用 env(safe-area-inset-top) 與底端對齊，徹底消除動態島與通話藥丸遮擋</li>
+                <li>📟 iPad Pro 600px 寬幅視野：平板端容器放寬至 600px、棋盤放寬至 530px，消除兩側巨大黑邊並保持操作流暢</li>
+                <li>💻 PC 桌面端隔離保護：桌上型電腦維持標準 480px 手機模擬框，多端設備響應均勻兼顧</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-087 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-087</div>
+              <div class="changelog-title">版本履歷與標題畫面多端版本號統一</div>
+              <ul class="changelog-list">
+                <li>🏷️ 全域版本號統一：標題畫面與設定彈窗版本標籤全面同步升級至商業發布版</li>
+                <li>🛠️ 歷史履歷重構：梳理 C-STORY-064 至 C-STORY-086 黏土全要素進化歷程</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-086 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-086</div>
+              <div class="changelog-title">黏土魔物穿透圖資優化 ＆ 自適應 60% 容器縮放置中對齊</div>
+              <ul class="changelog-list">
+                <li>✨ 白底接觸陰影完全透空：第 III 章 1024 山嶺巨人與第 IV 章 256~2048 荒漠全系毒蛛徹底消滅白色硬色塊，腳底透明度 100% 自然平滑</li>
+                <li>🛡️ 特殊色重構修復破洞：第 I 章 32 督軍改採純桃紅幕 (#FF00FF) 重新生成與去背，完美修復誤挖獠牙、斧頭簍空與膝蓋破洞</li>
+                <li>📐 棋盤自適應百分比容器：廢除固定死值寬高，全面改為 60% 自適應彈性容器，勇者/裝備/魔物統一錨點居中縮放 (center center)</li>
+                <li>📚 全資產 Prompt 典藏知識庫：建立 CLAY_STYLE_PROMPT_REGISTRY.md (v1.1.0)，納入「手段 A 光照硬隔離」防溢色標準語句與後續重構 Backlog</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-081 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-081</div>
+              <div class="changelog-title">消除魔物雙重縮放 ＆ 棋盤尺寸與展廳示範 100% 精準對齊</div>
+              <ul class="changelog-list">
+                <li>🔍 單次 1.50x 縮放修正：排除父容器雙重 scale(1.5)，盤面魔物體積回歸單次 1.50x，舒適收納於方塊內不再溢出相鄰格</li>
+                <li>🎯 本機樣式表安全聯動：server.py 與 visual_tuning.css 全面同步保護，杜絕調校參數飄移</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-080 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-080</div>
+              <div class="changelog-title">勇者、裝備、魔物三位一體外觀綁定 ＆ 沉浸桌遊體驗</div>
+              <ul class="changelog-list">
+                <li>🎲 三位一體微縮模型：設定選單切換至「微縮模型 (黏土浮雕風)」時，盤面魔物即刻實裝 40 階穿透黏土圖資</li>
+                <li>🔄 乾淨平滑切換：切換至點陣風或原生 Emoji 時，魔物圖資乾淨移除平滑退回對應圖標，無殘留標籤</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-078 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-078</div>
+              <div class="changelog-title">第 VIII 章終焉神域「黑曜天罰與血月日蝕」敵對視覺重構</div>
+              <ul class="changelog-list">
+                <li>⚔️ 極致陣營反差：最終章 3 隻神祇全面換裝「黑曜玄甲 ＋ 猩紅天罰光冕 ＋ 暗金神紋」，徹底消除與玩家白色勇者的視覺混淆</li>
+                <li>👑 終局神皇震撼壓迫：黑羽審判使者 (65536)、黑洞滅世智腦 (131072)、日蝕血月六翼神皇 (262144) 敵對威壓拉滿</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-075 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-075</div>
+              <div class="changelog-title">全 8 大章節 40 階微縮黏土魔物 100% 圓滿閉環</div>
+              <ul class="changelog-list">
+                <li>🏰 全生態池無縫實裝：第 I 章林地至第 VIII 章終焉神域，40 隻魔物全數具備微縮黏土圖資與長方形穿透方塊</li>
+                <li>🧪 零死灰硬塊：全章節圖資內嵌孔洞 100% 穿透透空，達成商業製品級視覺標準</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-064 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-064</div>
+              <div class="changelog-title">全要素可視化調校工作室 ＆ 本機樣式解耦安全一鍵同步</div>
+              <ul class="changelog-list">
+                <li>🎨 要素分類獨立調校：勇者 (0.8~2.0x)、裝備 (0.8~1.8x)、魔物 (0.8~2.0x) 分頁獨立控制，徹底解決不同物件縮放干擾問題</li>
+                <li>💾 一鍵套用至遊戲本體：展廳內可視化調校完成後，點擊一鍵儲存，由本機伺服器安全寫入 visual_tuning.css，遊戲即刻同步生效</li>
+                <li>🛡️ 樣式表解耦安全防護：獨立隔離 visual_tuning.css 樣式表，核心 style.css 零污染，支援隨時一鍵還原預設值</li>
+                <li>🩸 魔物專屬氣場光暈：支援血煞紅光、深淵幽紫、劇毒幽綠與冷白銳利，大幅提升深色底板辨識度</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-063 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-063</div>
+              <div class="changelog-title">實戰長方形 5:6 比例 100% 復刻 ＆ 展廳防溢出捲軸/換行排版</div>
+              <ul class="changelog-list">
+                <li>📐 實戰 5:6 直向長方形比例：比照正式棋盤 (aspect-ratio: 5/6) 規格，將展廳正方形方格全面更正為 58x70px 直向長方形</li>
+                <li>🔢 戰力數值底端疊合排版：數字恢復 1.45rem 飽滿粗體並微覆於角色下緣，完美還原實戰棋盤佈局</li>
+                <li>📑 雙排版模式切換：展廳新增「👉 水平滑動」天藍平滑捲動軸與「📐 自動折行」開關，徹底防堵卡片超出視窗邊緣</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-061 & 062 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-062</div>
+              <div class="changelog-title">全要素色調矩陣展廳 ＆ 雙軌獨立本機伺服器架構</div>
+              <ul class="changelog-list">
+                <li>👑 全要素王國遠征矩陣：T01~T17 同台展示勇者角色、微縮裝備、地牢魔物與金幣色調底板，直觀驗證階梯色彩共鳴</li>
+                <li>🚀 雙軌獨立啟動批次檔：切分「啟動遊戲本體.bat (Port 8081)」與「啟動全要素展廳.bat (Port 8082)」，採用 ANSI (CP950) 編碼杜絕亂碼</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-060 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-060</div>
+              <div class="changelog-title">微縮模型勇者上半身 1.4x 特寫鏡頭 ＆ 亮白高光貼紙描邊</div>
+              <ul class="changelog-list">
+                <li>🔍 鏡頭放大 1.40 倍特寫：聚焦勇者大頭表情與武器刃部，頭部視覺面積大幅躍升 200%</li>
+                <li>✨ 高反差高光白邊：外加 drop-shadow 雙層貼紙描邊與柔和背後聚光燈，解決烈焰戰狂 (128) 等深色勇者與深色底板融合問題</li>
+              </ul>
+            </div>
+
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-058</div>
+              <div class="changelog-title">4 號勇者冒險短劍因果修正與全階層圖資順移</div>
+              <ul class="changelog-list">
+                <li>⚔️ 合成因果精準對齊：侍從 (2) ＋ 冒險短劍 (2) ＝ 見習戰士 (4)，手持寬刃鋼鐵冒險短劍、身披縫線皮革胸甲，杜絕跳階</li>
+                <li>📦 全階層平滑順移：原 4 號順延為 8 號（低伏架盾），其餘各階向後平移遞延；原 16 階黃金神王晉升為 17 階 (131072) 頂級神皇</li>
+                <li>🛡️ 頂級神祇封頂保護：131,072 與 262,144 自動安全封頂於 17 階神皇模型，杜絕 404 破圖</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-057</div>
+              <div class="changelog-title">全 16 階 2.0 頭身黏土勇者角色與微縮模型裝備雙向綁定</div>
+              <ul class="changelog-list">
+                <li>🗿 微縮模型風格一鍵啟用：設定選單「微縮模型」樣式同步套用 3D 黏土勇者與裝備，打造極致沉浸桌遊公仔質感</li>
+                <li>👀 100% 露臉無閉面盔：全階層嚴格 2.0 頭身 Q 版大頭，生動五官、明亮眼眸與飛揚髮型完全外露</li>
+                <li>⚔️ 舉武器備戰待機架式：全 16 階剪影零重複，告別揮砍殘影，雙腳踏地保持隨時出擊的呼吸待命姿態</li>
+                <li>✨ 洋紅幕智慧 Chroma Key：四肢夾縫孔洞 100% 鏤空，眼白與純白鎧甲高光 100% 零誤傷</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-042</div>
+              <div class="changelog-title">底色圖標雙軌獨立切換、ABCD四風格與大字體重疊排版</div>
+              <ul class="changelog-list">
+                <li>🎨 底色與圖標分離：盤面底板配色與圖標美術風格完全解耦獨立設定，支援任意交叉自由混搭</li>
+                <li>🖼️ 四大美術風格架構：完整支援風格 A(像素點陣)、風格 B(立體Emoji)、風格 C(體素方塊)、風格 D(經典原生Emoji)</li>
+                <li>🔢 數字超大字體保護：戰力文字恢復 1.35rem 飽滿粗體，優先突出數值辨識，圖案垂直置中微透底層</li>
+                <li>⚔️ 16 階暫代武器鑲入：棋盤與 NEXT 預告欄位實裝 256x256 去背裝備立繪，未出圖時自動平滑 Fallback</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-041</div>
+              <div class="changelog-title">下一個登場數字方塊預告 (Next Tile Preview) 機制</div>
+              <ul class="changelog-list">
+                <li>🔮 戰鬥頂端預告視窗：頂端資訊列新增 NEXT 專屬迷你卡牌，即時透視下一手將登場的裝備等級或金幣</li>
+                <li>🎯 決定性精準生成：滑動結算嚴格遵循上一回合預告之裝備階級或金幣生成，告別不確定盲猜</li>
+                <li>⏳ 時光沙漏防刷回溯：使用 Undo 道具時，預告佇列精準回溯至歷史快照狀態，防堵洗牌刷裝</li>
+                <li>✨ 登場翻牌動畫：每次生成後預告卡牌同步翻牌彈跳，金幣黃金流光與裝備外觀生動反饋</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-040</div>
+              <div class="changelog-title">章節列頂部完全釘選、已通關靜態瞬現與關卡視圖模組化解耦</div>
+              <ul class="changelog-list">
+                <li>📌 章節列完全釘選：消除頂部間隙並提高層級，向下滾動時章節切換欄 100% 牢固置頂</li>
+                <li>⚡ 已通關靜態瞬現：切換已全通關章節直接在最底端呈現，杜絕由上往下滑動的視覺穿幫</li>
+                <li>🧩 關卡視圖模組化：獨立封裝 StageListView，隔離 UI 與邏輯，為後續關卡介面全新改版預作無痛抽換準備</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-039</div>
+              <div class="changelog-title">分頁切換自動置頂、冒險章節懸浮與挑戰關卡智慧定位</div>
+              <ul class="changelog-list">
+                <li>🔝 分頁滾動自動重置：點擊底部導航切換至營地、角色、冒險、商店時，視圖自動回彈頂部</li>
+                <li>📌 冒險章節標籤置頂：關卡清單上下滾動時，橫向章節切換欄固定於頂端，隨時切換免折返</li>
+                <li>🎯 最新挑戰智慧定位：持久化最新挑戰關卡，未全通自動置中對齊，全通章節貼心滑動至底部</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-038</div>
+              <div class="changelog-title">英雄魔物光圈復原、受阻微震與滿盤瀕危紅光警示</div>
+              <ul class="changelog-list">
+                <li>✨ 英雄魔物光圈完全恢復：解除裁切限制，5px 粗框伴隨水藍呼吸波浪與鮮紅脈衝光圈</li>
+                <li>📳 無效移動受阻微震：滑動無法合成/移動方向時，全體方塊快速輕震提供物理阻擋反饋</li>
+                <li>🚨 滿盤瀕危邊界紅光：剩餘 1 格或已滿時，戰鬥盤面邊緣脈衝閃爍鮮紅光芒緊急示警</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-037</div>
+              <div class="changelog-title">轉蛋機山形曲線擴展、科技費用重構與十連送道具革新</div>
+              <ul class="changelog-list">
+                <li>🎰 轉蛋機上限開放至 Lv.8：掉落峰值隨等級右移，最高直出 4096 裝備</li>
+                <li>🏛️ 科技費用平滑化：起點降至 600 🪙，大突破降為前階 3 倍，晉階無負擔</li>
+                <li>🎁 十連抽必送道具：每次十連抽必定額外贈送 1 個救急道具（單抽不贈送）</li>
+                <li>💰 初通賞金溫和增溫：Stage 65 賞金達 795 🪙，配合盤面金幣達成單場十連抽</li>
+                <li>⚔️ 裝備上限錨定：背包裝備上限設定為 65536 滿級神器</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-036</div>
+              <div class="changelog-title">Cache Busting 版本戳記與 iOS 主畫面無損熱更新</div>
+              <ul class="changelog-list">
+                <li>🛡️ 資源檔 Cache Busting：CSS 與入口 JS 嚴格注入版本號查詢字串，強制作廢舊快取</li>
+                <li>🔄 設定頁新增「檢查並刷新最新版本」按鈕，支援在主畫面模式下一鍵無損熱更新</li>
+                <li>💾 存檔資料與代碼更新完全隔離，保留全部既有金幣、關卡與裝備進度</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-035</div>
+              <div class="changelog-title">教學手勢重位隱藏與點擊指尖置中校準</div>
+              <ul class="changelog-list">
+                <li>🚫 消除手勢跨盤滑動：手勢重定位時先行隱藏，到達目標座標後瞬現，杜絕飄移干擾</li>
+                <li>🎯 點擊指尖精準校準：垂直補償高度偏移，使 👆 指尖精確指向金幣方塊幾何正中心</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-034</div>
+              <div class="changelog-title">戰敗教官覆盤提點與 2048 RPG 進階門道指南</div>
+              <ul class="changelog-list">
+                <li>🛡️ 戰敗結算新增教官覆盤提點卡片，點出與普通 2048 核心玩法的關鍵差異</li>
+                <li>🗡️ 提點一【先斬強敵】：魔物消滅戰力減半，由強至弱連環擊破以戰養戰</li>
+                <li>🐺 提點二【合怪騰地】：魔物佔地堵盤時主動相撞合體騰出空格，控場解圍</li>
+                <li>🪙 提點三【見好就收】：金幣合成翻倍高收益，擁擠時果斷點擊兌現清空格保命</li>
+                <li>🔄 提點卡片支援點擊切換與「換一則」按鈕，三大心法無縫輪播</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-033</div>
+              <div class="changelog-title">手勢位置優化、金幣收益結算修復、文案精簡與退關放棄機制</div>
+              <ul class="changelog-list">
+                <li>🎯 手指提示位置優化：滑動提示置於方塊下方微觸下緣，點擊領取絕對精準置中</li>
+                <li>🪙 修復教學關卡金幣收益：合成 8 + 點擊 8 完整累加為 16 🪙，初通總計 66 🪙</li>
+                <li>⚔️ 文案精簡：移除誤導性優先擊破，明確標註同級魔物合體升級規則</li>
+                <li>🚪 關卡退出機制：戰鬥中途退關放棄所有貨幣收益（回滾開局金幣），戰敗保留收益</li>
+                <li>⏱️ 操作視覺等待時間縮短為 1.0 秒，整體操作體驗更流暢</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-032</div>
+              <div class="changelog-title">新手教學節奏調優、自主演練、消除假規則與大廳序章訓練所</div>
+              <ul class="changelog-list">
+                <li>🏛️ 序章訓練所整合至大廳章節標籤，設定選單支援清除教學紀錄</li>
+                <li>👑 第四步自主實戰演練：戰力不足為阻擋而非陣亡，自由實戰打倒魔物</li>
+                <li>⏱️ 動態操作停留時間調整，刀光居中對準魔物</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-030</div>
+              <div class="changelog-title">新手引導序章 (Stage 0 Tutorial) 系統</div>
+              <ul class="changelog-list">
+                <li>🎓 新手首次進入遊戲自動觸發引導式序章關卡（Stage 0）</li>
+                <li>👆 四步微教學劇本：裝備合成升級、魔物討伐、金幣合成與點擊兌現、戰力不足懲罰</li>
+                <li>🔒 滑動方向限制與防呆晃動回饋，支援手指路徑動態動畫與跳過教學</li>
+                <li>⚙️ 大廳設定選單支援隨時重新體驗新手訓練</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-029</div>
+              <div class="changelog-title">金幣產出節奏重構與全關卡金礦獎勵池翻倍</div>
+              <ul class="changelog-list">
+                <li>🪙 富礦期延長至 8 次（前 8 次固定每 8 回合產出一次）</li>
+                <li>⏳ 動態間隔緩和遞增（每產出 +2 回合），最高封頂 16 回合，消除後期金幣乾涸</li>
+                <li>💰 全 350 關卡金幣獎勵池（goldCap）全額翻倍（第一章翻倍至 40~80、第二章翻倍至 90~240、後續篇章全面倍增）</li>
+                <li>⛏️ 維持每 4 次降一階折半衰減，最低鎖定 4 不出微型碎片</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-028</div>
+              <div class="changelog-title">設定頁版本履歷、安全邊距內收與體力愛心圖標</div>
+              <ul class="changelog-list">
+                <li>📜 設定頁新增版本更新履歷專區，支援流暢滑動瀏覽</li>
+                <li>📱 畫面頂部與底部安全邊距內收約 1 個內文字高，避開圓角與相機挖孔</li>
+                <li>❤️ 體力圖標全面由閃電更換為生動愛心（❤️ 5/5、-1 ❤️ 飄字演出）</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-027</div>
+              <div class="changelog-title">盤面固定尺寸防變形、Threes! 卡牌比例與全螢幕手勢</div>
+              <ul class="changelog-list">
+                <li>📐 5x5 網格鎖定 minmax(0, 1fr)，杜絕多位數文字撐開變形</li>
+                <li>🃏 盤面與方塊採用 5:6 垂直長方卡牌造型，契合手機縱向螢幕</li>
+                <li>📱 手勢擴展至全戰鬥區域，任意邊界滑動皆可靈敏響應</li>
+                <li>⚡ 戰敗結算紅光震顫與體力扣除動畫演出</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-026</div>
+              <div class="changelog-title">體力系統閉環與 5 秒沙盒廣告模擬器</div>
+              <ul class="changelog-list">
+                <li>⚡ 體力上限 5 點，勝戰不扣體力，戰敗扣 1 點</li>
+                <li>📺 每 3 場戰鬥觸發 5 秒沙盒插頁廣告，每日福利廣告領 500 金幣</li>
+                <li>👑 終身免廣告 PASS（秒領福利）、無限體力證（∞暢玩）特權生效</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-025</div>
+              <div class="changelog-title">營地卡片圓弧外框防穿模與視覺排版統一</div>
+              <ul class="changelog-list">
+                <li>🏛️ 軍備科技研發上移至第 2 位，突顯核心產出重要性</li>
+                <li>📦 消除倉庫標籤穿模，全面套用統一發光圓角外框</li>
+                <li>📐 按鈕文字置中且統一「先文字後金額」標準排版</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-024</div>
+              <div class="changelog-title">王國軍備科技大突破裝備實力門檻</div>
+              <ul class="changelog-list">
+                <li>🛡️ 大突破科技需穿戴對應階級武器始得研發，強化裝備養成深度</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-023</div>
+              <div class="changelog-title">商店與營地雙軌分流</div>
+              <ul class="changelog-list">
+                <li>💎 獨立第 4 分頁「皇家特許寶庫」，現金與廣告特權專屬櫥窗</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-032</div>
+              <div class="changelog-title">新手教學節奏調優、自主演練、消除假規則與大廳序章訓練所</div>
+              <ul class="changelog-list">
+                <li>⏱️ 教學操作完成後停留 1.5 秒視覺緩衝，合成與消滅效果不再瞬間被打斷</li>
+                <li>🎯 魔物消滅刀光精準斜切幾何中心，貨幣點擊手勢座標絕對置中</li>
+                <li>🛡️ 修正錯誤指引：戰力小於魔物為「阻擋無法消滅」，絕非勇者死亡</li>
+                <li>👑 Step 4 開放全方向自由移動自主演練，任務目標調整為「打倒魔物」</li>
+                <li>🎓 大廳正式整合「序章：新手訓練所」與第 0 關卡片，隨時自由重溫訓練</li>
+                <li>🗑️ 設定頁獨立新增「清除新手教學紀錄」功能，支援隨時重置引導狀態</li>
+              </ul>
+            </div>
+          </div>
+          <div class="setting-desc" style="font-size: 0.8rem; color: #94a3b8; line-height: 1.4;">
+            商業製品測試版 (Phase 1)：<br>
+            獨立純前端運行環境，本地自動存檔。
+          </div>
 
         <!-- 5. Reset & Data Management -->
         <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
@@ -2162,7 +2719,7 @@
           </div>
         </div>
 
-        <!-- Quests List -->
+        <!-- Quests List (4 Quests aligned with Constants.js DAILY_QUEST_CONFIGS) -->
         <div style="display:flex; flex-direction:column; gap:8px;" id="daily-quests-container">
           <div class="quest-item-card">
             <div>
@@ -2184,6 +2741,13 @@
               <div style="font-size:var(--font-caption); color:#94a3b8;">在冒險關卡中累計回收 50 枚金幣</div>
             </div>
             <button class="cr-btn cr-btn-disabled btn-small" disabled>進行中 (32/50)</button>
+          </div>
+          <div class="quest-item-card">
+            <div>
+              <div style="font-weight:800; font-size:var(--font-body); color:#f8fafc;">🚩 勤勉遠征 (2/3)</div>
+              <div style="font-size:var(--font-caption); color:#94a3b8;">進行任意冒險關卡戰鬥累計達 3 場</div>
+            </div>
+            <button class="cr-btn cr-btn-disabled btn-small" disabled>進行中 (2/3)</button>
           </div>
         </div>
 
@@ -2331,9 +2895,12 @@
       shop_gold_desc: '王國軍械庫鉅款！直購大量高級裝備，工坊科技狂飆！',
       shop_chapter_title: '第 4~8 章大師擴展包',
       shop_chapter_desc: '突破前三章試煉！直通深淵、滅世黑曜巨龍與終焉神域！',
-      btn_deploy: '⚔️ 出擊！',
-      btn_deploying: '⚔️ 出擊中',
-      btn_assign_deploy: '⚔️ 指派此英雄出擊',
+      btn_deploy: '⚔️ 出擊',
+      btn_stage_deploy: '⚔️ 出擊',
+      btn_hero_assigned: '上陣中',
+      btn_hero_assign: '指派上陣',
+      btn_assign_deploy: '🛡️ 指派上陣',
+      settings_log_title: '📜 版本更新履歷',
       btn_upgrade: '🔨 升級',
       settings_title: '⚙️ 遊戲設定',
       settings_lang: '🌐 語言 (Language)',
@@ -2365,9 +2932,12 @@
       shop_gold_desc: 'Instant treasury wealth! Buy high-tier gears and rush workshop tech!',
       shop_chapter_title: 'Ch.4~8 Master Expansion',
       shop_chapter_desc: 'Break through trial chapters! Venture into Abyss and Ultimate Divine Realm!',
-      btn_deploy: '⚔️ BATTLE!',
-      btn_deploying: '⚔️ IN BATTLE',
-      btn_assign_deploy: '⚔️ DEPLOY HERO',
+      btn_deploy: '⚔️ BATTLE',
+      btn_stage_deploy: '⚔️ BATTLE',
+      btn_hero_assigned: 'ASSIGNED',
+      btn_hero_assign: 'ASSIGN',
+      btn_assign_deploy: '🛡️ ASSIGN HERO',
+      settings_log_title: '📜 Version Changelog',
       btn_upgrade: '🔨 UPGRADE',
       settings_title: '⚙️ Game Settings',
       settings_lang: '🌐 Language',
@@ -2659,9 +3229,32 @@
     const data = getStageDef(currentSelectedStage);
     document.getElementById('modal-stage-title').textContent = `Stage ${currentSelectedStage} · 關卡情報`;
     document.getElementById('modal-boss-avatar').textContent = data.bossIcon;
-    document.getElementById('modal-boss-name').textContent = `首領：${data.bossName}`;
-    document.getElementById('modal-boss-val').textContent = data.val;
+    document.getElementById('modal-boss-name').textContent = `首領：${data.bossName} (${data.val})`;
     document.getElementById('modal-gold-reward').textContent = `${data.gold.toLocaleString()} 金幣`;
+    
+    // Minions (4 monsters)
+    const m1 = Math.max(2, Math.floor(data.val / 2));
+    const m2 = Math.max(2, Math.floor(data.val / 4));
+    const minionsContainer = document.getElementById('modal-minions-list');
+    if (minionsContainer) {
+      minionsContainer.innerHTML = `
+        <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🦇 洞穴蝙蝠 (${m1})</span>
+        <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🐗 毒牙野豬 (${m1})</span>
+        <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🐍 沼澤毒蛇 (${m2})</span>
+        <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🕷️ 刺針蜘蛛 (${m2})</span>
+      `;
+    }
+
+    // Stage Gears (3 items)
+    const gContainer = document.getElementById('modal-stage-gears');
+    if (gContainer) {
+      gContainer.innerHTML = `
+        <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">泥盾靴 (8)</span>
+        <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">青銅刃 (4)</span>
+        <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">泥木劍 (2)</span>
+      `;
+    }
+
     document.getElementById('modal-stage-detail').classList.add('active');
   }
 
@@ -2812,17 +3405,17 @@
     const statusTag = document.getElementById('modal-hero-status-tag');
 
     if (statusTag) {
-      statusTag.textContent = isDeployed ? '出擊中' : '未上陣';
+      statusTag.textContent = isDeployed ? ((currentLanguage === 'en-US') ? 'ASSIGNED' : '上陣中') : ((currentLanguage === 'en-US') ? 'STANDBY' : '未上陣');
       statusTag.style.color = isDeployed ? '#fbbf24' : '#94a3b8';
     }
 
     if (bottomBtn) {
       if (isDeployed) {
         bottomBtn.className = 'cr-btn cr-btn-amber btn-medium';
-        bottomBtn.innerHTML = '<span>⚔️ 出擊中</span>';
+        bottomBtn.innerHTML = '<span>🛡️ ' + ((currentLanguage === 'en-US') ? 'ASSIGNED' : '上陣中') + '</span>';
       } else {
         bottomBtn.className = 'cr-btn cr-btn-blue btn-medium';
-        bottomBtn.innerHTML = '<span>⚔️ 指派此英雄出擊</span>';
+        bottomBtn.innerHTML = '<span>🛡️ ' + ((currentLanguage === 'en-US') ? 'ASSIGN HERO' : '指派上陣') + '</span>';
       }
     }
   }
@@ -2860,11 +3453,11 @@
         if (k === heroKey) {
           card.classList.add('active-deployed');
           btn.className = 'cr-btn cr-btn-amber';
-          btn.textContent = '出擊中';
+          btn.textContent = (currentLanguage === 'en-US') ? 'ASSIGNED' : '上陣中';
         } else {
           card.classList.remove('active-deployed');
           btn.className = 'cr-btn cr-btn-blue';
-          btn.textContent = '出擊';
+          btn.textContent = (currentLanguage === 'en-US') ? 'ASSIGN' : '指派上陣';
         }
       }
     });
@@ -2988,13 +3581,13 @@
     },
     gears: {
       title: '英雄專屬神兵總覽',
-      tip: '💡 提示：未來各英雄將擁有獨立專屬裝備體系（如戰士刀劍、弓手戰弓、商人秘寶）。現階段以戰士裝備完整示意；點擊標題可摺疊/展開。',
-      total: 9,
-      unlocked: 9,
+      tip: '💡 提示：未來各英雄將擁有獨立專屬裝備體系（如戰士刀劍、弓手戰弓、商人秘寶）。現階段弓手與商人裝備暫以戰士裝備示意開放範圍；點擊標題可摺疊/展開。',
+      total: 39,
+      unlocked: 39,
       groups: [
         {
           groupName: '⚔️ 鐵甲狂戰士專屬裝備 (Swords & Armor)',
-          unlockedRatio: '9/9 解鎖',
+          unlockedRatio: '13/13 解鎖',
           items: [
             { name: '泥木劍', img: 'assets/images/equipment_clay/equip_01.png', val: 2, unlocked: true },
             { name: '青銅刃', img: 'assets/images/equipment_clay/equip_02.png', val: 4, unlocked: true },
@@ -3004,21 +3597,49 @@
             { name: '皇家重甲', img: 'assets/images/equipment_clay/equip_06.png', val: 64, unlocked: true },
             { name: '榮耀法靴', img: 'assets/images/equipment_clay/equip_07.png', val: 128, unlocked: true },
             { name: '輝煌神盾', img: 'assets/images/equipment_clay/equip_08.png', val: 256, unlocked: true },
-            { name: '聖殿光刃', img: 'assets/images/equipment_clay/equip_09.png', val: 512, unlocked: true }
+            { name: '聖殿光刃', img: 'assets/images/equipment_clay/equip_09.png', val: 512, unlocked: true },
+            { name: '永恆聖劍', img: 'assets/images/equipment_clay/equip_10.png', val: 1024, unlocked: true },
+            { name: '滅神狂斬', img: 'assets/images/equipment_clay/equip_11.png', val: 2048, unlocked: true },
+            { name: '混沌天斧', img: 'assets/images/equipment_clay/equip_12.png', val: 4096, unlocked: true },
+            { name: '龍皇破滅', img: 'assets/images/equipment_clay/equip_13.png', val: 8192, unlocked: true }
           ]
         },
         {
-          groupName: '🏹 精靈弓箭手專屬裝備 (Bows & Quivers) [預定規劃]',
-          unlockedRatio: '規劃中',
+          groupName: '🏹 精靈弓箭手專屬裝備 (暫借戰士裝備示意開放範圍)',
+          unlockedRatio: '13/13 暫代示意',
           items: [
-            { name: '巡林戰弓體系', val: '規劃中', unlocked: false }
+            { name: '巡林泥木弓 (暫)', img: 'assets/images/equipment_clay/equip_01.png', val: 2, unlocked: true },
+            { name: '獵戶青銅弓 (暫)', img: 'assets/images/equipment_clay/equip_02.png', val: 4, unlocked: true },
+            { name: '輕靈疾行靴 (暫)', img: 'assets/images/equipment_clay/equip_03.png', val: 8, unlocked: true },
+            { name: '精靈護胸 (暫)', img: 'assets/images/equipment_clay/equip_04.png', val: 16, unlocked: true },
+            { name: '秘銀長弓 (暫)', img: 'assets/images/equipment_clay/equip_05.png', val: 32, unlocked: true },
+            { name: '皇家鷹眼甲 (暫)', img: 'assets/images/equipment_clay/equip_06.png', val: 64, unlocked: true },
+            { name: '風行逐月靴 (暫)', img: 'assets/images/equipment_clay/equip_07.png', val: 128, unlocked: true },
+            { name: '神聖守護盾 (暫)', img: 'assets/images/equipment_clay/equip_08.png', val: 256, unlocked: true },
+            { name: '極光貫星弓 (暫)', img: 'assets/images/equipment_clay/equip_09.png', val: 512, unlocked: true },
+            { name: '永恆精靈弓 (暫)', img: 'assets/images/equipment_clay/equip_10.png', val: 1024, unlocked: true },
+            { name: '弒神裂空弓 (暫)', img: 'assets/images/equipment_clay/equip_11.png', val: 2048, unlocked: true },
+            { name: '混沌天風弓 (暫)', img: 'assets/images/equipment_clay/equip_12.png', val: 4096, unlocked: true },
+            { name: '龍皇蒼穹矢 (暫)', img: 'assets/images/equipment_clay/equip_13.png', val: 8192, unlocked: true }
           ]
         },
         {
-          groupName: '🪙 戰地商人專屬裝備 (Relics & Gold) [預定規劃]',
-          unlockedRatio: '規劃中',
+          groupName: '🪙 戰地商人專屬裝備 (暫借戰士裝備示意開放範圍)',
+          unlockedRatio: '13/13 暫代示意',
           items: [
-            { name: '商隊秘寶體系', val: '規劃中', unlocked: false }
+            { name: '商隊短棍 (暫)', img: 'assets/images/equipment_clay/equip_01.png', val: 2, unlocked: true },
+            { name: '青銅算尺 (暫)', img: 'assets/images/equipment_clay/equip_02.png', val: 4, unlocked: true },
+            { name: '長途商履 (暫)', img: 'assets/images/equipment_clay/equip_03.png', val: 8, unlocked: true },
+            { name: '金絲絲綢甲 (暫)', img: 'assets/images/equipment_clay/equip_04.png', val: 16, unlocked: true },
+            { name: '秘銀算盤 (暫)', img: 'assets/images/equipment_clay/equip_05.png', val: 32, unlocked: true },
+            { name: '富賈華袍 (暫)', img: 'assets/images/equipment_clay/equip_06.png', val: 64, unlocked: true },
+            { name: '金玉步雲履 (暫)', img: 'assets/images/equipment_clay/equip_07.png', val: 128, unlocked: true },
+            { name: '聚寶聚氣盾 (暫)', img: 'assets/images/equipment_clay/equip_08.png', val: 256, unlocked: true },
+            { name: '萬金點金刃 (暫)', img: 'assets/images/equipment_clay/equip_09.png', val: 512, unlocked: true },
+            { name: '千代商聖權杖 (暫)', img: 'assets/images/equipment_clay/equip_10.png', val: 1024, unlocked: true },
+            { name: '滅國金錢狂潮 (暫)', img: 'assets/images/equipment_clay/equip_11.png', val: 2048, unlocked: true },
+            { name: '開天聚寶巨斧 (暫)', img: 'assets/images/equipment_clay/equip_12.png', val: 4096, unlocked: true },
+            { name: '龍皇財富神域 (暫)', img: 'assets/images/equipment_clay/equip_13.png', val: 8192, unlocked: true }
           ]
         }
       ]

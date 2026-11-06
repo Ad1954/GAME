@@ -366,7 +366,11 @@ export class GwtRunner {
       // C-STORY-129: 商店與設定正式版規格全面對齊 ＆ 多語系 (i18n) 核心架構奠基
       this.testGwt129_1_ShopAllSixProductsOfficiallyAligned.bind(this),
       this.testGwt129_2_SettingsModalStructureAndOptions.bind(this),
-      this.testGwt129_3_I18nEngineAndLanguageSwitching.bind(this)
+      this.testGwt129_3_I18nEngineAndLanguageSwitching.bind(this),
+      // C-STORY-130: 試作版 UI 規格細緻化與文字/按鈕邏輯對齊 (8 大項調優)
+      this.testGwt130_1_ShopRemovalAndVersionChangelogInSettings.bind(this),
+      this.testGwt130_2_DailyQuests4Plus1StructureAndStageDetailRestructure.bind(this),
+      this.testGwt130_3_CompendiumExpandedGearsAndHeroAssignButtons.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6585,7 +6589,7 @@ export class GwtRunner {
     this.assert(htmlText.includes('tierClass'), 'Compendium cards dynamically inject battle tier color class');
   }
 
-  // C-STORY-128 GWT 128.3: 預留弓箭手與商人專屬裝備規劃區塊且規劃中不渲染圖片
+  // C-STORY-128 GWT 128.3: 預留弓箭手與商人專屬裝備規劃區塊（支援暫代示意戰士裝備開放範圍）
   async testGwt128_3_CompendiumGearFutureArchetypesPlanned() {
     let htmlText = '';
     if (typeof fetch === 'function') {
@@ -6594,15 +6598,15 @@ export class GwtRunner {
         if (resp.ok) htmlText = await resp.text();
       } catch (e) {}
     }
-    this.assert(htmlText.includes('🏹 精靈弓箭手專屬裝備 (Bows & Quivers) [預定規劃]'), 'Planned section for Elf Archer bow gear line');
-    this.assert(htmlText.includes('🪙 戰地商人專屬裝備 (Relics & Gold) [預定規劃]'), 'Planned section for Royal Merchant relic gear line');
+    this.assert(htmlText.includes('🏹 精靈弓箭手專屬裝備'), 'Planned section for Elf Archer bow gear line');
+    this.assert(htmlText.includes('🪙 戰地商人專屬裝備'), 'Planned section for Royal Merchant relic gear line');
   }
 
   // =========================================================================
   // C-STORY-129: 商店與設定正式版規格全面對齊 ＆ 多語系 (i18n) 核心架構奠基
   // =========================================================================
 
-  // C-STORY-129 GWT 129.1: 商店 6 大商品品項與定價 100% 正式版對齊
+  // C-STORY-129 GWT 129.1: 商店常駐功能商品品項與定價正式版對齊（移除未實裝功能之大師包）
   async testGwt129_1_ShopAllSixProductsOfficiallyAligned() {
     let htmlText = '';
     if (typeof fetch === 'function') {
@@ -6617,7 +6621,7 @@ export class GwtRunner {
     this.assert(shopSection.includes('無限體力通行證') && shopSection.includes('NT$ 90'), 'Shop contains Infinite Stamina Pass at NT$ 90');
     this.assert(shopSection.includes('50,000 皇家金幣袋') && shopSection.includes('NT$ 60'), 'Shop contains 50k Gold Pouch at NT$ 60');
     this.assert(shopSection.includes('福利廣告金幣 (+500🪙)'), 'Shop contains Daily Ad Gold reward');
-    this.assert(shopSection.includes('第 4~8 章大師擴展包') && shopSection.includes('NT$ 120'), 'Shop contains Master Chapter Pass at NT$ 120');
+    this.assert(!shopSection.includes('第 4~8 章大師擴展包'), 'Shop cleanly removes non-functional Master Chapter Pass');
   }
 
   // C-STORY-129 GWT 129.2: 遊戲設定視窗結構齊全與操作完整
@@ -6652,6 +6656,78 @@ export class GwtRunner {
     this.assert(htmlText.includes("'zh-TW':") && htmlText.includes("'en-US':"), 'Dictionary contains zh-TW and en-US locales');
     this.assert(htmlText.includes('function setLanguage('), 'Defines setLanguage function for instant text swapping');
     this.assert(htmlText.includes('.lang-en'), 'CSS defines scalability and padding adjustments for English typography');
+  }
+
+  // =========================================================================
+  // C-STORY-130: 試作版 UI 規格細緻化與文字/按鈕邏輯對齊 (8 大項調優)
+  // =========================================================================
+
+  // C-STORY-130 GWT 130.1: 商店 4~8 章擴展包去除 ＆ 設定頁完整保留版本更新履歷 (Version Log)
+  async testGwt130_1_ShopRemovalAndVersionChangelogInSettings() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    const shopSection = htmlText.split('id="view-shop"')[1]?.split('</section>')[0] || '';
+    this.assert(!shopSection.includes('第 4~8 章大師擴展包'), 'Shop cleanly excludes non-functional Master Expansion pass');
+    this.assert(htmlText.includes('id="version-changelog-box"'), 'Settings modal includes version changelog box');
+    this.assert(htmlText.includes('版本更新履歷') || htmlText.includes('Version Changelog'), 'Settings modal has changelog title');
+    this.assert(htmlText.includes('changelog-item') && htmlText.includes('C-STORY-108'), 'Changelog contains rich update history entries');
+  }
+
+  // C-STORY-130 GWT 130.2: 每日任務 4+1 標準結構 ＆ 關卡情報重整與統一「出擊」按鈕
+  async testGwt130_2_DailyQuests4Plus1StructureAndStageDetailRestructure() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    // Daily Quests 4+1 Check
+    const questContainer = htmlText.split('id="daily-quests-container"')[1]?.split('</div>\n\n        <button')[0] || '';
+    this.assert(questContainer.includes('魔物清剿'), 'Quest 1: Kill monsters');
+    this.assert(questContainer.includes('精良合成'), 'Quest 2: Merge tiles');
+    this.assert(questContainer.includes('開採財富'), 'Quest 3: Collect gold');
+    this.assert(questContainer.includes('勤勉遠征'), 'Quest 4: Combat count exists (4 quests total)');
+    this.assert(htmlText.includes('id="btn-claim-quest-chest"'), '+1 Chest: Claim activity chest button exists');
+
+    // Stage Detail Reorganization Check
+    const stageModal = htmlText.split('id="modal-stage-detail"')[1]?.split('<!-- ========================================================\n         MODAL 0:')[0] || '';
+    this.assert(stageModal.includes('id="modal-boss-name"'), 'Stage detail contains boss name with stats');
+    this.assert(stageModal.includes('其他魔物 (4隻)') && stageModal.includes('id="modal-minions-list"'), 'Stage detail lists 4 other monsters with stats');
+    this.assert(stageModal.includes('作戰目標'), 'Stage detail states combat objective');
+    this.assert(stageModal.includes('場景資源 (裝備品 3 格)') && stageModal.includes('id="modal-stage-gears"'), 'Stage detail shows 3 gear slots with values');
+    this.assert(stageModal.includes('初次通關獎勵') && stageModal.includes('id="modal-gold-reward"'), 'Stage detail displays first clear gold reward');
+    this.assert(!stageModal.includes('出擊遠征'), 'Stage detail eliminates redundant 出擊遠征 phrasing');
+    this.assert(stageModal.includes('⚔️ 出擊'), 'Stage detail deploy button is strictly unified to ⚔️ 出擊');
+  }
+
+  // C-STORY-130 GWT 130.3: 圖鑑裝備擴充 (9件以上)、職業暫借示意 ＆ 英雄卡片按鈕「指派上陣」/「上陣中」
+  async testGwt130_3_CompendiumExpandedGearsAndHeroAssignButtons() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    // Expanded gears in compendium check
+    this.assert(htmlText.includes('永恆聖劍') && htmlText.includes('val: 1024'), 'Compendium contains Tier 10 (1024) equipment');
+    this.assert(htmlText.includes('滅神狂斬') && htmlText.includes('val: 2048'), 'Compendium contains Tier 11 (2048) equipment');
+    this.assert(htmlText.includes('龍皇破滅') && htmlText.includes('val: 8192'), 'Compendium contains Tier 13 (8192) equipment (more than 9 items)');
+    
+    // Archer & Merchant shared warrior artwork demonstration
+    this.assert(htmlText.includes('🏹 精靈弓箭手專屬裝備 (暫借戰士裝備示意開放範圍)'), 'Archer gear group uses shared warrior gear demo');
+    this.assert(htmlText.includes('🪙 戰地商人專屬裝備 (暫借戰士裝備示意開放範圍)'), 'Merchant gear group uses shared warrior gear demo');
+
+    // Hero cards action buttons renamed to 指派上陣 / 上陣中
+    this.assert(htmlText.includes('id="btn-deploy-warrior"') && htmlText.includes('上陣中'), 'Active hero warrior shows 上陣中');
+    this.assert(htmlText.includes('id="btn-deploy-merchant"') && htmlText.includes('指派上陣'), 'Inactive hero merchant shows 指派上陣');
+    this.assert(htmlText.includes('id="btn-deploy-archer"') && htmlText.includes('指派上陣'), 'Inactive hero archer shows 指派上陣');
   }
 }
 
