@@ -4173,9 +4173,9 @@ function closeStageDetailModal() {
     for (let s = 1; s <= playerMaxStage; s++) {
       const def = getStageDef(s);
       if (def) {
-        encounteredKeys.add(${def.chapterId}_);
+        encounteredKeys.add(def.chapterId + '_' + def.val);
         if (def.minions && Array.isArray(def.minions)) {
-          def.minions.forEach(m => encounteredKeys.add(${def.chapterId}_));
+          def.minions.forEach(m => encounteredKeys.add(def.chapterId + '_' + m.val));
         }
       }
     }
@@ -4189,7 +4189,7 @@ function closeStageDetailModal() {
       const mList = Object.entries(chData.monsters).map(([val, m]) => {
         total++;
         const intVal = parseInt(val);
-        const isUnlocked = encounteredKeys.has(${c}_);
+        const isUnlocked = encounteredKeys.has(c + '_' + intVal);
         if (isUnlocked) {
           unlocked++;
           chUnlockedCount++;
@@ -4204,9 +4204,10 @@ function closeStageDetailModal() {
         };
       });
 
+      const ratioText = isEn ? 'Unlocked' : '已解鎖';
       groups.push({
         groupName: chName,
-        unlockedRatio: ${chUnlockedCount}/ ,
+        unlockedRatio: chUnlockedCount + '/' + mList.length + ' ' + ratioText,
         items: mList
       });
     }
