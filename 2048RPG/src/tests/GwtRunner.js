@@ -370,7 +370,10 @@ export class GwtRunner {
       // C-STORY-130: 試作版 UI 規格細緻化與文字/按鈕邏輯對齊 (8 大項調優)
       this.testGwt130_1_ShopRemovalAndVersionChangelogInSettings.bind(this),
       this.testGwt130_2_DailyQuests4Plus1StructureAndStageDetailRestructure.bind(this),
-      this.testGwt130_3_CompendiumExpandedGearsAndHeroAssignButtons.bind(this)
+      this.testGwt130_3_CompendiumExpandedGearsAndHeroAssignButtons.bind(this),
+      // C-STORY-131: 設定彈窗頁籤化重構（基本設定 / 更新履歷 / 開發測試）
+      this.testGwt131_1_SettingsModalThreeTabsStructureAndSwitching.bind(this),
+      this.testGwt131_2_SettingsGeneralChangelogDeveloperContentSeparation.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6728,6 +6731,55 @@ export class GwtRunner {
     this.assert(htmlText.includes('id="btn-deploy-warrior"') && htmlText.includes('上陣中'), 'Active hero warrior shows 上陣中');
     this.assert(htmlText.includes('id="btn-deploy-merchant"') && htmlText.includes('指派上陣'), 'Inactive hero merchant shows 指派上陣');
     this.assert(htmlText.includes('id="btn-deploy-archer"') && htmlText.includes('指派上陣'), 'Inactive hero archer shows 指派上陣');
+  }
+
+  // =========================================================================
+  // C-STORY-131: 設定彈窗頁籤化重構（基本設定 / 更新履歷 / 開發測試）
+  // =========================================================================
+
+  // C-STORY-131 GWT 131.1: 設定彈窗包含 3 個分頁頁籤及切換函式
+  async testGwt131_1_SettingsModalThreeTabsStructureAndSwitching() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('settings-tabs-bar'), 'Contains settings-tabs-bar container');
+    this.assert(htmlText.includes('id="btn-stab-general"') && htmlText.includes('switchSettingTab(\'general\')'), 'Tab 1: General Settings button');
+    this.assert(htmlText.includes('id="btn-stab-changelog"') && htmlText.includes('switchSettingTab(\'changelog\')'), 'Tab 2: Changelog button');
+    this.assert(htmlText.includes('id="btn-stab-developer"') && htmlText.includes('switchSettingTab(\'developer\')'), 'Tab 3: Developer/Debug button');
+    this.assert(htmlText.includes('function switchSettingTab('), 'Defines switchSettingTab JS function');
+  }
+
+  // C-STORY-131 GWT 131.2: 頁籤內容精準分離（基本設定/更新履歷/開發測試）
+  async testGwt131_2_SettingsGeneralChangelogDeveloperContentSeparation() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    // Pane 1: General (Lang, Theme, BGM, SFX, Reset Save)
+    const paneGeneral = htmlText.split('id="pane-setting-general"')[1]?.split('id="pane-setting-changelog"')[0] || '';
+    this.assert(paneGeneral.includes('id="setting-language-select"'), 'General pane contains Language switcher');
+    this.assert(paneGeneral.includes('id="setting-theme-select"'), 'General pane contains Board theme selector');
+    this.assert(paneGeneral.includes('id="setting-bgm-toggle"'), 'General pane contains BGM music toggle');
+    this.assert(paneGeneral.includes('id="setting-sfx-toggle"'), 'General pane contains SFX effects toggle');
+    this.assert(paneGeneral.includes('id="btn-settings-reset-save"'), 'General pane contains Reset Save button');
+
+    // Pane 2: Changelog (Version list, Check for updates button)
+    const paneChangelog = htmlText.split('id="pane-setting-changelog"')[1]?.split('id="pane-setting-developer"')[0] || '';
+    this.assert(paneChangelog.includes('id="version-changelog-box"'), 'Changelog pane contains version log box');
+    this.assert(paneChangelog.includes('id="btn-force-reload-version"'), 'Changelog pane contains manual update check button');
+
+    // Pane 3: Developer (Tile art style, Instant skill test, Clear tutorial)
+    const paneDev = htmlText.split('id="pane-setting-developer"')[1]?.split('id="btn-settings-close"')[0] || '';
+    this.assert(paneDev.includes('id="setting-style-select"'), 'Developer pane contains Tile art style selector');
+    this.assert(paneDev.includes('id="setting-instant-skill"'), 'Developer pane contains instant skill test switch');
+    this.assert(paneDev.includes('id="btn-settings-clear-tut"'), 'Developer pane contains Clear tutorial record button');
   }
 }
 

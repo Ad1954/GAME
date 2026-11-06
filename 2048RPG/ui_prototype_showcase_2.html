@@ -1625,6 +1625,49 @@
     .changelog-list { margin: 0; padding-left: 16px; color: #94a3b8; font-size: 0.76rem; }
     .changelog-list li { margin-bottom: 2px; }
 
+  
+    /* Settings Sub-tabs & Tab Panes (C-STORY-131) */
+    .settings-tabs-bar {
+      display: flex;
+      background: #090d16;
+      border: 1.5px solid #334155;
+      border-radius: 14px;
+      padding: 3px;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .settings-tab-btn {
+      flex: 1;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      font-size: var(--font-caption);
+      font-weight: 800;
+      color: #94a3b8;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .settings-tab-btn.active {
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      color: #38bdf8;
+      border: 1px solid #38bdf8;
+      box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+    }
+    .settings-pane {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+    }
+    .settings-pane.active {
+      display: flex;
+      animation: tabFadeIn 0.2s ease-out;
+    }
+
   </style>
 </head>
 <body>
@@ -2108,56 +2151,72 @@
          MODAL 0: ⚙️ 遊戲設定視窗 (SETTINGS MODAL WITH I18N LANGUAGE SWITCHER)
          ======================================================== -->
     <div class="modal-overlay" id="modal-settings" onclick="if(event.target===this) closeSettingsModal()">
-      <div class="cr-modal-box" style="max-height:85vh; overflow-y:auto; gap:12px;">
+      <div class="cr-modal-box" style="max-height:86vh; overflow-y:auto; gap:10px;">
         <div class="modal-close-btn" onclick="closeSettingsModal()">✕</div>
         <h3 style="font-size:var(--font-h1); color:#38bdf8; text-align:center;" id="settings-txt-title" data-i18n="settings_title">⚙️ 遊戲設定</h3>
         
-        <!-- 1. Language Switcher -->
-        <div class="setting-row">
-          <span style="font-weight:700; color:#f8fafc;" id="settings-txt-lang" data-i18n="settings_lang">🌐 語言 (Language)</span>
-          <select id="setting-language-select" class="setting-select" onchange="changeLanguageFromSelect(this.value)">
-            <option value="zh-TW" selected>繁體中文 (Traditional Chinese)</option>
-            <option value="en-US">English (英語)</option>
-          </select>
-        </div>
-
-        <!-- 2. Sound Effects Toggle -->
-        <div class="setting-row">
-          <span style="font-weight:700; color:#f8fafc;" id="settings-txt-sfx" data-i18n="settings_sfx">🔊 遊戲音效</span>
-          <input type="checkbox" id="setting-sfx-toggle" checked style="width:20px; height:20px; cursor:pointer;" onchange="alert(this.checked ? '🔊 音效已開啟' : '🔇 音效已靜音')">
-        </div>
-
-        <!-- 3. Tile Art Style -->
-        <div class="setting-row">
-          <span style="font-weight:700; color:#f8fafc;" id="settings-txt-style" data-i18n="settings_style">🖼️ 方塊美術造型</span>
-          <select id="setting-style-select" class="setting-select" onchange="alert('🎨 美術造型已切換為：' + this.options[this.selectedIndex].text)">
-            <option value="clay" selected>🗿 微縮模型 (3D黏土)</option>
-            <option value="emoji">🎭 立體 Emoji (Q版)</option>
-            <option value="comic">🎨 賽璐璐 (美漫風)</option>
-            <option value="pixel">👾 復古點陣 (16-Bit)</option>
-          </select>
-        </div>
-
-        <!-- 4. Board Palette Theme -->
-        <div class="setting-row">
-          <span style="font-weight:700; color:#f8fafc;" id="settings-txt-theme" data-i18n="settings_theme">🎨 盤面底板配色</span>
-          <select id="setting-theme-select" class="setting-select" onchange="alert('🏰 盤面配色已切換為：' + this.options[this.selectedIndex].text)">
-            <option value="kingdom" selected>🏰 王國遠征 (深藍)</option>
-            <option value="cyber">🌌 賽博霓虹 (Cyber)</option>
-            <option value="retro">🕹️ 復古點陣 (Retro)</option>
-            <option value="minimal">⬛ 極簡深邃 (Minimal)</option>
-          </select>
-        </div>
-
-        <hr style="border: 0; border-top: 1px solid rgba(56, 189, 248, 0.2); margin: 6px 0;">
-        <div class="setting-section-header" style="margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
-          <span style="font-size: 0.92rem; font-weight: 800; color: #38bdf8;" id="settings-txt-log-title" data-i18n="settings_log_title">📜 版本更新履歷</span>
-          <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v6.9.1</span>
-        </div>
-                  <div class="setting-section-header" style="margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-size: 0.92rem; font-weight: 800; color: #38bdf8;">📜 版本更新履歷</span>
-            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v5.8.4</span>
+        <!-- 3 Tabs Navigation Bar -->
+        <div class="settings-tabs-bar">
+          <div class="settings-tab-btn active" id="btn-stab-general" onclick="switchSettingTab('general')">
+            <span id="stab-txt-general" data-i18n="stab_general">⚙️ 基本設定</span>
           </div>
+          <div class="settings-tab-btn" id="btn-stab-changelog" onclick="switchSettingTab('changelog')">
+            <span id="stab-txt-changelog" data-i18n="stab_changelog">📜 更新履歷</span>
+          </div>
+          <div class="settings-tab-btn" id="btn-stab-developer" onclick="switchSettingTab('developer')">
+            <span id="stab-txt-developer" data-i18n="stab_developer">🛠️ 開發測試</span>
+          </div>
+        </div>
+
+        <!-- ================= PANE 1: 基本設定 ================= -->
+        <div class="settings-pane active" id="pane-setting-general">
+          <!-- 1. 語言 (Language) -->
+          <div class="setting-row">
+            <span style="font-weight:700; color:#f8fafc;" id="settings-txt-lang" data-i18n="settings_lang">🌐 語言 (Language)</span>
+            <select id="setting-language-select" class="setting-select" onchange="changeLanguageFromSelect(this.value)">
+              <option value="zh-TW" selected>繁體中文 (Traditional Chinese)</option>
+              <option value="en-US">English (英語)</option>
+            </select>
+          </div>
+
+          <!-- 2. 盤面底板配色 -->
+          <div class="setting-row">
+            <span style="font-weight:700; color:#f8fafc;" id="settings-txt-theme" data-i18n="settings_theme">🎨 盤面底板配色</span>
+            <select id="setting-theme-select" class="setting-select" onchange="alert('🏰 盤面配色已切換為：' + this.options[this.selectedIndex].text)">
+              <option value="kingdom" selected>🏰 王國遠征 (深藍)</option>
+              <option value="cyber">🌌 賽博霓虹 (Cyber)</option>
+              <option value="retro">🕹️ 復古點陣 (Retro)</option>
+              <option value="minimal">⬛ 極簡深邃 (Minimal)</option>
+            </select>
+          </div>
+
+          <!-- 3. 背景音樂 (BGM) -->
+          <div class="setting-row">
+            <span style="font-weight:700; color:#f8fafc;" id="settings-txt-bgm" data-i18n="settings_bgm">🎵 背景音樂</span>
+            <input type="checkbox" id="setting-bgm-toggle" checked style="width:20px; height:20px; cursor:pointer;" onchange="alert(this.checked ? '🎵 背景音樂已開啟' : '🔇 背景音樂已關閉')">
+          </div>
+
+          <!-- 4. 遊戲音效 (SFX) -->
+          <div class="setting-row">
+            <span style="font-weight:700; color:#f8fafc;" id="settings-txt-sfx" data-i18n="settings_sfx">🔊 遊戲音效</span>
+            <input type="checkbox" id="setting-sfx-toggle" checked style="width:20px; height:20px; cursor:pointer;" onchange="alert(this.checked ? '🔊 音效已開啟' : '🔇 音效已靜音')">
+          </div>
+
+          <!-- 5. 清除紀錄 (清除本地存檔) -->
+          <div style="margin-top:6px;">
+            <button class="cr-btn cr-btn-purple btn-medium" id="btn-settings-reset-save" data-i18n="settings_reset_save" style="width:100%; background:linear-gradient(180deg, #991b1b, #7f1d1d); border-color:#ef4444;" onclick="if(confirm('⚠️ 警告：確定要清除本地存檔並重置所有進度嗎？此操作不可逆！')) alert('🗑️ 本地存檔已重置回初始狀態！')">🗑️ 清除本地存檔 (重置紀錄)</button>
+          </div>
+        </div>
+
+        <!-- ================= PANE 2: 更新履歷 ================= -->
+        <div class="settings-pane" id="pane-setting-changelog">
+          <div class="setting-section-header" style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.92rem; font-weight: 800; color: #38bdf8;" id="settings-txt-log-title" data-i18n="settings_log_title">📜 版本更新履歷</span>
+            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v6.9.1</span>
+          </div>
+
+          <!-- Version Changelog Box with Scrollbar -->
+          <div class="version-changelog-box" id="version-changelog-box" style="max-height:260px;">
           <div class="version-changelog-box" id="version-changelog-box">
             <!-- C-STORY-108 -->
             <div class="changelog-item">
@@ -2663,11 +2722,39 @@
             商業製品測試版 (Phase 1)：<br>
             獨立純前端運行環境，本地自動存檔。
           </div>
+          </div>
 
-        <!-- 5. Reset & Data Management -->
-        <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
-          <button class="cr-btn cr-btn-amber btn-medium" id="btn-settings-clear-tut" data-i18n="settings_clear_tut" style="width:100%;" onclick="alert('🔄 新手教學引導狀態已重置！下次進入關卡將重新指引。')">🔄 清除新手教學紀錄</button>
-          <button class="cr-btn cr-btn-purple btn-medium" id="btn-settings-reset-save" data-i18n="settings_reset_save" style="width:100%; background:linear-gradient(180deg, #991b1b, #7f1d1d); border-color:#ef4444;" onclick="if(confirm('⚠️ 警告：確定要清除本地存檔並重置所有進度嗎？此操作不可逆！')) alert('🗑️ 本地存檔已重置回初始狀態！')">🗑️ 清除本地存檔 (重置進度)</button>
+          <!-- 手動檢查版本更新 -->
+          <button class="cr-btn cr-btn-green btn-medium" id="btn-force-reload-version" data-i18n="settings_btn_check_update" style="width:100%;" onclick="alert('🔄 目前已是最新版本 (v6.9.1)！無須更新。')">🔄 手動檢查版本更新 (無損熱更新)</button>
+        </div>
+
+        <!-- ================= PANE 3: 開發測試用 ================= -->
+        <div class="settings-pane" id="pane-setting-developer">
+          <!-- 1. 方塊美術造型 -->
+          <div class="setting-row">
+            <span style="font-weight:700; color:#f8fafc;" id="settings-txt-style" data-i18n="settings_style">🖼️ 方塊美術造型</span>
+            <select id="setting-style-select" class="setting-select" onchange="alert('🎨 美術造型已切換為：' + this.options[this.selectedIndex].text)">
+              <option value="clay" selected>🗿 微縮模型 (3D黏土)</option>
+              <option value="emoji">🎭 立體 Emoji (Q版)</option>
+              <option value="comic">🎨 賽璐璐 (美漫風)</option>
+              <option value="pixel">👾 復古點陣 (16-Bit)</option>
+              <option value="voxel">🧱 體素方塊 (3D立體)</option>
+            </select>
+          </div>
+
+          <!-- 2. 測試：技能開場即就緒 -->
+          <div class="setting-row" style="background: rgba(56, 189, 248, 0.08); padding: 8px 10px; border-radius: 8px; border: 1px dashed rgba(56, 189, 248, 0.3);">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-weight: 700; color: #38bdf8;" id="settings-txt-instant-skill" data-i18n="settings_instant_skill">🛠️ [測試] 技能開場即就緒</span>
+              <span style="font-size: 0.72rem; color: #94a3b8;">進入戰鬥技能充能即為 100% 滿額</span>
+            </div>
+            <input type="checkbox" id="setting-instant-skill" style="width:20px; height:20px; cursor:pointer;" onchange="alert(this.checked ? '⚡ 開場技能 100% 就緒已啟用' : '正常戰鬥充能模式')">
+          </div>
+
+          <!-- 3. 清除新手教學紀錄 -->
+          <div style="margin-top:6px;">
+            <button class="cr-btn cr-btn-amber btn-medium" id="btn-settings-clear-tut" data-i18n="settings_clear_tut" style="width:100%;" onclick="alert('🔄 新手教學引導狀態已重置！下次進入關卡將重新指引。')">🔄 清除新手教學紀錄 (重置引導狀態)</button>
+          </div>
         </div>
 
         <button class="cr-btn cr-btn-blue btn-medium" id="btn-settings-close" data-i18n="settings_close" style="width:100%; margin-top:4px;" onclick="closeSettingsModal()">確定關閉</button>
@@ -2903,6 +2990,12 @@
       settings_log_title: '📜 版本更新履歷',
       btn_upgrade: '🔨 升級',
       settings_title: '⚙️ 遊戲設定',
+      stab_general: '⚙️ 基本設定',
+      stab_changelog: '📜 更新履歷',
+      stab_developer: '🛠️ 開發測試',
+      settings_bgm: '🎵 背景音樂',
+      settings_btn_check_update: '🔄 手動檢查版本更新 (無損熱更新)',
+      settings_instant_skill: '🛠️ [測試] 技能開場即就緒',
       settings_lang: '🌐 語言 (Language)',
       settings_sfx: '🔊 遊戲音效',
       settings_style: '🖼️ 方塊美術造型',
@@ -2940,6 +3033,12 @@
       settings_log_title: '📜 Version Changelog',
       btn_upgrade: '🔨 UPGRADE',
       settings_title: '⚙️ Game Settings',
+      stab_general: '⚙️ General',
+      stab_changelog: '📜 Changelog',
+      stab_developer: '🛠️ Developer',
+      settings_bgm: '🎵 Background Music',
+      settings_btn_check_update: '🔄 Check for Updates (Hot Reload)',
+      settings_instant_skill: '🛠️ [Debug] Instant Skill Ready',
       settings_lang: '🌐 Language',
       settings_sfx: '🔊 Sound Effects',
       settings_style: '🖼️ Tile Art Style',
@@ -2978,6 +3077,24 @@
   }
 
   // Settings Modal Open/Close
+  
+  // Settings Tabs Switching (C-STORY-131)
+  function switchSettingTab(tabKey) {
+    const tabs = ['general', 'changelog', 'developer'];
+    tabs.forEach(t => {
+      const btn = document.getElementById(`btn-stab-${t}`);
+      const pane = document.getElementById(`pane-setting-${t}`);
+      if (btn) {
+        if (t === tabKey) btn.classList.add('active');
+        else btn.classList.remove('active');
+      }
+      if (pane) {
+        if (t === tabKey) pane.classList.add('active');
+        else pane.classList.remove('active');
+      }
+    });
+  }
+
   function openSettingsModal() {
     const modal = document.getElementById('modal-settings');
     if (modal) modal.classList.add('active');
