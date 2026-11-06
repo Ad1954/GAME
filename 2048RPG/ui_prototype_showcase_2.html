@@ -2905,7 +2905,7 @@
             <img id="modal-hero-portrait" src="assets/images/hero_knight/hero_09.png" style="width:92%; height:92%; object-fit:contain; transform:scale(1.12);" alt="Hero Portrait" />
           </div>
           <div style="display:flex; flex-direction:column; gap:4px;">
-            <div style="font-size:var(--font-caption); color:#94a3b8; font-weight:700;">目前神兵形態</div>
+            <div style="font-size:var(--font-caption); color:#94a3b8; font-weight:700;" id="modal-weapon-header" data-i18n="hero_modal_weapon_header">目前神兵形態</div>
             <div style="font-size:1.05rem; font-weight:800; color:#fbbf24;" id="modal-hero-tier-label">Tier 9 (戰力 512)</div>
             <div style="font-size:var(--font-caption); color:#38bdf8; font-weight:600;" id="modal-hero-posture-label">✦ 聖殿光刃戰鬥姿態</div>
           </div>
@@ -3039,9 +3039,9 @@
       shop_btn_gold_price: 'NT$ 60 儲值金幣',
 
       // Camp Tab (軍備)
-      camp_title: '王國前進營地',
-      camp_desc: '升級打鐵科技、抽裝備與行囊強化',
-      camp_section_title: '營地科技與設施',
+      camp_title: '王國軍備前哨營地',
+      camp_desc: '升級防衛工事與鍛造設施，大幅強化出擊隊伍基礎戰力！',
+      camp_section_title: '🏰 前哨營地基礎設施',
       camp_forge_title: '皇家鐵匠鋪 LV.3',
       camp_forge_desc: '初始棋盤生成裝備基礎階級提升至 T02',
       camp_btn_forge: '升級 🪙800',
@@ -3059,6 +3059,9 @@
       chapter_3: '第三章：孤峰岩地',
       chapter_4: '第四章：蛛魔荒漠',
       chapter_5: '第五章：遠古地宮',
+      chapter_6: '第六章：滅世黑曜',
+      chapter_7: '第七章：神魔深淵',
+      chapter_8: '第八章：終焉神域',
       adv_rec_power: '推薦戰力',
       adv_first_clear: '首通金幣獎勵',
       adv_stage_info: '關卡詳細情報',
@@ -3077,11 +3080,15 @@
       drawer_close: '完成關閉',
 
       // Stage Detail Modal
-      stage_title_suffix: '· 關卡情報',
+      stage_info_title: '關卡詳細情報',
+      stage_objective_label: '作戰目標',
       stage_objective_default: '作戰目標：消滅盤面所有魔物',
       stage_minions_title: '其他魔物 (4隻)：',
       stage_gears_title: '場景資源 (裝備品 3 格)：',
       stage_first_gold_title: '🪙 初次通關獎勵：',
+      first_clear_reward_label: '初次通關獎勵',
+      strategy_tip_label: '攻略提示',
+      strategy_tip_text: '使用戰士十字碎裂清除四周卡位金幣！',
       stage_tactical_tip: '💡 攻略提示：使用戰士十字碎裂清除四周卡位金幣！',
 
       // Gear & Heroes Tab (裝備)
@@ -3102,12 +3109,15 @@
       btn_hero_assign: '指派上陣',
       btn_assign_deploy: '🛡️ 指派上陣',
       btn_upgrade: '🔨 升級',
+      btn_max_lv: '已滿級',
+      hero_modal_weapon_header: '目前神兵形態',
+      comp_val_prefix: '數值',
 
       // Compendium Tab (圖鑑)
       comp_tab_monsters: '魔物圖鑑',
       comp_tab_heroes: '英雄圖鑑',
       comp_tab_gears: '裝備圖鑑',
-      comp_progress_lbl: '完成度',
+      comp_progress_lbl: '解鎖進度：',
       comp_unlocked_fmt: '已解鎖',
 
       // Settings Modal
@@ -3117,15 +3127,14 @@
       stab_developer: '🛠️ 開發測試',
       settings_lang: '🌐 語言 (Language)',
       settings_theme: '🎨 盤面底板配色',
-      settings_bgm: '🎵 背景音樂',
-      settings_sfx: '🔊 遊戲音效',
-      settings_style: '🖼️ 方塊美術造型',
-      settings_log_title: '📜 版本更新履歷',
-      settings_btn_check_update: '🔄 手動檢查版本更新 (無損熱更新)',
-      settings_instant_skill: '🛠️ [測試] 技能開場即就緒',
-      settings_clear_tut: '🔄 清除新手教學紀錄 (重置引導狀態)',
-      settings_reset_save: '🗑️ 清除本地存檔 (重置紀錄)',
-      settings_close: '確定關閉'
+      settings_bgm: '🎵 背景音樂 (BGM)',
+      settings_sfx: '🔊 音效 (SFX)',
+      settings_reset_btn: '🗑️ 清除所有紀錄 (重新開始)',
+      settings_log_title: '📜 版本更新記錄 (Changelog)',
+      settings_btn_check_update: '🔄 手動檢查版本更新',
+      settings_art_style: '🎨 方塊美術風格 (Art Style)',
+      settings_instant_skills: '⚡ 英雄技能無冷卻 (測試用)',
+      settings_clear_tutorial: '🧹 清除新手教學紀錄 (重播教學)'
     },
     'en-US': {
       // Bottom Navigation
@@ -3134,77 +3143,84 @@
       nav_adventure: 'Battle',
       nav_gear: 'Gear',
       nav_compendium: 'Archive',
-
+      
       // Top HUD
       hud_gold: 'Gold',
-      hud_stamina: 'Energy',
+      hud_stamina: 'Stamina',
 
       // Shop Tab
-      shop_pass_title: 'Lifetime No-Ads PASS',
-      shop_pass_tag: '🛡️ VIP LIFETIME · PERMANENT NO ADS',
-      shop_pass_desc: 'Permanently remove interstitial ads! Claim all bonus rewards instantly without waiting!',
-      shop_btn_pass_price: 'NT$ 150 Permanent No-Ads',
+      shop_pass_title: 'Lifetime Ad-Free PASS',
+      shop_pass_tag: '🛡️ Royal Lifetime Privilege · No Ads Forever',
+      shop_pass_desc: 'Permanently removes all interstitial ads every 3 stages! Instant claim for all ad rewards!',
+      shop_btn_pass_price: '$4.99 Remove Ads Forever',
       shop_header_daily: '✨ Daily Royal Benefits',
       shop_daily_free_title: 'Daily Supply Chest (+200🪙)',
-      shop_daily_free_desc: 'Free daily kingdom military grant (+200🪙)',
+      shop_daily_free_desc: 'Free daily kingdom supply pack (+200🪙)',
       shop_btn_free: 'Claim Free',
-      shop_ad_title: 'Bonus Ad Gold (+500🪙)',
-      shop_ad_desc: 'Watch promo to get 500 gold! (Instant claim for No-Ads PASS owners)',
-      shop_ad_btn: 'Watch Ad',
-      shop_ad_left: 'Daily Left: 3 / 3',
+      shop_ad_title: 'Bonus Video Gold (+500🪙)',
+      shop_ad_desc: 'Watch promo video to receive 500 gold! (Ad-free PASS claims instantly)',
+      shop_ad_btn: 'Watch Video',
+      shop_ad_left: 'Today: 3 / 3 remaining',
       shop_header_passes: '👑 Royal Season Pass & Bundles',
       shop_stamina_title: 'Infinite Stamina Pass',
-      shop_stamina_desc: 'Zero defeat penalty! 0 Stamina lost on loss, conquer all 350 stages!',
-      shop_btn_stamina_price: 'NT$ 90 Unlock Now',
+      shop_stamina_desc: 'Zero stamina cost on defeats! Freely challenge all 350 adventure stages!',
+      shop_btn_stamina_price: '$2.99 Unlock Now',
       shop_gold_title: '50,000 Royal Gold Pouch',
-      shop_gold_desc: 'Instant treasury wealth! Buy high-tier gears and rush workshop tech!',
-      shop_btn_gold_price: 'NT$ 60 Refill Gold',
+      shop_gold_desc: 'Massive treasury pack! Instantly buy high-tier equipment and rush forge tech!',
+      shop_btn_gold_price: '$1.99 Refill Gold',
 
       // Camp Tab (軍備)
-      camp_title: 'Kingdom Forward Camp',
-      camp_desc: 'Upgrade blacksmith tech, pull gears & expand backpack',
-      camp_section_title: 'Camp Facilities & Tech',
-      camp_forge_title: 'Royal Blacksmith LV.3',
-      camp_forge_desc: 'Board base equipment generation upgraded to T02',
+      camp_title: '⚔️ Royal Arsenal Outpost',
+      camp_desc: 'Upgrade forge and defense works to massively boost army deployment stats!',
+      camp_section_title: '🏰 Outpost Facilities',
+      camp_forge_title: 'Royal Blacksmith Lv.3',
+      camp_forge_desc: 'Initial equipment tile tier upgraded to T02 on board spawn',
       camp_btn_forge: 'Upgrade 🪙800',
       camp_gacha_title: 'Equipment Gacha',
-      camp_gacha_desc: 'Random clay gear drops; 10-pull guarantees emergency item',
+      camp_gacha_desc: 'Random clay divine arms; 10x pull guarantees emergency item',
       camp_btn_single: 'Single 🪙100',
       camp_btn_ten: '10x Pull 🪙1000',
-      camp_bag_title: 'Military Backpack (24 ➔ 28)',
-      camp_bag_desc: 'Expand 4 gear warehouse slots, +20% victory gold bonus',
+      camp_bag_title: 'Supply Haversack (24 ➔ 28 slots)',
+      camp_bag_desc: 'Expands gear vault by 4 slots, stage clear gold +20%',
       camp_btn_expand: 'Expand 🪙2000',
 
       // Adventure Screen
       chapter_1: 'Chapter 1: Breeze Realm',
-      chapter_2: 'Chapter 2: Scorching Lava',
-      chapter_3: 'Chapter 3: Lone Crag',
-      chapter_4: 'Chapter 4: Spider Desert',
+      chapter_2: 'Chapter 2: Scorching Magma',
+      chapter_3: 'Chapter 3: Crag Peak',
+      chapter_4: 'Chapter 4: Spider Desolation',
       chapter_5: 'Chapter 5: Ancient Crypt',
-      adv_rec_power: 'Rec. Power',
-      adv_first_clear: 'First Clear',
+      chapter_6: 'Chapter 6: Obsidian Abyss',
+      chapter_7: 'Chapter 7: Astral Rift',
+      chapter_8: 'Chapter 8: Genesis Throne',
+      adv_rec_power: 'Recommended',
+      adv_first_clear: 'First Clear Bonus',
       adv_stage_info: 'Stage Info',
       adv_details: 'Details ℹ️',
-      btn_deploy: '⚔️ BATTLE!',
+      btn_deploy: '⚔️ BATTLE !',
       btn_stage_deploy: '⚔️ BATTLE',
       boss_prefix: 'Boss',
       gear_power_suffix: 'Gear',
       gold_suffix: 'Gold',
 
       // Quick Stage Drawer
-      drawer_quick_jump: 'Quick Stage Select',
+      drawer_quick_jump: 'Quick Stage Jump',
       drawer_quick_tip: 'Select unlocked stage to jump',
       drawer_progress: '🚩Focus',
       drawer_selecting: 'Selected',
       drawer_close: 'Done & Close',
 
       // Stage Detail Modal
-      stage_title_suffix: '· Stage Info',
+      stage_info_title: 'Stage Info',
+      stage_objective_label: 'Objective',
       stage_objective_default: 'Objective: Eliminate all monsters on board',
       stage_minions_title: 'Other Monsters (4):',
       stage_gears_title: 'Stage Resources (3 Gears):',
       stage_first_gold_title: '🪙 First Clear Reward:',
-      stage_tactical_tip: '💡 Tactical Tip: Use warrior cross cleave to clear blocking coins!',
+      first_clear_reward_label: 'First Clear Reward',
+      strategy_tip_label: 'Strategy Tip',
+      strategy_tip_text: 'Use Warrior skill to break surrounding blocker coins!',
+      stage_tactical_tip: '💡 Strategy Tip: Use Warrior skill to break surrounding blocker coins!',
 
       // Gear & Heroes Tab (裝備)
       gear_tab_inventory: 'Inventory',
@@ -3221,38 +3237,38 @@
       gear_btn_merge: '✨ Auto Merge',
       hero_list_title: 'Kingdom Hero Roster',
       btn_hero_assigned: 'ASSIGNED',
-      btn_hero_assign: 'ASSIGN',
+      btn_hero_assign: 'DEPLOY',
       btn_assign_deploy: '🛡️ ASSIGN HERO',
-      btn_upgrade: '🔨 UPGRADE',
+      btn_upgrade: '🔨 Upgrade',
+      btn_max_lv: 'MAX LV',
+      hero_modal_weapon_header: 'Current Divine Weapon',
+      comp_val_prefix: 'Value',
 
       // Compendium Tab (圖鑑)
       comp_tab_monsters: 'Monsters',
       comp_tab_heroes: 'Heroes',
-      comp_tab_gears: 'Gears',
-      comp_progress_lbl: 'Progress',
+      comp_tab_gears: 'Equipments',
+      comp_progress_lbl: 'Progress: ',
       comp_unlocked_fmt: 'Unlocked',
 
       // Settings Modal
-      settings_title: '⚙️ Game Settings',
+      settings_title: '⚙️ Settings',
       stab_general: '⚙️ General',
       stab_changelog: '📜 Changelog',
       stab_developer: '🛠️ Developer',
       settings_lang: '🌐 Language',
-      settings_theme: '🎨 Board Palette',
-      settings_bgm: '🎵 Background Music',
-      settings_sfx: '🔊 Sound Effects',
-      settings_style: '🖼️ Tile Art Style',
+      settings_theme: '🎨 Board Palette Skin',
+      settings_bgm: '🎵 Music (BGM)',
+      settings_sfx: '🔊 Sound Effects (SFX)',
+      settings_reset_btn: '🗑️ Clear Save Data (Start Over)',
       settings_log_title: '📜 Version Changelog',
-      settings_btn_check_update: '🔄 Check for Updates (Hot Reload)',
-      settings_instant_skill: '🛠️ [Debug] Instant Skill Ready',
-      settings_clear_tut: '🔄 Clear Tutorial Record (Reset Guide)',
-      settings_reset_save: '🗑️ Reset Local Save Data',
-      settings_close: 'Confirm & Close'
+      settings_btn_check_update: '🔄 Check for Updates',
+      settings_art_style: '🎨 Tile Art Style',
+      settings_instant_skills: '⚡ Zero Cooldown Skills (Test Mode)',
+      settings_clear_tutorial: '🧹 Reset Tutorial Flags'
     }
   };
-
-  // Translation helper function
-  function t(key, fallback = '') {
+function t(key, fallback = '') {
     const dict = I18N_DICT[currentLanguage] || I18N_DICT['zh-TW'];
     return dict[key] || fallback || key;
   }
@@ -3280,6 +3296,7 @@ function setLanguage(lang) {
 
     // Re-render adventure hub, compendium and gear capacity
     renderAdventureStage();
+    renderHeroRoster();
     renderCompendiumView();
     const capEl = document.getElementById('gear-txt-capacity');
     if (capEl) capEl.textContent = `${t('gear_capacity_label')}`;
@@ -3327,15 +3344,17 @@ function setLanguage(lang) {
   let activeDeployedGear = { name: '聖殿光刃 (512)', img: 'assets/images/equipment_clay/equip_09.png' };
   let currentCompTab = 'monsters';
 
-  const STAGE_CONFIGS = {
-    1: { name: '史萊姆草地', bossIcon: '🟢', bossName: '草地史萊姆', val: 8, power: '16 裝備', gold: 1000 },
-    5: { name: '毒菇沼澤', bossIcon: '🍄', bossName: '劇毒大毒菇', val: 32, power: '64 裝備', gold: 1200 },
-    10: { name: '哥布林前哨', bossIcon: '👺', bossName: '哥布林長老', val: 64, power: '256 裝備', gold: 1400 },
-    12: { name: '林中小徑', bossIcon: '🐺', bossName: '森林巨狼', val: 64, power: '2048 裝備', gold: 1560 },
-    15: { name: '荒漠土匪營', bossIcon: '🦂', bossName: '沙漠巨蠍', val: 128, power: '1024 裝備', gold: 1800 },
-    20: { name: '綠洲古遺蹟', bossIcon: '🕷️', bossName: '古墓石蛛', val: 256, power: '2048 裝備', gold: 2200 },
-    25: { name: '荒漠最高峰', bossIcon: '👑', bossName: '荒漠霸王龍', val: 512, power: '4096 裝備', gold: 3000 }
-  };
+  const CHAPTER_CONFIGS = [
+    { id: 0, nameZh: '序章：新手訓練所', nameEn: 'Prologue: Training Camp', range: [0, 0] },
+    { id: 1, nameZh: '第一章：微風之境', nameEn: 'Chapter 1: Breeze Realm', range: [1, 5] },
+    { id: 2, nameZh: '第二章：灼熱熔岩', nameEn: 'Chapter 2: Scorching Magma', range: [6, 20] },
+    { id: 3, nameZh: '第三章：孤峰岩地', nameEn: 'Chapter 3: Crag Peak', range: [21, 50] },
+    { id: 4, nameZh: '第四章：蛛魔荒漠', nameEn: 'Chapter 4: Spider Desolation', range: [51, 90] },
+    { id: 5, nameZh: '第五章：遠古地宮', nameEn: 'Chapter 5: Ancient Crypt', range: [91, 150] },
+    { id: 6, nameZh: '第六章：滅世黑曜', nameEn: 'Chapter 6: Obsidian Abyss', range: [151, 220] },
+    { id: 7, nameZh: '第七章：神魔深淵', nameEn: 'Chapter 7: Astral Rift', range: [221, 280] },
+    { id: 8, nameZh: '第八章：終焉神域', nameEn: 'Chapter 8: Genesis Throne', range: [281, 350] }
+  ];
 
   // Chapter Monster Artwork mapping table (100% aligned with CHAPTER_MONSTER_POOLS)
   const CHAPTER_MONSTER_DATABASE = {
@@ -3343,26 +3362,25 @@ function setLanguage(lang) {
       nameZh: '第一章：微風之境', nameEn: 'Chapter 1: Breeze Realm',
       monsters: {
         2:  { nameZh: '洞穴蝙蝠', nameEn: 'Cave Bat', img: 'assets/images/monsters_clay/monster_ch01_02.png' },
-        4:  { nameZh: '森林幼狼', nameEn: 'Forest Pup', img: 'assets/images/monsters_clay/monster_ch01_04.png' },
+        4:  { nameZh: '森林幼狼', nameEn: 'Young Wolf', img: 'assets/images/monsters_clay/monster_ch01_04.png' },
         8:  { nameZh: '哥布林斥候', nameEn: 'Goblin Scout', img: 'assets/images/monsters_clay/monster_ch01_08.png' },
         16: { nameZh: '野生史萊姆', nameEn: 'Wild Slime', img: 'assets/images/monsters_clay/monster_ch01_16.png' },
-        32: { nameZh: '獸人督軍', nameEn: 'Orc Warlord', img: 'assets/images/monsters_clay/monster_ch01_32.png' },
-        64: { nameZh: '森林巨狼', nameEn: 'Forest Great Wolf', img: 'assets/images/monsters_clay/monster_ch02_64.png' }
+        32: { nameZh: '獸人督軍', nameEn: 'Orc Warlord', img: 'assets/images/monsters_clay/monster_ch01_32.png' }
       }
     },
     2: {
-      nameZh: '第二章：灼熱熔岩', nameEn: 'Chapter 2: Scorching Lava',
+      nameZh: '第二章：灼熱熔岩', nameEn: 'Chapter 2: Scorching Magma',
       monsters: {
         16:  { nameZh: '火苗蜥蜴', nameEn: 'Flame Lizard', img: 'assets/images/monsters_clay/monster_ch02_16.png' },
-        32:  { nameZh: '熔岩火靈', nameEn: 'Lava Spirit', img: 'assets/images/monsters_clay/monster_ch02_32.png' },
+        32:  { nameZh: '熔岩火靈', nameEn: 'Magma Spirit', img: 'assets/images/monsters_clay/monster_ch02_32.png' },
         64:  { nameZh: '熔岩史萊姆', nameEn: 'Lava Slime', img: 'assets/images/monsters_clay/monster_ch02_64.png' },
-        128: { nameZh: '炎魔督軍', nameEn: 'Flame Demon Warlord', img: 'assets/images/monsters_clay/monster_ch02_128.png' },
+        128: { nameZh: '炎魔督軍', nameEn: 'Infernal Warlord', img: 'assets/images/monsters_clay/monster_ch02_128.png' },
         256: { nameZh: '赤炎巨魔', nameEn: 'Blazing Troll', img: 'assets/images/monsters_clay/monster_ch02_256.png' },
         512: { nameZh: '黑曜熔岩龍', nameEn: 'Obsidian Magma Dragon', img: 'assets/images/monsters_clay/monster_ch02_512.png' }
       }
     },
     3: {
-      nameZh: '第三章：孤峰岩地', nameEn: 'Chapter 3: Lone Crag',
+      nameZh: '第三章：孤峰岩地', nameEn: 'Chapter 3: Crag Peak',
       monsters: {
         64:   { nameZh: '懸崖強盜', nameEn: 'Cliff Bandit', img: 'assets/images/monsters_clay/monster_ch03_64.png' },
         128:  { nameZh: '落石石像鬼', nameEn: 'Falling Stone Gargoyle', img: 'assets/images/monsters_clay/monster_ch03_128.png' },
@@ -3371,44 +3389,153 @@ function setLanguage(lang) {
         1024: { nameZh: '山嶺巨人', nameEn: 'Mountain Colossus', img: 'assets/images/monsters_clay/monster_ch03_1024.png' },
         2048: { nameZh: '岩地霸主', nameEn: 'Crag Overlord', img: 'assets/images/monsters_clay/monster_ch03_2048.png' }
       }
+    },
+    4: {
+      nameZh: '第四章：蛛魔荒漠', nameEn: 'Chapter 4: Spider Desolation',
+      monsters: {
+        256:  { nameZh: '沙丘毒蠍', nameEn: 'Dune Scorpion', img: 'assets/images/monsters_clay/monster_ch04_256.png' },
+        512:  { nameZh: '刺針母蛛', nameEn: 'Needle Broodmother', img: 'assets/images/monsters_clay/monster_ch04_512.png' },
+        1024: { nameZh: '荒漠毒蛛', nameEn: 'Desert Venom Spider', img: 'assets/images/monsters_clay/monster_ch04_1024.png' },
+        2048: { nameZh: '蛛魔祭司', nameEn: 'Arachnid Priest', img: 'assets/images/monsters_clay/monster_ch04_2048.png' },
+        4096: { nameZh: '遠古蛛皇', nameEn: 'Ancient Brood Sovereign', img: 'assets/images/monsters_clay/monster_ch04_4096.png' }
+      }
+    },
+    5: {
+      nameZh: '第五章：遠古地宮', nameEn: 'Chapter 5: Ancient Crypt',
+      monsters: {
+        1024:  { nameZh: '不死骷髏', nameEn: 'Undead Skeleton', img: 'assets/images/monsters_clay/monster_ch05_1024.png' },
+        2048:  { nameZh: '幽魂術士', nameEn: 'Wraith Sorcerer', img: 'assets/images/monsters_clay/monster_ch05_2048.png' },
+        4096:  { nameZh: '皇陵守衛', nameEn: 'Crypt Guardian', img: 'assets/images/monsters_clay/monster_ch05_4096.png' },
+        8192:  { nameZh: '木乃伊王', nameEn: 'Mummy King', img: 'assets/images/monsters_clay/monster_ch05_8192.png' },
+        16384: { nameZh: '冥界巫妖', nameEn: 'Nether Lich', img: 'assets/images/monsters_clay/monster_ch05_16384.png' }
+      }
+    },
+    6: {
+      nameZh: '第六章：滅世黑曜', nameEn: 'Chapter 6: Obsidian Abyss',
+      monsters: {
+        4096:  { nameZh: '黑曜石魔', nameEn: 'Obsidian Golem', img: 'assets/images/monsters_clay/monster_ch06_4096.png' },
+        8192:  { nameZh: '黑曜熔火怪', nameEn: 'Obsidian Molten Beast', img: 'assets/images/monsters_clay/monster_ch06_8192.png' },
+        16384: { nameZh: '黑曜幼龍', nameEn: 'Obsidian Drake', img: 'assets/images/monsters_clay/monster_ch06_16384.png' },
+        32768: { nameZh: '黑曜侍僧', nameEn: 'Obsidian Acolyte', img: 'assets/images/monsters_clay/monster_ch06_32768.png' },
+        65536: { nameZh: '遠古黑曜巨龍', nameEn: 'Ancient Obsidian Dragon', img: 'assets/images/monsters_clay/monster_ch06_65536.png' }
+      }
+    },
+    7: {
+      nameZh: '第七章：神魔深淵', nameEn: 'Chapter 7: Astral Rift',
+      monsters: {
+        16384:  { nameZh: '虛空行者', nameEn: 'Void Walker', img: 'assets/images/monsters_clay/monster_ch07_16384.png' },
+        32768:  { nameZh: '深淵眼魔', nameEn: 'Nether Beholder', img: 'assets/images/monsters_clay/monster_ch07_32768.png' },
+        65536:  { nameZh: '裂隙巨妖', nameEn: 'Rift Kraken', img: 'assets/images/monsters_clay/monster_ch07_65536.png' },
+        131072: { nameZh: '混沌魔皇', nameEn: 'Chaos Demon Emperor', img: 'assets/images/monsters_clay/monster_ch07_131072.png' }
+      }
+    },
+    8: {
+      nameZh: '第八章：終焉神域', nameEn: 'Chapter 8: Genesis Throne',
+      monsters: {
+        65536:  { nameZh: '天界裁決者', nameEn: 'Celestial Arbiter', img: 'assets/images/monsters_clay/monster_ch08_65536.png' },
+        131072: { nameZh: '終焉智腦', nameEn: 'Genesis Brain', img: 'assets/images/monsters_clay/monster_ch08_131072.png' },
+        262144: { nameZh: '萬古始祖神', nameEn: 'Ancient Primordial God', img: 'assets/images/monsters_clay/monster_ch08_262144.png' }
+      }
     }
+  };
+  const BOSS_ART_MAP = CHAPTER_MONSTER_DATABASE;
+
+  const GEAR_TIER_NAMES = {
+    2: { nameZh: '泥木劍', nameEn: 'Wood Sword' },
+    4: { nameZh: '青銅刃', nameEn: 'Bronze Blade' },
+    8: { nameZh: '泥盾靴', nameEn: 'Leather Boots' },
+    16: { nameZh: '鐵甲胸鎧', nameEn: 'Chainmail' },
+    32: { nameZh: '秘銀闊劍', nameEn: 'Mithril Sword' },
+    64: { nameZh: '皇家重甲', nameEn: 'Royal Armor' },
+    128: { nameZh: '榮耀法靴', nameEn: 'Honor Boots' },
+    256: { nameZh: '輝煌神盾', nameEn: 'Glory Shield' },
+    512: { nameZh: '聖殿光刃', nameEn: 'Paladin Blade' },
+    1024: { nameZh: '永恆聖劍', nameEn: 'Eternal Blade' },
+    2048: { nameZh: '滅神狂斬', nameEn: 'Godslayer' },
+    4096: { nameZh: '混沌天斧', nameEn: 'Chaos Axe' },
+    8192: { nameZh: '龍皇破滅', nameEn: 'Dragon Buster' }
   };
 
   function getStageChapter(s) {
-    if (s <= 10) return 1;
-    if (s <= 20) return 2;
-    return 3;
+    for (const ch of CHAPTER_CONFIGS) {
+      if (s >= ch.range[0] && s <= ch.range[1]) return ch.id;
+    }
+    return 1;
   }
 
   function getStageDef(s) {
     const ch = getStageChapter(s);
     const chData = CHAPTER_MONSTER_DATABASE[ch] || CHAPTER_MONSTER_DATABASE[1];
     
-    // Calculate stage boss power value
+    // Calculate stage boss power value matching 350-stage design curve
     let val = 64;
     if (ch === 1) {
-      val = Math.min(64, Math.pow(2, Math.floor((s - 1) / 2) + 3));
+      if (s === 1) val = 8;
+      else if (s <= 3) val = 16;
+      else val = 32;
     } else if (ch === 2) {
-      val = Math.min(512, Math.pow(2, Math.floor((s - 11) / 2) + 4));
+      if (s === 6) val = 32;
+      else if (s <= 14) val = 64;
+      else if (s <= 17) val = 128;
+      else if (s <= 19) val = 256;
+      else val = 512;
+    } else if (ch === 3) {
+      if (s <= 27) val = 512;
+      else if (s <= 41) val = 1024;
+      else val = 2048;
+    } else if (ch === 4) {
+      if (s <= 65) val = 2048;
+      else val = 4096;
+    } else if (ch === 5) {
+      if (s <= 120) val = 8192;
+      else val = 16384;
+    } else if (ch === 6) {
+      if (s <= 180) val = 32768;
+      else val = 65536;
+    } else if (ch === 7) {
+      if (s <= 250) val = 65536;
+      else val = 131072;
     } else {
-      val = Math.min(2048, Math.pow(2, Math.floor((s - 21) / 2) + 6));
+      if (s <= 310) val = 131072;
+      else val = 262144;
     }
 
-    // Retrieve chapter-specific monster data
-    const mData = chData.monsters[val] || Object.values(chData.monsters)[0];
+    // Retrieve chapter-specific boss data
+    const mData = chData.monsters[val] || Object.values(chData.monsters)[Object.values(chData.monsters).length - 1];
     const bossNameZh = mData.nameZh;
     const bossNameEn = mData.nameEn;
     const bossName = (currentLanguage === 'en-US') ? bossNameEn : bossNameZh;
     const bossImg = mData.img;
 
+    // Pick 4 minions from current chapter's monster pool
+    const chMonsterList = Object.entries(chData.monsters).map(([v, m]) => ({ val: parseInt(v), ...m }));
+    const validMinions = chMonsterList.filter(m => m.val <= val);
+    const pool = (validMinions.length > 0) ? validMinions : chMonsterList;
+    const minions = [];
+    for (let i = 0; i < 4; i++) {
+      const pick = pool[Math.min(i % pool.length, pool.length - 1)];
+      minions.push(pick);
+    }
+
+    // 3 Gear resources matching stage tier
+    const gVals = [8, 4, 2];
+    const gears = gVals.map(gv => {
+      const gObj = GEAR_TIER_NAMES[gv] || { nameZh: '裝備', nameEn: 'Gear' };
+      return { val: gv, nameZh: gObj.nameZh, nameEn: gObj.nameEn };
+    });
+
     return {
       chapterId: ch,
+      chapterNameZh: chData.nameZh,
+      chapterNameEn: chData.nameEn,
       chapterName: (currentLanguage === 'en-US') ? chData.nameEn : chData.nameZh,
       val: val,
       bossImg: bossImg,
       bossNameZh: bossNameZh,
       bossNameEn: bossNameEn,
       bossName: bossName,
+      minions: minions,
+      gears: gears,
       gold: 1000 + s * 45
     };
   }
@@ -3445,9 +3572,7 @@ function setLanguage(lang) {
     // Chapter Title Localization
     const chapTag = document.getElementById('hub-chap-tag');
     if (chapTag) {
-      if (currentSelectedStage <= 10) chapTag.textContent = t('chapter_1');
-      else if (currentSelectedStage <= 20) chapTag.textContent = t('chapter_2');
-      else chapTag.textContent = t('chapter_3');
+      chapTag.textContent = data.chapterName;
     }
 
     // Boss Artwork and Localized Name
@@ -3638,43 +3763,64 @@ function setLanguage(lang) {
   // 5. Stage Detail POPUP (Clean Battle Objective, No Stamina Mention)
   function openStageDetailModal() {
     const data = getStageDef(currentSelectedStage);
-    document.getElementById('modal-stage-title').textContent = `Stage ${currentSelectedStage} ${t('stage_title_suffix')}`;
+    const isEn = (currentLanguage === 'en-US');
+    const modalTitle = document.getElementById('modal-stage-title');
+    if (modalTitle) {
+      modalTitle.textContent = isEn 
+        ? `Stage ${currentSelectedStage} · Stage Info`
+        : `第 ${currentSelectedStage} 關 · 關卡詳細情報`;
+    }
     
     const modalBossImg = document.getElementById('modal-boss-img');
     if (modalBossImg) modalBossImg.src = data.bossImg;
     
-    const bName = (currentLanguage === 'en-US') ? (data.bossNameEn || data.bossName) : (data.bossNameZh || data.bossName);
-    document.getElementById('modal-boss-name').textContent = `${t('boss_prefix')}：${bName} (${data.val})`;
-    document.getElementById('modal-stage-objective').textContent = t('stage_objective_default');
-    document.getElementById('modal-gold-reward').textContent = `${data.gold.toLocaleString()} ${t('gold_suffix')}`;
+    const bName = isEn ? (data.bossNameEn || data.bossName) : (data.bossNameZh || data.bossName);
+    const bossNameEl = document.getElementById('modal-boss-name');
+    if (bossNameEl) bossNameEl.textContent = `${t('boss_prefix')} : ${bName} (${data.val})`;
     
-    // Minions (4 monsters)
-    const m1 = Math.max(2, Math.floor(data.val / 2));
-    const m2 = Math.max(2, Math.floor(data.val / 4));
+    const objEl = document.getElementById('modal-stage-objective');
+    if (objEl) {
+      objEl.textContent = isEn 
+        ? 'Objective: Eliminate all monsters on board' 
+        : '作戰目標：消滅盤面所有魔物';
+    }
+
+    const goldRewardEl = document.getElementById('modal-gold-reward');
+    if (goldRewardEl) {
+      goldRewardEl.innerHTML = isEn
+        ? `First Clear Reward: <span style="color:#fbbf24; font-weight:800;">${data.gold.toLocaleString()} Gold</span>`
+        : `初次通關獎勵：<span style="color:#fbbf24; font-weight:800;">${data.gold.toLocaleString()} 金幣</span>`;
+    }
+    
+    // Minions (4 monsters from chapter pool)
     const minionsContainer = document.getElementById('modal-minions-list');
     if (minionsContainer) {
-      minionsContainer.innerHTML = `
-        <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🦇 洞穴蝙蝠 (${m1})</span>
-        <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🐗 毒牙野豬 (${m1})</span>
-        <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🐍 沼澤毒蛇 (${m2})</span>
-        <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🕷️ 刺針蜘蛛 (${m2})</span>
-      `;
+      minionsContainer.innerHTML = data.minions.map(m => {
+        const mName = isEn ? m.nameEn : m.nameZh;
+        return `<span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">${mName} (${m.val})</span>`;
+      }).join(' ');
     }
 
     // Stage Gears (3 items)
     const gContainer = document.getElementById('modal-stage-gears');
     if (gContainer) {
-      gContainer.innerHTML = `
-        <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">泥盾靴 (8)</span>
-        <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">青銅刃 (4)</span>
-        <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">泥木劍 (2)</span>
-      `;
+      gContainer.innerHTML = data.gears.map(g => {
+        const gName = isEn ? g.nameEn : g.nameZh;
+        return `<span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">${gName} (${g.val})</span>`;
+      }).join(' ');
+    }
+
+    const tipEl = document.getElementById('modal-tactical-tip');
+    if (tipEl) {
+      tipEl.textContent = isEn
+        ? '💡 Strategy Tip: Use Warrior skill to break surrounding blocker coins!'
+        : '💡 攻略提示：使用戰士十字碎裂清除四周卡位金幣！';
     }
 
     document.getElementById('modal-stage-detail').classList.add('active');
   }
 
-  function closeStageDetailModal() {
+function closeStageDetailModal() {
     document.getElementById('modal-stage-detail').classList.remove('active');
   }
 
@@ -3689,61 +3835,95 @@ function setLanguage(lang) {
 
   const HERO_CONFIGS = {
     warrior: {
-      title: '戰士 (Warrior)',
-      level: '等級：LV.5 (已達最高階)',
-      skillTitle: '⚔️ 專屬技能：十字碎裂',
-      skillDesc: '以英雄為中心粉碎上下左右4格內的裝備與金幣（不傷魔物），滿盤瀕危時自動觸發保命。<br><span style="color:#94a3b8;">⚠️ 碎裂的金幣直接粉碎消除，無法折現入袋。</span>',
-      cd: '冷卻回合：100 回合 (滿級極速)',
+      nameZh: '戰士',
+      nameEn: 'Warrior',
+      titleZh: '戰士 (Warrior)',
+      titleEn: 'Warrior',
+      levelZh: '等級：LV.5 (已達最高階)',
+      levelEn: 'Level: Lv.5 (Max Tier reached)',
+      skillTitleZh: '⚔️ 專屬技能：十字碎裂',
+      skillTitleEn: '⚔️ Exclusive Skill: Cross Smash',
+      skillDescZh: '以英雄為中心粉碎上下左右4格內的裝備與金幣（不傷魔物），滿盤瀕危時自動觸發保命。<br><span style="color:#94a3b8;">⚠️ 碎裂的金幣直接粉碎消除，無法折現入袋。</span>',
+      skillDescEn: 'Smashes equipment & gold tiles in 4 adjacent tiles around hero (harmless to monsters). Auto-triggers when board is locked!<br><span style="color:#94a3b8;">⚠️ Smashed gold tiles are pulverized and not cashed out.</span>',
+      cdZh: '冷卻回合：100 回合 (滿級極速)',
+      cdEn: 'Cooldown: 100 turns (Max speed)',
       isMaxLevel: true,
       upgradeCost: 0,
-      posture: '✦ 聖殿光刃戰鬥姿態',
+      postureZh: '✦ 聖殿光刃戰鬥姿態',
+      postureEn: '✦ Paladin Blade Stance',
+      skillShortZh: '技能：十字碎裂',
+      skillShortEn: 'Skill: Cross Smash',
       tiers: [
-        { label: 'Tier 1 (戰力 2)', img: 'assets/images/hero_knight/hero_01.png' },
-        { label: 'Tier 5 (戰力 32)', img: 'assets/images/hero_knight/hero_05.png' },
-        { label: 'Tier 9 (戰力 512)', img: 'assets/images/hero_knight/hero_09.png' }
+        { labelZh: 'Tier 1 (戰力 2)', labelEn: 'Tier 1 (Power 2)', img: 'assets/images/hero_knight/hero_01.png' },
+        { labelZh: 'Tier 5 (戰力 32)', labelEn: 'Tier 5 (Power 32)', img: 'assets/images/hero_knight/hero_05.png' },
+        { labelZh: 'Tier 9 (戰力 512)', labelEn: 'Tier 9 (Power 512)', img: 'assets/images/hero_knight/hero_09.png' }
       ]
     },
     merchant: {
-      title: '戰地商人 (Royal Merchant)',
-      level: '等級：LV.1',
-      skillTitle: '🪙 專屬技能：黃金急召',
-      skillDesc: '瞬間強制回收盤面上所有的金幣方塊並直接折現入袋，騰出空格；滿盤瀕危時自動觸發保命。',
-      cd: '冷卻回合：500 回合 (LV.1)',
+      nameZh: '戰地商人',
+      nameEn: 'Merchant',
+      titleZh: '戰地商人 (Royal Merchant)',
+      titleEn: 'Royal Merchant',
+      levelZh: '等級：LV.1',
+      levelEn: 'Level: Lv.1',
+      skillTitleZh: '🪙 專屬技能：黃金急召',
+      skillTitleEn: '🪙 Exclusive Skill: Gold Rush',
+      skillDescZh: '瞬間強制回收盤面上所有的金幣方塊並直接折現入袋，騰出空格；滿盤瀕危時自動觸發保命。',
+      skillDescEn: 'Instantly cashes out all gold tiles on board into inventory, freeing empty tiles. Auto-triggers when board is locked!',
+      cdZh: '冷卻回合：500 回合 (LV.1)',
+      cdEn: 'Cooldown: 500 turns (Lv.1)',
       isMaxLevel: false,
       upgradeCost: 5000,
-      posture: '✦ 皇家金庫守護姿態',
+      postureZh: '✦ 皇家金庫守護姿態',
+      postureEn: '✦ Royal Vault Guard Stance',
+      skillShortZh: '技能：黃金急召',
+      skillShortEn: 'Skill: Gold Rush',
       tiers: [
-        { label: 'Tier 1 (戰力 2)', img: 'assets/images/hero_knight/hero_01.png' },
-        { label: 'Tier 5 (戰力 32)', img: 'assets/images/hero_knight/hero_05.png' },
-        { label: 'Tier 9 (戰力 512)', img: 'assets/images/hero_knight/hero_09.png' }
+        { labelZh: 'Tier 1 (戰力 2)', labelEn: 'Tier 1 (Power 2)', img: 'assets/images/hero_knight/hero_01.png' },
+        { labelZh: 'Tier 5 (戰力 32)', labelEn: 'Tier 5 (Power 32)', img: 'assets/images/hero_knight/hero_05.png' },
+        { labelZh: 'Tier 9 (戰力 512)', labelEn: 'Tier 9 (Power 512)', img: 'assets/images/hero_knight/hero_09.png' }
       ]
     },
     archer: {
-      title: '精靈弓箭手 (Elf Archer)',
-      level: '等級：LV.1',
-      skillTitle: '🏹 專屬技能：破甲重矢',
-      skillDesc: '鎖定全場數值最大的魔物：若大於等於4則數值折半；若為2則直接射殺。純主動進攻，無被動保命。',
-      cd: '冷卻回合：500 回合 (LV.1)',
+      nameZh: '精靈弓手',
+      nameEn: 'Archer',
+      titleZh: '精靈弓箭手 (Elf Archer)',
+      titleEn: 'Elf Archer',
+      levelZh: '等級：LV.1',
+      levelEn: 'Level: Lv.1',
+      skillTitleZh: '🏹 專屬技能：破甲重矢',
+      skillTitleEn: '🏹 Exclusive Skill: Armor Piercer',
+      skillDescZh: '鎖定全場數值最大的魔物：若大於等於4則數值折半；若為2則直接射殺。純主動進攻，無被動保命。',
+      skillDescEn: 'Locks onto the strongest monster on board: cuts value in half if >= 4; instantly snipes if value is 2. Pure offensive skill, no auto-protection.',
+      cdZh: '冷卻回合：500 回合 (LV.1)',
+      cdEn: 'Cooldown: 500 turns (Lv.1)',
       isMaxLevel: false,
       upgradeCost: 5000,
-      posture: '✦ 幻影神射手姿態',
+      postureZh: '✦ 幻影神射手姿態',
+      postureEn: '✦ Phantom Archer Stance',
+      skillShortZh: '技能：破甲重矢',
+      skillShortEn: 'Skill: Armor Piercer',
       tiers: [
-        { label: 'Tier 1 (戰力 2)', img: 'assets/images/hero_knight/hero_01.png' },
-        { label: 'Tier 5 (戰力 32)', img: 'assets/images/hero_knight/hero_03.png' },
-        { label: 'Tier 9 (戰力 512)', img: 'assets/images/hero_knight/hero_09.png' }
+        { labelZh: 'Tier 1 (戰力 2)', labelEn: 'Tier 1 (Power 2)', img: 'assets/images/hero_knight/hero_01.png' },
+        { labelZh: 'Tier 5 (戰力 32)', labelEn: 'Tier 5 (Power 32)', img: 'assets/images/hero_knight/hero_03.png' },
+        { labelZh: 'Tier 9 (戰力 512)', labelEn: 'Tier 9 (Power 512)', img: 'assets/images/hero_knight/hero_09.png' }
       ]
     }
   };
 
   function updateHeroAppearancePreview() {
+    const isEn = (currentLanguage === 'en-US');
     const conf = HERO_CONFIGS[modalHeroSelected] || HERO_CONFIGS.warrior;
     const tierData = conf.tiers[modalHeroPreviewTierIdx] || conf.tiers[0];
     const portrait = document.getElementById('modal-hero-portrait');
     const tierLabel = document.getElementById('modal-hero-tier-label');
     const postureLabel = document.getElementById('modal-hero-posture-label');
     if (portrait) portrait.src = tierData.img;
-    if (tierLabel) tierLabel.textContent = tierData.label;
-    if (postureLabel) postureLabel.textContent = conf.posture || '✦ 戰鬥姿態';
+    if (tierLabel) tierLabel.textContent = isEn ? tierData.labelEn : tierData.labelZh;
+    if (postureLabel) postureLabel.textContent = isEn ? conf.postureEn : conf.postureZh;
+
+    const weaponHdr = document.getElementById('modal-weapon-header');
+    if (weaponHdr) weaponHdr.textContent = isEn ? 'Current Divine Weapon' : '目前神兵形態';
   }
 
   function stepHeroTierPreview(delta) {
@@ -3761,16 +3941,17 @@ function setLanguage(lang) {
     const video = document.getElementById('hero-demo-video');
     const conceptCard = document.getElementById('hero-demo-concept');
     const conf = HERO_CONFIGS[heroKey] || HERO_CONFIGS.warrior;
+    const isEn = (currentLanguage === 'en-US');
 
-    document.getElementById('modal-hero-title').textContent = conf.title;
-    document.getElementById('modal-hero-level').textContent = conf.level;
-    document.getElementById('modal-skill-title').textContent = conf.skillTitle;
-    document.getElementById('modal-skill-desc').innerHTML = conf.skillDesc;
-    document.getElementById('modal-skill-cd').textContent = conf.cd;
+    document.getElementById('modal-hero-title').textContent = isEn ? conf.titleEn : conf.titleZh;
+    document.getElementById('modal-hero-level').textContent = isEn ? conf.levelEn : conf.levelZh;
+    document.getElementById('modal-skill-title').textContent = isEn ? conf.skillTitleEn : conf.skillTitleZh;
+    document.getElementById('modal-skill-desc').innerHTML = isEn ? conf.skillDescEn : conf.skillDescZh;
+    document.getElementById('modal-skill-cd').textContent = isEn ? conf.cdEn : conf.cdZh;
 
     updateHeroAppearancePreview();
 
-    // Video Demo for Warrior; High-End Conceptual Skill Cards for Merchant & Archer
+    // Video Demo for Warrior; Conceptual Skill Cards for Merchant & Archer
     if (heroKey === 'warrior') {
       video.style.display = 'block';
       conceptCard.style.display = 'none';
@@ -3780,30 +3961,33 @@ function setLanguage(lang) {
       video.pause();
       conceptCard.style.display = 'flex';
       document.getElementById('concept-icon-badge').textContent = '🪙✨';
-      document.getElementById('concept-title').textContent = '【黃金急召 實戰示意】';
-      document.getElementById('concept-flow').innerHTML = '全場金幣瞬間強制折現入袋 ➔ 獲得大量財富 ➔ 極速騰出盤面空格';
+      document.getElementById('concept-title').textContent = isEn ? '【Gold Rush Combat Demo】' : '【黃金急召 實戰示意】';
+      document.getElementById('concept-flow').innerHTML = isEn 
+        ? 'Instantly cashes out all gold on board ➔ Gain riches ➔ Quickly free up board space'
+        : '全場金幣瞬間強制折現入袋 ➔ 獲得大量財富 ➔ 極速騰出盤面空格';
     } else if (heroKey === 'archer') {
       video.style.display = 'none';
       video.pause();
       conceptCard.style.display = 'flex';
       document.getElementById('concept-icon-badge').textContent = '🏹🎯';
-      document.getElementById('concept-title').textContent = '【破甲重矢 實戰示意】';
-      document.getElementById('concept-flow').innerHTML = '貫穿障礙鎖定全場最大魔物 ➔ 數值直接減半 / 數值2魔物秒殺';
+      document.getElementById('concept-title').textContent = isEn ? '【Armor Piercer Combat Demo】' : '【破甲重矢 實戰示意】';
+      document.getElementById('concept-flow').innerHTML = isEn
+        ? 'Pierces obstacles to target largest monster ➔ Value halved / Tier 2 sniped'
+        : '貫穿障礙鎖定全場最大魔物 ➔ 數值直接減半 / 數值2魔物秒殺';
     }
 
-    // Update Bottom Action Buttons (Upgrade on Right)
+    // Update Bottom Action Buttons
     const upgradeBtn = document.getElementById('modal-upgrade-btn');
     if (conf.isMaxLevel) {
       upgradeBtn.className = 'cr-btn cr-btn-disabled btn-medium';
-      upgradeBtn.innerHTML = '<span>已滿級</span>';
+      upgradeBtn.innerHTML = `<span>${isEn ? 'MAX LV' : '已滿級'}</span>`;
       upgradeBtn.onclick = null;
     } else {
       upgradeBtn.className = 'cr-btn cr-btn-green btn-medium';
-      upgradeBtn.innerHTML = `<span>🔨 升級 🪙${conf.upgradeCost}</span>`;
+      upgradeBtn.innerHTML = `<span>🔨 ${isEn ? 'Upgrade' : '升級'} 🪙${conf.upgradeCost}</span>`;
       upgradeBtn.onclick = upgradeHeroFromModal;
     }
 
-    // Update Bottom Deploy Button (Deploy on Left)
     updateModalDeployButtons();
     modal.classList.add('active');
   }
@@ -3811,77 +3995,102 @@ function setLanguage(lang) {
   function upgradeHeroFromModal() {
     const conf = HERO_CONFIGS[modalHeroSelected];
     if (conf && !conf.isMaxLevel) {
-      alert(`🔨 成功花費 🪙${conf.upgradeCost} 升級 ${conf.title}！`);
+      alert(`🔨 成功花費 🪙${conf.upgradeCost} 升級 ${conf.titleZh}！`);
     }
   }
 
   function updateModalDeployButtons() {
     const isDeployed = (activeDeployedHero === modalHeroSelected);
+    const isEn = (currentLanguage === 'en-US');
     const bottomBtn = document.getElementById('modal-bottom-deploy-btn');
     const statusTag = document.getElementById('modal-hero-status-tag');
 
     if (statusTag) {
-      statusTag.textContent = isDeployed ? ((currentLanguage === 'en-US') ? 'ASSIGNED' : '上陣中') : ((currentLanguage === 'en-US') ? 'STANDBY' : '未上陣');
+      statusTag.textContent = isDeployed ? (isEn ? 'ASSIGNED' : '上陣中') : (isEn ? 'STANDBY' : '未上陣');
       statusTag.style.color = isDeployed ? '#fbbf24' : '#94a3b8';
     }
 
     if (bottomBtn) {
       if (isDeployed) {
         bottomBtn.className = 'cr-btn cr-btn-amber btn-medium';
-        bottomBtn.innerHTML = '<span>🛡️ ' + ((currentLanguage === 'en-US') ? 'ASSIGNED' : '上陣中') + '</span>';
+        bottomBtn.innerHTML = '<span>🛡️ ' + (isEn ? 'ASSIGNED' : '上陣中') + '</span>';
       } else {
         bottomBtn.className = 'cr-btn cr-btn-blue btn-medium';
-        bottomBtn.innerHTML = '<span>🛡️ ' + ((currentLanguage === 'en-US') ? 'ASSIGN HERO' : '指派上陣') + '</span>';
+        bottomBtn.innerHTML = '<span>🛡️ ' + (isEn ? 'ASSIGN HERO' : '指派上陣') + '</span>';
       }
     }
   }
 
   function closeHeroDetailModal() {
     const video = document.getElementById('hero-demo-video');
-    video.pause();
+    if (video) video.pause();
     document.getElementById('modal-hero-detail').classList.remove('active');
   }
 
-  // Deploy Hero with Full Two-Way State & Visual Synchronization
-  function deployHero(heroKey) {
-    activeDeployedHero = heroKey;
-    const heroNameMap = { 
-      'warrior': '戰士 (LV.5)', 
-      'merchant': '戰地商人 (LV.1)', 
-      'archer': '精靈弓箭手 (LV.1)'
-    };
-    const heroImgMap = {
-      'warrior': 'assets/images/hero_knight/hero_09.png', // 512 equipment evolved form
-      'merchant': 'assets/images/hero_knight/hero_09.png', // 512 equipment evolved form
-      'archer': 'assets/images/hero_knight/hero_09.png'   // 512 equipment evolved form
-    };
+  function renderHeroRoster() {
+    const isEn = (currentLanguage === 'en-US');
+    
+    // Top deployment slot
+    const gNameEl = document.getElementById('deploy-gear-name');
+    if (gNameEl) gNameEl.textContent = isEn ? 'Paladin Blade (512)' : '聖殿光刃 (512)';
+    
+    const hNameEl = document.getElementById('deploy-hero-name');
+    if (hNameEl) {
+      const activeConf = HERO_CONFIGS[activeDeployedHero] || HERO_CONFIGS.warrior;
+      const lvStr = (activeDeployedHero === 'warrior') ? 'LV.5' : 'LV.1';
+      hNameEl.textContent = isEn ? `${activeConf.nameEn} (${lvStr})` : `${activeConf.nameZh} (${lvStr})`;
+    }
 
-    // 1. Update top deployment slot
-    document.getElementById('deploy-hero-name').textContent = heroNameMap[heroKey];
-    document.getElementById('deploy-hero-img').src = heroImgMap[heroKey];
-
-    // 2. Synchronize all 3 hero cards in 2-column grid
-    const allHeroes = ['warrior', 'merchant', 'archer'];
-    allHeroes.forEach(k => {
+    // Hero cards
+    ['warrior', 'merchant', 'archer'].forEach(k => {
+      const conf = HERO_CONFIGS[k];
       const card = document.getElementById(`card-hero-${k}`);
-      const btn = document.getElementById(`btn-deploy-${k}`);
-      if (card && btn) {
-        if (k === heroKey) {
-          card.classList.add('active-deployed');
-          btn.className = 'cr-btn cr-btn-amber';
-          btn.textContent = (currentLanguage === 'en-US') ? 'ASSIGNED' : '上陣中';
-        } else {
-          card.classList.remove('active-deployed');
-          btn.className = 'cr-btn cr-btn-blue';
-          btn.textContent = (currentLanguage === 'en-US') ? 'ASSIGN' : '指派上陣';
+      if (!card) return;
+
+      const titleEl = card.querySelector('.hero-card-title');
+      const lvStr = (k === 'warrior') ? 'LV.5' : 'LV.1';
+      if (titleEl) titleEl.textContent = isEn ? `${conf.nameEn} ${lvStr}` : `${conf.nameZh} ${lvStr}`;
+
+      const skillEl = card.querySelector('.hero-skill-label');
+      if (skillEl) skillEl.textContent = isEn ? conf.skillShortEn : conf.skillShortZh;
+
+      const deployBtn = document.getElementById(`btn-deploy-${k}`);
+      if (k === activeDeployedHero) {
+        card.classList.add('active-deployed');
+        if (deployBtn) {
+          deployBtn.className = 'cr-btn cr-btn-amber';
+          deployBtn.textContent = isEn ? 'ASSIGNED' : '上陣中';
+        }
+      } else {
+        card.classList.remove('active-deployed');
+        if (deployBtn) {
+          deployBtn.className = 'cr-btn cr-btn-blue';
+          deployBtn.textContent = isEn ? 'DEPLOY' : '指派上陣';
+        }
+      }
+
+      const lowerActions = card.querySelector('.hero-actions-lower');
+      if (lowerActions) {
+        const btns = lowerActions.querySelectorAll('button');
+        if (btns.length >= 2) {
+          const secondBtn = btns[1];
+          if (conf.isMaxLevel) {
+            secondBtn.textContent = isEn ? 'MAX LV' : '已滿級';
+          } else {
+            secondBtn.textContent = isEn ? `Upgrade 🪙${conf.upgradeCost}` : `升級 🪙${conf.upgradeCost}`;
+          }
         }
       }
     });
+  }
 
-    // 3. Synchronize modal if opened
+  // Deploy Hero
+  function deployHero(heroKey) {
+    activeDeployedHero = heroKey;
+    renderHeroRoster();
     updateModalDeployButtons();
-
-    alert(`⚔️ 已成功指派 ${heroNameMap[heroKey]} 上陣出擊！`);
+    const heroName = (currentLanguage === 'en-US') ? (HERO_CONFIGS[heroKey].nameEn) : (HERO_CONFIGS[heroKey].nameZh);
+    alert(`⚔️ 已成功指派 ${heroName} 上陣出擊！`);
   }
 
   function deployFromModal() {
@@ -3889,11 +4098,6 @@ function setLanguage(lang) {
     closeHeroDetailModal();
   }
 
-  function unequipActiveGear() {
-    alert('🛡️ 已解除佩戴裝備！');
-  }
-
-  // 7. Compendium Sub-tab Switching & Grouped Chapter Rendering
   function switchCompTab(tabKey) {
     currentCompTab = tabKey;
     document.querySelectorAll('.comp-tab-btn').forEach(b => b.classList.remove('active'));
@@ -3901,161 +4105,178 @@ function setLanguage(lang) {
     renderCompendiumView();
   }
 
+  function getCompendiumMonsterData() {
+    const isEn = (currentLanguage === 'en-US');
+    const groups = [];
+    let total = 0;
+    let unlocked = 0;
+
+    for (let c = 1; c <= 8; c++) {
+      const chData = CHAPTER_MONSTER_DATABASE[c];
+      if (!chData) continue;
+      const chName = isEn ? chData.nameEn : chData.nameZh;
+      const mList = Object.entries(chData.monsters).map(([val, m]) => {
+        total++;
+        unlocked++;
+        return {
+          nameZh: m.nameZh,
+          nameEn: m.nameEn,
+          name: isEn ? m.nameEn : m.nameZh,
+          val: parseInt(val),
+          img: m.img,
+          unlocked: true
+        };
+      });
+
+      groups.push({
+        groupName: chName,
+        unlockedRatio: `${mList.length}/${mList.length} ${isEn ? 'Unlocked' : '已解鎖'}`,
+        items: mList
+      });
+    }
+
+    return {
+      title: isEn ? 'Monster Compendium Overview' : '魔物收集總覽',
+      tip: isEn 
+        ? '💡 Tip: Encounter monsters in Adventure stages to register them in Compendium.'
+        : '💡 提示：於冒險關卡中「遭遇現身」即算解鎖；未滿 3 格列直接透明留空，不繪製底板。',
+      total: total,
+      unlocked: unlocked,
+      groups: groups
+    };
+  }
+
   const COMPENDIUM_DATA = {
-    monsters: {
-      title: '魔物收集總覽',
-      tip: '💡 提示：於冒險關卡中「遭遇現身」即算解鎖；未滿 3 格列直接透明留空，不繪製底板。',
-      total: 9,
-      unlocked: 6,
-      groups: [
-        {
-          groupName: '第一章：林地平原',
-          items: [
-            { name: '草地史萊姆', icon: '🟢', val: 8, unlocked: true },
-            { name: '小魔蝠', icon: '🦇', val: 16, unlocked: true },
-            { name: '劇毒大毒菇', icon: '🍄', val: 32, unlocked: true },
-            { name: '森林巨狼', icon: '🐺', val: 64, unlocked: true }
-          ]
-        },
-        {
-          groupName: '第二章：荒漠峽谷',
-          items: [
-            { name: '哥布林長老', icon: '👺', val: 64, unlocked: true },
-            { name: '沙漠巨蠍', icon: '🦂', val: 128, unlocked: true }
-            // 2 items, 3rd is empty cell (transparent without background board)
-          ]
-        },
-        {
-          groupName: '第三章：古墓地宮',
-          items: [
-            { name: '古墓石蛛', icon: '🕷️', val: 256, unlocked: false },
-            { name: '荒漠霸王龍', icon: '👑', val: 512, unlocked: false },
-            { name: '終焉魔神', icon: '👹', val: 1024, unlocked: false }
-          ]
-        }
-      ]
-    },
     heroes: {
-      title: '英雄圖鑑總覽',
-      tip: '💡 提示：在關卡中「成功合成出」或於酒館解鎖之英雄外觀；若已開啟至 512，則 2~512 全階級皆已點亮解鎖！點擊英雄標題可收合/展開。',
+      titleZh: '英雄圖鑑總覽',
+      titleEn: 'Hero Compendium Overview',
+      tipZh: '💡 提示：在關卡中「成功合成出」或於酒館解鎖之英雄外觀；若已開啟至 512，則 2~512 全階級皆已點亮解鎖！點擊英雄標題可收合/展開。',
+      tipEn: '💡 Tip: Merge heroes in stages or unlock them in tavern. Tiers 2~512 unlocked! Click header to toggle accordion.',
       total: 27,
       unlocked: 27,
       groups: [
         {
-          groupName: '⚔️ 鐵甲狂戰士 (Warrior)',
-          unlockedRatio: '9/9 解鎖',
+          groupNameZh: '⚔️ 鐵甲狂戰士 (Warrior)',
+          groupNameEn: '⚔️ Ironclad Berserker (Warrior)',
+          unlockedRatioZh: '9/9 解鎖',
+          unlockedRatioEn: '9/9 Unlocked',
           items: [
-            { name: '泥木戰士', img: 'assets/images/hero_knight/hero_01.png', val: 2, unlocked: true },
-            { name: '青銅衛兵', img: 'assets/images/hero_knight/hero_02.png', val: 4, unlocked: true },
-            { name: '重裝前鋒', img: 'assets/images/hero_knight/hero_03.png', val: 8, unlocked: true },
-            { name: '鐵衛騎士', img: 'assets/images/hero_knight/hero_04.png', val: 16, unlocked: true },
-            { name: '鋼刃領主', img: 'assets/images/hero_knight/hero_05.png', val: 32, unlocked: true },
-            { name: '皇家禁衛', img: 'assets/images/hero_knight/hero_06.png', val: 64, unlocked: true },
-            { name: '榮耀聖騎', img: 'assets/images/hero_knight/hero_07.png', val: 128, unlocked: true },
-            { name: '無畏豪傑', img: 'assets/images/hero_knight/hero_08.png', val: 256, unlocked: true },
-            { name: '聖殿戰神', img: 'assets/images/hero_knight/hero_09.png', val: 512, unlocked: true }
+            { nameZh: '泥木戰士', nameEn: 'Wood Warrior', img: 'assets/images/hero_knight/hero_01.png', val: 2, unlocked: true },
+            { nameZh: '青銅衛兵', nameEn: 'Bronze Guard', img: 'assets/images/hero_knight/hero_02.png', val: 4, unlocked: true },
+            { nameZh: '重裝前鋒', nameEn: 'Heavy Vanguard', img: 'assets/images/hero_knight/hero_03.png', val: 8, unlocked: true },
+            { nameZh: '鐵衛騎士', nameEn: 'Iron Knight', img: 'assets/images/hero_knight/hero_04.png', val: 16, unlocked: true },
+            { nameZh: '鋼刃領主', nameEn: 'Steel Lord', img: 'assets/images/hero_knight/hero_05.png', val: 32, unlocked: true },
+            { nameZh: '皇家禁衛', nameEn: 'Royal Guard', img: 'assets/images/hero_knight/hero_06.png', val: 64, unlocked: true },
+            { nameZh: '榮耀聖騎', nameEn: 'Paladin Knight', img: 'assets/images/hero_knight/hero_07.png', val: 128, unlocked: true },
+            { nameZh: '無畏豪傑', nameEn: 'Fearless Hero', img: 'assets/images/hero_knight/hero_08.png', val: 256, unlocked: true },
+            { nameZh: '聖殿戰神', nameEn: 'Temple Warlord', img: 'assets/images/hero_knight/hero_09.png', val: 512, unlocked: true }
           ]
         },
         {
-          groupName: '🪙 戰地商人 (Royal Merchant)',
-          unlockedRatio: '9/9 解鎖',
+          groupNameZh: '🪙 戰地商人 (Royal Merchant)',
+          groupNameEn: '🪙 Royal Merchant',
+          unlockedRatioZh: '9/9 解鎖',
+          unlockedRatioEn: '9/9 Unlocked',
           items: [
-            { name: '商隊學徒', img: 'assets/images/hero_knight/hero_01.png', val: 2, unlocked: true },
-            { name: '行商行者', img: 'assets/images/hero_knight/hero_02.png', val: 4, unlocked: true },
-            { name: '金庫巡守', img: 'assets/images/hero_knight/hero_03.png', val: 8, unlocked: true },
-            { name: '財富護衛', img: 'assets/images/hero_knight/hero_04.png', val: 16, unlocked: true },
-            { name: '精算管事', img: 'assets/images/hero_knight/hero_05.png', val: 32, unlocked: true },
-            { name: '王國大商', img: 'assets/images/hero_knight/hero_06.png', val: 64, unlocked: true },
-            { name: '財閥巨賈', img: 'assets/images/hero_knight/hero_07.png', val: 128, unlocked: true },
-            { name: '金泉使者', img: 'assets/images/hero_knight/hero_08.png', val: 256, unlocked: true },
-            { name: '黃金支配者', img: 'assets/images/hero_knight/hero_09.png', val: 512, unlocked: true }
+            { nameZh: '商隊學徒', nameEn: 'Caravan Apprentice', img: 'assets/images/hero_knight/hero_01.png', val: 2, unlocked: true },
+            { nameZh: '行商行者', nameEn: 'Peddler', img: 'assets/images/hero_knight/hero_02.png', val: 4, unlocked: true },
+            { nameZh: '金庫巡守', nameEn: 'Vault Patrol', img: 'assets/images/hero_knight/hero_03.png', val: 8, unlocked: true },
+            { nameZh: '財富護衛', nameEn: 'Wealth Guard', img: 'assets/images/hero_knight/hero_04.png', val: 16, unlocked: true },
+            { nameZh: '精算管事', nameEn: 'Accountant', img: 'assets/images/hero_knight/hero_05.png', val: 32, unlocked: true },
+            { nameZh: '王國大商', nameEn: 'Kingdom Tycoon', img: 'assets/images/hero_knight/hero_06.png', val: 64, unlocked: true },
+            { nameZh: '財閥巨賈', nameEn: 'Oligarch', img: 'assets/images/hero_knight/hero_07.png', val: 128, unlocked: true },
+            { nameZh: '金泉使者', nameEn: 'Golden Envoy', img: 'assets/images/hero_knight/hero_08.png', val: 256, unlocked: true },
+            { nameZh: '黃金支配者', nameEn: 'Gold Sovereign', img: 'assets/images/hero_knight/hero_09.png', val: 512, unlocked: true }
           ]
         },
         {
-          groupName: '🏹 精靈弓箭手 (Elf Archer)',
-          unlockedRatio: '9/9 解鎖',
+          groupNameZh: '🏹 精靈弓箭手 (Elf Archer)',
+          groupNameEn: '🏹 Elf Archer',
+          unlockedRatioZh: '9/9 解鎖',
+          unlockedRatioEn: '9/9 Unlocked',
           items: [
-            { name: '巡林新兵', img: 'assets/images/hero_knight/hero_01.png', val: 2, unlocked: true },
-            { name: '綠蔭射手', img: 'assets/images/hero_knight/hero_02.png', val: 4, unlocked: true },
-            { name: '風行斥候', img: 'assets/images/hero_knight/hero_03.png', val: 8, unlocked: true },
-            { name: '密林獵手', img: 'assets/images/hero_knight/hero_04.png', val: 16, unlocked: true },
-            { name: '精靈狙擊者', img: 'assets/images/hero_knight/hero_05.png', val: 32, unlocked: true },
-            { name: '穿雲破甲者', img: 'assets/images/hero_knight/hero_06.png', val: 64, unlocked: true },
-            { name: '星芒射手', img: 'assets/images/hero_knight/hero_07.png', val: 128, unlocked: true },
-            { name: '月影箭神', img: 'assets/images/hero_knight/hero_08.png', val: 256, unlocked: true },
-            { name: '幻影神射手', img: 'assets/images/hero_knight/hero_09.png', val: 512, unlocked: true }
-          ]
-        },
-        {
-          groupName: '🔒 聖騎士 (Paladin) [未解鎖]',
-          unlockedRatio: '0/9 解鎖',
-          items: [
-            { name: '未解鎖職業', val: '???', unlocked: false }
+            { nameZh: '巡林新兵', nameEn: 'Ranger Recruit', img: 'assets/images/hero_knight/hero_01.png', val: 2, unlocked: true },
+            { nameZh: '綠蔭射手', nameEn: 'Greenwood Archer', img: 'assets/images/hero_knight/hero_02.png', val: 4, unlocked: true },
+            { nameZh: '風行斥候', nameEn: 'Wind Scout', img: 'assets/images/hero_knight/hero_03.png', val: 8, unlocked: true },
+            { nameZh: '密林獵手', nameEn: 'Forest Hunter', img: 'assets/images/hero_knight/hero_04.png', val: 16, unlocked: true },
+            { nameZh: '精靈狙擊者', nameEn: 'Elven Sniper', img: 'assets/images/hero_knight/hero_05.png', val: 32, unlocked: true },
+            { nameZh: '穿雲破甲者', nameEn: 'Cloud Piercer', img: 'assets/images/hero_knight/hero_06.png', val: 64, unlocked: true },
+            { nameZh: '星芒射手', nameEn: 'Starlight Archer', img: 'assets/images/hero_knight/hero_07.png', val: 128, unlocked: true },
+            { nameZh: '月影箭神', nameEn: 'Moonshadow Marksman', img: 'assets/images/hero_knight/hero_08.png', val: 256, unlocked: true },
+            { nameZh: '幻影神射手', nameEn: 'Phantom Archer', img: 'assets/images/hero_knight/hero_09.png', val: 512, unlocked: true }
           ]
         }
       ]
     },
     gears: {
-      title: '英雄專屬神兵總覽',
-      tip: '💡 提示：未來各英雄將擁有獨立專屬裝備體系（如戰士刀劍、弓手戰弓、商人秘寶）。現階段弓手與商人裝備暫以戰士裝備示意開放範圍；點擊標題可摺疊/展開。',
+      titleZh: '英雄專屬神兵總覽',
+      titleEn: 'Divine Equipment Overview',
+      tipZh: '💡 提示：未來各英雄將擁有獨立專屬裝備體系；點擊標題可摺疊/展開。',
+      tipEn: '💡 Tip: Each hero class features dedicated gear progressions. Click header to toggle accordion.',
       total: 39,
       unlocked: 39,
       groups: [
         {
-          groupName: '⚔️ 鐵甲狂戰士專屬裝備 (Swords & Armor)',
-          unlockedRatio: '13/13 解鎖',
+          groupNameZh: '⚔️ 鐵甲狂戰士專屬裝備 (Swords & Armor)',
+          groupNameEn: '⚔️ Berserker Gear (Swords & Armor)',
+          unlockedRatioZh: '13/13 解鎖',
+          unlockedRatioEn: '13/13 Unlocked',
           items: [
-            { name: '泥木劍', img: 'assets/images/equipment_clay/equip_01.png', val: 2, unlocked: true },
-            { name: '青銅刃', img: 'assets/images/equipment_clay/equip_02.png', val: 4, unlocked: true },
-            { name: '泥盾靴', img: 'assets/images/equipment_clay/equip_03.png', val: 8, unlocked: true },
-            { name: '鐵甲胸鎧', img: 'assets/images/equipment_clay/equip_04.png', val: 16, unlocked: true },
-            { name: '秘銀闊劍', img: 'assets/images/equipment_clay/equip_05.png', val: 32, unlocked: true },
-            { name: '皇家重甲', img: 'assets/images/equipment_clay/equip_06.png', val: 64, unlocked: true },
-            { name: '榮耀法靴', img: 'assets/images/equipment_clay/equip_07.png', val: 128, unlocked: true },
-            { name: '輝煌神盾', img: 'assets/images/equipment_clay/equip_08.png', val: 256, unlocked: true },
-            { name: '聖殿光刃', img: 'assets/images/equipment_clay/equip_09.png', val: 512, unlocked: true },
-            { name: '永恆聖劍', img: 'assets/images/equipment_clay/equip_10.png', val: 1024, unlocked: true },
-            { name: '滅神狂斬', img: 'assets/images/equipment_clay/equip_11.png', val: 2048, unlocked: true },
-            { name: '混沌天斧', img: 'assets/images/equipment_clay/equip_12.png', val: 4096, unlocked: true },
-            { name: '龍皇破滅', img: 'assets/images/equipment_clay/equip_13.png', val: 8192, unlocked: true }
+            { nameZh: '泥木劍', nameEn: 'Wood Sword', img: 'assets/images/equipment_clay/equip_01.png', val: 2, unlocked: true },
+            { nameZh: '青銅刃', nameEn: 'Bronze Blade', img: 'assets/images/equipment_clay/equip_02.png', val: 4, unlocked: true },
+            { nameZh: '泥盾靴', nameEn: 'Leather Boots', img: 'assets/images/equipment_clay/equip_03.png', val: 8, unlocked: true },
+            { nameZh: '鐵甲胸鎧', nameEn: 'Chainmail', img: 'assets/images/equipment_clay/equip_04.png', val: 16, unlocked: true },
+            { nameZh: '秘銀闊劍', nameEn: 'Mithril Sword', img: 'assets/images/equipment_clay/equip_05.png', val: 32, unlocked: true },
+            { nameZh: '皇家重甲', nameEn: 'Royal Armor', img: 'assets/images/equipment_clay/equip_06.png', val: 64, unlocked: true },
+            { nameZh: '榮耀法靴', nameEn: 'Honor Boots', img: 'assets/images/equipment_clay/equip_07.png', val: 128, unlocked: true },
+            { nameZh: '輝煌神盾', nameEn: 'Glory Shield', img: 'assets/images/equipment_clay/equip_08.png', val: 256, unlocked: true },
+            { nameZh: '聖殿光刃', nameEn: 'Paladin Blade', img: 'assets/images/equipment_clay/equip_09.png', val: 512, unlocked: true },
+            { nameZh: '永恆聖劍', nameEn: 'Eternal Blade', img: 'assets/images/equipment_clay/equip_10.png', val: 1024, unlocked: true },
+            { nameZh: '滅神狂斬', nameEn: 'Godslayer', img: 'assets/images/equipment_clay/equip_11.png', val: 2048, unlocked: true },
+            { nameZh: '混沌天斧', nameEn: 'Chaos Axe', img: 'assets/images/equipment_clay/equip_12.png', val: 4096, unlocked: true },
+            { nameZh: '龍皇破滅', nameEn: 'Dragon Buster', img: 'assets/images/equipment_clay/equip_13.png', val: 8192, unlocked: true }
           ]
         },
         {
-          groupName: '🏹 精靈弓箭手專屬裝備 (暫借戰士裝備示意開放範圍)',
-          unlockedRatio: '13/13 暫代示意',
+          groupNameZh: '🏹 精靈弓箭手專屬裝備 (暫借戰士裝備示意開放範圍)',
+          groupNameEn: '🏹 Archer Gear (Preview Set)',
+          unlockedRatioZh: '13/13 暫代示意',
+          unlockedRatioEn: '13/13 Preview',
           items: [
-            { name: '巡林泥木弓 (暫)', img: 'assets/images/equipment_clay/equip_01.png', val: 2, unlocked: true },
-            { name: '獵戶青銅弓 (暫)', img: 'assets/images/equipment_clay/equip_02.png', val: 4, unlocked: true },
-            { name: '輕靈疾行靴 (暫)', img: 'assets/images/equipment_clay/equip_03.png', val: 8, unlocked: true },
-            { name: '精靈護胸 (暫)', img: 'assets/images/equipment_clay/equip_04.png', val: 16, unlocked: true },
-            { name: '秘銀長弓 (暫)', img: 'assets/images/equipment_clay/equip_05.png', val: 32, unlocked: true },
-            { name: '皇家鷹眼甲 (暫)', img: 'assets/images/equipment_clay/equip_06.png', val: 64, unlocked: true },
-            { name: '風行逐月靴 (暫)', img: 'assets/images/equipment_clay/equip_07.png', val: 128, unlocked: true },
-            { name: '神聖守護盾 (暫)', img: 'assets/images/equipment_clay/equip_08.png', val: 256, unlocked: true },
-            { name: '極光貫星弓 (暫)', img: 'assets/images/equipment_clay/equip_09.png', val: 512, unlocked: true },
-            { name: '永恆精靈弓 (暫)', img: 'assets/images/equipment_clay/equip_10.png', val: 1024, unlocked: true },
-            { name: '弒神裂空弓 (暫)', img: 'assets/images/equipment_clay/equip_11.png', val: 2048, unlocked: true },
-            { name: '混沌天風弓 (暫)', img: 'assets/images/equipment_clay/equip_12.png', val: 4096, unlocked: true },
-            { name: '龍皇蒼穹矢 (暫)', img: 'assets/images/equipment_clay/equip_13.png', val: 8192, unlocked: true }
+            { nameZh: '巡林泥木弓 (暫)', nameEn: 'Wood Bow (Preview)', img: 'assets/images/equipment_clay/equip_01.png', val: 2, unlocked: true },
+            { nameZh: '獵戶青銅弓 (暫)', nameEn: 'Bronze Bow (Preview)', img: 'assets/images/equipment_clay/equip_02.png', val: 4, unlocked: true },
+            { nameZh: '輕靈疾行靴 (暫)', nameEn: 'Swift Boots (Preview)', img: 'assets/images/equipment_clay/equip_03.png', val: 8, unlocked: true },
+            { nameZh: '精靈護胸 (暫)', nameEn: 'Elven Cuirass (Preview)', img: 'assets/images/equipment_clay/equip_04.png', val: 16, unlocked: true },
+            { nameZh: '秘銀長弓 (暫)', nameEn: 'Mithril Longbow (Preview)', img: 'assets/images/equipment_clay/equip_05.png', val: 32, unlocked: true },
+            { nameZh: '皇家鷹眼甲 (暫)', nameEn: 'Hawkeye Armor (Preview)', img: 'assets/images/equipment_clay/equip_06.png', val: 64, unlocked: true },
+            { nameZh: '風行逐月靴 (暫)', nameEn: 'Moonwalk Boots (Preview)', img: 'assets/images/equipment_clay/equip_07.png', val: 128, unlocked: true },
+            { nameZh: '神聖守護盾 (暫)', nameEn: 'Divine Aegis (Preview)', img: 'assets/images/equipment_clay/equip_08.png', val: 256, unlocked: true },
+            { nameZh: '極光貫星弓 (暫)', nameEn: 'Aurora Bow (Preview)', img: 'assets/images/equipment_clay/equip_09.png', val: 512, unlocked: true },
+            { nameZh: '永恆精靈弓 (暫)', nameEn: 'Eternal Bow (Preview)', img: 'assets/images/equipment_clay/equip_10.png', val: 1024, unlocked: true },
+            { nameZh: '弒神裂空弓 (暫)', nameEn: 'Godsniper Bow (Preview)', img: 'assets/images/equipment_clay/equip_11.png', val: 2048, unlocked: true },
+            { nameZh: '混沌天風弓 (暫)', nameEn: 'Chaos Tempest Bow (Preview)', img: 'assets/images/equipment_clay/equip_12.png', val: 4096, unlocked: true },
+            { nameZh: '龍皇蒼穹矢 (暫)', nameEn: 'Dragon Sky Arrow (Preview)', img: 'assets/images/equipment_clay/equip_13.png', val: 8192, unlocked: true }
           ]
         },
         {
-          groupName: '🪙 戰地商人專屬裝備 (暫借戰士裝備示意開放範圍)',
-          unlockedRatio: '13/13 暫代示意',
+          groupNameZh: '🪙 戰地商人專屬裝備 (暫借戰士裝備示意開放範圍)',
+          groupNameEn: '🪙 Merchant Gear (Preview Set)',
+          unlockedRatioZh: '13/13 暫代示意',
+          unlockedRatioEn: '13/13 Preview',
           items: [
-            { name: '商隊短棍 (暫)', img: 'assets/images/equipment_clay/equip_01.png', val: 2, unlocked: true },
-            { name: '青銅算尺 (暫)', img: 'assets/images/equipment_clay/equip_02.png', val: 4, unlocked: true },
-            { name: '長途商履 (暫)', img: 'assets/images/equipment_clay/equip_03.png', val: 8, unlocked: true },
-            { name: '金絲絲綢甲 (暫)', img: 'assets/images/equipment_clay/equip_04.png', val: 16, unlocked: true },
-            { name: '秘銀算盤 (暫)', img: 'assets/images/equipment_clay/equip_05.png', val: 32, unlocked: true },
-            { name: '富賈華袍 (暫)', img: 'assets/images/equipment_clay/equip_06.png', val: 64, unlocked: true },
-            { name: '金玉步雲履 (暫)', img: 'assets/images/equipment_clay/equip_07.png', val: 128, unlocked: true },
-            { name: '聚寶聚氣盾 (暫)', img: 'assets/images/equipment_clay/equip_08.png', val: 256, unlocked: true },
-            { name: '萬金點金刃 (暫)', img: 'assets/images/equipment_clay/equip_09.png', val: 512, unlocked: true },
-            { name: '千代商聖權杖 (暫)', img: 'assets/images/equipment_clay/equip_10.png', val: 1024, unlocked: true },
-            { name: '滅國金錢狂潮 (暫)', img: 'assets/images/equipment_clay/equip_11.png', val: 2048, unlocked: true },
-            { name: '開天聚寶巨斧 (暫)', img: 'assets/images/equipment_clay/equip_12.png', val: 4096, unlocked: true },
-            { name: '龍皇財富神域 (暫)', img: 'assets/images/equipment_clay/equip_13.png', val: 8192, unlocked: true }
+            { nameZh: '商隊短棍 (暫)', nameEn: 'Caravan Baton (Preview)', img: 'assets/images/equipment_clay/equip_01.png', val: 2, unlocked: true },
+            { nameZh: '青銅算尺 (暫)', nameEn: 'Bronze Abacus (Preview)', img: 'assets/images/equipment_clay/equip_02.png', val: 4, unlocked: true },
+            { nameZh: '長途商履 (暫)', nameEn: 'Merchant Shoes (Preview)', img: 'assets/images/equipment_clay/equip_03.png', val: 8, unlocked: true },
+            { nameZh: '金絲絲綢甲 (暫)', nameEn: 'Silk Armor (Preview)', img: 'assets/images/equipment_clay/equip_04.png', val: 16, unlocked: true },
+            { nameZh: '秘銀算盤 (暫)', nameEn: 'Mithril Abacus (Preview)', img: 'assets/images/equipment_clay/equip_05.png', val: 32, unlocked: true },
+            { nameZh: '富賈華袍 (暫)', nameEn: 'Tycoon Robe (Preview)', img: 'assets/images/equipment_clay/equip_06.png', val: 64, unlocked: true },
+            { nameZh: '金玉步雲履 (暫)', nameEn: 'Cloudstep Shoes (Preview)', img: 'assets/images/equipment_clay/equip_07.png', val: 128, unlocked: true },
+            { nameZh: '聚寶聚氣盾 (暫)', nameEn: 'Treasure Aegis (Preview)', img: 'assets/images/equipment_clay/equip_08.png', val: 256, unlocked: true },
+            { nameZh: '萬金點金刃 (暫)', nameEn: 'Midas Blade (Preview)', img: 'assets/images/equipment_clay/equip_09.png', val: 512, unlocked: true },
+            { nameZh: '千代商聖權杖 (暫)', nameEn: 'Sovereign Scepter (Preview)', img: 'assets/images/equipment_clay/equip_10.png', val: 1024, unlocked: true },
+            { nameZh: '滅國金錢狂潮 (暫)', nameEn: 'Gold Surge (Preview)', img: 'assets/images/equipment_clay/equip_11.png', val: 2048, unlocked: true },
+            { nameZh: '開天聚寶巨斧 (暫)', nameEn: 'Treasure Axe (Preview)', img: 'assets/images/equipment_clay/equip_12.png', val: 4096, unlocked: true },
+            { nameZh: '龍皇財富神域 (暫)', nameEn: 'Dragon Vault Realm (Preview)', img: 'assets/images/equipment_clay/equip_13.png', val: 8192, unlocked: true }
           ]
         }
       ]
@@ -4063,13 +4284,36 @@ function setLanguage(lang) {
   };
 
   function renderCompendiumView() {
-    const data = COMPENDIUM_DATA[currentCompTab];
+    const isEn = (currentLanguage === 'en-US');
+    let data;
+    if (currentCompTab === 'monsters') {
+      data = getCompendiumMonsterData();
+    } else {
+      const raw = COMPENDIUM_DATA[currentCompTab];
+      data = {
+        title: isEn ? (raw.titleEn || raw.title) : (raw.titleZh || raw.title),
+        tip: isEn ? (raw.tipEn || raw.tip) : (raw.tipZh || raw.tip),
+        total: raw.total,
+        unlocked: raw.unlocked,
+        groups: raw.groups.map(g => ({
+          groupName: isEn ? (g.groupNameEn || g.groupName) : (g.groupNameZh || g.groupName),
+          unlockedRatio: isEn ? (g.unlockedRatioEn || g.unlockedRatio) : (g.unlockedRatioZh || g.unlockedRatio),
+          items: g.items.map(it => ({
+            ...it,
+            name: isEn ? (it.nameEn || it.name) : (it.nameZh || it.name)
+          }))
+        }))
+      };
+    }
+
     document.getElementById('comp-view-title').textContent = data.title;
     document.getElementById('comp-tip-text').textContent = data.tip;
 
     const pct = Math.round((data.unlocked / data.total) * 100);
     document.getElementById('comp-progress-fill').style.width = `${pct}%`;
-    document.getElementById('comp-progress-text').textContent = `已解鎖 ${data.unlocked} / ${data.total} (${pct}%)`;
+    document.getElementById('comp-progress-text').textContent = isEn 
+      ? `Unlocked ${data.unlocked} / ${data.total} (${pct}%)`
+      : `已解鎖 ${data.unlocked} / ${data.total} (${pct}%)`;
 
     const area = document.getElementById('compendium-content-area');
     area.innerHTML = '';
@@ -4103,7 +4347,6 @@ function setLanguage(lang) {
 
         let visualHtml = '';
         if (!item.unlocked) {
-          // User Requirement: 如果有英雄或項目未解鎖，那圖片也不顯示
           visualHtml = `<span style="font-size:2.2rem; filter:grayscale(1); opacity:0.6;">🔒</span>`;
         } else if (item.img) {
           visualHtml = `<img src="${item.img}" style="width:52px; height:52px; object-fit:contain;" alt="${item.name}" />`;
@@ -4113,24 +4356,28 @@ function setLanguage(lang) {
           visualHtml = `<span style="font-size:2.2rem;">${item.icon || '❓'}</span>`;
         }
 
+        const valPrefix = isEn ? 'Value: ' : '數值: ';
+        const unlStr = isEn ? 'Locked' : '未解鎖';
         card.innerHTML = `
           ${visualHtml}
-          <span style="font-size:var(--font-caption); font-weight:800; color:#f8fafc; text-align:center;">${item.unlocked ? item.name : '未解鎖'}</span>
-          <span style="font-size:var(--font-mini); color:#fbbf24; font-weight:700;">${item.unlocked ? '數值: ' + item.val : '???'}</span>
+          <span style="font-size:var(--font-caption); font-weight:800; color:#f8fafc; text-align:center;">${item.unlocked ? item.name : unlStr}</span>
+          <span style="font-size:var(--font-mini); color:#fbbf24; font-weight:700;">${item.unlocked ? valPrefix + item.val : '???'}</span>
         `;
 
         card.onclick = () => {
           if (!item.unlocked) {
-            alert('🔒 該項目尚未解鎖！請推進冒險或合成出對應項目。');
+            alert(isEn ? '🔒 Item locked! Advance stages to discover.' : '🔒 該項目尚未解鎖！請推進冒險或合成出對應項目。');
           } else {
-            alert(`📖 【圖鑑情報】\n名稱：${item.name}\n數值階級：${item.val}\n解鎖狀態：已收錄進王國圖鑑！`);
+            alert(isEn 
+              ? `📖 【Compendium Info】\nName: ${item.name}\nTier: ${item.val}\nStatus: Registered!`
+              : `📖 【圖鑑情報】\n名稱：${item.name}\n數值階級：${item.val}\n解鎖狀態：已收錄進王國圖鑑！`);
           }
         };
 
         grid.appendChild(card);
       });
 
-      // User Requirement: 湊不滿 3 列數量的就留空，不要有底板
+      // Remainder empty cells
       const remainder = grp.items.length % 3;
       if (remainder !== 0) {
         const emptyNeeded = 3 - remainder;
@@ -4146,7 +4393,6 @@ function setLanguage(lang) {
     });
   }
 
-  // 8. Populate Gear Grid with Authentic Battle Tile Tints
   function initGearGrid() {
     const gearGrid = document.getElementById('gear-grid-container');
     gearGrid.innerHTML = '';
@@ -4167,6 +4413,7 @@ function setLanguage(lang) {
   // Initialization
   window.addEventListener('DOMContentLoaded', () => {
     renderAdventureStage();
+    renderHeroRoster();
     initGearGrid();
     renderCompendiumView();
   });

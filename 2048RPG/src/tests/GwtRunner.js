@@ -380,7 +380,10 @@ export class GwtRunner {
       this.testGwt132_3_GlobalI18nTableCoverageAndLookupFunction.bind(this),
       // C-STORY-133: 章節魔物名圖精準關聯 ＆ 全分頁深度多語系 (i18n) 零死角全覆蓋
       this.testGwt133_1_ChapterMonsterDatabaseAndNameImageStrictMatch.bind(this),
-      this.testGwt133_2_ComprehensiveI18nAllTabsFullCoverage.bind(this)
+      this.testGwt133_2_ComprehensiveI18nAllTabsFullCoverage.bind(this),
+      // C-STORY-134: 章節魔物池生態對齊、關卡詳細資訊全語系動態連動 ＆ 英雄圖鑑零死角多語系
+      this.testGwt134_1_ChapterRangeAlignmentAndAccurateMonsterPoolMatching.bind(this),
+      this.testGwt134_2_HeroRosterCompendiumMonsterAndDetailModalI18n.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6890,6 +6893,43 @@ export class GwtRunner {
 
     // Drawer labels & dynamic localization
     this.assert(htmlText.includes('t(\'drawer_progress\'') && htmlText.includes('t(\'drawer_selecting\''), 'Quick stage drawer cells dynamically query t()');
+  }
+
+  // =========================================================================
+  // C-STORY-134: 章節魔物池生態對齊、關卡詳細資訊全語系動態連動 ＆ 英雄圖鑑零死角多語系
+  // =========================================================================
+
+  // C-STORY-134 GWT 134.1: 章節範圍精準對齊 350 關標準（第1章1~5，第2章6~20等）與彈窗生態池動態生成
+  async testGwt134_1_ChapterRangeAlignmentAndAccurateMonsterPoolMatching() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+
+    this.assert(htmlText.includes('range: [1, 5]') && htmlText.includes('range: [6, 20]'), 'Chapter 1 is Stage 1~5 and Chapter 2 is Stage 6~20');
+    this.assert(htmlText.includes('range: [21, 50]') && htmlText.includes('range: [281, 350]'), 'Chapter configs cover full 350 stages span');
+    this.assert(htmlText.includes('GEAR_TIER_NAMES = {'), 'Contains bilingual gear tier names database');
+    this.assert(htmlText.includes('Wood Sword') && htmlText.includes('Paladin Blade'), 'Contains English gear definitions');
+    this.assert(htmlText.includes('First Clear Reward:'), 'Stage detail modal contains localized first clear reward');
+  }
+
+  // C-STORY-134 GWT 134.2: 英雄名單、神兵彈窗與圖鑑魔物池真實連動與雙語支援
+  async testGwt134_2_HeroRosterCompendiumMonsterAndDetailModalI18n() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+
+    this.assert(htmlText.includes('renderHeroRoster()'), 'Implements dedicated renderHeroRoster function');
+    this.assert(htmlText.includes('id="modal-weapon-header"'), 'Hero detail modal weapon header has unique ID for localization');
+    this.assert(htmlText.includes('getCompendiumMonsterData()'), 'Compendium monsters built dynamically from official chapter pools');
+    this.assert(htmlText.includes('Monster Compendium Overview'), 'Compendium contains localized English titles');
   }
 }
 
