@@ -362,7 +362,11 @@ export class GwtRunner {
       // C-STORY-128: 圖鑑裝備分頁重整（以英雄專屬裝備體系為架構，先以戰士神兵示意）
       this.testGwt128_1_CompendiumGearHeroBasedGrouping.bind(this),
       this.testGwt128_2_WarriorGearsFullNineTiersCoverage.bind(this),
-      this.testGwt128_3_CompendiumGearFutureArchetypesPlanned.bind(this)
+      this.testGwt128_3_CompendiumGearFutureArchetypesPlanned.bind(this),
+      // C-STORY-129: 商店與設定正式版規格全面對齊 ＆ 多語系 (i18n) 核心架構奠基
+      this.testGwt129_1_ShopAllSixProductsOfficiallyAligned.bind(this),
+      this.testGwt129_2_SettingsModalStructureAndOptions.bind(this),
+      this.testGwt129_3_I18nEngineAndLanguageSwitching.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6246,7 +6250,7 @@ export class GwtRunner {
         if (resp.ok) htmlText = await resp.text();
       } catch (e) {}
     }
-    this.assert(htmlText.includes('終身免廣告特權'), 'Store featured banner updated to No Ads Pass');
+    this.assert(htmlText.includes('終身免廣告 PASS') || htmlText.includes('終身免廣告特權'), 'Store featured banner updated to No Ads Pass');
     this.assert(htmlText.includes('裝備轉蛋機'), 'Armory includes gear gacha machine facility');
     this.assert(htmlText.includes('皇家鐵匠鋪'), 'Armory includes royal forge technology');
     this.assert(htmlText.includes('軍需行囊'), 'Armory includes military backpack facility');
@@ -6592,6 +6596,62 @@ export class GwtRunner {
     }
     this.assert(htmlText.includes('🏹 精靈弓箭手專屬裝備 (Bows & Quivers) [預定規劃]'), 'Planned section for Elf Archer bow gear line');
     this.assert(htmlText.includes('🪙 戰地商人專屬裝備 (Relics & Gold) [預定規劃]'), 'Planned section for Royal Merchant relic gear line');
+  }
+
+  // =========================================================================
+  // C-STORY-129: 商店與設定正式版規格全面對齊 ＆ 多語系 (i18n) 核心架構奠基
+  // =========================================================================
+
+  // C-STORY-129 GWT 129.1: 商店 6 大商品品項與定價 100% 正式版對齊
+  async testGwt129_1_ShopAllSixProductsOfficiallyAligned() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    const shopSection = htmlText.split('id="view-shop"')[1]?.split('</section>')[0] || '';
+    this.assert(shopSection.includes('終身免廣告 PASS') && shopSection.includes('NT$ 150'), 'Shop contains No Ads Pass at NT$ 150');
+    this.assert(shopSection.includes('每日免費軍資箱 (+200🪙)'), 'Shop contains Daily Free Gift (+200)');
+    this.assert(shopSection.includes('無限體力通行證') && shopSection.includes('NT$ 90'), 'Shop contains Infinite Stamina Pass at NT$ 90');
+    this.assert(shopSection.includes('50,000 皇家金幣袋') && shopSection.includes('NT$ 60'), 'Shop contains 50k Gold Pouch at NT$ 60');
+    this.assert(shopSection.includes('福利廣告金幣 (+500🪙)'), 'Shop contains Daily Ad Gold reward');
+    this.assert(shopSection.includes('第 4~8 章大師擴展包') && shopSection.includes('NT$ 120'), 'Shop contains Master Chapter Pass at NT$ 120');
+  }
+
+  // C-STORY-129 GWT 129.2: 遊戲設定視窗結構齊全與操作完整
+  async testGwt129_2_SettingsModalStructureAndOptions() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('id="btn-open-settings"') && htmlText.includes('openSettingsModal()'), 'Settings button opens settings modal');
+    this.assert(htmlText.includes('id="modal-settings"'), 'Contains modal-settings overlay');
+    this.assert(htmlText.includes('id="setting-language-select"'), 'Settings includes language select dropdown');
+    this.assert(htmlText.includes('id="setting-sfx-toggle"'), 'Settings includes sound effects toggle');
+    this.assert(htmlText.includes('id="setting-style-select"'), 'Settings includes tile art style select');
+    this.assert(htmlText.includes('id="setting-theme-select"'), 'Settings includes board palette theme select');
+    this.assert(htmlText.includes('id="btn-settings-clear-tut"'), 'Settings includes clear tutorial record action');
+    this.assert(htmlText.includes('id="btn-settings-reset-save"'), 'Settings includes reset save action');
+  }
+
+  // C-STORY-129 GWT 129.3: 多語系 (i18n) 字典引擎與即時切換防爆版
+  async testGwt129_3_I18nEngineAndLanguageSwitching() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('const I18N_DICT ='), 'Defines I18N_DICT multi-language dictionary');
+    this.assert(htmlText.includes("'zh-TW':") && htmlText.includes("'en-US':"), 'Dictionary contains zh-TW and en-US locales');
+    this.assert(htmlText.includes('function setLanguage('), 'Defines setLanguage function for instant text swapping');
+    this.assert(htmlText.includes('.lang-en'), 'CSS defines scalability and padding adjustments for English typography');
   }
 }
 

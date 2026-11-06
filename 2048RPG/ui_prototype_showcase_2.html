@@ -1552,6 +1552,47 @@
       gap: 8px;
       background: radial-gradient(circle at center, rgba(30, 41, 59, 0.8) 0%, rgba(9, 13, 22, 0.95) 100%);
     }
+
+    /* Settings Modal Styles */
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      gap: 10px;
+    }
+
+    .setting-select {
+      background: #0f172a;
+      border: 1.5px solid #0284c7;
+      color: #f8fafc;
+      font-weight: 700;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: var(--font-caption);
+      cursor: pointer;
+      outline: none;
+    }
+
+    /* Multi-language (i18n) Layout Scalability & Overflow Protection */
+    .lang-en .btn-large {
+      font-size: 1.05rem;
+      padding: 0 16px;
+    }
+    .lang-en .btn-medium {
+      font-size: 0.82rem;
+      padding: 0 8px;
+    }
+    .lang-en .btn-small {
+      font-size: 0.72rem;
+      padding: 0 6px;
+    }
+    .lang-en .nav-item span {
+      font-size: 0.68rem;
+    }
   </style>
 </head>
 <body>
@@ -1575,45 +1616,92 @@
         <span>🪙</span>
         <span id="txt-gold">445,699 +</span>
       </div>
-      <div class="settings-btn" onclick="alert('⚙️ 設定：音樂音效、語言切換、存檔同步')">⚙️</div>
+      <div class="settings-btn" id="btn-open-settings" onclick="openSettingsModal()" title="遊戲設定">⚙️</div>
     </header>
 
     <!-- Phone Body (5 Switchable Views) -->
     <main class="phone-body">
 
       <!-- ==========================================
-           TAB 1: 💎 商店頁 (SHOP)
+           TAB 1: 💎 商店頁 (SHOP) (100% 正式版 6 大商品對齊)
            ========================================== -->
       <section class="tab-view" id="view-shop">
         <div class="shop-container">
-          <!-- Featured Banner: No Ads Pass -->
+          <!-- 1. Featured Banner: Lifetime No-Ads Pass -->
           <div class="shop-banner">
-            <span class="shop-banner-tag">🛡️ 尊爵終身特權 · 永久免廣告</span>
+            <span class="shop-banner-tag" id="shop-txt-pass-tag" data-i18n="shop_pass_tag">🛡️ 尊爵終身特權 · 永久免廣告</span>
             <div class="shop-banner-center">
               <div class="shop-card-pedestal">
                 <span style="font-size:2rem;">🚫📺</span>
                 <span style="font-size:0.65rem; color:#fbbf24; font-weight:900;">NO ADS</span>
               </div>
               <div>
-                <h3 style="font-size:var(--font-h1); color:#fff;">終身免廣告特權</h3>
-                <p style="font-size:var(--font-caption); color:#cbd5e1;">不再受任何廣告干擾 + 每日加贈體力</p>
+                <h3 style="font-size:var(--font-h1); color:#fff;" id="shop-txt-pass-title" data-i18n="shop_pass_title">終身免廣告 PASS</h3>
+                <p style="font-size:var(--font-caption); color:#cbd5e1;" id="shop-txt-pass-desc" data-i18n="shop_pass_desc">永久免除每 3 關插頁廣告！所有廣告獎勵直接「一鍵秒領」無需等待！</p>
               </div>
             </div>
-            <button class="cr-btn cr-btn-green btn-small" style="align-self:center; width:70%;" onclick="alert('🎉 恭喜解鎖【終身免廣告特權】！永久暢享無廣告遊戲體驗！')">NT$ 90.00 永久移除廣告</button>
+            <button class="cr-btn cr-btn-green btn-small" id="shop-btn-pass-price" style="align-self:center; width:70%;" onclick="alert('🎉 恭喜解鎖【終身免廣告 PASS】！永久暢享無廣告遊戲體驗！')">NT$ 150 永久移除廣告</button>
           </div>
 
-          <!-- Daily Picks Grid (Strictly Aligned with Game: Daily Free Supplies Only) -->
-          <h3 style="font-size:var(--font-h2); color:#38bdf8;">每日皇家福利</h3>
-          <div class="shop-grid" style="grid-template-columns: 1fr;">
-            <div class="shop-item-card" style="flex-direction:row; justify-content:space-between; padding:16px 20px;">
-              <div style="display:flex; align-items:center; gap:16px;">
+          <!-- Section 1: Daily Free Perks -->
+          <h3 style="font-size:var(--font-h2); color:#38bdf8;" id="shop-txt-header-daily">✨ 每日皇家福利</h3>
+          <div class="shop-grid" style="grid-template-columns: 1fr; gap:10px;">
+            <!-- 2. Daily Free Supplies (+200🪙) -->
+            <div class="shop-item-card" style="flex-direction:row; justify-content:space-between; padding:12px 16px;">
+              <div style="display:flex; align-items:center; gap:14px;">
                 <div class="item-pedestal">📦</div>
                 <div>
-                  <h4 style="font-size:var(--font-body); font-weight:800; color:#f8fafc;">每日免費軍資箱 (+200🪙)</h4>
-                  <p style="font-size:var(--font-caption); color:#94a3b8;">王國軍資每日免費補給 (+200🪙)</p>
+                  <h4 style="font-size:var(--font-body); font-weight:800; color:#f8fafc;" id="shop-txt-free-title" data-i18n="shop_daily_free_title">每日免費軍資箱 (+200🪙)</h4>
+                  <p style="font-size:var(--font-caption); color:#94a3b8;" id="shop-txt-free-desc" data-i18n="shop_daily_free_desc">王國軍資每日免費補給 (+200🪙)</p>
                 </div>
               </div>
-              <button class="cr-btn cr-btn-blue btn-medium" onclick="alert('📦 成功領取每日免費軍資：+200 🪙！')">免費領取</button>
+              <button class="cr-btn cr-btn-blue btn-medium" id="shop-btn-free" data-i18n="shop_btn_free" onclick="alert('📦 成功領取每日免費軍資：+200 🪙！')">免費領取</button>
+            </div>
+
+            <!-- 3. Daily Ad Reward (+500🪙, 3 times daily) -->
+            <div class="shop-item-card" style="flex-direction:row; justify-content:space-between; padding:12px 16px;">
+              <div style="display:flex; align-items:center; gap:14px;">
+                <div class="item-pedestal">📺</div>
+                <div>
+                  <h4 style="font-size:var(--font-body); font-weight:800; color:#f8fafc;" id="shop-txt-ad-title" data-i18n="shop_ad_title">福利廣告金幣 (+500🪙)</h4>
+                  <p style="font-size:var(--font-caption); color:#94a3b8;" id="shop-txt-ad-desc" data-i18n="shop_ad_desc">觀看宣傳短片領取 500 金幣！（免廣告 PASS 玩家點擊秒領）</p>
+                  <div style="font-size:var(--font-mini); color:#fbbf24; font-weight:700; margin-top:2px;">今日剩餘：3 / 3 次</div>
+                </div>
+              </div>
+              <button class="cr-btn cr-btn-amber btn-medium" id="shop-btn-ad" data-i18n="shop_ad_btn" onclick="alert('📺 觀看宣傳短片完成：+500 🪙 入袋！')">觀看廣告</button>
+            </div>
+          </div>
+
+          <!-- Section 2: Special Privilege Passes & Packs -->
+          <h3 style="font-size:var(--font-h2); color:#fbbf24; margin-top:4px;" id="shop-txt-header-passes">👑 皇家特許通行證與禮包</h3>
+          <div class="shop-grid" style="grid-template-columns: repeat(2, 1fr); gap:10px;">
+            <!-- 4. Infinite Stamina Pass -->
+            <div class="shop-item-card">
+              <div class="item-pedestal">❤️</div>
+              <h4 style="font-size:var(--font-body); font-weight:800; text-align:center; color:#f8fafc;" id="shop-txt-stamina-title" data-i18n="shop_stamina_title">無限體力通行證</h4>
+              <p style="font-size:var(--font-caption); color:#94a3b8; text-align:center; min-height:36px;" id="shop-txt-stamina-desc" data-i18n="shop_stamina_desc">遠征失利零負擔，敗戰 0 體力消耗，暢遊 350 大關！</p>
+              <button class="cr-btn cr-btn-purple btn-small" id="shop-btn-stamina-price" style="width:100%;" onclick="alert('❤️ 成功開通【無限體力通行證】！敗戰不再扣除體力！')">NT$ 90 立即開通</button>
+            </div>
+
+            <!-- 5. 50,000 Royal Gold Pouch -->
+            <div class="shop-item-card">
+              <div class="item-pedestal">💰</div>
+              <h4 style="font-size:var(--font-body); font-weight:800; text-align:center; color:#f8fafc;" id="shop-txt-gold-title" data-i18n="shop_gold_title">50,000 皇家金幣袋</h4>
+              <p style="font-size:var(--font-caption); color:#94a3b8; text-align:center; min-height:36px;" id="shop-txt-gold-desc" data-i18n="shop_gold_desc">王國軍械庫鉅款！直購大量高級裝備，工坊科技狂飆！</p>
+              <button class="cr-btn cr-btn-green btn-small" id="shop-btn-gold-price" style="width:100%;" onclick="alert('💰 儲值成功：獲得 50,000 🪙 + 首購贈禮 5,000 🪙！')">NT$ 60 儲值金幣</button>
+            </div>
+
+            <!-- 6. Master Chapters Expansion (Full Width) -->
+            <div class="shop-item-card" style="grid-column: span 2; flex-direction:row; justify-content:space-between; padding:12px 16px;">
+              <div style="display:flex; align-items:center; gap:14px;">
+                <div class="item-pedestal">🗺️</div>
+                <div>
+                  <h4 style="font-size:var(--font-body); font-weight:800; color:#f8fafc;" id="shop-txt-chapter-title" data-i18n="shop_chapter_title">第 4~8 章大師擴展包</h4>
+                  <p style="font-size:var(--font-caption); color:#94a3b8;" id="shop-txt-chapter-desc" data-i18n="shop_chapter_desc">突破前三章試煉！直通深淵、滅世黑曜巨龍與終焉神域！</p>
+                  <div style="font-size:var(--font-mini); color:#38bdf8; font-weight:700;">✔ 解鎖後續 320 道關卡  ✔ 開啟大師級裝備掉落</div>
+                </div>
+              </div>
+              <button class="cr-btn cr-btn-purple btn-medium" id="shop-btn-chapter-price" style="padding:0 12px;" onclick="alert('🗺️ 成功購買【第 4~8 章大師擴展包】！全 350 道關卡正式全面解鎖！')">NT$ 120 購買解鎖</button>
             </div>
           </div>
         </div>
@@ -1741,8 +1829,8 @@
 
           <!-- Giant Heroic Deploy Button (Strictly Clean, No Stamina Text) -->
           <div class="hub-deploy-section">
-            <button class="cr-btn cr-btn-blue btn-battle-heroic" onclick="launchStageBattle()">
-              <span>⚔️ 出擊！</span>
+            <button class="cr-btn cr-btn-blue btn-battle-heroic" id="btn-main-battle" onclick="launchStageBattle()">
+              <span id="txt-main-battle" data-i18n="btn_deploy">⚔️ 出擊！</span>
             </button>
           </div>
 
@@ -1925,23 +2013,23 @@
     <nav class="phone-nav-bar">
       <div class="nav-item" onclick="switchMainTab('shop')">
         <span class="nav-icon">💎</span>
-        <span class="nav-text">商店</span>
+        <span class="nav-text" id="nav-txt-shop" data-i18n="nav_shop">商店</span>
       </div>
       <div class="nav-item" onclick="switchMainTab('camp')">
         <span class="nav-icon">⛺</span>
-        <span class="nav-text">軍備</span>
+        <span class="nav-text" id="nav-txt-camp" data-i18n="nav_camp">軍備</span>
       </div>
       <div class="nav-item active" onclick="switchMainTab('adventure')">
         <span class="nav-icon">⚔️</span>
-        <span class="nav-text">冒險</span>
+        <span class="nav-text" id="nav-txt-adventure" data-i18n="nav_adventure">冒險</span>
       </div>
       <div class="nav-item" onclick="switchMainTab('gear')">
         <span class="nav-icon">🛡️</span>
-        <span class="nav-text">裝備</span>
+        <span class="nav-text" id="nav-txt-gear" data-i18n="nav_gear">裝備</span>
       </div>
       <div class="nav-item" onclick="switchMainTab('compendium')">
         <span class="nav-icon">📕</span>
-        <span class="nav-text">圖鑑</span>
+        <span class="nav-text" id="nav-txt-compendium" data-i18n="nav_compendium">圖鑑</span>
       </div>
     </nav>
 
@@ -1971,6 +2059,61 @@
         <button class="cr-btn cr-btn-blue btn-large" style="width:100%;" onclick="closeStageDetailModal(); launchStageBattle();">
           <span>⚔️ 出擊遠征</span>
         </button>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         MODAL 0: ⚙️ 遊戲設定視窗 (SETTINGS MODAL WITH I18N LANGUAGE SWITCHER)
+         ======================================================== -->
+    <div class="modal-overlay" id="modal-settings" onclick="if(event.target===this) closeSettingsModal()">
+      <div class="cr-modal-box" style="max-height:85vh; overflow-y:auto; gap:12px;">
+        <div class="modal-close-btn" onclick="closeSettingsModal()">✕</div>
+        <h3 style="font-size:var(--font-h1); color:#38bdf8; text-align:center;" id="settings-txt-title" data-i18n="settings_title">⚙️ 遊戲設定</h3>
+        
+        <!-- 1. Language Switcher -->
+        <div class="setting-row">
+          <span style="font-weight:700; color:#f8fafc;" id="settings-txt-lang" data-i18n="settings_lang">🌐 語言 (Language)</span>
+          <select id="setting-language-select" class="setting-select" onchange="changeLanguageFromSelect(this.value)">
+            <option value="zh-TW" selected>繁體中文 (Traditional Chinese)</option>
+            <option value="en-US">English (英語)</option>
+          </select>
+        </div>
+
+        <!-- 2. Sound Effects Toggle -->
+        <div class="setting-row">
+          <span style="font-weight:700; color:#f8fafc;" id="settings-txt-sfx" data-i18n="settings_sfx">🔊 遊戲音效</span>
+          <input type="checkbox" id="setting-sfx-toggle" checked style="width:20px; height:20px; cursor:pointer;" onchange="alert(this.checked ? '🔊 音效已開啟' : '🔇 音效已靜音')">
+        </div>
+
+        <!-- 3. Tile Art Style -->
+        <div class="setting-row">
+          <span style="font-weight:700; color:#f8fafc;" id="settings-txt-style" data-i18n="settings_style">🖼️ 方塊美術造型</span>
+          <select id="setting-style-select" class="setting-select" onchange="alert('🎨 美術造型已切換為：' + this.options[this.selectedIndex].text)">
+            <option value="clay" selected>🗿 微縮模型 (3D黏土)</option>
+            <option value="emoji">🎭 立體 Emoji (Q版)</option>
+            <option value="comic">🎨 賽璐璐 (美漫風)</option>
+            <option value="pixel">👾 復古點陣 (16-Bit)</option>
+          </select>
+        </div>
+
+        <!-- 4. Board Palette Theme -->
+        <div class="setting-row">
+          <span style="font-weight:700; color:#f8fafc;" id="settings-txt-theme" data-i18n="settings_theme">🎨 盤面底板配色</span>
+          <select id="setting-theme-select" class="setting-select" onchange="alert('🏰 盤面配色已切換為：' + this.options[this.selectedIndex].text)">
+            <option value="kingdom" selected>🏰 王國遠征 (深藍)</option>
+            <option value="cyber">🌌 賽博霓虹 (Cyber)</option>
+            <option value="retro">🕹️ 復古點陣 (Retro)</option>
+            <option value="minimal">⬛ 極簡深邃 (Minimal)</option>
+          </select>
+        </div>
+
+        <!-- 5. Reset & Data Management -->
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
+          <button class="cr-btn cr-btn-amber btn-medium" id="btn-settings-clear-tut" data-i18n="settings_clear_tut" style="width:100%;" onclick="alert('🔄 新手教學引導狀態已重置！下次進入關卡將重新指引。')">🔄 清除新手教學紀錄</button>
+          <button class="cr-btn cr-btn-purple btn-medium" id="btn-settings-reset-save" data-i18n="settings_reset_save" style="width:100%; background:linear-gradient(180deg, #991b1b, #7f1d1d); border-color:#ef4444;" onclick="if(confirm('⚠️ 警告：確定要清除本地存檔並重置所有進度嗎？此操作不可逆！')) alert('🗑️ 本地存檔已重置回初始狀態！')">🗑️ 清除本地存檔 (重置進度)</button>
+        </div>
+
+        <button class="cr-btn cr-btn-blue btn-medium" id="btn-settings-close" data-i18n="settings_close" style="width:100%; margin-top:4px;" onclick="closeSettingsModal()">確定關閉</button>
       </div>
     </div>
 
@@ -2132,20 +2275,20 @@
        RIGHT DESKTOP SPECIFICATION & VERIFICATION PANEL
        ======================================================== -->
   <aside class="desktop-panel">
-    <h2>🎯 《2048 RPG》商業化主介面 v2.5 英雄專屬裝備圖鑑展示</h2>
+    <h2>🎯 《2048 RPG》商業化主介面 v2.6 正式版規格對齊與多語系展示</h2>
     
     <div class="spec-card">
-      <strong>📌 本次概念網頁收斂重點（C-STORY-128 - 圖鑑裝備分頁英雄體系重整）：</strong><br>
-      去除細碎階級小組，重構為「英雄專屬裝備體系」架構。現階段完整展示「⚔️ 鐵甲狂戰士專屬裝備（刀劍與重裝 2～512）」，並預留弓箭手戰弓與商人秘寶規劃區塊！
+      <strong>📌 本次概念網頁收斂重點（C-STORY-129 - 商店/設定對齊 ＆ 多語系架構）：</strong><br>
+      完全對齊遊戲正式版 6 大商城品項與真實 ⚙️ 設定彈窗，並導入第一波輕量化多語系 (i18n) 字典引擎（支援繁體中文與英語即時切換與防爆版排版），作為後續全程式整併之堅實基石！
     </div>
 
     <div class="spec-card">
-      <strong>✨ 核心規格收斂落實（C-STORY-128）：</strong><br>
-      1. <strong>⚔️ 戰士專屬神兵 2～512 全階呈獻</strong>：泥木劍(2) 至 聖殿光刃(512) 共 9 階神兵一體化收錄於戰士專屬群組，直向 5:6 盤面比例與戰鬥漸層底色。<br>
-      2. <strong>🏹 預留長線職業裝備規劃</strong>：預列弓箭手戰弓、商人秘寶專屬裝備群組，標註「規劃中」且未解鎖不渲染圖片。<br>
-      3. <strong>📂 折疊收合手感一致</strong>：裝備分頁同享英雄圖鑑的點擊標題收合/展開 (Accordion) 互動機制。<br>
-      4. <strong>📐 全介面直向長方形與放大設定</strong>：裝備庫、出擊欄位與英雄卡片 5:6 比例長方形與放大樣式全數穩定生效。<br>
-      5. <strong>🚀 獨立雙擊啟動 BAT</strong>：根目錄 `start_prototype_showcase.bat` 雙擊即可一鍵瀏覽，無需後台 TASKS。
+      <strong>✨ 核心規格收斂落實（C-STORY-129）：</strong><br>
+      1. <strong>💎 商店 6 大商品 100% 正式版對齊</strong>：終身免廣告 PASS (NT$150)、每日免費軍資 (+200🪙)、無限體力通行證 (NT$90)、5萬皇家金幣袋 (NT$60)、福利廣告金幣 (+500🪙，每日3次)、第4~8章大師擴展包 (NT$120) 全數就位。<br>
+      2. <strong>⚙️ 真實遊戲設定視窗實裝</strong>：點擊頂部齒輪開啟高質感彈窗，整合音效開關、方塊風格選單、盤面底板主題、清除教學引導與存檔重置操作。<br>
+      3. <strong>🌐 多語系 (i18n) 核心字典引擎</strong>：設定彈窗提供語言下拉選單，支援繁體中文 (zh-TW) 與 English (en-US) 毫秒級即時熱切換。<br>
+      4. <strong>🛡️ 跨語系防爆版伸縮排版</strong>：引入 `.lang-en` 彈性字級與內距規格，按鈕不溢出、不折行、保持沉浸手遊美感。<br>
+      5. <strong>📐 長方形盤面比例與英雄裝備體系</strong>：全域 5:6 比例長方形格子、戰士 2~512 神兵與圖鑑收合機制全線穩定維持。
     </div>
 
     <div class="spec-card">
@@ -2161,6 +2304,120 @@
 </div>
 
 <script>
+  // ========================================================
+  // I18N MULTI-LANGUAGE SYSTEM (C-STORY-129)
+  // ========================================================
+  let currentLanguage = 'zh-TW';
+
+  const I18N_DICT = {
+    'zh-TW': {
+      nav_shop: '商店',
+      nav_camp: '軍備',
+      nav_adventure: '冒險',
+      nav_gear: '裝備',
+      nav_compendium: '圖鑑',
+      shop_pass_title: '終身免廣告 PASS',
+      shop_pass_tag: '🛡️ 尊爵終身特權 · 永久免廣告',
+      shop_pass_desc: '永久免除每 3 關插頁廣告！所有廣告獎勵直接「一鍵秒領」無需等待！',
+      shop_daily_free_title: '每日免費軍資箱 (+200🪙)',
+      shop_daily_free_desc: '王國軍資每日免費補給 (+200🪙)',
+      shop_btn_free: '免費領取',
+      shop_ad_title: '福利廣告金幣 (+500🪙)',
+      shop_ad_desc: '觀看宣傳短片領取 500 金幣！（免廣告 PASS 玩家點擊秒領）',
+      shop_ad_btn: '觀看廣告',
+      shop_stamina_title: '無限體力通行證',
+      shop_stamina_desc: '遠征失利零負擔，敗戰 0 體力消耗，暢遊 350 大關！',
+      shop_gold_title: '50,000 皇家金幣袋',
+      shop_gold_desc: '王國軍械庫鉅款！直購大量高級裝備，工坊科技狂飆！',
+      shop_chapter_title: '第 4~8 章大師擴展包',
+      shop_chapter_desc: '突破前三章試煉！直通深淵、滅世黑曜巨龍與終焉神域！',
+      btn_deploy: '⚔️ 出擊！',
+      btn_deploying: '⚔️ 出擊中',
+      btn_assign_deploy: '⚔️ 指派此英雄出擊',
+      btn_upgrade: '🔨 升級',
+      settings_title: '⚙️ 遊戲設定',
+      settings_lang: '🌐 語言 (Language)',
+      settings_sfx: '🔊 遊戲音效',
+      settings_style: '🖼️ 方塊美術造型',
+      settings_theme: '🎨 盤面底板配色',
+      settings_clear_tut: '🔄 清除新手教學紀錄',
+      settings_reset_save: '🗑️ 清除本地存檔 (重置進度)',
+      settings_close: '確定關閉'
+    },
+    'en-US': {
+      nav_shop: 'Shop',
+      nav_camp: 'Camp',
+      nav_adventure: 'Battle',
+      nav_gear: 'Gear',
+      nav_compendium: 'Archive',
+      shop_pass_title: 'Lifetime No-Ads PASS',
+      shop_pass_tag: '🛡️ VIP LIFETIME · PERMANENT NO ADS',
+      shop_pass_desc: 'Permanently remove interstitial ads! Claim all bonus rewards instantly without waiting!',
+      shop_daily_free_title: 'Daily Supply Chest (+200🪙)',
+      shop_daily_free_desc: 'Free daily kingdom military grant (+200🪙)',
+      shop_btn_free: 'Claim Free',
+      shop_ad_title: 'Bonus Ad Gold (+500🪙)',
+      shop_ad_desc: 'Watch promo to get 500 gold! (Instant claim for No-Ads PASS owners)',
+      shop_ad_btn: 'Watch Ad',
+      shop_stamina_title: 'Infinite Stamina Pass',
+      shop_stamina_desc: 'Zero defeat penalty! 0 Stamina lost on loss, conquer all 350 stages!',
+      shop_gold_title: '50,000 Royal Gold Pouch',
+      shop_gold_desc: 'Instant treasury wealth! Buy high-tier gears and rush workshop tech!',
+      shop_chapter_title: 'Ch.4~8 Master Expansion',
+      shop_chapter_desc: 'Break through trial chapters! Venture into Abyss and Ultimate Divine Realm!',
+      btn_deploy: '⚔️ BATTLE!',
+      btn_deploying: '⚔️ IN BATTLE',
+      btn_assign_deploy: '⚔️ DEPLOY HERO',
+      btn_upgrade: '🔨 UPGRADE',
+      settings_title: '⚙️ Game Settings',
+      settings_lang: '🌐 Language',
+      settings_sfx: '🔊 Sound Effects',
+      settings_style: '🖼️ Tile Art Style',
+      settings_theme: '🎨 Board Palette',
+      settings_clear_tut: '🔄 Clear Tutorial Record',
+      settings_reset_save: '🗑️ Reset Local Save Data',
+      settings_close: 'Confirm & Close'
+    }
+  };
+
+  function setLanguage(lang) {
+    currentLanguage = lang;
+    const dict = I18N_DICT[lang] || I18N_DICT['zh-TW'];
+    
+    // Toggle layout style class on phone mockup
+    const phone = document.querySelector('.phone-mockup');
+    if (phone) {
+      if (lang === 'en-US') phone.classList.add('lang-en');
+      else phone.classList.remove('lang-en');
+    }
+
+    // Refresh all data-i18n elements
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (dict[key]) {
+        el.textContent = dict[key];
+      }
+    });
+
+    // Update bottom deploy buttons if open
+    updateModalDeployButtons();
+  }
+
+  function changeLanguageFromSelect(lang) {
+    setLanguage(lang);
+  }
+
+  // Settings Modal Open/Close
+  function openSettingsModal() {
+    const modal = document.getElementById('modal-settings');
+    if (modal) modal.classList.add('active');
+  }
+
+  function closeSettingsModal() {
+    const modal = document.getElementById('modal-settings');
+    if (modal) modal.classList.remove('active');
+  }
+
   // ========================================================
   // STATE MANAGEMENT FOR SHOWCASE V2.0
   // ========================================================
