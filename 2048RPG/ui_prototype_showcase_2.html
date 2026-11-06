@@ -232,6 +232,10 @@
 
     .nav-item .nav-icon {
       font-size: 1.35rem;
+      min-height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: transform 0.2s ease;
       filter: grayscale(0.6) opacity(0.8);
     }
@@ -1596,8 +1600,13 @@
       font-size: 0.72rem;
       padding: 0 6px;
     }
-    .lang-en .nav-item span {
-      font-size: 0.68rem;
+    .lang-en .nav-item .nav-text {
+      font-size: 0.65rem;
+      letter-spacing: -0.2px;
+      line-height: 1.1;
+    }
+    .lang-en .nav-item .nav-icon {
+      font-size: 1.35rem !important;
     }
   
     /* Version Changelog Box in Settings Modal */
@@ -1666,6 +1675,37 @@
     .settings-pane.active {
       display: flex;
       animation: tabFadeIn 0.2s ease-out;
+    }
+
+  
+    /* Boss Artwork Display (Clay / Image / Emoji Adaptive) */
+    .arena-boss-container {
+      width: 84px;
+      height: 84px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      filter: drop-shadow(0 8px 16px rgba(0,0,0,0.7));
+      animation: floatBoss 3s ease-in-out infinite alternate;
+    }
+    .arena-boss-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .modal-boss-container {
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .modal-boss-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
 
   </style>
@@ -1858,7 +1898,9 @@
               <!-- Center Artwork Box (Clickable -> Quick Switch Drawer) -->
               <div class="stage-artwork-card" onclick="openQuickStageDrawer()">
                 <img class="arena-bg-img" src="assets/images/map_integrated_world_road.jpg" alt="Arena Background" />
-                <div class="arena-boss-icon" id="arena-boss-icon">🐺</div>
+                <div class="arena-boss-container" id="arena-boss-container">
+                  <img id="arena-boss-img" src="assets/images/monsters_clay/monster_ch02_64.png" alt="Boss Artwork" />
+                </div>
                 <div class="arena-badge" id="arena-boss-name">首領：森林巨狼 (64)</div>
               </div>
             </div>
@@ -1876,18 +1918,18 @@
           <!-- Stage Brief Info Bar (Clickable -> Stage Detail POPUP, Symmetrical) -->
           <div class="hub-stage-brief" onclick="openStageDetailModal()">
             <div class="brief-col">
-              <span class="label">推薦戰力</span>
+              <span class="label" id="txt-brief-power-lbl" data-i18n="adv_rec_power">推薦戰力</span>
               <span class="val" id="brief-rec-power">2048 裝備</span>
             </div>
             <div style="width:1.5px; height:24px; background:#334155; opacity:0.6;"></div>
             <div class="brief-col">
-              <span class="label">首通金幣獎勵</span>
+              <span class="label" id="txt-brief-gold-lbl" data-i18n="adv_first_clear">首通金幣獎勵</span>
               <span class="val" style="color:#fbbf24;" id="brief-first-gold">🪙 1,560</span>
             </div>
             <div style="width:1.5px; height:24px; background:#334155; opacity:0.6;"></div>
             <div class="brief-col">
-              <span class="label">關卡詳細情報</span>
-              <span class="val" style="color:#38bdf8; font-size:var(--font-body);">詳情 ℹ️</span>
+              <span class="label" id="txt-brief-info-lbl" data-i18n="adv_stage_info">關卡詳細情報</span>
+              <span class="val" style="color:#38bdf8; font-size:var(--font-body);" id="txt-brief-details" data-i18n="adv_details">詳情 ℹ️</span>
             </div>
           </div>
 
@@ -2108,7 +2150,9 @@
         <!-- 怪物資訊 -->
         <div style="background:#1e293b; border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:8px;">
           <div style="display:flex; gap:12px; align-items:center;">
-            <span style="font-size:2.6rem;" id="modal-boss-avatar">🐺</span>
+            <div class="modal-boss-container" id="modal-boss-container">
+            <img id="modal-boss-img" src="assets/images/monsters_clay/monster_ch02_64.png" alt="Modal Boss Artwork" />
+          </div>
             <div style="flex:1;">
               <h4 style="font-size:var(--font-h2); color:#f8fafc; margin-bottom:2px;" id="modal-boss-name">首領：森林巨狼 (64)</h4>
               <p style="font-size:var(--font-caption); color:#38bdf8;" id="modal-stage-objective">作戰目標：消滅盤面所有魔物</p>
@@ -2116,7 +2160,7 @@
           </div>
           <!-- 其他怪物 (總數 4 隻) -->
           <div style="background:#0f172a; border-radius:8px; padding:8px 10px; font-size:var(--font-caption);">
-            <div style="color:#94a3b8; font-weight:700; margin-bottom:4px;">其他魔物 (4隻)：</div>
+            <div style="color:#94a3b8; font-weight:700; margin-bottom:4px;" id="modal-txt-minions-lbl" data-i18n="stage_minions_title">其他魔物 (4隻)：</div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;" id="modal-minions-list">
               <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🦇 洞穴蝙蝠 (16)</span>
               <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🐗 毒牙野豬 (16)</span>
@@ -2129,14 +2173,14 @@
         <!-- 場景資源與獎勵 -->
         <div style="background:#090d16; border-radius:12px; padding:10px 12px; font-size:var(--font-caption); color:#cbd5e1; display:flex; flex-direction:column; gap:6px;">
           <div>
-            <div style="color:#38bdf8; font-weight:700; margin-bottom:4px;">場景資源 (裝備品 3 格)：</div>
+            <div style="color:#38bdf8; font-weight:700; margin-bottom:4px;" id="modal-txt-gears-lbl" data-i18n="stage_gears_title">場景資源 (裝備品 3 格)：</div>
             <div style="display:flex; gap:8px;" id="modal-stage-gears">
               <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">泥盾靴 (8)</span>
               <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">青銅刃 (4)</span>
               <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">泥木劍 (2)</span>
             </div>
           </div>
-          <div style="margin-top:2px;">🪙 初次通關獎勵：<strong style="color:#fbbf24; font-size:var(--font-body);" id="modal-gold-reward">1,560 金幣</strong></div>
+          <div style="margin-top:2px;"><span id="modal-txt-gold-lbl" data-i18n="stage_first_gold_title">🪙 初次通關獎勵：</span><strong style="color:#fbbf24; font-size:var(--font-body);" id="modal-gold-reward">1,560 金幣</strong></div>
           <div style="font-size:var(--font-mini); color:#94a3b8;">💡 攻略提示：使用戰士十字碎裂清除四周卡位金幣！</div>
         </div>
 
@@ -2910,8 +2954,8 @@
     <div class="drawer-overlay" id="drawer-quick-stage" onclick="if(event.target===this) closeQuickStageDrawer()">
       <div class="drawer-sheet">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h3 style="font-size:var(--font-h1); color:#fbbf24;">快速跳轉關卡</h3>
-          <span style="font-size:var(--font-caption); color:#94a3b8;">點選已通關關卡進行切換</span>
+          <h3 style="font-size:var(--font-h1); color:#fbbf24;" id="drawer-txt-title" data-i18n="drawer_quick_jump">快速跳轉關卡</h3>
+          <span style="font-size:var(--font-caption); color:#94a3b8;" id="drawer-txt-sub" data-i18n="drawer_quick_tip">點選已通關關卡進行切換</span>
         </div>
         <div class="drawer-grid" id="quick-stage-grid">
           <!-- Dynamically populated with 25 stages -->
@@ -2967,6 +3011,12 @@
       nav_adventure: '冒險',
       nav_gear: '裝備',
       nav_compendium: '圖鑑',
+      
+      // Top HUD & Resource
+      hud_gold: '金幣',
+      hud_stamina: '體力',
+
+      // Shop
       shop_pass_title: '終身免廣告 PASS',
       shop_pass_tag: '🛡️ 尊爵終身特權 · 永久免廣告',
       shop_pass_desc: '永久免除每 3 關插頁廣告！所有廣告獎勵直接「一鍵秒領」無需等待！',
@@ -2980,28 +3030,57 @@
       shop_stamina_desc: '遠征失利零負擔，敗戰 0 體力消耗，暢遊 350 大關！',
       shop_gold_title: '50,000 皇家金幣袋',
       shop_gold_desc: '王國軍械庫鉅款！直購大量高級裝備，工坊科技狂飆！',
-      shop_chapter_title: '第 4~8 章大師擴展包',
-      shop_chapter_desc: '突破前三章試煉！直通深淵、滅世黑曜巨龍與終焉神域！',
+      
+      // Buttons
       btn_deploy: '⚔️ 出擊',
       btn_stage_deploy: '⚔️ 出擊',
       btn_hero_assigned: '上陣中',
       btn_hero_assign: '指派上陣',
       btn_assign_deploy: '🛡️ 指派上陣',
-      settings_log_title: '📜 版本更新履歷',
       btn_upgrade: '🔨 升級',
+      
+      // Adventure Screen
+      chapter_1: '第一章：林地平原',
+      chapter_2: '第二章：荒漠峽谷',
+      chapter_3: '第三章：星穹之巔',
+      adv_rec_power: '推薦戰力',
+      adv_first_clear: '首通金幣獎勵',
+      adv_stage_info: '關卡詳細情報',
+      adv_details: '詳情 ℹ️',
+      boss_prefix: '首領',
+      gear_power_suffix: '裝備',
+      gold_suffix: '金幣',
+      
+      // Quick Stage Drawer
+      drawer_quick_jump: '快速跳轉關卡',
+      drawer_quick_tip: '點選已通關關卡進行切換',
+      drawer_progress: '🚩進度',
+      drawer_selecting: '選擇中',
+      drawer_close: '完成關閉',
+
+      // Stage Detail Modal
+      stage_title_suffix: '· 關卡情報',
+      stage_objective_default: '作戰目標：消滅盤面所有魔物',
+      stage_minions_title: '其他魔物 (4隻)：',
+      stage_gears_title: '場景資源 (裝備品 3 格)：',
+      stage_first_gold_title: '🪙 初次通關獎勵：',
+      stage_tactical_tip: '💡 攻略提示：使用戰士十字碎裂清除四周卡位金幣！',
+
+      // Settings Modal
       settings_title: '⚙️ 遊戲設定',
       stab_general: '⚙️ 基本設定',
       stab_changelog: '📜 更新履歷',
       stab_developer: '🛠️ 開發測試',
-      settings_bgm: '🎵 背景音樂',
-      settings_btn_check_update: '🔄 手動檢查版本更新 (無損熱更新)',
-      settings_instant_skill: '🛠️ [測試] 技能開場即就緒',
       settings_lang: '🌐 語言 (Language)',
+      settings_theme: '🎨 盤面底板配色',
+      settings_bgm: '🎵 背景音樂',
       settings_sfx: '🔊 遊戲音效',
       settings_style: '🖼️ 方塊美術造型',
-      settings_theme: '🎨 盤面底板配色',
-      settings_clear_tut: '🔄 清除新手教學紀錄',
-      settings_reset_save: '🗑️ 清除本地存檔 (重置進度)',
+      settings_log_title: '📜 版本更新履歷',
+      settings_btn_check_update: '🔄 手動檢查版本更新 (無損熱更新)',
+      settings_instant_skill: '🛠️ [測試] 技能開場即就緒',
+      settings_clear_tut: '🔄 清除新手教學紀錄 (重置引導狀態)',
+      settings_reset_save: '🗑️ 清除本地存檔 (重置紀錄)',
       settings_close: '確定關閉'
     },
     'en-US': {
@@ -3010,6 +3089,12 @@
       nav_adventure: 'Battle',
       nav_gear: 'Gear',
       nav_compendium: 'Archive',
+
+      // Top HUD & Resource
+      hud_gold: 'Gold',
+      hud_stamina: 'Energy',
+
+      // Shop
       shop_pass_title: 'Lifetime No-Ads PASS',
       shop_pass_tag: '🛡️ VIP LIFETIME · PERMANENT NO ADS',
       shop_pass_desc: 'Permanently remove interstitial ads! Claim all bonus rewards instantly without waiting!',
@@ -3023,33 +3108,67 @@
       shop_stamina_desc: 'Zero defeat penalty! 0 Stamina lost on loss, conquer all 350 stages!',
       shop_gold_title: '50,000 Royal Gold Pouch',
       shop_gold_desc: 'Instant treasury wealth! Buy high-tier gears and rush workshop tech!',
-      shop_chapter_title: 'Ch.4~8 Master Expansion',
-      shop_chapter_desc: 'Break through trial chapters! Venture into Abyss and Ultimate Divine Realm!',
+
+      // Buttons
       btn_deploy: '⚔️ BATTLE',
       btn_stage_deploy: '⚔️ BATTLE',
       btn_hero_assigned: 'ASSIGNED',
       btn_hero_assign: 'ASSIGN',
       btn_assign_deploy: '🛡️ ASSIGN HERO',
-      settings_log_title: '📜 Version Changelog',
       btn_upgrade: '🔨 UPGRADE',
+
+      // Adventure Screen
+      chapter_1: 'Chapter 1: Woodland Plains',
+      chapter_2: 'Chapter 2: Arid Canyon',
+      chapter_3: 'Chapter 3: Astral Peak',
+      adv_rec_power: 'Rec. Power',
+      adv_first_clear: 'First Clear',
+      adv_stage_info: 'Stage Info',
+      adv_details: 'Details ℹ️',
+      boss_prefix: 'Boss',
+      gear_power_suffix: 'Gear',
+      gold_suffix: 'Gold',
+
+      // Quick Stage Drawer
+      drawer_quick_jump: 'Quick Stage Select',
+      drawer_quick_tip: 'Select unlocked stage to jump',
+      drawer_progress: '🚩Focus',
+      drawer_selecting: 'Selected',
+      drawer_close: 'Done & Close',
+
+      // Stage Detail Modal
+      stage_title_suffix: '· Stage Info',
+      stage_objective_default: 'Objective: Eliminate all monsters on board',
+      stage_minions_title: 'Other Monsters (4):',
+      stage_gears_title: 'Stage Resources (3 Gears):',
+      stage_first_gold_title: '🪙 First Clear Reward:',
+      stage_tactical_tip: '💡 Tactical Tip: Use warrior cross cleave to clear blocking coins!',
+
+      // Settings Modal
       settings_title: '⚙️ Game Settings',
       stab_general: '⚙️ General',
       stab_changelog: '📜 Changelog',
       stab_developer: '🛠️ Developer',
-      settings_bgm: '🎵 Background Music',
-      settings_btn_check_update: '🔄 Check for Updates (Hot Reload)',
-      settings_instant_skill: '🛠️ [Debug] Instant Skill Ready',
       settings_lang: '🌐 Language',
+      settings_theme: '🎨 Board Palette',
+      settings_bgm: '🎵 Background Music',
       settings_sfx: '🔊 Sound Effects',
       settings_style: '🖼️ Tile Art Style',
-      settings_theme: '🎨 Board Palette',
-      settings_clear_tut: '🔄 Clear Tutorial Record',
+      settings_log_title: '📜 Version Changelog',
+      settings_btn_check_update: '🔄 Check for Updates (Hot Reload)',
+      settings_instant_skill: '🛠️ [Debug] Instant Skill Ready',
+      settings_clear_tut: '🔄 Clear Tutorial Record (Reset Guide)',
       settings_reset_save: '🗑️ Reset Local Save Data',
       settings_close: 'Confirm & Close'
     }
   };
 
-  function setLanguage(lang) {
+  // Translation helper function
+  function t(key, fallback = '') {
+    const dict = I18N_DICT[currentLanguage] || I18N_DICT['zh-TW'];
+    return dict[key] || fallback || key;
+  }
+function setLanguage(lang) {
     currentLanguage = lang;
     const dict = I18N_DICT[lang] || I18N_DICT['zh-TW'];
     
@@ -3070,6 +3189,9 @@
 
     // Update bottom deploy buttons if open
     updateModalDeployButtons();
+
+    // Re-render adventure hub with new language
+    renderAdventureStage();
   }
 
   function changeLanguageFromSelect(lang) {
@@ -3124,14 +3246,41 @@
     25: { name: '荒漠最高峰', bossIcon: '👑', bossName: '荒漠霸王龍', val: 512, power: '4096 裝備', gold: 3000 }
   };
 
+  // Chapter Monster Artwork mapping table
+  const BOSS_ART_MAP = {
+    8:   { nameZh: '草地史萊姆', nameEn: 'Meadow Slime', img: 'assets/images/monsters_clay/monster_ch01_08.png', icon: '🟢' },
+    16:  { nameZh: '野生史萊姆', nameEn: 'Wild Slime', img: 'assets/images/monsters_clay/monster_ch01_16.png', icon: '🦠' },
+    32:  { nameZh: '劇毒大毒菇', nameEn: 'Poison Toadstool', img: 'assets/images/monsters_clay/monster_ch01_32.png', icon: '🍄' },
+    64:  { nameZh: '森林巨狼', nameEn: 'Forest Great Wolf', img: 'assets/images/monsters_clay/monster_ch02_64.png', icon: '🐺' },
+    128: { nameZh: '沙漠巨蠍', nameEn: 'Desert Giant Scorpion', img: 'assets/images/monsters_clay/monster_ch02_128.png', icon: '🦂' },
+    256: { nameZh: '古墓石蛛', nameEn: 'Ancient Tomb Spider', img: 'assets/images/monsters_clay/monster_ch02_256.png', icon: '🕷️' },
+    512: { nameZh: '荒漠霸王龍', nameEn: 'Dune Tyrannosaur', img: 'assets/images/monsters_clay/monster_ch02_512.png', icon: '👑' },
+    1024:{ nameZh: '山嶺石巨人', nameEn: 'Mountain Stone Titan', img: 'assets/images/monsters_clay/monster_ch03_1024.png', icon: '🪨' },
+    2048:{ nameZh: '岩地霸主', nameEn: 'Crag Overlord', img: 'assets/images/monsters_clay/monster_ch03_2048.png', icon: '👑' }
+  };
+
   function getStageDef(s) {
-    if (STAGE_CONFIGS[s]) return STAGE_CONFIGS[s];
+    if (STAGE_CONFIGS[s]) {
+      const conf = STAGE_CONFIGS[s];
+      const bossMeta = BOSS_ART_MAP[conf.val] || { img: 'assets/images/monsters_clay/monster_ch02_64.png', icon: conf.bossIcon };
+      return {
+        ...conf,
+        bossImg: bossMeta.img,
+        bossNameZh: conf.bossName,
+        bossNameEn: bossMeta.nameEn || conf.bossName
+      };
+    }
+    const val = Math.min(2048, Math.pow(2, Math.floor(s / 3) + 2));
+    const bossMeta = BOSS_ART_MAP[val] || { nameZh: `狂暴野獸 S${s}`, nameEn: `Wild Beast S${s}`, img: 'assets/images/monsters_clay/monster_ch02_64.png', icon: '🐺' };
     return {
       name: `幽暗密林 ${s}`,
-      bossIcon: (s % 5 === 0) ? '👹' : '🐺',
-      bossName: (s % 5 === 0) ? `密林首領 S${s}` : `狂暴野獸 S${s}`,
-      val: Math.min(512, Math.pow(2, Math.floor(s / 3) + 2)),
-      power: `${Math.pow(2, Math.floor(s / 3) + 3)} 裝備`,
+      bossIcon: bossMeta.icon,
+      bossImg: bossMeta.img,
+      bossName: (currentLanguage === 'en-US') ? bossMeta.nameEn : bossMeta.nameZh,
+      bossNameZh: bossMeta.nameZh,
+      bossNameEn: bossMeta.nameEn,
+      val: val,
+      power: `${val * 2} ${t('gear_power_suffix')}`,
       gold: 1000 + s * 45
     };
   }
@@ -3164,9 +3313,23 @@
   function renderAdventureStage() {
     const data = getStageDef(currentSelectedStage);
     document.getElementById('hub-stage-num').textContent = `Stage ${currentSelectedStage}`;
-    document.getElementById('arena-boss-icon').textContent = data.bossIcon;
-    document.getElementById('arena-boss-name').textContent = `首領：${data.bossName} (${data.val})`;
-    document.getElementById('brief-rec-power').textContent = data.power;
+    
+    // Chapter Title Localization
+    const chapTag = document.getElementById('hub-chap-tag');
+    if (chapTag) {
+      if (currentSelectedStage <= 10) chapTag.textContent = t('chapter_1');
+      else if (currentSelectedStage <= 20) chapTag.textContent = t('chapter_2');
+      else chapTag.textContent = t('chapter_3');
+    }
+
+    // Boss Artwork and Localized Name
+    const bossImgEl = document.getElementById('arena-boss-img');
+    if (bossImgEl) bossImgEl.src = data.bossImg;
+    const bName = (currentLanguage === 'en-US') ? (data.bossNameEn || data.bossName) : (data.bossNameZh || data.bossName);
+    document.getElementById('arena-boss-name').textContent = `${t('boss_prefix')}：${bName} (${data.val})`;
+    
+    // Brief stats
+    document.getElementById('brief-rec-power').textContent = `${data.val * 2} ${t('gear_power_suffix')}`;
     document.getElementById('brief-first-gold').textContent = `🪙 ${data.gold.toLocaleString()}`;
 
     // Update Nav Arrows Disabled States
@@ -3344,10 +3507,15 @@
   // 5. Stage Detail POPUP (Clean Battle Objective, No Stamina Mention)
   function openStageDetailModal() {
     const data = getStageDef(currentSelectedStage);
-    document.getElementById('modal-stage-title').textContent = `Stage ${currentSelectedStage} · 關卡情報`;
-    document.getElementById('modal-boss-avatar').textContent = data.bossIcon;
-    document.getElementById('modal-boss-name').textContent = `首領：${data.bossName} (${data.val})`;
-    document.getElementById('modal-gold-reward').textContent = `${data.gold.toLocaleString()} 金幣`;
+    document.getElementById('modal-stage-title').textContent = `Stage ${currentSelectedStage} ${t('stage_title_suffix')}`;
+    
+    const modalBossImg = document.getElementById('modal-boss-img');
+    if (modalBossImg) modalBossImg.src = data.bossImg;
+    
+    const bName = (currentLanguage === 'en-US') ? (data.bossNameEn || data.bossName) : (data.bossNameZh || data.bossName);
+    document.getElementById('modal-boss-name').textContent = `${t('boss_prefix')}：${bName} (${data.val})`;
+    document.getElementById('modal-stage-objective').textContent = t('stage_objective_default');
+    document.getElementById('modal-gold-reward').textContent = `${data.gold.toLocaleString()} ${t('gold_suffix')}`;
     
     // Minions (4 monsters)
     const m1 = Math.max(2, Math.floor(data.val / 2));

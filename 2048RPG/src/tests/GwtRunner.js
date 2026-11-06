@@ -373,7 +373,11 @@ export class GwtRunner {
       this.testGwt130_3_CompendiumExpandedGearsAndHeroAssignButtons.bind(this),
       // C-STORY-131: 設定彈窗頁籤化重構（基本設定 / 更新履歷 / 開發測試）
       this.testGwt131_1_SettingsModalThreeTabsStructureAndSwitching.bind(this),
-      this.testGwt131_2_SettingsGeneralChangelogDeveloperContentSeparation.bind(this)
+      this.testGwt131_2_SettingsGeneralChangelogDeveloperContentSeparation.bind(this),
+      // C-STORY-132: 冒險首領美術關聯化、導航圖文解耦防縮小 ＆ 全域多語系文字表全覆蓋
+      this.testGwt132_1_AdventureBossActualArtworkAdaptive.bind(this),
+      this.testGwt132_2_BottomNavIconDecoupledAndProtected.bind(this),
+      this.testGwt132_3_GlobalI18nTableCoverageAndLookupFunction.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6780,6 +6784,56 @@ export class GwtRunner {
     this.assert(paneDev.includes('id="setting-style-select"'), 'Developer pane contains Tile art style selector');
     this.assert(paneDev.includes('id="setting-instant-skill"'), 'Developer pane contains instant skill test switch');
     this.assert(paneDev.includes('id="btn-settings-clear-tut"'), 'Developer pane contains Clear tutorial record button');
+  }
+
+  // =========================================================================
+  // C-STORY-132: 冒險首領美術關聯化、導航圖文解耦防縮小 ＆ 全域多語系文字表全覆蓋
+  // =========================================================================
+
+  // C-STORY-132 GWT 132.1: 冒險關卡首領圖示連動真實美術立繪（如黏土風格 monster_ch02_64.png）
+  async testGwt132_1_AdventureBossActualArtworkAdaptive() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('id="arena-boss-container"') && htmlText.includes('id="arena-boss-img"'), 'Arena card contains boss artwork image element');
+    this.assert(htmlText.includes('id="modal-boss-container"') && htmlText.includes('id="modal-boss-img"'), 'Stage detail modal contains boss artwork image element');
+    this.assert(htmlText.includes('monsters_clay/monster_ch02_64.png'), 'Default Stage 12 uses official clay artwork of Great Wolf');
+    this.assert(htmlText.includes('const BOSS_ART_MAP ='), 'Defines boss artwork lookup mapping table');
+  }
+
+  // C-STORY-132 GWT 132.2: 底部導航欄圖示與文字解耦，在 English 語系下圖示維持正常大尺寸不被壓縮
+  async testGwt132_2_BottomNavIconDecoupledAndProtected() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('.lang-en .nav-item .nav-text'), 'CSS applies smaller font-size strictly to .nav-text');
+    this.assert(htmlText.includes('.lang-en .nav-item .nav-icon') && htmlText.includes('font-size: 1.35rem'), 'CSS locks nav-icon font-size to 1.35rem in English');
+    this.assert(htmlText.includes('min-height: 24px'), 'Nav icon has protected minimum vertical dimensions');
+  }
+
+  // C-STORY-132 GWT 132.3: 全域多語系文字表 (I18n Table) 涵蓋度與 t() 查詢函數實裝
+  async testGwt132_3_GlobalI18nTableCoverageAndLookupFunction() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('function t(key, fallback'), 'Defines global translation helper function t(key)');
+    this.assert(htmlText.includes('data-i18n="adv_rec_power"'), 'Stage brief power label bound to i18n');
+    this.assert(htmlText.includes('data-i18n="adv_first_clear"'), 'Stage brief gold label bound to i18n');
+    this.assert(htmlText.includes('data-i18n="adv_stage_info"'), 'Stage brief info label bound to i18n');
+    this.assert(htmlText.includes('data-i18n="drawer_quick_jump"'), 'Quick stage drawer title bound to i18n');
+    this.assert(htmlText.includes('chapter_1:') && htmlText.includes('chapter_2:'), 'I18n table contains chapter titles');
   }
 }
 
