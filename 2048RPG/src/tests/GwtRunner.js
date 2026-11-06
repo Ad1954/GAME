@@ -377,7 +377,10 @@ export class GwtRunner {
       // C-STORY-132: 冒險首領美術關聯化、導航圖文解耦防縮小 ＆ 全域多語系文字表全覆蓋
       this.testGwt132_1_AdventureBossActualArtworkAdaptive.bind(this),
       this.testGwt132_2_BottomNavIconDecoupledAndProtected.bind(this),
-      this.testGwt132_3_GlobalI18nTableCoverageAndLookupFunction.bind(this)
+      this.testGwt132_3_GlobalI18nTableCoverageAndLookupFunction.bind(this),
+      // C-STORY-133: 章節魔物名圖精準關聯 ＆ 全分頁深度多語系 (i18n) 零死角全覆蓋
+      this.testGwt133_1_ChapterMonsterDatabaseAndNameImageStrictMatch.bind(this),
+      this.testGwt133_2_ComprehensiveI18nAllTabsFullCoverage.bind(this)
     ];
 
     for (const test of testCases) {
@@ -6802,7 +6805,7 @@ export class GwtRunner {
     this.assert(htmlText.includes('id="arena-boss-container"') && htmlText.includes('id="arena-boss-img"'), 'Arena card contains boss artwork image element');
     this.assert(htmlText.includes('id="modal-boss-container"') && htmlText.includes('id="modal-boss-img"'), 'Stage detail modal contains boss artwork image element');
     this.assert(htmlText.includes('monsters_clay/monster_ch02_64.png'), 'Default Stage 12 uses official clay artwork of Great Wolf');
-    this.assert(htmlText.includes('const BOSS_ART_MAP ='), 'Defines boss artwork lookup mapping table');
+    this.assert(htmlText.includes('CHAPTER_MONSTER_DATABASE') || htmlText.includes('const BOSS_ART_MAP ='), 'Defines boss artwork lookup mapping table');
   }
 
   // C-STORY-132 GWT 132.2: 底部導航欄圖示與文字解耦，在 English 語系下圖示維持正常大尺寸不被壓縮
@@ -6834,6 +6837,59 @@ export class GwtRunner {
     this.assert(htmlText.includes('data-i18n="adv_stage_info"'), 'Stage brief info label bound to i18n');
     this.assert(htmlText.includes('data-i18n="drawer_quick_jump"'), 'Quick stage drawer title bound to i18n');
     this.assert(htmlText.includes('chapter_1:') && htmlText.includes('chapter_2:'), 'I18n table contains chapter titles');
+  }
+
+  // =========================================================================
+  // C-STORY-133: 章節魔物名圖精準關聯 ＆ 全分頁深度多語系 (i18n) 零死角全覆蓋
+  // =========================================================================
+
+  // C-STORY-133 GWT 133.1: 章節魔物資料庫關聯 (Stage 14 熔岩史萊姆名圖 100% 一致)
+  async testGwt133_1_ChapterMonsterDatabaseAndNameImageStrictMatch() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    this.assert(htmlText.includes('CHAPTER_MONSTER_DATABASE = {'), 'Contains chapter-aware monster database');
+    this.assert(htmlText.includes('nameZh: \'熔岩史萊姆\'') && htmlText.includes('nameEn: \'Lava Slime\''), 'Chapter 2 contains Lava Slime');
+    this.assert(htmlText.includes('monster_ch02_64.png'), 'Lava Slime correctly uses monster_ch02_64.png');
+    this.assert(htmlText.includes('getStageChapter(s)'), 'Uses stage-to-chapter resolution function');
+  }
+
+  // C-STORY-133 GWT 133.2: 深度多語系覆蓋（商店、軍備、裝備、圖鑑、快速選關）
+  async testGwt133_2_ComprehensiveI18nAllTabsFullCoverage() {
+    let htmlText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./ui_prototype_showcase_2.html');
+        if (resp.ok) htmlText = await resp.text();
+      } catch (e) {}
+    }
+    // Shop Tab Coverage
+    this.assert(htmlText.includes('data-i18n="shop_header_daily"'), 'Shop daily perks header bound to i18n');
+    this.assert(htmlText.includes('data-i18n="shop_header_passes"'), 'Shop season passes header bound to i18n');
+    this.assert(htmlText.includes('data-i18n="shop_btn_pass_price"'), 'Shop no-ads button bound to i18n');
+
+    // Camp Tab Coverage
+    this.assert(htmlText.includes('data-i18n="camp_title"') && htmlText.includes('data-i18n="camp_desc"'), 'Camp banner title and desc bound to i18n');
+    this.assert(htmlText.includes('data-i18n="camp_forge_title"'), 'Camp blacksmith title bound to i18n');
+    this.assert(htmlText.includes('data-i18n="camp_gacha_title"'), 'Camp gacha title bound to i18n');
+    this.assert(htmlText.includes('data-i18n="camp_bag_title"'), 'Camp backpack title bound to i18n');
+
+    // Gear Tab Coverage
+    this.assert(htmlText.includes('data-i18n="gear_tab_inventory"') && htmlText.includes('data-i18n="gear_tab_heroes"'), 'Gear subtabs bound to i18n');
+    this.assert(htmlText.includes('data-i18n="gear_deploy_title"') && htmlText.includes('data-i18n="gear_slot_gear"'), 'Gear deploy module bound to i18n');
+    this.assert(htmlText.includes('data-i18n="gear_inventory_title"'), 'Gear inventory title bound to i18n');
+
+    // Compendium Tab Coverage
+    this.assert(htmlText.includes('data-i18n="comp_tab_monsters"'), 'Compendium monsters tab bound to i18n');
+    this.assert(htmlText.includes('data-i18n="comp_tab_heroes"'), 'Compendium heroes tab bound to i18n');
+    this.assert(htmlText.includes('data-i18n="comp_tab_gears"'), 'Compendium gears tab bound to i18n');
+
+    // Drawer labels & dynamic localization
+    this.assert(htmlText.includes('t(\'drawer_progress\'') && htmlText.includes('t(\'drawer_selecting\''), 'Quick stage drawer cells dynamically query t()');
   }
 }
 

@@ -1755,11 +1755,11 @@
                 <p style="font-size:var(--font-caption); color:#cbd5e1;" id="shop-txt-pass-desc" data-i18n="shop_pass_desc">永久免除每 3 關插頁廣告！所有廣告獎勵直接「一鍵秒領」無需等待！</p>
               </div>
             </div>
-            <button class="cr-btn cr-btn-green btn-small" id="shop-btn-pass-price" style="align-self:center; width:70%;" onclick="alert('🎉 恭喜解鎖【終身免廣告 PASS】！永久暢享無廣告遊戲體驗！')">NT$ 150 永久移除廣告</button>
+            <button class="cr-btn cr-btn-green btn-small" id="shop-btn-pass-price" data-i18n="shop_btn_pass_price" style="align-self:center; width:70%;" onclick="alert('🎉 恭喜解鎖【終身免廣告 PASS】！永久暢享無廣告遊戲體驗！')">NT$ 150 永久移除廣告</button>
           </div>
 
           <!-- Section 1: Daily Free Perks -->
-          <h3 style="font-size:var(--font-h2); color:#38bdf8;" id="shop-txt-header-daily">✨ 每日皇家福利</h3>
+          <h3 style="font-size:var(--font-h2); color:#38bdf8;" id="shop-txt-header-daily" data-i18n="shop_header_daily">✨ 每日皇家福利</h3>
           <div class="shop-grid" style="grid-template-columns: 1fr; gap:10px;">
             <!-- 2. Daily Free Supplies (+200🪙) -->
             <div class="shop-item-card" style="flex-direction:row; justify-content:space-between; padding:12px 16px;">
@@ -1780,7 +1780,7 @@
                 <div>
                   <h4 style="font-size:var(--font-body); font-weight:800; color:#f8fafc;" id="shop-txt-ad-title" data-i18n="shop_ad_title">福利廣告金幣 (+500🪙)</h4>
                   <p style="font-size:var(--font-caption); color:#94a3b8;" id="shop-txt-ad-desc" data-i18n="shop_ad_desc">觀看宣傳短片領取 500 金幣！（免廣告 PASS 玩家點擊秒領）</p>
-                  <div style="font-size:var(--font-mini); color:#fbbf24; font-weight:700; margin-top:2px;">今日剩餘：3 / 3 次</div>
+                  <div style="font-size:var(--font-mini); color:#fbbf24; font-weight:700; margin-top:2px;" id="shop-txt-ad-left" data-i18n="shop_ad_left">今日剩餘：3 / 3 次</div>
                 </div>
               </div>
               <button class="cr-btn cr-btn-amber btn-medium" id="shop-btn-ad" data-i18n="shop_ad_btn" onclick="alert('📺 觀看宣傳短片完成：+500 🪙 入袋！')">觀看廣告</button>
@@ -1788,14 +1788,14 @@
           </div>
 
           <!-- Section 2: Special Privilege Passes & Packs -->
-          <h3 style="font-size:var(--font-h2); color:#fbbf24; margin-top:4px;" id="shop-txt-header-passes">👑 皇家特許通行證與禮包</h3>
+          <h3 style="font-size:var(--font-h2); color:#fbbf24; margin-top:4px;" id="shop-txt-header-passes" data-i18n="shop_header_passes">👑 皇家特許通行證與禮包</h3>
           <div class="shop-grid" style="grid-template-columns: repeat(2, 1fr); gap:10px;">
             <!-- 4. Infinite Stamina Pass -->
             <div class="shop-item-card">
               <div class="item-pedestal">❤️</div>
               <h4 style="font-size:var(--font-body); font-weight:800; text-align:center; color:#f8fafc;" id="shop-txt-stamina-title" data-i18n="shop_stamina_title">無限體力通行證</h4>
               <p style="font-size:var(--font-caption); color:#94a3b8; text-align:center; min-height:36px;" id="shop-txt-stamina-desc" data-i18n="shop_stamina_desc">遠征失利零負擔，敗戰 0 體力消耗，暢遊 350 大關！</p>
-              <button class="cr-btn cr-btn-purple btn-small" id="shop-btn-stamina-price" style="width:100%;" onclick="alert('❤️ 成功開通【無限體力通行證】！敗戰不再扣除體力！')">NT$ 90 立即開通</button>
+              <button class="cr-btn cr-btn-purple btn-small" id="shop-btn-stamina-price" data-i18n="shop_btn_stamina_price" style="width:100%;" onclick="alert('❤️ 成功開通【無限體力通行證】！敗戰不再扣除體力！')">NT$ 90 立即開通</button>
             </div>
 
             <!-- 5. 50,000 Royal Gold Pouch -->
@@ -1803,7 +1803,7 @@
               <div class="item-pedestal">💰</div>
               <h4 style="font-size:var(--font-body); font-weight:800; text-align:center; color:#f8fafc;" id="shop-txt-gold-title" data-i18n="shop_gold_title">50,000 皇家金幣袋</h4>
               <p style="font-size:var(--font-caption); color:#94a3b8; text-align:center; min-height:36px;" id="shop-txt-gold-desc" data-i18n="shop_gold_desc">王國軍械庫鉅款！直購大量高級裝備，工坊科技狂飆！</p>
-              <button class="cr-btn cr-btn-green btn-small" id="shop-btn-gold-price" style="width:100%;" onclick="alert('💰 儲值成功：獲得 50,000 🪙 + 首購贈禮 5,000 🪙！')">NT$ 60 儲值金幣</button>
+              <button class="cr-btn cr-btn-green btn-small" id="shop-btn-gold-price" data-i18n="shop_btn_gold_price" style="width:100%;" onclick="alert('💰 儲值成功：獲得 50,000 🪙 + 首購贈禮 5,000 🪙！')">NT$ 60 儲值金幣</button>
             </div>
 
 
@@ -1818,47 +1818,47 @@
         <div class="camp-container">
           <div class="camp-banner">
             <div>
-              <h3 style="font-size:var(--font-h1); color:#fbbf24;">王國前進營地</h3>
-              <p style="font-size:var(--font-caption); color:#cbd5e1;">升級打鐵科技、抽裝備與行囊強化</p>
+              <h3 style="font-size:var(--font-h1); color:#fbbf24;" id="camp-txt-title" data-i18n="camp_title">王國前進營地</h3>
+              <p style="font-size:var(--font-caption); color:#cbd5e1;" id="camp-txt-desc" data-i18n="camp_desc">升級打鐵科技、抽裝備與行囊強化</p>
             </div>
             <span style="font-size:3.5rem;">⛺</span>
           </div>
 
-          <h3 style="font-size:var(--font-h2); color:#38bdf8;">營地科技與設施</h3>
+          <h3 style="font-size:var(--font-h2); color:#38bdf8;" id="camp-txt-section" data-i18n="camp_section_title">營地科技與設施</h3>
           
-          <!-- 1. 鐵匠鋪 (提升科技，真實數值) -->
+          <!-- 1. 鐵匠鋪 -->
           <div class="camp-talent-card">
             <div class="talent-icon-box">🔨</div>
             <div style="flex:1;">
-              <h4 style="font-size:var(--font-body); font-weight:800;">皇家鐵匠鋪 LV.3</h4>
-              <p style="font-size:var(--font-caption); color:#94a3b8;">初始棋盤生成裝備基礎階級提升至 T02</p>
+              <h4 style="font-size:var(--font-body); font-weight:800;" id="camp-txt-forge-title" data-i18n="camp_forge_title">皇家鐵匠鋪 LV.3</h4>
+              <p style="font-size:var(--font-caption); color:#94a3b8;" id="camp-txt-forge-desc" data-i18n="camp_forge_desc">初始棋盤生成裝備基礎階級提升至 T02</p>
             </div>
-            <button class="cr-btn cr-btn-green btn-small" onclick="alert('🔨 鐵匠鋪升級成功！')">升級 🪙800</button>
+            <button class="cr-btn cr-btn-green btn-small" id="camp-btn-forge-upgrade" data-i18n="camp_btn_forge" onclick="alert('🔨 鐵匠鋪升級成功！')">升級 🪙800</button>
           </div>
 
-          <!-- 2. 裝備轉蛋機 (標準化對稱按鈕，去除按鍵上重複說明文字) -->
+          <!-- 2. 裝備轉蛋機 -->
           <div class="camp-talent-card" style="flex-direction:column; align-items:stretch; gap:8px;">
             <div style="display:flex; align-items:center; gap:12px;">
               <div class="talent-icon-box">🎰</div>
               <div style="flex:1;">
-                <h4 style="font-size:var(--font-body); font-weight:800;">裝備轉蛋機</h4>
-                <p style="font-size:var(--font-caption); color:#94a3b8;">隨機獲得泥雕神兵；十連抽必得應急道具</p>
+                <h4 style="font-size:var(--font-body); font-weight:800;" id="camp-txt-gacha-title" data-i18n="camp_gacha_title">裝備轉蛋機</h4>
+                <p style="font-size:var(--font-caption); color:#94a3b8;" id="camp-txt-gacha-desc" data-i18n="camp_gacha_desc">隨機獲得泥雕神兵；十連抽必得應急道具</p>
               </div>
             </div>
             <div style="display:flex; gap:8px; width:100%;">
-              <button class="cr-btn cr-btn-purple btn-small" style="flex:1;" onclick="alert('🎰 單抽 (🪙100)：獲得 T02 青銅刃 (4)！')">單抽 🪙100</button>
-              <button class="cr-btn cr-btn-amber btn-small" style="flex:1;" onclick="alert('🎰 十連抽 (🪙1,000)：獲得 10 件裝備！\n🎁 保底贈送應急道具：⏳ 時光沙漏 x1！')">十連抽 🪙1000</button>
+              <button class="cr-btn cr-btn-purple btn-small" id="camp-btn-gacha-single" data-i18n="camp_btn_single" style="flex:1;" onclick="alert('🎰 單抽 (🪙100)：獲得 T02 青銅刃 (4)！')">單抽 🪙100</button>
+              <button class="cr-btn cr-btn-amber btn-small" id="camp-btn-gacha-ten" data-i18n="camp_btn_ten" style="flex:1;" onclick="alert('🎰 十連抽 (🪙1,000)：獲得 10 件裝備！\n🎁 保底贈送應急道具：⏳ 時光沙漏 x1！')">十連抽 🪙1000</button>
             </div>
           </div>
 
-          <!-- 3. 軍需背包 (真實擴充首度2000金幣) -->
+          <!-- 3. 軍需背包 -->
           <div class="camp-talent-card">
             <div class="talent-icon-box">🎒</div>
             <div style="flex:1;">
-              <h4 style="font-size:var(--font-body); font-weight:800;">軍需行囊 (24 ➔ 28格)</h4>
-              <p style="font-size:var(--font-caption); color:#94a3b8;">擴充 4 格裝備庫容量，通關金幣結算額外+20%</p>
+              <h4 style="font-size:var(--font-body); font-weight:800;" id="camp-txt-bag-title" data-i18n="camp_bag_title">軍需行囊 (24 ➔ 28格)</h4>
+              <p style="font-size:var(--font-caption); color:#94a3b8;" id="camp-txt-bag-desc" data-i18n="camp_bag_desc">擴充 4 格裝備庫容量，通關金幣結算額外+20%</p>
             </div>
-            <button class="cr-btn cr-btn-green btn-small" onclick="alert('🎒 行囊擴充成功！容量已提升至 28 格！')">擴充 🪙2000</button>
+            <button class="cr-btn cr-btn-green btn-small" id="camp-btn-bag-expand" data-i18n="camp_btn_expand" onclick="alert('🎒 行囊擴充成功！容量已提升至 28 格！')">擴充 🪙2000</button>
           </div>
         </div>
       </section>
@@ -1953,11 +1953,11 @@
           <div class="sub-tabs-bar">
             <div class="sub-tab-btn active" id="btn-sub-gear" onclick="switchGearSubTab('gear')">
               <span>🛡️</span>
-              <span>裝備庫</span>
+              <span id="tab-txt-gear-armory" data-i18n="gear_tab_inventory">裝備庫</span>
             </div>
             <div class="sub-tab-btn" id="btn-sub-hero" onclick="switchGearSubTab('hero')">
               <span>🙂</span>
-              <span>英雄名單</span>
+              <span id="tab-txt-gear-heroes" data-i18n="gear_tab_heroes">英雄名單</span>
             </div>
           </div>
 
@@ -1966,40 +1966,40 @@
             
             <!-- Active Deployment Module -->
             <div class="active-deploy-box">
-              <div class="deploy-module-title">⚔️ 出擊設置</div>
+              <div class="deploy-module-title" id="gear-txt-deploy-title" data-i18n="gear_deploy_title">⚔️ 出擊設置</div>
               <div class="deploy-slots-row">
-                <!-- Gear Slot (Without redundant Txx) -->
+                <!-- Gear Slot -->
                 <div class="deploy-slot-card">
-                  <span class="slot-name">配戴裝備</span>
+                  <span class="slot-name" id="gear-txt-slot-gear" data-i18n="gear_slot_gear">配戴裝備</span>
                   <div class="slot-visual">
                     <img id="deploy-gear-img" src="assets/images/equipment_clay/equip_09.png" alt="Equipped Gear" />
                   </div>
                   <span style="font-size:var(--font-caption); font-weight:800; color:#fbbf24;" id="deploy-gear-name">聖殿光刃 (512)</span>
-                  <button class="cr-btn cr-btn-purple btn-medium" style="width:85%;" onclick="unequipActiveGear()">解除</button>
+                  <button class="cr-btn cr-btn-purple btn-medium" id="gear-btn-unequip" data-i18n="gear_btn_unequip" style="width:85%;" onclick="unequipActiveGear()">解除</button>
                 </div>
 
                 <!-- Hero Slot -->
                 <div class="deploy-slot-card">
-                  <span class="slot-name">上陣英雄</span>
+                  <span class="slot-name" id="gear-txt-slot-hero" data-i18n="gear_slot_hero">上陣英雄</span>
                   <div class="slot-visual">
                     <img id="deploy-hero-img" src="assets/images/hero_knight/hero_09.png" alt="Equipped Hero" />
                   </div>
                   <span style="font-size:var(--font-caption); font-weight:800; color:#38bdf8;" id="deploy-hero-name">戰士 (LV.5)</span>
-                  <button class="cr-btn cr-btn-amber btn-medium" style="width:85%;" onclick="switchGearSubTab('hero')">更換</button>
+                  <button class="cr-btn cr-btn-amber btn-medium" id="gear-btn-switch-hero" data-i18n="gear_btn_switch_hero" style="width:85%;" onclick="switchGearSubTab('hero')">更換</button>
                 </div>
               </div>
             </div>
 
-            <!-- Standardized Inventory Actions (Order: 1. 轉蛋, 2. 擴充, 3. 一鍵合成) -->
+            <!-- Standardized Inventory Actions -->
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size:var(--font-h2); font-weight:800; color:#cbd5e1;">持有裝備庫</span>
-              <span style="font-size:var(--font-caption); color:#94a3b8;">容量：8 / 24</span>
+              <span style="font-size:var(--font-h2); font-weight:800; color:#cbd5e1;" id="gear-txt-inv-title" data-i18n="gear_inventory_title">持有裝備庫</span>
+              <span style="font-size:var(--font-caption); color:#94a3b8;" id="gear-txt-capacity">容量：8 / 24</span>
             </div>
 
             <div class="inventory-actions-bar">
-              <button class="cr-btn cr-btn-purple" onclick="alert('🎁 前往裝備轉蛋機！')">🎁 裝備轉蛋</button>
-              <button class="cr-btn cr-btn-blue" onclick="alert('📦 花費 1,000 金幣擴充 4 格背包！')">📦 擴充容量</button>
-              <button class="cr-btn cr-btn-green" onclick="alert('✨ 一鍵合成：已自動合併相同裝備！')">✨ 一鍵合成</button>
+              <button class="cr-btn cr-btn-purple" id="gear-btn-act-gacha" data-i18n="gear_btn_gacha" onclick="alert('🎁 前往裝備轉蛋機！')">🎁 裝備轉蛋</button>
+              <button class="cr-btn cr-btn-blue" id="gear-btn-act-expand" data-i18n="gear_btn_expand" onclick="alert('📦 花費 1,000 金幣擴充 4 格背包！')">📦 擴充容量</button>
+              <button class="cr-btn cr-btn-green" id="gear-btn-act-merge" data-i18n="gear_btn_merge" onclick="alert('✨ 一鍵合成：已自動合併相同裝備！')">✨ 一鍵合成</button>
             </div>
 
             <!-- Gear Grid (Bounded, no overflow) -->
@@ -2011,7 +2011,7 @@
 
           <!-- Sub-view 2: 英雄名單 (嚴格保留正統3英雄：戰士、戰地商人、精靈弓手) -->
           <div class="sub-view" id="subview-hero">
-            <h3 style="font-size:var(--font-h1); color:#38bdf8; text-align:center;">王國英雄名單</h3>
+            <h3 style="font-size:var(--font-h1); color:#38bdf8; text-align:center;" id="hero-txt-list-title" data-i18n="hero_list_title">王國英雄名單</h3>
             <div class="hero-list-container">
               
               <!-- 戰士 Hero Card (Matched with 512 Equipment Power) -->
@@ -2078,15 +2078,15 @@
           <div class="comp-tabs-bar">
             <div class="comp-tab-btn active" id="btn-comp-monsters" onclick="switchCompTab('monsters')">
               <span>👾</span>
-              <span>魔物圖鑑</span>
+              <span id="comp-txt-tab-monsters" data-i18n="comp_tab_monsters">魔物圖鑑</span>
             </div>
             <div class="comp-tab-btn" id="btn-comp-heroes" onclick="switchCompTab('heroes')">
               <span>⚔️</span>
-              <span>英雄圖鑑</span>
+              <span id="comp-txt-tab-heroes" data-i18n="comp_tab_heroes">英雄圖鑑</span>
             </div>
             <div class="comp-tab-btn" id="btn-comp-gears" onclick="switchCompTab('gears')">
               <span>🛡️</span>
-              <span>裝備圖鑑</span>
+              <span id="comp-txt-tab-gears" data-i18n="comp_tab_gears">裝備圖鑑</span>
             </div>
           </div>
 
@@ -2097,7 +2097,7 @@
 
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="font-size:var(--font-h2); color:#fbbf24;" id="comp-view-title">魔物收集總覽</h3>
-            <span style="font-size:var(--font-caption); color:#94a3b8;" id="comp-progress-label">完成度</span>
+            <span style="font-size:var(--font-caption); color:#94a3b8;" id="comp-progress-label" data-i18n="comp_progress_lbl">完成度</span>
           </div>
 
           <!-- Progress Bar -->
@@ -2960,7 +2960,7 @@
         <div class="drawer-grid" id="quick-stage-grid">
           <!-- Dynamically populated with 25 stages -->
         </div>
-        <button class="cr-btn cr-btn-purple btn-medium" style="width:100%;" onclick="closeQuickStageDrawer()">完成關閉</button>
+        <button class="cr-btn cr-btn-purple btn-medium" id="drawer-btn-close" data-i18n="drawer_close" style="width:100%;" onclick="closeQuickStageDrawer()">完成關閉</button>
       </div>
     </div>
 
@@ -3006,51 +3006,69 @@
 
   const I18N_DICT = {
     'zh-TW': {
+      // Bottom Navigation
       nav_shop: '商店',
       nav_camp: '軍備',
       nav_adventure: '冒險',
       nav_gear: '裝備',
       nav_compendium: '圖鑑',
       
-      // Top HUD & Resource
+      // Top HUD
       hud_gold: '金幣',
       hud_stamina: '體力',
 
-      // Shop
+      // Shop Tab
       shop_pass_title: '終身免廣告 PASS',
       shop_pass_tag: '🛡️ 尊爵終身特權 · 永久免廣告',
       shop_pass_desc: '永久免除每 3 關插頁廣告！所有廣告獎勵直接「一鍵秒領」無需等待！',
+      shop_btn_pass_price: 'NT$ 150 永久移除廣告',
+      shop_header_daily: '✨ 每日皇家福利',
       shop_daily_free_title: '每日免費軍資箱 (+200🪙)',
       shop_daily_free_desc: '王國軍資每日免費補給 (+200🪙)',
       shop_btn_free: '免費領取',
       shop_ad_title: '福利廣告金幣 (+500🪙)',
       shop_ad_desc: '觀看宣傳短片領取 500 金幣！（免廣告 PASS 玩家點擊秒領）',
       shop_ad_btn: '觀看廣告',
+      shop_ad_left: '今日剩餘：3 / 3 次',
+      shop_header_passes: '👑 皇家特許通行證與禮包',
       shop_stamina_title: '無限體力通行證',
       shop_stamina_desc: '遠征失利零負擔，敗戰 0 體力消耗，暢遊 350 大關！',
+      shop_btn_stamina_price: 'NT$ 90 立即開通',
       shop_gold_title: '50,000 皇家金幣袋',
       shop_gold_desc: '王國軍械庫鉅款！直購大量高級裝備，工坊科技狂飆！',
-      
-      // Buttons
-      btn_deploy: '⚔️ 出擊',
-      btn_stage_deploy: '⚔️ 出擊',
-      btn_hero_assigned: '上陣中',
-      btn_hero_assign: '指派上陣',
-      btn_assign_deploy: '🛡️ 指派上陣',
-      btn_upgrade: '🔨 升級',
-      
+      shop_btn_gold_price: 'NT$ 60 儲值金幣',
+
+      // Camp Tab (軍備)
+      camp_title: '王國前進營地',
+      camp_desc: '升級打鐵科技、抽裝備與行囊強化',
+      camp_section_title: '營地科技與設施',
+      camp_forge_title: '皇家鐵匠鋪 LV.3',
+      camp_forge_desc: '初始棋盤生成裝備基礎階級提升至 T02',
+      camp_btn_forge: '升級 🪙800',
+      camp_gacha_title: '裝備轉蛋機',
+      camp_gacha_desc: '隨機獲得泥雕神兵；十連抽必得應急道具',
+      camp_btn_single: '單抽 🪙100',
+      camp_btn_ten: '十連抽 🪙1000',
+      camp_bag_title: '軍需行囊 (24 ➔ 28格)',
+      camp_bag_desc: '擴充 4 格裝備庫容量，通關金幣結算額外+20%',
+      camp_btn_expand: '擴充 🪙2000',
+
       // Adventure Screen
-      chapter_1: '第一章：林地平原',
-      chapter_2: '第二章：荒漠峽谷',
-      chapter_3: '第三章：星穹之巔',
+      chapter_1: '第一章：微風之境',
+      chapter_2: '第二章：灼熱熔岩',
+      chapter_3: '第三章：孤峰岩地',
+      chapter_4: '第四章：蛛魔荒漠',
+      chapter_5: '第五章：遠古地宮',
       adv_rec_power: '推薦戰力',
       adv_first_clear: '首通金幣獎勵',
       adv_stage_info: '關卡詳細情報',
       adv_details: '詳情 ℹ️',
+      btn_deploy: '⚔️ 出擊！',
+      btn_stage_deploy: '⚔️ 出擊',
       boss_prefix: '首領',
       gear_power_suffix: '裝備',
       gold_suffix: '金幣',
-      
+
       // Quick Stage Drawer
       drawer_quick_jump: '快速跳轉關卡',
       drawer_quick_tip: '點選已通關關卡進行切換',
@@ -3065,6 +3083,32 @@
       stage_gears_title: '場景資源 (裝備品 3 格)：',
       stage_first_gold_title: '🪙 初次通關獎勵：',
       stage_tactical_tip: '💡 攻略提示：使用戰士十字碎裂清除四周卡位金幣！',
+
+      // Gear & Heroes Tab (裝備)
+      gear_tab_inventory: '裝備庫',
+      gear_tab_heroes: '英雄名單',
+      gear_deploy_title: '⚔️ 出擊設置',
+      gear_slot_gear: '配戴裝備',
+      gear_slot_hero: '上陣英雄',
+      gear_btn_unequip: '解除',
+      gear_btn_switch_hero: '更換',
+      gear_inventory_title: '持有裝備庫',
+      gear_capacity_label: '容量：8 / 24',
+      gear_btn_gacha: '🎁 裝備轉蛋',
+      gear_btn_expand: '📦 擴充容量',
+      gear_btn_merge: '✨ 一鍵合成',
+      hero_list_title: '王國英雄名單',
+      btn_hero_assigned: '上陣中',
+      btn_hero_assign: '指派上陣',
+      btn_assign_deploy: '🛡️ 指派上陣',
+      btn_upgrade: '🔨 升級',
+
+      // Compendium Tab (圖鑑)
+      comp_tab_monsters: '魔物圖鑑',
+      comp_tab_heroes: '英雄圖鑑',
+      comp_tab_gears: '裝備圖鑑',
+      comp_progress_lbl: '完成度',
+      comp_unlocked_fmt: '已解鎖',
 
       // Settings Modal
       settings_title: '⚙️ 遊戲設定',
@@ -3084,47 +3128,65 @@
       settings_close: '確定關閉'
     },
     'en-US': {
+      // Bottom Navigation
       nav_shop: 'Shop',
       nav_camp: 'Camp',
       nav_adventure: 'Battle',
       nav_gear: 'Gear',
       nav_compendium: 'Archive',
 
-      // Top HUD & Resource
+      // Top HUD
       hud_gold: 'Gold',
       hud_stamina: 'Energy',
 
-      // Shop
+      // Shop Tab
       shop_pass_title: 'Lifetime No-Ads PASS',
       shop_pass_tag: '🛡️ VIP LIFETIME · PERMANENT NO ADS',
       shop_pass_desc: 'Permanently remove interstitial ads! Claim all bonus rewards instantly without waiting!',
+      shop_btn_pass_price: 'NT$ 150 Permanent No-Ads',
+      shop_header_daily: '✨ Daily Royal Benefits',
       shop_daily_free_title: 'Daily Supply Chest (+200🪙)',
       shop_daily_free_desc: 'Free daily kingdom military grant (+200🪙)',
       shop_btn_free: 'Claim Free',
       shop_ad_title: 'Bonus Ad Gold (+500🪙)',
       shop_ad_desc: 'Watch promo to get 500 gold! (Instant claim for No-Ads PASS owners)',
       shop_ad_btn: 'Watch Ad',
+      shop_ad_left: 'Daily Left: 3 / 3',
+      shop_header_passes: '👑 Royal Season Pass & Bundles',
       shop_stamina_title: 'Infinite Stamina Pass',
       shop_stamina_desc: 'Zero defeat penalty! 0 Stamina lost on loss, conquer all 350 stages!',
+      shop_btn_stamina_price: 'NT$ 90 Unlock Now',
       shop_gold_title: '50,000 Royal Gold Pouch',
       shop_gold_desc: 'Instant treasury wealth! Buy high-tier gears and rush workshop tech!',
+      shop_btn_gold_price: 'NT$ 60 Refill Gold',
 
-      // Buttons
-      btn_deploy: '⚔️ BATTLE',
-      btn_stage_deploy: '⚔️ BATTLE',
-      btn_hero_assigned: 'ASSIGNED',
-      btn_hero_assign: 'ASSIGN',
-      btn_assign_deploy: '🛡️ ASSIGN HERO',
-      btn_upgrade: '🔨 UPGRADE',
+      // Camp Tab (軍備)
+      camp_title: 'Kingdom Forward Camp',
+      camp_desc: 'Upgrade blacksmith tech, pull gears & expand backpack',
+      camp_section_title: 'Camp Facilities & Tech',
+      camp_forge_title: 'Royal Blacksmith LV.3',
+      camp_forge_desc: 'Board base equipment generation upgraded to T02',
+      camp_btn_forge: 'Upgrade 🪙800',
+      camp_gacha_title: 'Equipment Gacha',
+      camp_gacha_desc: 'Random clay gear drops; 10-pull guarantees emergency item',
+      camp_btn_single: 'Single 🪙100',
+      camp_btn_ten: '10x Pull 🪙1000',
+      camp_bag_title: 'Military Backpack (24 ➔ 28)',
+      camp_bag_desc: 'Expand 4 gear warehouse slots, +20% victory gold bonus',
+      camp_btn_expand: 'Expand 🪙2000',
 
       // Adventure Screen
-      chapter_1: 'Chapter 1: Woodland Plains',
-      chapter_2: 'Chapter 2: Arid Canyon',
-      chapter_3: 'Chapter 3: Astral Peak',
+      chapter_1: 'Chapter 1: Breeze Realm',
+      chapter_2: 'Chapter 2: Scorching Lava',
+      chapter_3: 'Chapter 3: Lone Crag',
+      chapter_4: 'Chapter 4: Spider Desert',
+      chapter_5: 'Chapter 5: Ancient Crypt',
       adv_rec_power: 'Rec. Power',
       adv_first_clear: 'First Clear',
       adv_stage_info: 'Stage Info',
       adv_details: 'Details ℹ️',
+      btn_deploy: '⚔️ BATTLE!',
+      btn_stage_deploy: '⚔️ BATTLE',
       boss_prefix: 'Boss',
       gear_power_suffix: 'Gear',
       gold_suffix: 'Gold',
@@ -3143,6 +3205,32 @@
       stage_gears_title: 'Stage Resources (3 Gears):',
       stage_first_gold_title: '🪙 First Clear Reward:',
       stage_tactical_tip: '💡 Tactical Tip: Use warrior cross cleave to clear blocking coins!',
+
+      // Gear & Heroes Tab (裝備)
+      gear_tab_inventory: 'Inventory',
+      gear_tab_heroes: 'Hero Roster',
+      gear_deploy_title: '⚔️ Battle Deployment',
+      gear_slot_gear: 'Equipped Gear',
+      gear_slot_hero: 'Assigned Hero',
+      gear_btn_unequip: 'Unequip',
+      gear_btn_switch_hero: 'Switch',
+      gear_inventory_title: 'Gear Inventory',
+      gear_capacity_label: 'Capacity: 8 / 24',
+      gear_btn_gacha: '🎁 Gear Gacha',
+      gear_btn_expand: '📦 Expand Space',
+      gear_btn_merge: '✨ Auto Merge',
+      hero_list_title: 'Kingdom Hero Roster',
+      btn_hero_assigned: 'ASSIGNED',
+      btn_hero_assign: 'ASSIGN',
+      btn_assign_deploy: '🛡️ ASSIGN HERO',
+      btn_upgrade: '🔨 UPGRADE',
+
+      // Compendium Tab (圖鑑)
+      comp_tab_monsters: 'Monsters',
+      comp_tab_heroes: 'Heroes',
+      comp_tab_gears: 'Gears',
+      comp_progress_lbl: 'Progress',
+      comp_unlocked_fmt: 'Unlocked',
 
       // Settings Modal
       settings_title: '⚙️ Game Settings',
@@ -3190,8 +3278,11 @@ function setLanguage(lang) {
     // Update bottom deploy buttons if open
     updateModalDeployButtons();
 
-    // Re-render adventure hub with new language
+    // Re-render adventure hub, compendium and gear capacity
     renderAdventureStage();
+    renderCompendiumView();
+    const capEl = document.getElementById('gear-txt-capacity');
+    if (capEl) capEl.textContent = `${t('gear_capacity_label')}`;
   }
 
   function changeLanguageFromSelect(lang) {
@@ -3246,41 +3337,78 @@ function setLanguage(lang) {
     25: { name: '荒漠最高峰', bossIcon: '👑', bossName: '荒漠霸王龍', val: 512, power: '4096 裝備', gold: 3000 }
   };
 
-  // Chapter Monster Artwork mapping table
-  const BOSS_ART_MAP = {
-    8:   { nameZh: '草地史萊姆', nameEn: 'Meadow Slime', img: 'assets/images/monsters_clay/monster_ch01_08.png', icon: '🟢' },
-    16:  { nameZh: '野生史萊姆', nameEn: 'Wild Slime', img: 'assets/images/monsters_clay/monster_ch01_16.png', icon: '🦠' },
-    32:  { nameZh: '劇毒大毒菇', nameEn: 'Poison Toadstool', img: 'assets/images/monsters_clay/monster_ch01_32.png', icon: '🍄' },
-    64:  { nameZh: '森林巨狼', nameEn: 'Forest Great Wolf', img: 'assets/images/monsters_clay/monster_ch02_64.png', icon: '🐺' },
-    128: { nameZh: '沙漠巨蠍', nameEn: 'Desert Giant Scorpion', img: 'assets/images/monsters_clay/monster_ch02_128.png', icon: '🦂' },
-    256: { nameZh: '古墓石蛛', nameEn: 'Ancient Tomb Spider', img: 'assets/images/monsters_clay/monster_ch02_256.png', icon: '🕷️' },
-    512: { nameZh: '荒漠霸王龍', nameEn: 'Dune Tyrannosaur', img: 'assets/images/monsters_clay/monster_ch02_512.png', icon: '👑' },
-    1024:{ nameZh: '山嶺石巨人', nameEn: 'Mountain Stone Titan', img: 'assets/images/monsters_clay/monster_ch03_1024.png', icon: '🪨' },
-    2048:{ nameZh: '岩地霸主', nameEn: 'Crag Overlord', img: 'assets/images/monsters_clay/monster_ch03_2048.png', icon: '👑' }
+  // Chapter Monster Artwork mapping table (100% aligned with CHAPTER_MONSTER_POOLS)
+  const CHAPTER_MONSTER_DATABASE = {
+    1: {
+      nameZh: '第一章：微風之境', nameEn: 'Chapter 1: Breeze Realm',
+      monsters: {
+        2:  { nameZh: '洞穴蝙蝠', nameEn: 'Cave Bat', img: 'assets/images/monsters_clay/monster_ch01_02.png' },
+        4:  { nameZh: '森林幼狼', nameEn: 'Forest Pup', img: 'assets/images/monsters_clay/monster_ch01_04.png' },
+        8:  { nameZh: '哥布林斥候', nameEn: 'Goblin Scout', img: 'assets/images/monsters_clay/monster_ch01_08.png' },
+        16: { nameZh: '野生史萊姆', nameEn: 'Wild Slime', img: 'assets/images/monsters_clay/monster_ch01_16.png' },
+        32: { nameZh: '獸人督軍', nameEn: 'Orc Warlord', img: 'assets/images/monsters_clay/monster_ch01_32.png' },
+        64: { nameZh: '森林巨狼', nameEn: 'Forest Great Wolf', img: 'assets/images/monsters_clay/monster_ch02_64.png' }
+      }
+    },
+    2: {
+      nameZh: '第二章：灼熱熔岩', nameEn: 'Chapter 2: Scorching Lava',
+      monsters: {
+        16:  { nameZh: '火苗蜥蜴', nameEn: 'Flame Lizard', img: 'assets/images/monsters_clay/monster_ch02_16.png' },
+        32:  { nameZh: '熔岩火靈', nameEn: 'Lava Spirit', img: 'assets/images/monsters_clay/monster_ch02_32.png' },
+        64:  { nameZh: '熔岩史萊姆', nameEn: 'Lava Slime', img: 'assets/images/monsters_clay/monster_ch02_64.png' },
+        128: { nameZh: '炎魔督軍', nameEn: 'Flame Demon Warlord', img: 'assets/images/monsters_clay/monster_ch02_128.png' },
+        256: { nameZh: '赤炎巨魔', nameEn: 'Blazing Troll', img: 'assets/images/monsters_clay/monster_ch02_256.png' },
+        512: { nameZh: '黑曜熔岩龍', nameEn: 'Obsidian Magma Dragon', img: 'assets/images/monsters_clay/monster_ch02_512.png' }
+      }
+    },
+    3: {
+      nameZh: '第三章：孤峰岩地', nameEn: 'Chapter 3: Lone Crag',
+      monsters: {
+        64:   { nameZh: '懸崖強盜', nameEn: 'Cliff Bandit', img: 'assets/images/monsters_clay/monster_ch03_64.png' },
+        128:  { nameZh: '落石石像鬼', nameEn: 'Falling Stone Gargoyle', img: 'assets/images/monsters_clay/monster_ch03_128.png' },
+        256:  { nameZh: '岩穴巨蜥', nameEn: 'Crag Giant Lizard', img: 'assets/images/monsters_clay/monster_ch03_256.png' },
+        512:  { nameZh: '石魔守衛', nameEn: 'Stone Golem Guard', img: 'assets/images/monsters_clay/monster_ch03_512.png' },
+        1024: { nameZh: '山嶺巨人', nameEn: 'Mountain Colossus', img: 'assets/images/monsters_clay/monster_ch03_1024.png' },
+        2048: { nameZh: '岩地霸主', nameEn: 'Crag Overlord', img: 'assets/images/monsters_clay/monster_ch03_2048.png' }
+      }
+    }
   };
 
+  function getStageChapter(s) {
+    if (s <= 10) return 1;
+    if (s <= 20) return 2;
+    return 3;
+  }
+
   function getStageDef(s) {
-    if (STAGE_CONFIGS[s]) {
-      const conf = STAGE_CONFIGS[s];
-      const bossMeta = BOSS_ART_MAP[conf.val] || { img: 'assets/images/monsters_clay/monster_ch02_64.png', icon: conf.bossIcon };
-      return {
-        ...conf,
-        bossImg: bossMeta.img,
-        bossNameZh: conf.bossName,
-        bossNameEn: bossMeta.nameEn || conf.bossName
-      };
+    const ch = getStageChapter(s);
+    const chData = CHAPTER_MONSTER_DATABASE[ch] || CHAPTER_MONSTER_DATABASE[1];
+    
+    // Calculate stage boss power value
+    let val = 64;
+    if (ch === 1) {
+      val = Math.min(64, Math.pow(2, Math.floor((s - 1) / 2) + 3));
+    } else if (ch === 2) {
+      val = Math.min(512, Math.pow(2, Math.floor((s - 11) / 2) + 4));
+    } else {
+      val = Math.min(2048, Math.pow(2, Math.floor((s - 21) / 2) + 6));
     }
-    const val = Math.min(2048, Math.pow(2, Math.floor(s / 3) + 2));
-    const bossMeta = BOSS_ART_MAP[val] || { nameZh: `狂暴野獸 S${s}`, nameEn: `Wild Beast S${s}`, img: 'assets/images/monsters_clay/monster_ch02_64.png', icon: '🐺' };
+
+    // Retrieve chapter-specific monster data
+    const mData = chData.monsters[val] || Object.values(chData.monsters)[0];
+    const bossNameZh = mData.nameZh;
+    const bossNameEn = mData.nameEn;
+    const bossName = (currentLanguage === 'en-US') ? bossNameEn : bossNameZh;
+    const bossImg = mData.img;
+
     return {
-      name: `幽暗密林 ${s}`,
-      bossIcon: bossMeta.icon,
-      bossImg: bossMeta.img,
-      bossName: (currentLanguage === 'en-US') ? bossMeta.nameEn : bossMeta.nameZh,
-      bossNameZh: bossMeta.nameZh,
-      bossNameEn: bossMeta.nameEn,
+      chapterId: ch,
+      chapterName: (currentLanguage === 'en-US') ? chData.nameEn : chData.nameZh,
       val: val,
-      power: `${val * 2} ${t('gear_power_suffix')}`,
+      bossImg: bossImg,
+      bossNameZh: bossNameZh,
+      bossNameEn: bossNameEn,
+      bossName: bossName,
       gold: 1000 + s * 45
     };
   }
@@ -3367,12 +3495,15 @@ function setLanguage(lang) {
       const cell = document.createElement('div');
       cell.className = 'drawer-cell';
 
+      const progTxt = t('drawer_progress', '🚩進度');
+      const selTxt = t('drawer_selecting', '選擇中');
+
       if (s < MAX_UNLOCKED_STAGE) {
         cell.classList.add('cleared');
         cell.innerHTML = `<span>${s}</span><span style="font-size:0.55rem; color:#34d399;">✔️</span>`;
       } else if (s === MAX_UNLOCKED_STAGE) {
         cell.classList.add('progress');
-        cell.innerHTML = `<span>${s}</span><span style="font-size:0.52rem; color:#fbbf24;">🚩進度</span>`;
+        cell.innerHTML = `<span>${s}</span><span style="font-size:0.52rem; color:#fbbf24;">${progTxt}</span>`;
       } else {
         cell.classList.add('locked');
         cell.innerHTML = `<span>🔒</span>`;
@@ -3380,7 +3511,7 @@ function setLanguage(lang) {
 
       if (s === currentSelectedStage) {
         cell.classList.add('selected');
-        cell.innerHTML = `<span>${s}</span><span style="font-size:0.52rem; color:#ffffff;">選擇中</span>`;
+        cell.innerHTML = `<span>${s}</span><span style="font-size:0.52rem; color:#ffffff;">${selTxt}</span>`;
       }
 
       cell.onclick = () => {
