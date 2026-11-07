@@ -394,7 +394,10 @@ export class GwtRunner {
       this.testGwt137_2_CascadingGearUnlockAndIndependentHeroProgression.bind(this),
       // C-STORY-138: 雙軌整合沙盒入口 index_v2.html 與路由切換控制器
       this.testGwt138_1_DualTrackIntegratedSandboxStructureAndFiles.bind(this),
-      this.testGwt138_2_AppStateRouterLobbyAndCombatTransition.bind(this)
+      this.testGwt138_2_AppStateRouterLobbyAndCombatTransition.bind(this),
+      // C-STORY-139: 沙盒全面真實化——深層對接核心業務邏輯
+      this.testGwt139_1_RealMetagameDataBindingsAndCampUpgrades.bind(this),
+      this.testGwt139_2_RealGachaInventoryAndKeyboardInputControls.bind(this)
     ];
 
     for (const test of testCases) {
@@ -7106,6 +7109,65 @@ export class GwtRunner {
     // 3. Wires startCombat and exitCombat
     this.assert(mainV2Text.includes("startCombat(stageId)") && mainV2Text.includes("exitCombat()"), 'Implements startCombat and exitCombat');
     this.assert(mainV2Text.includes("window.launchStageBattle ="), 'Hooks into window.launchStageBattle');
+  }
+
+  // =========================================================================
+  // C-STORY-139: 沙盒全面真實化——深層對接核心業務邏輯
+  // =========================================================================
+
+  // C-STORY-139 GWT 139.1: 冒險真實關卡導航 ＆ 每日任務簽到持久化 ＆ 軍備升級扣款
+  async testGwt139_1_RealMetagameDataBindingsAndCampUpgrades() {
+    let uiLogicText = '';
+    let indexV2Text = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp1 = await fetch('./proto_ui_logic.js');
+        if (resp1.ok) uiLogicText = await resp1.text();
+        const resp2 = await fetch('./index_v2.html');
+        if (resp2.ok) indexV2Text = await resp2.text();
+      } catch (e) {}
+    }
+
+    // 1. Dynamic stage navigation based on maxUnlockedStage
+    this.assert(uiLogicText.includes('getMaxUnlocked()') && uiLogicText.includes('changeStageByStep(step)'), 'Adventure navigation uses real getMaxUnlocked');
+
+    // 2. Removal of strategy tips in stage briefing modal
+    this.assert(!indexV2Text.includes('💡 攻略提示'), 'Strategy tip safely removed from stage briefing');
+
+    // 3. Real Camp Upgrades with gold check and persistent storage
+    this.assert(uiLogicText.includes("upgradeCampBuilding(type)") && uiLogicText.includes("rpg_2048_camp_upgrades"), 'Camp upgrades persist to localStorage');
+    this.assert(uiLogicText.includes("sm.gold < cost") && uiLogicText.includes("sm.saveData()"), 'Camp upgrades check gold and call sm.saveData()');
+
+    // 4. Daily loop integration with persistent claimed state
+    this.assert(uiLogicText.includes("dlm.claimSignInReward()") && uiLogicText.includes("今日已簽到"), 'Daily sign-in integrates with DailyLoopManager');
+    this.assert(uiLogicText.includes("dlm.claimQuestReward(qId)"), 'Daily quests integrate with DailyLoopManager');
+  }
+
+  // C-STORY-139 GWT 139.2: 轉蛋機對接 GachaEngine ＆ 裝備背包替換 ＆ 戰鬥鍵盤事件捕獲
+  async testGwt139_2_RealGachaInventoryAndKeyboardInputControls() {
+    let mainV2Text = '';
+    let uiLogicText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp1 = await fetch('./main_v2.js');
+        if (resp1.ok) mainV2Text = await resp1.text();
+        const resp2 = await fetch('./proto_ui_logic.js');
+        if (resp2.ok) uiLogicText = await resp2.text();
+      } catch (e) {}
+    }
+
+    // 1. GachaEngine bridge with single and ten pull
+    this.assert(mainV2Text.includes("performGacha(count)") && mainV2Text.includes("gachaEngine.rollMulti"), 'GachaEngine rollMulti and roll bridged in main_v2');
+    this.assert(mainV2Text.includes("inventoryManager.addItem(tier)"), 'Gacha items added to real InventoryManager');
+
+    // 2. Out-of-combat equipment equipping & swapping
+    this.assert(mainV2Text.includes("equipGearItem(item)") && mainV2Text.includes("rpg_2048_equipped_gear"), 'Equipment swapping persists to localStorage');
+    this.assert(uiLogicText.includes("openQuickGachaModal") && uiLogicText.includes("openUpgradeCapacityModal"), 'Quick Gacha and Capacity modals defined');
+
+    // 3. Keyboard Arrow & WASD Capture in Combat
+    this.assert(mainV2Text.includes("handleKeyDown") && mainV2Text.includes("capture: true"), 'Keyboard event registered with capture: true');
+    this.assert(mainV2Text.includes("e.code === 'ArrowUp'") && mainV2Text.includes("e.code === 'KeyW'"), 'Keyboard checks both e.key and e.code for arrows and WASD');
+    this.assert(mainV2Text.includes("combatOverlay.setAttribute('tabindex', '0')"), 'Combat overlay receives focusable tabindex');
   }
 }
 

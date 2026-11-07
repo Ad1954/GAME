@@ -1,9 +1,12 @@
-// main_v2.js: Integrated Controller & App Router for 2048 RPG Commercial Edition (v2.0)
+// main_v2.js: Real Integrated Controller & Core App Router (C-STORY-139)
 import { GameEventBus } from './src/core/GameEventBus.js';
 import { StageManager } from './src/core/StageManager.js';
 import { ViewRenderer } from './src/presentation/ViewRenderer.js';
 import { AudioEffects } from './src/presentation/AudioEffects.js';
 import { CombatVfxEngine } from './src/presentation/CombatVfxEngine.js';
+import { DailyLoopManager } from './src/core/DailyLoopManager.js';
+import { GachaEngine } from './src/core/GachaEngine.js';
+import { InventoryManager } from './src/core/InventoryManager.js';
 import {
   Direction, TileType, STAGE_CONFIGS, STAGE_0_CONFIG, Events,
   MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS,
@@ -14,9 +17,15 @@ import {
 class AppRouter {
   constructor() {
     this.state = 'LOBBY'; // 'LOBBY' | 'COMBAT'
+    this.STAGE_CONFIGS = STAGE_CONFIGS;
     this.eventBus = new GameEventBus();
     this.stageManager = new StageManager(this.eventBus);
     this.audio = new AudioEffects();
+    this.dailyLoopManager = new DailyLoopManager(this.eventBus);
+
+    // Out-of-Combat Inventory Manager (C-STORY-139)
+    this.initInventoryManager();
+
     this.isSliding = false;
     this.isSkillExecuting = false;
     this.currentAimingItem = null;
@@ -43,26 +52,123 @@ class AppRouter {
 
     this.bindCombatEvents();
     this.bindCombatControls();
-    this.hookLobbyBridge();
     this.syncHud();
+    window.launchStageBattle = (stageId) => this.startCombat(stageId || window.currentSelectedStage || 1);
+
+    // Initial render
+    setTimeout(() => {
+      if (typeof window.renderAdventureStage === 'function') {
+        window.renderAdventureStage();
+      }
+      if (typeof window.renderGearInventory === 'function') {
+        window.renderGearInventory();
+      }
+    }, 100);
   }
 
-  hookLobbyBridge() {
-    // Override the prototype launchStageBattle function to trigger real combat!
-    window.launchStageBattle = (stageId) => {
-      const targetStage = stageId !== undefined ? stageId : (window.currentSelectedStage || 1);
-      this.startCombat(targetStage);
+  // ----------------------------------------------------
+  // INVENTORY & LOADOUT MANAGEMENT (ITEM 6 & 9)
+  // ----------------------------------------------------
+  initInventoryManager() {
+    this.inventoryManager = new InventoryManager(16);
+    const raw = localStorage.getItem('rpg_2048_inventory_v2');
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        this.inventoryManager.items = Array.isArray(parsed) ? parsed : [];
+      } catch (e) {}
+    } else {
+      // Starter Gear for clean new profile
+      this.inventoryManager.addItem(2); // 泥木劍 (2)
+      this.inventoryManager.addItem(4); // 青銅短刃 (4)
+      this.saveInventory();
+    }
+  }
+
+  saveInventory() {
+    localStorage.setItem('rpg_2048_inventory_v2', JSON.stringify(this.inventoryManager.items));
+  }
+
+  getEquippedGear() {
+    const raw = localStorage.getItem('rpg_2048_equipped_gear');
+    if (raw) {
+      try { return JSON.parse(raw); } catch (e) {}
+    }
+    return { id: 'starter_sword', name: '泥木劍', val: 2, img: 'assets/images/equipment_clay/equip_01.png' };
+  }
+
+  equipGearItem(item) {
+    if (!item) return;
+    const gear = {
+      id: item.id,
+      name: `神兵裝備`,
+      val: item.value,
+      img: item.img || 'assets/images/equipment_clay/equip_01.png'
     };
-
-    // Sync HUD with stageManager
+    localStorage.setItem('rpg_2048_equipped_gear', JSON.stringify(gear));
+    this.inventoryManager.equippedItem = gear;
+    if (this.audio) this.audio.playCoin();
     this.syncHud();
   }
 
+  // ----------------------------------------------------
+  // REAL GACHA BRIDGE (ITEM 4)
+  // ----------------------------------------------------
+  performGacha(count) {
+    const cost = count === 1 ? 100 : 900;
+    if (this.stageManager.gold < cost) {
+      alert(`⚠️ 金幣不足！轉蛋需要 ${cost} 🪙，目前僅有 ${this.stageManager.gold} 🪙！`);
+      return { success: false };
+    }
+
+    if (!this.inventoryManager.canAdd(count)) {
+      alert(`⚠️ 背包空間不足！請先前往工坊「擴充容量」或清理裝備！`);
+      return { success: false };
+    }
+
+    this.stageManager.gold -= cost;
+    this.stageManager.saveData();
+
+    const rolledTiers = count === 1
+      ? [this.stageManager.gachaEngine.roll(1)]
+      : this.stageManager.gachaEngine.rollMulti(1, 10);
+    const rolledItems = [];
+
+    rolledTiers.forEach((tier) => {
+      const it = this.inventoryManager.addItem(tier);
+      if (it) {
+        it.name = `神裝`;
+        it.img = `assets/images/equipment_clay/equip_01.png`;
+        rolledItems.push(it);
+      }
+    });
+
+    this.saveInventory();
+    if (this.audio) this.audio.playVictory();
+    this.syncHud();
+
+    return { success: true, items: rolledItems };
+  }
+
+  // ----------------------------------------------------
+  // ROUTER STATE SWITCHING & COMBAT (ITEM 8)
+  // ----------------------------------------------------
   switchAppState(newState) {
     this.state = newState;
     if (newState === 'COMBAT') {
+      // Force hide all modal backdrops
+      document.querySelectorAll('.modal-overlay').forEach(m => {
+        m.classList.remove('active');
+        m.style.display = 'none';
+      });
+
       if (this.lobbyWrapper) this.lobbyWrapper.style.display = 'none';
-      if (this.combatOverlay) this.combatOverlay.style.display = 'flex';
+      if (this.combatOverlay) {
+        this.combatOverlay.style.display = 'flex';
+        this.combatOverlay.setAttribute('tabindex', '0');
+        this.combatOverlay.focus();
+      }
+
       requestAnimationFrame(() => {
         if (this.vfxEngine) this.vfxEngine.resize();
       });
@@ -71,13 +177,14 @@ class AppRouter {
       if (this.lobbyWrapper) this.lobbyWrapper.style.display = 'flex';
       this.syncHud();
 
-      // Refresh Lobby Adventure Map and Compendium with latest progress
-      window.MAX_UNLOCKED_STAGE = this.stageManager.maxUnlockedStage || 1;
       if (typeof window.renderAdventureStage === 'function') {
-        window.renderAdventureStage(window.currentSelectedStage || window.MAX_UNLOCKED_STAGE);
+        window.renderAdventureStage();
       }
       if (typeof window.renderCompendiumView === 'function') {
         window.renderCompendiumView();
+      }
+      if (typeof window.renderGearInventory === 'function') {
+        window.renderGearInventory();
       }
     }
   }
@@ -98,7 +205,10 @@ class AppRouter {
   startCombat(stageId) {
     if (!this.stageManager.canStartStage()) {
       const staminaModal = document.getElementById('modal-stamina-empty');
-      if (staminaModal) staminaModal.style.display = 'flex';
+      if (staminaModal) {
+        staminaModal.classList.add('active');
+        staminaModal.style.display = 'flex';
+      }
       return;
     }
 
@@ -250,20 +360,25 @@ class AppRouter {
       });
     }
 
-    // Keyboard Controls
-    window.addEventListener('keydown', (e) => {
+    // Comprehensive PC Cross / Arrow Keys & WASD Event Listener (Item 8)
+    const handleKeyDown = (e) => {
       if (this.state !== 'COMBAT' || !this.stageManager.isInBattle) return;
+
       let dir = null;
-      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') dir = Direction.UP;
-      else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') dir = Direction.DOWN;
-      else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') dir = Direction.LEFT;
-      else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') dir = Direction.RIGHT;
+      if (e.key === 'ArrowUp' || e.code === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'KeyW') dir = Direction.UP;
+      else if (e.key === 'ArrowDown' || e.code === 'ArrowDown' || e.key === 's' || e.key === 'S' || e.code === 'KeyS') dir = Direction.DOWN;
+      else if (e.key === 'ArrowLeft' || e.code === 'ArrowLeft' || e.key === 'a' || e.key === 'A' || e.code === 'KeyA') dir = Direction.LEFT;
+      else if (e.key === 'ArrowRight' || e.code === 'ArrowRight' || e.key === 'd' || e.key === 'D' || e.code === 'KeyD') dir = Direction.RIGHT;
 
       if (dir) {
         e.preventDefault();
+        e.stopPropagation();
         this.handleMove(dir);
       }
-    });
+    };
+
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    document.addEventListener('keydown', handleKeyDown, { capture: true });
 
     // Touch Swipe Controls
     const combatArea = this.combatOverlay;
@@ -307,18 +422,6 @@ class AppRouter {
     if (btnUndo) {
       btnUndo.addEventListener('click', () => {
         if (this.stageManager.useItem('undo')) this.audio.playUndo();
-      });
-    }
-    const btnHammer = document.getElementById('btn-item-hammer');
-    if (btnHammer) {
-      btnHammer.addEventListener('click', () => {
-        alert('請點擊盤面上的任意非勇者方塊進行破壞！');
-      });
-    }
-    const btnSnipe = document.getElementById('btn-item-snipe');
-    if (btnSnipe) {
-      btnSnipe.addEventListener('click', () => {
-        alert('請點擊盤面上的目標魔物進行狙殺！');
       });
     }
   }

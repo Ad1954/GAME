@@ -103,7 +103,7 @@
       height: 20px;
       background: #000;
       border-radius: 12px;
-      z-index: 100;
+      z-index: 500;
     }
 
     /* Top Persistent Resource Header */
@@ -1714,7 +1714,7 @@
   width: 100%;
   height: 100%;
   background: var(--bg-dark, #090d16);
-  z-index: 100;
+  z-index: 500;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1764,4 +1764,75 @@
   align-items: center;
   justify-content: center;
   z-index: 120;
+}
+
+
+/* ========================================================
+   C-STORY-139 ADDON: QUICK MODALS & GACHA RESULTS
+   ======================================================== */
+.combat-overlay:focus {
+  outline: none;
+}
+
+.quick-modal-box {
+  background: #111827;
+  border: 2px solid #38bdf8;
+  border-radius: 20px;
+  padding: 20px;
+  width: 90%;
+  max-width: 360px;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+}
+
+.gacha-result-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.gacha-item-card {
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 6px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.gacha-item-card img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.gacha-item-card .tier-val {
+  font-size: 0.72rem;
+  font-weight: bold;
+  color: #38bdf8;
+  margin-top: 2px;
+}
+
+.gacha-item-card.rare {
+  border-color: #a855f7;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+}
+
+.gacha-item-card.epic {
+  border-color: #fbbf24;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
+}
+
+.upgrade-capacity-info {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 0.9rem;
+  line-height: 1.6;
 }

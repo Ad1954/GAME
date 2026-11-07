@@ -497,7 +497,7 @@
             </div>
           </div>
           <div style="margin-top:2px;"><span id="modal-txt-gold-lbl" data-i18n="stage_first_gold_title">🪙 初次通關獎勵：</span><strong style="color:#fbbf24; font-size:var(--font-body);" id="modal-gold-reward">1,560 金幣</strong></div>
-          <div style="font-size:var(--font-mini); color:#94a3b8;">💡 攻略提示：使用戰士十字碎裂清除四周卡位金幣！</div>
+          
         </div>
 
         <!-- 統一按鈕文字為「出擊」 -->
@@ -1282,7 +1282,7 @@
     </div>
 
     <!-- OFFICIAL 2048 COMBAT OVERLAY (FULL SCREEN BATTLE) -->
-    <section class="combat-overlay" id="combat-overlay" style="display: none;">
+    <section class="combat-overlay" id="combat-overlay" style="display: none;" tabindex="0">
       <header class="combat-top-bar">
         <button class="btn-combat-back" id="btn-combat-back" title="返回冒險大廳">◀ 大廳</button>
         <div class="combat-stage-info">
@@ -1422,6 +1422,64 @@
           </div>
 
   </div>
+
+  
+    <!-- ========================================================
+         MODAL: 裝備快捷轉蛋 (QUICK GACHA POPUP) - C-STORY-139
+         ======================================================== -->
+    <div class="modal-overlay" id="modal-quick-gacha" onclick="if(event.target===this) closeQuickGachaModal()">
+      <div class="quick-modal-box">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="color:#fbbf24; margin:0; font-size:1.15rem;">🎟️ 神秘裝備轉蛋機</h3>
+          <div class="modal-close-btn" onclick="closeQuickGachaModal()" style="cursor:pointer; color:#94a3b8; font-weight:bold; font-size:1.2rem;">✕</div>
+        </div>
+        <p style="color:#94a3b8; font-size:0.85rem; margin:0;">消耗金幣抽取強大裝備品，直接存入個人背包！</p>
+        <div style="display:flex; gap:10px; margin-top:8px;">
+          <button class="cr-btn cr-btn-purple" style="flex:1; padding:12px 6px;" onclick="handleQuickGachaPull(1)">
+            <span style="font-size:0.88rem;">🎟️ 單抽</span><br>
+            <span style="font-size:0.75rem; color:#fde047;">100 🪙</span>
+          </button>
+          <button class="cr-btn cr-btn-amber" style="flex:1; padding:12px 6px;" onclick="handleQuickGachaPull(10)">
+            <span style="font-size:0.88rem;">🎁 十連抽 (9折)</span><br>
+            <span style="font-size:0.75rem; color:#fef08a;">900 🪙</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         MODAL: 背包容量擴充 (CAPACITY UPGRADE) - C-STORY-139
+         ======================================================== -->
+    <div class="modal-overlay" id="modal-upgrade-capacity" onclick="if(event.target===this) closeUpgradeCapacityModal()">
+      <div class="quick-modal-box">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="color:#38bdf8; margin:0; font-size:1.15rem;">🎒 背包空間擴充</h3>
+          <div class="modal-close-btn" onclick="closeUpgradeCapacityModal()" style="cursor:pointer; color:#94a3b8; font-weight:bold; font-size:1.2rem;">✕</div>
+        </div>
+        <div class="upgrade-capacity-info" id="upgrade-capacity-body">
+          <!-- Populated by JS -->
+        </div>
+        <button class="cr-btn cr-btn-green" id="btn-confirm-upgrade-capacity" style="width:100%; padding:10px;" onclick="handleConfirmCapacityUpgrade()">
+          <span>確認升級</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         MODAL: 轉蛋獲得展示 (GACHA RESULTS DISPLAY) - C-STORY-139
+         ======================================================== -->
+    <div class="modal-overlay" id="modal-gacha-result" onclick="if(event.target===this) closeGachaResultModal()">
+      <div class="quick-modal-box" style="max-width:380px;">
+        <h3 style="color:#fbbf24; text-align:center; margin:0 0 4px 0; font-size:1.2rem;">🎉 轉蛋抽取獲得！</h3>
+        <p style="color:#94a3b8; text-align:center; font-size:0.8rem; margin:0 0 10px 0;">已全數送達您的裝備背包中</p>
+        <div class="gacha-result-grid" id="gacha-result-cards">
+          <!-- Populated by JS -->
+        </div>
+        <button class="cr-btn cr-btn-blue" style="width:100%; padding:10px;" onclick="closeGachaResultModal()">
+          <span>收入裝備背包</span>
+        </button>
+      </div>
+    </div>
 
   <!-- PROTOTYPE METAGAME UI SCRIPT -->
   <script src="proto_ui_logic.js?v=2.0.0"></script>
