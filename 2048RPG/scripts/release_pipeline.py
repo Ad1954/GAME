@@ -72,7 +72,8 @@ def run_pipeline(tag):
         "review_equip_evolution.html", "review_knight_evolution.html",
         "review_samurai_evolution.html", "review_style_matrix_512.html",
         "review_style_tests.html", "review_tiles_matrix.html", "review_weapons.html",
-        "啟動全要素展廳.bat", "啟動製品版.bat", "啟動遊戲.bat"
+        "啟動全要素展廳.bat", "啟動製品版.bat", "啟動遊戲.bat", "啟動遊戲本體.bat",
+        "index_v2.html", "style_v2.css", "main_v2.js", "proto_ui_logic.js", "啟動整合測試版.bat"
     ]
 
     # 複製檔案

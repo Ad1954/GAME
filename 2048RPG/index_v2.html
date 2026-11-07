@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>2048 RPG：王國遠征 (正式整合測試版 v2.0)</title>
+  <link rel="stylesheet" href="style.css?v=1.4.7">
+  <link rel="stylesheet" href="visual_tuning.css">
+  <link rel="stylesheet" href="style_v2.css?v=2.0.0">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #090d16;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .phone-mockup {
+      margin: 0 auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 0 4px #1e293b;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================= PHONE MOCKUP CONTAINER ================= -->
+  <div class="phone-mockup" id="app-container">
+
+    <!-- LOBBY WRAPPER (Top HUD, 5 Tabs, Bottom Nav, Modals) -->
+    <div class="lobby-wrapper" id="lobby-wrapper" style="width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+      <!-- Top Notch -->
+    <div class="phone-notch"></div>
+
+    <!-- Top Persistent Resources Bar -->
+    <header class="phone-header">
+      <div class="resource-capsule stamina" onclick="alert('❤️ 體力：5/5（每20分鐘自然恢復1點）')">
+        <span>❤️</span>
+        <span id="txt-stamina">5 / 5</span>
+      </div>
+      <div class="resource-capsule gold" onclick="alert('🪙 金幣：445,699\n點擊可進入商城儲值！')">
+        <span>🪙</span>
+        <span id="txt-gold">445,699 +</span>
+      </div>
+      <div class="settings-btn" id="btn-open-settings" onclick="openSettingsModal()" title="遊戲設定">⚙️</div>
+    </header>
+
+    <!-- Phone Body (5 Switchable Views) -->
+    <main class="phone-body">
+
+      <!-- ==========================================
+           TAB 1: 💎 商店頁 (SHOP) (100% 正式版 6 大商品對齊)
+           ========================================== -->
+      <section class="tab-view" id="view-shop">
+        <div class="shop-container">
+          <!-- 1. Featured Banner: Lifetime No-Ads Pass -->
+          <div class="shop-banner">
+            <span class="shop-banner-tag" id="shop-txt-pass-tag" data-i18n="shop_pass_tag">🛡️ 尊爵終身特權 · 永久免廣告</span>
+            <div class="shop-banner-center">
+              <div class="shop-card-pedestal">
+                <span style="font-size:2rem;">🚫📺</span>
+                <span style="font-size:0.65rem; color:#fbbf24; font-weight:900;">NO ADS</span>
+              </div>
+              <div>
+                <h3 style="font-size:var(--font-h1); color:#fff;" id="shop-txt-pass-title" data-i18n="shop_pass_title">終身免廣告 PASS</h3>
+                <p style="font-size:var(--font-caption); color:#cbd5e1;" id="shop-txt-pass-desc" data-i18n="shop_pass_desc">永久免除每 3 關插頁廣告！所有廣告獎勵直接「一鍵秒領」無需等待！</p>
+              </div>
+            </div>
+            <button class="cr-btn cr-btn-green btn-small" id="shop-btn-pass-price" data-i18n="shop_btn_pass_price" style="align-self:center; width:70%;" onclick="alert('🎉 恭喜解鎖【終身免廣告 PASS】！永久暢享無廣告遊戲體驗！')">NT$ 150 永久移除廣告</button>
+          </div>
+
+          <!-- Section 1: Daily Free Perks -->
+          <h3 style="font-size:var(--font-h2); color:#38bdf8;" id="shop-txt-header-daily" data-i18n="shop_header_daily">✨ 每日皇家福利</h3>
+          <div class="shop-grid" style="grid-template-columns: 1fr; gap:10px;">
+            <!-- 2. Daily Free Supplies (+200🪙) -->
+            <div class="shop-item-card" style="flex-direction:row; justify-content:space-between; padding:12px 16px;">
+              <div style="display:flex; align-items:center; gap:14px;">
+                <div class="item-pedestal">📦</div>
+                <div>
+                  <h4 style="font-size:var(--font-body); font-weight:800; color:#f8fafc;" id="shop-txt-free-title" data-i18n="shop_daily_free_title">每日免費軍資箱 (+200🪙)</h4>
+                  <p style="font-size:var(--font-caption); color:#94a3b8;" id="shop-txt-free-desc" data-i18n="shop_daily_free_desc">王國軍資每日免費補給 (+200🪙)</p>
+                </div>
+              </div>
+              <button class="cr-btn cr-btn-blue btn-medium" id="shop-btn-free" data-i18n="shop_btn_free" onclick="alert('📦 成功領取每日免費軍資：+200 🪙！')">免費領取</button>
+            </div>
+
+            <!-- 3. Daily Ad Reward (+500🪙, 3 times daily) -->
+            <div class="shop-item-card" style="flex-direction:row; justify-content:space-between; padding:12px 16px;">
+              <div style="display:flex; align-items:center; gap:14px;">
+                <div class="item-pedestal">📺</div>
+                <div>
+                  <h4 style="font-size:var(--font-body); font-weight:800; color:#f8fafc;" id="shop-txt-ad-title" data-i18n="shop_ad_title">福利廣告金幣 (+500🪙)</h4>
+                  <p style="font-size:var(--font-caption); color:#94a3b8;" id="shop-txt-ad-desc" data-i18n="shop_ad_desc">觀看宣傳短片領取 500 金幣！（免廣告 PASS 玩家點擊秒領）</p>
+                  <div style="font-size:var(--font-mini); color:#fbbf24; font-weight:700; margin-top:2px;" id="shop-txt-ad-left" data-i18n="shop_ad_left">今日剩餘：3 / 3 次</div>
+                </div>
+              </div>
+              <button class="cr-btn cr-btn-amber btn-medium" id="shop-btn-ad" data-i18n="shop_ad_btn" onclick="alert('📺 觀看宣傳短片完成：+500 🪙 入袋！')">觀看廣告</button>
+            </div>
+          </div>
+
+          <!-- Section 2: Special Privilege Passes & Packs -->
+          <h3 style="font-size:var(--font-h2); color:#fbbf24; margin-top:4px;" id="shop-txt-header-passes" data-i18n="shop_header_passes">👑 皇家特許通行證與禮包</h3>
+          <div class="shop-grid" style="grid-template-columns: repeat(2, 1fr); gap:10px;">
+            <!-- 4. Infinite Stamina Pass -->
+            <div class="shop-item-card">
+              <div class="item-pedestal">❤️</div>
+              <h4 style="font-size:var(--font-body); font-weight:800; text-align:center; color:#f8fafc;" id="shop-txt-stamina-title" data-i18n="shop_stamina_title">無限體力通行證</h4>
+              <p style="font-size:var(--font-caption); color:#94a3b8; text-align:center; min-height:36px;" id="shop-txt-stamina-desc" data-i18n="shop_stamina_desc">遠征失利零負擔，敗戰 0 體力消耗，暢遊 350 大關！</p>
+              <button class="cr-btn cr-btn-purple btn-small" id="shop-btn-stamina-price" data-i18n="shop_btn_stamina_price" style="width:100%;" onclick="alert('❤️ 成功開通【無限體力通行證】！敗戰不再扣除體力！')">NT$ 90 立即開通</button>
+            </div>
+
+            <!-- 5. 50,000 Royal Gold Pouch -->
+            <div class="shop-item-card">
+              <div class="item-pedestal">💰</div>
+              <h4 style="font-size:var(--font-body); font-weight:800; text-align:center; color:#f8fafc;" id="shop-txt-gold-title" data-i18n="shop_gold_title">50,000 皇家金幣袋</h4>
+              <p style="font-size:var(--font-caption); color:#94a3b8; text-align:center; min-height:36px;" id="shop-txt-gold-desc" data-i18n="shop_gold_desc">王國軍械庫鉅款！直購大量高級裝備，工坊科技狂飆！</p>
+              <button class="cr-btn cr-btn-green btn-small" id="shop-btn-gold-price" data-i18n="shop_btn_gold_price" style="width:100%;" onclick="alert('💰 儲值成功：獲得 50,000 🪙 + 首購贈禮 5,000 🪙！')">NT$ 60 儲值金幣</button>
+            </div>
+
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           TAB 2: ⛺ 軍備頁 (ARMORY / CAMP)
+           ========================================== -->
+      <section class="tab-view" id="view-camp">
+        <div class="camp-container">
+          <div class="camp-banner">
+            <div>
+              <h3 style="font-size:var(--font-h1); color:#fbbf24;" id="camp-txt-title" data-i18n="camp_title">王國前進營地</h3>
+              <p style="font-size:var(--font-caption); color:#cbd5e1;" id="camp-txt-desc" data-i18n="camp_desc">升級打鐵科技、抽裝備與行囊強化</p>
+            </div>
+            <span style="font-size:3.5rem;">⛺</span>
+          </div>
+
+          <h3 style="font-size:var(--font-h2); color:#38bdf8;" id="camp-txt-section" data-i18n="camp_section_title">營地科技與設施</h3>
+          
+          <!-- 1. 鐵匠鋪 -->
+          <div class="camp-talent-card">
+            <div class="talent-icon-box">🔨</div>
+            <div style="flex:1;">
+              <h4 style="font-size:var(--font-body); font-weight:800;" id="camp-txt-forge-title" data-i18n="camp_forge_title">皇家鐵匠鋪 LV.3</h4>
+              <p style="font-size:var(--font-caption); color:#94a3b8;" id="camp-txt-forge-desc" data-i18n="camp_forge_desc">初始棋盤生成裝備基礎階級提升至 T02</p>
+            </div>
+            <button class="cr-btn cr-btn-green btn-small" id="camp-btn-forge-upgrade" data-i18n="camp_btn_forge" onclick="alert('🔨 鐵匠鋪升級成功！')">升級 🪙800</button>
+          </div>
+
+          <!-- 2. 裝備轉蛋機 -->
+          <div class="camp-talent-card" style="flex-direction:column; align-items:stretch; gap:8px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div class="talent-icon-box">🎰</div>
+              <div style="flex:1;">
+                <h4 style="font-size:var(--font-body); font-weight:800;" id="camp-txt-gacha-title" data-i18n="camp_gacha_title">裝備轉蛋機</h4>
+                <p style="font-size:var(--font-caption); color:#94a3b8;" id="camp-txt-gacha-desc" data-i18n="camp_gacha_desc">隨機獲得泥雕神兵；十連抽必得應急道具</p>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px; width:100%;">
+              <button class="cr-btn cr-btn-purple btn-small" id="camp-btn-gacha-single" data-i18n="camp_btn_single" style="flex:1;" onclick="alert('🎰 單抽 (🪙100)：獲得 T02 青銅刃 (4)！')">單抽 🪙100</button>
+              <button class="cr-btn cr-btn-amber btn-small" id="camp-btn-gacha-ten" data-i18n="camp_btn_ten" style="flex:1;" onclick="alert('🎰 十連抽 (🪙1,000)：獲得 10 件裝備！\n🎁 保底贈送應急道具：⏳ 時光沙漏 x1！')">十連抽 🪙1000</button>
+            </div>
+          </div>
+
+          <!-- 3. 軍需背包 -->
+          <div class="camp-talent-card">
+            <div class="talent-icon-box">🎒</div>
+            <div style="flex:1;">
+              <h4 style="font-size:var(--font-body); font-weight:800;" id="camp-txt-bag-title" data-i18n="camp_bag_title">軍需行囊 (24 ➔ 28格)</h4>
+              <p style="font-size:var(--font-caption); color:#94a3b8;" id="camp-txt-bag-desc" data-i18n="camp_bag_desc">擴充 4 格裝備庫容量，通關金幣結算額外+20%</p>
+            </div>
+            <button class="cr-btn cr-btn-green btn-small" id="camp-btn-bag-expand" data-i18n="camp_btn_expand" onclick="alert('🎒 行囊擴充成功！容量已提升至 28 格！')">擴充 🪙2000</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           TAB 3: ⚔️ 冒險主頁 (ADVENTURE HUB) - DEFAULT
+           ========================================== -->
+      <section class="tab-view active" id="view-adventure">
+        <div class="hub-container">
+          
+          <!-- Top Chapter Header with Integrated Stepper (Image 3 Alignment) -->
+          <div class="hub-chapter-header-box">
+            <button class="hub-stage-arrow-btn" id="btn-stage-prev" onclick="changeStageByStep(-1)">◀</button>
+            <div class="hub-chapter-center" onclick="openQuickStageDrawer()">
+              <div class="chapter-tag" id="hub-chap-tag">第一章：林地平原</div>
+              <div class="stage-title">
+                <span id="hub-stage-num">Stage 12</span>
+                <span class="hub-btn-stage-select" title="快速選關">☰</span>
+              </div>
+            </div>
+            <button class="hub-stage-arrow-btn" id="btn-stage-next" onclick="changeStageByStep(1)">▶</button>
+          </div>
+
+          <!-- Arena Master Layout: Left HUD Icon + Center Arena + Right HUD Icon -->
+          <div class="hub-battlefield-layout">
+            
+            <!-- Left Side HUD Action (Actual Implemented: Daily Sign-in Modal) -->
+            <div class="hub-hud-sidebar">
+              <div class="hub-hud-icon-btn" onclick="openDailySignInModal()" title="每日簽到">
+                <span class="icon-glyph">📅</span>
+                <span class="hud-badge-dot"></span>
+              </div>
+            </div>
+
+            <!-- Center Stage Focus Arena Column -->
+            <div class="hub-center-arena-column">
+              <!-- Center Artwork Box (Clickable -> Quick Switch Drawer) -->
+              <div class="stage-artwork-card" onclick="openQuickStageDrawer()">
+                <img class="arena-bg-img" src="assets/images/map_integrated_world_road.jpg" alt="Arena Background" />
+                <div class="arena-boss-container" id="arena-boss-container">
+                  <img id="arena-boss-img" src="assets/images/monsters_clay/monster_ch02_64.png" alt="Boss Artwork" />
+                </div>
+                <div class="arena-badge" id="arena-boss-name">首領：森林巨狼 (64)</div>
+              </div>
+            </div>
+
+            <!-- Right Side HUD Action (Actual Implemented: Daily Quests Modal) -->
+            <div class="hub-hud-sidebar">
+              <div class="hub-hud-icon-btn" onclick="openDailyQuestsModal()" title="冒險任務">
+                <span class="icon-glyph">📜</span>
+                <span class="hud-badge-dot"></span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Stage Brief Info Bar (Clickable -> Stage Detail POPUP, Symmetrical) -->
+          <div class="hub-stage-brief" onclick="openStageDetailModal()">
+            <div class="brief-col">
+              <span class="label" id="txt-brief-power-lbl" data-i18n="adv_rec_power">推薦戰力</span>
+              <span class="val" id="brief-rec-power">2048 裝備</span>
+            </div>
+            <div style="width:1.5px; height:24px; background:#334155; opacity:0.6;"></div>
+            <div class="brief-col">
+              <span class="label" id="txt-brief-gold-lbl" data-i18n="adv_first_clear">首通金幣獎勵</span>
+              <span class="val" style="color:#fbbf24;" id="brief-first-gold">🪙 1,560</span>
+            </div>
+            <div style="width:1.5px; height:24px; background:#334155; opacity:0.6;"></div>
+            <div class="brief-col">
+              <span class="label" id="txt-brief-info-lbl" data-i18n="adv_stage_info">關卡詳細情報</span>
+              <span class="val" style="color:#38bdf8; font-size:var(--font-body);" id="txt-brief-details" data-i18n="adv_details">詳情 ℹ️</span>
+            </div>
+          </div>
+
+          <!-- Giant Heroic Deploy Button (Strictly Clean, No Stamina Text) -->
+          <div class="hub-deploy-section">
+            <button class="cr-btn cr-btn-blue btn-battle-heroic" id="btn-main-battle" onclick="launchStageBattle()">
+              <span id="txt-main-battle" data-i18n="btn_deploy">⚔️ 出擊！</span>
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==========================================
+           TAB 4: 🛡️ 裝備與英雄 (GEAR & HEROES)
+           ========================================== -->
+      <section class="tab-view" id="view-gear">
+        <div class="gear-container">
+          
+          <!-- Sub-tabs Switch -->
+          <div class="sub-tabs-bar">
+            <div class="sub-tab-btn active" id="btn-sub-gear" onclick="switchGearSubTab('gear')">
+              <span>🛡️</span>
+              <span id="tab-txt-gear-armory" data-i18n="gear_tab_inventory">裝備庫</span>
+            </div>
+            <div class="sub-tab-btn" id="btn-sub-hero" onclick="switchGearSubTab('hero')">
+              <span>🙂</span>
+              <span id="tab-txt-gear-heroes" data-i18n="gear_tab_heroes">英雄名單</span>
+            </div>
+          </div>
+
+          <!-- Sub-view 1: 裝備庫 -->
+          <div class="sub-view active" id="subview-gear">
+            
+            <!-- Active Deployment Module -->
+            <div class="active-deploy-box">
+              <div class="deploy-module-title" id="gear-txt-deploy-title" data-i18n="gear_deploy_title">⚔️ 出擊設置</div>
+              <div class="deploy-slots-row">
+                <!-- Gear Slot -->
+                <div class="deploy-slot-card">
+                  <span class="slot-name" id="gear-txt-slot-gear" data-i18n="gear_slot_gear">配戴裝備</span>
+                  <div class="slot-visual">
+                    <img id="deploy-gear-img" src="assets/images/equipment_clay/equip_09.png" alt="Equipped Gear" />
+                  </div>
+                  <span style="font-size:var(--font-caption); font-weight:800; color:#fbbf24;" id="deploy-gear-name">聖殿光刃 (512)</span>
+                  <button class="cr-btn cr-btn-purple btn-medium" id="gear-btn-unequip" data-i18n="gear_btn_unequip" style="width:85%;" onclick="unequipActiveGear()">解除</button>
+                </div>
+
+                <!-- Hero Slot -->
+                <div class="deploy-slot-card">
+                  <span class="slot-name" id="gear-txt-slot-hero" data-i18n="gear_slot_hero">上陣英雄</span>
+                  <div class="slot-visual">
+                    <img id="deploy-hero-img" src="assets/images/hero_knight/hero_09.png" alt="Equipped Hero" />
+                  </div>
+                  <span style="font-size:var(--font-caption); font-weight:800; color:#38bdf8;" id="deploy-hero-name">戰士 (LV.5)</span>
+                  <button class="cr-btn cr-btn-amber btn-medium" id="gear-btn-switch-hero" data-i18n="gear_btn_switch_hero" style="width:85%;" onclick="switchGearSubTab('hero')">更換</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Standardized Inventory Actions -->
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:var(--font-h2); font-weight:800; color:#cbd5e1;" id="gear-txt-inv-title" data-i18n="gear_inventory_title">持有裝備庫</span>
+              <span style="font-size:var(--font-caption); color:#94a3b8;" id="gear-txt-capacity">容量：8 / 24</span>
+            </div>
+
+            <div class="inventory-actions-bar">
+              <button class="cr-btn cr-btn-purple" id="gear-btn-act-gacha" data-i18n="gear_btn_gacha" onclick="alert('🎁 前往裝備轉蛋機！')">🎁 裝備轉蛋</button>
+              <button class="cr-btn cr-btn-blue" id="gear-btn-act-expand" data-i18n="gear_btn_expand" onclick="alert('📦 花費 1,000 金幣擴充 4 格背包！')">📦 擴充容量</button>
+              <button class="cr-btn cr-btn-green" id="gear-btn-act-merge" data-i18n="gear_btn_merge" onclick="alert('✨ 一鍵合成：已自動合併相同裝備！')">✨ 一鍵合成</button>
+            </div>
+
+            <!-- Gear Grid (Bounded, no overflow) -->
+            <div class="gear-grid" id="gear-grid-container">
+              <!-- Dynamically populated -->
+            </div>
+
+          </div>
+
+          <!-- Sub-view 2: 英雄名單 (嚴格保留正統3英雄：戰士、戰地商人、精靈弓手) -->
+          <div class="sub-view" id="subview-hero">
+            <h3 style="font-size:var(--font-h1); color:#38bdf8; text-align:center;" id="hero-txt-list-title" data-i18n="hero_list_title">王國英雄名單</h3>
+            <div class="hero-list-container">
+              
+              <!-- 戰士 Hero Card (Matched with 512 Equipment Power) -->
+              <div class="hero-card active-deployed" id="card-hero-warrior">
+                <div class="hero-hitbox-upper" onclick="openHeroDetailModal('warrior')">
+                  <span class="hero-card-title">戰士 LV.5</span>
+                  <div class="hero-avatar-box">
+                    <img id="avatar-warrior" src="assets/images/hero_knight/hero_09.png" alt="Warrior" />
+                    <div class="info-tag">i</div>
+                  </div>
+                  <div class="hero-skill-label">技能：十字碎裂</div>
+                </div>
+                <div class="hero-actions-lower">
+                  <button class="cr-btn cr-btn-amber" id="btn-deploy-warrior" onclick="deployHero('warrior')">上陣中</button>
+                  <button class="cr-btn cr-btn-disabled" disabled>已滿級</button>
+                </div>
+              </div>
+
+              <!-- 戰地商人 Hero Card (連動佩戴 512 裝備外觀) -->
+              <div class="hero-card" id="card-hero-merchant">
+                <div class="hero-hitbox-upper" onclick="openHeroDetailModal('merchant')">
+                  <span class="hero-card-title">戰地商人 LV.1</span>
+                  <div class="hero-avatar-box">
+                    <img id="avatar-merchant" src="assets/images/hero_knight/hero_09.png" alt="Merchant" />
+                    <div class="info-tag">i</div>
+                  </div>
+                  <div class="hero-skill-label">技能：黃金急召</div>
+                </div>
+                <div class="hero-actions-lower">
+                  <button class="cr-btn cr-btn-blue" id="btn-deploy-merchant" onclick="deployHero('merchant')">指派上陣</button>
+                  <button class="cr-btn cr-btn-green" onclick="alert('🪙 花費 5,000 金幣升級戰地商人！')">升級 🪙5000</button>
+                </div>
+              </div>
+
+              <!-- 精靈弓箭手 Hero Card (連動佩戴 512 裝備外觀) -->
+              <div class="hero-card" id="card-hero-archer">
+                <div class="hero-hitbox-upper" onclick="openHeroDetailModal('archer')">
+                  <span class="hero-card-title">精靈弓手 LV.1</span>
+                  <div class="hero-avatar-box">
+                    <img id="avatar-archer" src="assets/images/hero_knight/hero_09.png" alt="Archer" />
+                    <div class="info-tag">i</div>
+                  </div>
+                  <div class="hero-skill-label">技能：破甲重矢</div>
+                </div>
+                <div class="hero-actions-lower">
+                  <button class="cr-btn cr-btn-blue" id="btn-deploy-archer" onclick="deployHero('archer')">指派上陣</button>
+                  <button class="cr-btn cr-btn-green" onclick="alert('🪙 花費 5,000 金幣升級精靈弓箭手！')">升級 🪙5000</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==========================================
+           TAB 5: 📕 圖鑑頁 (COMPENDIUM)
+           ========================================== -->
+      <section class="tab-view" id="view-compendium">
+        <div class="compendium-container">
+          
+          <!-- Sub-tabs Bar for Compendium -->
+          <div class="comp-tabs-bar">
+            <div class="comp-tab-btn active" id="btn-comp-monsters" onclick="switchCompTab('monsters')">
+              <span>👾</span>
+              <span id="comp-txt-tab-monsters" data-i18n="comp_tab_monsters">魔物圖鑑</span>
+            </div>
+            <div class="comp-tab-btn" id="btn-comp-heroes" onclick="switchCompTab('heroes')">
+              <span>⚔️</span>
+              <span id="comp-txt-tab-heroes" data-i18n="comp_tab_heroes">英雄圖鑑</span>
+            </div>
+            <div class="comp-tab-btn" id="btn-comp-gears" onclick="switchCompTab('gears')">
+              <span>🛡️</span>
+              <span id="comp-txt-tab-gears" data-i18n="comp_tab_gears">裝備圖鑑</span>
+            </div>
+          </div>
+
+          <!-- Collection Conditions Tip Banner -->
+          <div class="comp-tip-box" id="comp-tip-text">
+            💡 提示：於冒險中遭遇過魔物即可解鎖；未滿欄位直接留空不設底板。
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="font-size:var(--font-h2); color:#fbbf24;" id="comp-view-title">魔物收集總覽</h3>
+            <span style="font-size:var(--font-caption); color:#94a3b8;" id="comp-progress-label" data-i18n="comp_progress_lbl">完成度</span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="compendium-progress-bar">
+            <div class="progress-fill" id="comp-progress-fill"></div>
+            <span class="progress-text" id="comp-progress-text">已解鎖 6 / 9 (67%)</span>
+          </div>
+
+          <!-- Compendium Chapters Container (Dynamically Populated) -->
+          <div id="compendium-content-area" style="display:flex; flex-direction:column; gap:14px;">
+            <!-- Chapter sections appended by JavaScript -->
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar (5 Primary Tabs) -->
+    <nav class="phone-nav-bar">
+      <div class="nav-item" onclick="switchMainTab('shop')">
+        <span class="nav-icon">💎</span>
+        <span class="nav-text" id="nav-txt-shop" data-i18n="nav_shop">商店</span>
+      </div>
+      <div class="nav-item" onclick="switchMainTab('camp')">
+        <span class="nav-icon">⛺</span>
+        <span class="nav-text" id="nav-txt-camp" data-i18n="nav_camp">軍備</span>
+      </div>
+      <div class="nav-item active" onclick="switchMainTab('adventure')">
+        <span class="nav-icon">⚔️</span>
+        <span class="nav-text" id="nav-txt-adventure" data-i18n="nav_adventure">冒險</span>
+      </div>
+      <div class="nav-item" onclick="switchMainTab('gear')">
+        <span class="nav-icon">🛡️</span>
+        <span class="nav-text" id="nav-txt-gear" data-i18n="nav_gear">裝備</span>
+      </div>
+      <div class="nav-item" onclick="switchMainTab('compendium')">
+        <span class="nav-icon">📕</span>
+        <span class="nav-text" id="nav-txt-compendium" data-i18n="nav_compendium">圖鑑</span>
+      </div>
+    </nav>
+
+    <!-- ========================================================
+         MODAL 1: 關卡詳細資訊 POPUP (STAGE DETAIL)
+         ======================================================== -->
+    <div class="modal-overlay" id="modal-stage-detail" onclick="if(event.target===this) closeStageDetailModal()">
+      <div class="cr-modal-box" style="gap:10px; max-height:88vh; overflow-y:auto;">
+        <div class="modal-close-btn" onclick="closeStageDetailModal()">✕</div>
+        <h3 style="font-size:var(--font-h1); color:#fbbf24; text-align:center;" id="modal-stage-title">Stage 12 · 關卡情報</h3>
+        
+        <!-- 怪物資訊 -->
+        <div style="background:#1e293b; border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; gap:12px; align-items:center;">
+            <div class="modal-boss-container" id="modal-boss-container">
+            <img id="modal-boss-img" src="assets/images/monsters_clay/monster_ch02_64.png" alt="Modal Boss Artwork" />
+          </div>
+            <div style="flex:1;">
+              <h4 style="font-size:var(--font-h2); color:#f8fafc; margin-bottom:2px;" id="modal-boss-name">首領：森林巨狼 (64)</h4>
+              <p style="font-size:var(--font-caption); color:#38bdf8;" id="modal-stage-objective">作戰目標：消滅盤面所有魔物</p>
+            </div>
+          </div>
+          <!-- 其他怪物 (總數 4 隻) -->
+          <div style="background:#0f172a; border-radius:8px; padding:8px 10px; font-size:var(--font-caption);">
+            <div style="color:#94a3b8; font-weight:700; margin-bottom:4px;" id="modal-txt-minions-lbl" data-i18n="stage_minions_title">其他魔物 (4隻)：</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;" id="modal-minions-list">
+              <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🦇 洞穴蝙蝠 (16)</span>
+              <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🐗 毒牙野豬 (16)</span>
+              <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🐍 沼澤毒蛇 (8)</span>
+              <span class="arena-badge" style="background:#334155; color:#cbd5e1; padding:3px 8px; border-radius:6px; font-weight:700;">🕷️ 刺針蜘蛛 (8)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 場景資源與獎勵 -->
+        <div style="background:#090d16; border-radius:12px; padding:10px 12px; font-size:var(--font-caption); color:#cbd5e1; display:flex; flex-direction:column; gap:6px;">
+          <div>
+            <div style="color:#38bdf8; font-weight:700; margin-bottom:4px;" id="modal-txt-gears-lbl" data-i18n="stage_gears_title">場景資源 (裝備品 3 格)：</div>
+            <div style="display:flex; gap:8px;" id="modal-stage-gears">
+              <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">泥盾靴 (8)</span>
+              <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">青銅刃 (4)</span>
+              <span class="arena-badge" style="background:#1e293b; border:1px solid #3b82f6; color:#93c5fd; padding:3px 8px; border-radius:6px; font-weight:700;">泥木劍 (2)</span>
+            </div>
+          </div>
+          <div style="margin-top:2px;"><span id="modal-txt-gold-lbl" data-i18n="stage_first_gold_title">🪙 初次通關獎勵：</span><strong style="color:#fbbf24; font-size:var(--font-body);" id="modal-gold-reward">1,560 金幣</strong></div>
+          <div style="font-size:var(--font-mini); color:#94a3b8;">💡 攻略提示：使用戰士十字碎裂清除四周卡位金幣！</div>
+        </div>
+
+        <!-- 統一按鈕文字為「出擊」 -->
+        <button class="cr-btn cr-btn-blue btn-large" style="width:100%;" onclick="closeStageDetailModal(); launchStageBattle();">
+          <span id="modal-stage-btn-deploy" data-i18n="btn_stage_deploy">⚔️ 出擊</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         MODAL 0: ⚙️ 遊戲設定視窗 (SETTINGS MODAL WITH I18N LANGUAGE SWITCHER)
+         ======================================================== -->
+    <div class="modal-overlay" id="modal-settings" onclick="if(event.target===this) closeSettingsModal()">
+      <div class="cr-modal-box" style="max-height:86vh; overflow-y:auto; gap:10px;">
+        <div class="modal-close-btn" onclick="closeSettingsModal()">✕</div>
+        <h3 style="font-size:var(--font-h1); color:#38bdf8; text-align:center;" id="settings-txt-title" data-i18n="settings_title">⚙️ 遊戲設定</h3>
+        
+        <!-- 3 Tabs Navigation Bar -->
+        <div class="settings-tabs-bar">
+          <div class="settings-tab-btn active" id="btn-stab-general" onclick="switchSettingTab('general')">
+            <span id="stab-txt-general" data-i18n="stab_general">⚙️ 基本設定</span>
+          </div>
+          <div class="settings-tab-btn" id="btn-stab-changelog" onclick="switchSettingTab('changelog')">
+            <span id="stab-txt-changelog" data-i18n="stab_changelog">📜 更新履歷</span>
+          </div>
+          <div class="settings-tab-btn" id="btn-stab-developer" onclick="switchSettingTab('developer')">
+            <span id="stab-txt-developer" data-i18n="stab_developer">🛠️ 開發測試</span>
+          </div>
+        </div>
+
+        <!-- ================= PANE 1: 基本設定 ================= -->
+        <div class="settings-pane active" id="pane-setting-general">
+          <!-- 1. 語言 (Language) -->
+          <div class="setting-row">
+            <span style="font-weight:700; color:#f8fafc;" id="settings-txt-lang" data-i18n="settings_lang">🌐 語言 (Language)</span>
+            <select id="setting-language-select" class="setting-select" onchange="changeLanguageFromSelect(this.value)">
+              <option value="zh-TW" selected>繁體中文 (Traditional Chinese)</option>
+              <option value="en-US">English (英語)</option>
+            </select>
+          </div>
+
+          <!-- 2. 盤面底板配色 -->
+          <div class="setting-row">
+            <span style="font-weight:700; color:#f8fafc;" id="settings-txt-theme" data-i18n="settings_theme">🎨 盤面底板配色</span>
+            <select id="setting-theme-select" class="setting-select" onchange="alert('🏰 盤面配色已切換為：' + this.options[this.selectedIndex].text)">
+              <option value="kingdom" selected>🏰 王國遠征 (深藍)</option>
+              <option value="cyber">🌌 賽博霓虹 (Cyber)</option>
+              <option value="retro">🕹️ 復古點陣 (Retro)</option>
+              <option value="minimal">⬛ 極簡深邃 (Minimal)</option>
+            </select>
+          </div>
+
+          <!-- 3. 背景音樂 (BGM) -->
+          <div class="setting-row">
+            <span style="font-weight:700; color:#f8fafc;" id="settings-txt-bgm" data-i18n="settings_bgm">🎵 背景音樂</span>
+            <input type="checkbox" id="setting-bgm-toggle" checked style="width:20px; height:20px; cursor:pointer;" onchange="alert(this.checked ? '🎵 背景音樂已開啟' : '🔇 背景音樂已關閉')">
+          </div>
+
+          <!-- 4. 遊戲音效 (SFX) -->
+          <div class="setting-row">
+            <span style="font-weight:700; color:#f8fafc;" id="settings-txt-sfx" data-i18n="settings_sfx">🔊 遊戲音效</span>
+            <input type="checkbox" id="setting-sfx-toggle" checked style="width:20px; height:20px; cursor:pointer;" onchange="alert(this.checked ? '🔊 音效已開啟' : '🔇 音效已靜音')">
+          </div>
+
+          <!-- 5. 清除紀錄 (清除本地存檔) -->
+          <div style="margin-top:6px;">
+            <button class="cr-btn cr-btn-purple btn-medium" id="btn-settings-reset-save" data-i18n="settings_reset_save" style="width:100%; background:linear-gradient(180deg, #991b1b, #7f1d1d); border-color:#ef4444;" onclick="if(confirm('⚠️ 警告：確定要清除本地存檔並重置所有進度嗎？此操作不可逆！')) alert('🗑️ 本地存檔已重置回初始狀態！')">🗑️ 清除本地存檔 (重置紀錄)</button>
+          </div>
+        </div>
+
+        <!-- ================= PANE 2: 更新履歷 ================= -->
+        <div class="settings-pane" id="pane-setting-changelog">
+          <div class="setting-section-header" style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.92rem; font-weight: 800; color: #38bdf8;" id="settings-txt-log-title" data-i18n="settings_log_title">📜 版本更新履歷</span>
+            <span style="font-size: 0.72rem; color: #facc15; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.4); padding: 2px 8px; border-radius: 10px;">v6.9.1</span>
+          </div>
+
+          <!-- Version Changelog Box with Scrollbar -->
+          <div class="version-changelog-box" id="version-changelog-box" style="max-height:260px;">
+          <div class="version-changelog-box" id="version-changelog-box">
+            <!-- C-STORY-108 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-108 (最新)</div>
+              <div class="changelog-title">破壞戰槌規則調優：排除魔物/英雄 ＆ 點選金幣智慧直接兌現且不耗戰槌</div>
+              <ul class="changelog-list">
+                <li>🛡️ 排除魔物與勇者秒殺：破壞戰槌嚴格禁止點擊魔物或勇者，阻擋無效消耗，確立精準重弩唯一的秒怪殺手地位。</li>
+                <li>🪙 金幣智慧直接領取：點選金幣方塊不粉碎浪費，自動執行全額領取兌現入袋並騰出空格，且 100% 保留戰槌數量不扣除！</li>
+              </ul>
+            </div>
+            <!-- C-STORY-107 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-107</div>
+              <div class="changelog-title">每日任務「精良合成」優化為「任意合成 10 次」 ＆ 盤面/倉庫合成即時觸發修復</div>
+              <ul class="changelog-list">
+                <li>🛡️ 每日合成任務改為「任意合成 10 次」：移除單次 128 高階限制，改為累計任意合成 10 次即可領取 300 🪙 與 25 活躍度！</li>
+                <li>⚡ 盤面滑動與倉庫合成全線觸發：修復關卡滑動合成與倉庫手動/一鍵合成未派發 TILE_MERGED 事件的問題，每次合成皆即時更新每日任務進度。</li>
+              </ul>
+            </div>
+            <!-- C-STORY-106 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-106</div>
+              <div class="changelog-title">48 階王國軍備科技擴充 (270萬深水庫) ＆ 全 350 關 800 回合節奏平衡對齊</div>
+              <ul class="changelog-list">
+                <li>🏛️ 科技上限擴充至 48 階 (8 大週期)：盤面基礎產出最高突破至 [512, 1024, 2048]，前期 Cycle 1~2 降價更親民 (僅需 2.4萬 G)，中後期阶梯陡峭拉升至總額 270萬 G！</li>
+                <li>🗡️ 大突破裝備持有門檻雙向支援：每 6 階大突破檢查玩家「穿戴中或背包內持有」之最高裝備 (16 ➔ 65536)，引導裝備與科技雙軌養成。</li>
+                <li>⚖️ 全 350 關出擊參考指標對齊：以第 350 關 800 回合內討伐完成為基準，更新全關卡純參考建議戰力與建議科技階級（挑戰關卡 100% 自由無限制，可隨時裸裝出擊）。</li>
+              </ul>
+            </div>
+            <!-- C-STORY-102 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-102</div>
+              <div class="changelog-title">經濟數值可視化調校工作台 (Economy Studio) ＆ 350 關 CSV 報表 ＆ 26.5萬科技深水庫</div>
+              <ul class="changelog-list">
+                <li>📊 單檔免開 CMD 經濟調校工作台 (economy_studio.html)：支援即時調整每日福利、關卡獎勵斜率、科技倍率、十連抽動態定價與章節勝率，即時繪製收支曲線與匯出 CSV！</li>
+                <li>🎁 每日 3~5 次十連抽福利升級：簽到首日 1,000G 起跳、第 7 天 5,000G＋雙倍戰槌與沙漏；100 活躍全勤寶箱升級發放 600G＋精準重弩 x2＋破壞戰槌 x1！</li>
+                <li>🏛️ 24 階科技深水庫重構 (總額 265,000G)：四大突破升級為 5,000 / 15,000 / 35,000 / 80,000G，有效吸收中後期金幣產出，防止關卡難度過早崩塌。</li>
+              </ul>
+            </div>
+            <!-- C-STORY-101 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-101</div>
+              <div class="changelog-title">每日留存與活躍循環系統（7日簽到 ＆ 每日任務 ＆ 商店免費補給）</div>
+              <ul class="changelog-list">
+                <li>📅 七日之約連續簽到：每天進入大廳領取階梯遞增金幣，第 7 天發放 2000 金幣與「破壞戰槌」神級戰鬥道具，首次登入自動引導彈窗！</li>
+                <li>📜 每日活躍任務矩陣：四項推關順手達成的目標（消滅魔物、合成高階士兵/裝備、開採金幣、遠征場次），每項提供專屬金幣產出與活躍度點數！</li>
+                <li>🏆 100 活躍度全勤大寶箱：當天完成任務填滿 100 活躍度，即刻領取 500 金幣與「精準重弩」大獎，每日 00:00 自動無感跨天重置！</li>
+                <li>📦 皇家寶庫每日免費軍資：商店頂部常駐每日 200 金幣免費補給箱，大廳各活動入口配備智慧紅點提示，養成目標清晰明確。</li>
+              </ul>
+            </div>
+            <!-- C-STORY-100 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-100</div>
+              <div class="changelog-title">商人技能無金幣前置安全攔截 ＆ 破甲重矢 18 片輕量化 ＆ 三大職業專屬必殺音效實裝</div>
+              <ul class="changelog-list">
+                <li>🪙 商人急召無金幣前置攔截：盤面無金幣時主動施放技能，跳出「⚠️ 盤面無金幣可供回收！」警示漂字並立即安全返回，杜絕虛假觸發演出與空放問題，充能完整保留。</li>
+                <li>🏹 破甲重矢 18 片岩石碎片輕量化：命中魔物瞬間的碎片粒子嚴格精簡為 18 片，並移除耗能軟體高斯模糊，徹底消除爆片瞬間 0.4~0.8 秒真實繪圖負擔導致的卡頓。</li>
+                <li>🎵 三大職業專屬 Web Audio 合成音效：徹底移除誤用的戰敗音效，戰士配備「重低音震波裂地音」、弓箭手配備「破空尖嘯貫穿音」、商人配備「五度純金連續琶音」，打擊感與辨識度大幅提升。</li>
+              </ul>
+            </div>
+            <!-- C-STORY-099 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-099</div>
+              <div class="changelog-title">瀕死被動自救有效性智慧判定 ＆ 完整必殺技動態特效聯動</div>
+              <ul class="changelog-list">
+                <li>🏹 弓箭手自救智慧門檻：最強魔物為數字 2（可一擊秒殺消塊騰出空位）時才觸發破甲重矢自救；若大於 2 則保留 100% 充能不白白浪費，徹底杜絕大招演完依然戰敗的負面體驗</li>
+                <li>⚔️ 戰士與商人自救前置檢核：戰士十字周邊必須存在裝備或金幣、商人盤面必須存在金幣時才觸發自救，確保每一次自救必定實質開闢生路</li>
+                <li>💥 絕處逢生動態特效完整派發：瀕死自救成功時全面調用 CombatVfxEngine，完整播放 120px 激光十字岩崩、天頂極光流星秒殺或 3D 金幣狂潮物理特效，逆轉絕境體驗拉滿</li>
+              </ul>
+            </div>
+            <!-- C-STORY-098 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-098</div>
+              <div class="changelog-title">必殺技畫布動態網格錨定修復 ＆ 生命週期防死鎖防護</div>
+              <ul class="changelog-list">
+                <li>🎯 消除左上偏移：畫布自動計算網格相對於父容器的真實 Offset，消滅 Flex 置中導致的 20~40px 左上位移；並支援 data-r 與 data-row 雙重選擇器，100% 精準錨定於英雄角色方塊中心</li>
+                <li>🛡️ 阻斷性死鎖根除：修復 vfxLayer 未定義拋出例外中斷解鎖的缺陷，全面實裝 try...finally 強制解鎖保證，並於關卡進入與退關流程中加入防禦性操作鎖重置，徹底告別操作卡死</li>
+              </ul>
+            </div>
+            <!-- C-STORY-097 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-097</div>
+              <div class="changelog-title">三大職業必殺技高階視覺特效同步移植（大地岩崩、零延遲流星、3D立體翻轉金幣）</div>
+              <ul class="changelog-list">
+                <li>⚔️ 戰士十字碎裂大地岩崩：貫穿十字激光精準定版 120px，粉碎演出全面升級為赭石棕、焦褐、土黃色系之三角形岩崩碎石，盤面邊緣自動截斷光束且不產生無效邊界外爆炸</li>
+                <li>🏹 弓箭手破甲重矢精準離弦：修正初始尾跡溢出錯覺，巨矢自英雄方塊核心沖天，配合 450ms 天頂滯空蓄力感與零延遲碰撞引爆機制，跨盤面打擊感毫秒級精準同步</li>
+                <li>🪙 商人黃金急召3D純金狂潮：告別抽象星光，全面實裝 3D Cel-Shaded 翻轉自旋立體金幣（Tumbling Coins），自帶雙層金屬反光厚度，向上噴發並以拋物弧線奔湧吸入頂部錢包</li>
+              </ul>
+            </div>
+            <!-- C-STORY-096 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-096</div>
+              <div class="changelog-title">Canvas 2D 物理光影與能量爆破引擎（告別 Demo 級特效）</div>
+              <ul class="changelog-list">
+                <li>✨ Canvas 60FPS 物理引擎：建構專屬 CombatVfxEngine，徹底淘汰 Emoji 與陽春細線，實現商業級打擊光效</li>
+                <li>⚔️ 十字碎裂月牙光刃：英雄中心瞬間爆發 4 道帶有金紅光暈（Bloom Glow）的月牙巨氣刃，命中格子引發震盪波與 35 顆衰減碎石火花</li>
+                <li>🏹 破甲重矢魔法流星：高能翡翠光束沖天再疾速墜擊魔物，命中爆發雙重衝擊波圈與 55 顆烈焰光塵粒子，強光覆蓋時折半數字</li>
+                <li>🪙 黃金急召金幣吸入：全場金幣彈跳觸發圓形震波，化為燦金光球群沿物理弧線吸入頂部錢包</li>
+              </ul>
+            </div>
+            <!-- C-STORY-095 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-095</div>
+              <div class="changelog-title">超必殺 Cut-in 特寫演出 ＆ 三大職業方塊動態爆破系統</div>
+              <ul class="changelog-list">
+                <li>🔥 口袋快打風超燃 Cut-in：發動大招時切入 2 頭身黏土高舉神兵去背立繪與燃燒氣芒，半透明背景不遮蔽盤面</li>
+                <li>⚔️ 十字碎裂刀氣四射：英雄中心射出四向金紅刀氣波，命中裝備與金幣引發劇烈震顫爆破後清空</li>
+                <li>🏹 破甲重矢天頂墜砸：魔法巨矢沖天射出、自畫面外垂直砸落目標魔物，趁濃煙火光遮擋瞬間折半數值</li>
+                <li>🪙 黃金急召金幣彈跳：全盤金幣方塊向上彈跳躍起，化為金色流光粒子吸入錢包，跳錢折現</li>
+              </ul>
+            </div>
+            <!-- C-STORY-094 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-094</div>
+              <div class="changelog-title">測試輔助開關：技能開場即滿額就緒 ＆ 正式版撤除列管</div>
+              <ul class="changelog-list">
+                <li>🛠️ 測試專用開關：於設定彈窗提供【技能開場即就緒】切換開關，狀態即時儲存於本機</li>
+                <li>⚡ 開局能量全滿：開啟後進入任何關卡，隊長技能立即充飽 100% 能量並啟動金光呼吸，開場第一步即可手動施放大招</li>
+                <li>📋 正式版撤除列管：已將此測試開關登錄至《商業版正式發布前置清理清單》，確保正式對外版本純淨拔除</li>
+              </ul>
+            </div>
+            <!-- C-STORY-093 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-093</div>
+              <div class="changelog-title">角色特殊能力系統 ＆ 三大職業流派與冷卻步數科技</div>
+              <ul class="changelog-list">
+                <li>👑 三大職業自由切換：大廳「角色」專區實裝戰士、精靈弓箭手、皇家商人三大經典流派自由切換</li>
+                <li>🗡️ 戰士【十字碎裂】：以英雄為中心粉碎上下左右4格裝備與金幣（不傷魔物），滿盤瀕危時自動觸發保命</li>
+                <li>🏹 弓箭手【破甲重矢】：鎖定全場最強 Boss 重創折半（=2 則直接秒殺），純主動進攻大招，無被動保命</li>
+                <li>🪙 商人【黃金急召】：瞬間強制回收盤面所有金幣折現入袋，騰出空格；滿盤瀕危時自動觸發保命</li>
+                <li>⏳ 高階金幣冷卻科技：技能開局從 0 步累積，基礎需 500 回合，可消耗巨額金幣逐步縮減至 100 回合</li>
+                <li>🎯 重弩道具全面調優：無視魔物數值大小直接射殺任意指定魔物，確立跳關殺手鐧地位</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-092 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-092</div>
+              <div class="changelog-title">正式對外商業發布前置清理清單與過渡代碼封存規範</div>
+              <ul class="changelog-list">
+                <li>📋 正式發布清理清單立案：建立發布工程師專用 Pre-Launch Checklist，列管拔除測試期過渡邏輯</li>
+                <li>🛡️ 測試代碼零殘留保護：明確規定正式版拔除 C-STORY-090 單次遷移代碼，依賴純淨 Fallback 確保玩家自訂設定永不被覆蓋</li>
+                <li>🛠️ 物資調試專區管制：規範營地測試物資於公開營運環境切換為隱藏，維護商業數值健全</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-091 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-091</div>
+              <div class="changelog-title">版本更新履歷即時聯動 ＆ 三位一體同步機制建立</div>
+              <ul class="changelog-list">
+                <li>📜 履歷全面同步實裝：設定彈窗完整補齊 C-STORY-087 ~ C-STORY-090 更新履歷，徹底消除「新舊不符」現象</li>
+                <li>🔄 強制聯動同步清單：建立規格文檔、遊戲內履歷與發布管線三位一體同步機制，確保每次更新版本透明公開</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-090 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-090</div>
+              <div class="changelog-title">舊存檔外觀單次自動遷移升級至 v5.2 黏土視覺標準</div>
+              <ul class="changelog-list">
+                <li>✨ 舊玩家無縫遷移：加入一次性版本遷移機制，舊設備開啟自動將外觀設定升級為「微縮模型 ＋ 王國遠征 ＋ 新版純圖」</li>
+                <li>💾 個性化選擇保留：單次升級完成後標記旗標，後續玩家於設定手動切換之風格偏好完全予以保留</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-089 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-089</div>
+              <div class="changelog-title">全域預設外觀視覺升級為「微縮模型 ＋ 王國遠征」桌遊質感</div>
+              <ul class="changelog-list">
+                <li>👑 新玩家預設外觀調整：圖標風格預設為「微縮模型 (黏土浮雕風)」、底板預設為「王國遠征 (深藍暗夜石板)」、方塊文字預設為「新版純圖」</li>
+                <li>🎨 沉浸桌遊公仔體驗：無需手動調整設定，初次踏入王國即可享受高辨識度 3D 黏土微縮戰場</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-088 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-088</div>
+              <div class="changelog-title">iOS / 平板跨裝置自適應優化 ＆ PC 桌面模擬器隔離</div>
+              <ul class="changelog-list">
+                <li>📱 iPhone 14 動態島安全區避讓：頂欄採用 env(safe-area-inset-top) 與底端對齊，徹底消除動態島與通話藥丸遮擋</li>
+                <li>📟 iPad Pro 600px 寬幅視野：平板端容器放寬至 600px、棋盤放寬至 530px，消除兩側巨大黑邊並保持操作流暢</li>
+                <li>💻 PC 桌面端隔離保護：桌上型電腦維持標準 480px 手機模擬框，多端設備響應均勻兼顧</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-087 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-087</div>
+              <div class="changelog-title">版本履歷與標題畫面多端版本號統一</div>
+              <ul class="changelog-list">
+                <li>🏷️ 全域版本號統一：標題畫面與設定彈窗版本標籤全面同步升級至商業發布版</li>
+                <li>🛠️ 歷史履歷重構：梳理 C-STORY-064 至 C-STORY-086 黏土全要素進化歷程</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-086 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-086</div>
+              <div class="changelog-title">黏土魔物穿透圖資優化 ＆ 自適應 60% 容器縮放置中對齊</div>
+              <ul class="changelog-list">
+                <li>✨ 白底接觸陰影完全透空：第 III 章 1024 山嶺巨人與第 IV 章 256~2048 荒漠全系毒蛛徹底消滅白色硬色塊，腳底透明度 100% 自然平滑</li>
+                <li>🛡️ 特殊色重構修復破洞：第 I 章 32 督軍改採純桃紅幕 (#FF00FF) 重新生成與去背，完美修復誤挖獠牙、斧頭簍空與膝蓋破洞</li>
+                <li>📐 棋盤自適應百分比容器：廢除固定死值寬高，全面改為 60% 自適應彈性容器，勇者/裝備/魔物統一錨點居中縮放 (center center)</li>
+                <li>📚 全資產 Prompt 典藏知識庫：建立 CLAY_STYLE_PROMPT_REGISTRY.md (v1.1.0)，納入「手段 A 光照硬隔離」防溢色標準語句與後續重構 Backlog</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-081 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-081</div>
+              <div class="changelog-title">消除魔物雙重縮放 ＆ 棋盤尺寸與展廳示範 100% 精準對齊</div>
+              <ul class="changelog-list">
+                <li>🔍 單次 1.50x 縮放修正：排除父容器雙重 scale(1.5)，盤面魔物體積回歸單次 1.50x，舒適收納於方塊內不再溢出相鄰格</li>
+                <li>🎯 本機樣式表安全聯動：server.py 與 visual_tuning.css 全面同步保護，杜絕調校參數飄移</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-080 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-080</div>
+              <div class="changelog-title">勇者、裝備、魔物三位一體外觀綁定 ＆ 沉浸桌遊體驗</div>
+              <ul class="changelog-list">
+                <li>🎲 三位一體微縮模型：設定選單切換至「微縮模型 (黏土浮雕風)」時，盤面魔物即刻實裝 40 階穿透黏土圖資</li>
+                <li>🔄 乾淨平滑切換：切換至點陣風或原生 Emoji 時，魔物圖資乾淨移除平滑退回對應圖標，無殘留標籤</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-078 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-078</div>
+              <div class="changelog-title">第 VIII 章終焉神域「黑曜天罰與血月日蝕」敵對視覺重構</div>
+              <ul class="changelog-list">
+                <li>⚔️ 極致陣營反差：最終章 3 隻神祇全面換裝「黑曜玄甲 ＋ 猩紅天罰光冕 ＋ 暗金神紋」，徹底消除與玩家白色勇者的視覺混淆</li>
+                <li>👑 終局神皇震撼壓迫：黑羽審判使者 (65536)、黑洞滅世智腦 (131072)、日蝕血月六翼神皇 (262144) 敵對威壓拉滿</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-075 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-075</div>
+              <div class="changelog-title">全 8 大章節 40 階微縮黏土魔物 100% 圓滿閉環</div>
+              <ul class="changelog-list">
+                <li>🏰 全生態池無縫實裝：第 I 章林地至第 VIII 章終焉神域，40 隻魔物全數具備微縮黏土圖資與長方形穿透方塊</li>
+                <li>🧪 零死灰硬塊：全章節圖資內嵌孔洞 100% 穿透透空，達成商業製品級視覺標準</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-064 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-064</div>
+              <div class="changelog-title">全要素可視化調校工作室 ＆ 本機樣式解耦安全一鍵同步</div>
+              <ul class="changelog-list">
+                <li>🎨 要素分類獨立調校：勇者 (0.8~2.0x)、裝備 (0.8~1.8x)、魔物 (0.8~2.0x) 分頁獨立控制，徹底解決不同物件縮放干擾問題</li>
+                <li>💾 一鍵套用至遊戲本體：展廳內可視化調校完成後，點擊一鍵儲存，由本機伺服器安全寫入 visual_tuning.css，遊戲即刻同步生效</li>
+                <li>🛡️ 樣式表解耦安全防護：獨立隔離 visual_tuning.css 樣式表，核心 style.css 零污染，支援隨時一鍵還原預設值</li>
+                <li>🩸 魔物專屬氣場光暈：支援血煞紅光、深淵幽紫、劇毒幽綠與冷白銳利，大幅提升深色底板辨識度</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-063 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-063</div>
+              <div class="changelog-title">實戰長方形 5:6 比例 100% 復刻 ＆ 展廳防溢出捲軸/換行排版</div>
+              <ul class="changelog-list">
+                <li>📐 實戰 5:6 直向長方形比例：比照正式棋盤 (aspect-ratio: 5/6) 規格，將展廳正方形方格全面更正為 58x70px 直向長方形</li>
+                <li>🔢 戰力數值底端疊合排版：數字恢復 1.45rem 飽滿粗體並微覆於角色下緣，完美還原實戰棋盤佈局</li>
+                <li>📑 雙排版模式切換：展廳新增「👉 水平滑動」天藍平滑捲動軸與「📐 自動折行」開關，徹底防堵卡片超出視窗邊緣</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-061 & 062 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-062</div>
+              <div class="changelog-title">全要素色調矩陣展廳 ＆ 雙軌獨立本機伺服器架構</div>
+              <ul class="changelog-list">
+                <li>👑 全要素王國遠征矩陣：T01~T17 同台展示勇者角色、微縮裝備、地牢魔物與金幣色調底板，直觀驗證階梯色彩共鳴</li>
+                <li>🚀 雙軌獨立啟動批次檔：切分「啟動遊戲本體.bat (Port 8081)」與「啟動全要素展廳.bat (Port 8082)」，採用 ANSI (CP950) 編碼杜絕亂碼</li>
+              </ul>
+            </div>
+
+            <!-- C-STORY-060 -->
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-060</div>
+              <div class="changelog-title">微縮模型勇者上半身 1.4x 特寫鏡頭 ＆ 亮白高光貼紙描邊</div>
+              <ul class="changelog-list">
+                <li>🔍 鏡頭放大 1.40 倍特寫：聚焦勇者大頭表情與武器刃部，頭部視覺面積大幅躍升 200%</li>
+                <li>✨ 高反差高光白邊：外加 drop-shadow 雙層貼紙描邊與柔和背後聚光燈，解決烈焰戰狂 (128) 等深色勇者與深色底板融合問題</li>
+              </ul>
+            </div>
+
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-058</div>
+              <div class="changelog-title">4 號勇者冒險短劍因果修正與全階層圖資順移</div>
+              <ul class="changelog-list">
+                <li>⚔️ 合成因果精準對齊：侍從 (2) ＋ 冒險短劍 (2) ＝ 見習戰士 (4)，手持寬刃鋼鐵冒險短劍、身披縫線皮革胸甲，杜絕跳階</li>
+                <li>📦 全階層平滑順移：原 4 號順延為 8 號（低伏架盾），其餘各階向後平移遞延；原 16 階黃金神王晉升為 17 階 (131072) 頂級神皇</li>
+                <li>🛡️ 頂級神祇封頂保護：131,072 與 262,144 自動安全封頂於 17 階神皇模型，杜絕 404 破圖</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-057</div>
+              <div class="changelog-title">全 16 階 2.0 頭身黏土勇者角色與微縮模型裝備雙向綁定</div>
+              <ul class="changelog-list">
+                <li>🗿 微縮模型風格一鍵啟用：設定選單「微縮模型」樣式同步套用 3D 黏土勇者與裝備，打造極致沉浸桌遊公仔質感</li>
+                <li>👀 100% 露臉無閉面盔：全階層嚴格 2.0 頭身 Q 版大頭，生動五官、明亮眼眸與飛揚髮型完全外露</li>
+                <li>⚔️ 舉武器備戰待機架式：全 16 階剪影零重複，告別揮砍殘影，雙腳踏地保持隨時出擊的呼吸待命姿態</li>
+                <li>✨ 洋紅幕智慧 Chroma Key：四肢夾縫孔洞 100% 鏤空，眼白與純白鎧甲高光 100% 零誤傷</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-042</div>
+              <div class="changelog-title">底色圖標雙軌獨立切換、ABCD四風格與大字體重疊排版</div>
+              <ul class="changelog-list">
+                <li>🎨 底色與圖標分離：盤面底板配色與圖標美術風格完全解耦獨立設定，支援任意交叉自由混搭</li>
+                <li>🖼️ 四大美術風格架構：完整支援風格 A(像素點陣)、風格 B(立體Emoji)、風格 C(體素方塊)、風格 D(經典原生Emoji)</li>
+                <li>🔢 數字超大字體保護：戰力文字恢復 1.35rem 飽滿粗體，優先突出數值辨識，圖案垂直置中微透底層</li>
+                <li>⚔️ 16 階暫代武器鑲入：棋盤與 NEXT 預告欄位實裝 256x256 去背裝備立繪，未出圖時自動平滑 Fallback</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-041</div>
+              <div class="changelog-title">下一個登場數字方塊預告 (Next Tile Preview) 機制</div>
+              <ul class="changelog-list">
+                <li>🔮 戰鬥頂端預告視窗：頂端資訊列新增 NEXT 專屬迷你卡牌，即時透視下一手將登場的裝備等級或金幣</li>
+                <li>🎯 決定性精準生成：滑動結算嚴格遵循上一回合預告之裝備階級或金幣生成，告別不確定盲猜</li>
+                <li>⏳ 時光沙漏防刷回溯：使用 Undo 道具時，預告佇列精準回溯至歷史快照狀態，防堵洗牌刷裝</li>
+                <li>✨ 登場翻牌動畫：每次生成後預告卡牌同步翻牌彈跳，金幣黃金流光與裝備外觀生動反饋</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-040</div>
+              <div class="changelog-title">章節列頂部完全釘選、已通關靜態瞬現與關卡視圖模組化解耦</div>
+              <ul class="changelog-list">
+                <li>📌 章節列完全釘選：消除頂部間隙並提高層級，向下滾動時章節切換欄 100% 牢固置頂</li>
+                <li>⚡ 已通關靜態瞬現：切換已全通關章節直接在最底端呈現，杜絕由上往下滑動的視覺穿幫</li>
+                <li>🧩 關卡視圖模組化：獨立封裝 StageListView，隔離 UI 與邏輯，為後續關卡介面全新改版預作無痛抽換準備</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-039</div>
+              <div class="changelog-title">分頁切換自動置頂、冒險章節懸浮與挑戰關卡智慧定位</div>
+              <ul class="changelog-list">
+                <li>🔝 分頁滾動自動重置：點擊底部導航切換至營地、角色、冒險、商店時，視圖自動回彈頂部</li>
+                <li>📌 冒險章節標籤置頂：關卡清單上下滾動時，橫向章節切換欄固定於頂端，隨時切換免折返</li>
+                <li>🎯 最新挑戰智慧定位：持久化最新挑戰關卡，未全通自動置中對齊，全通章節貼心滑動至底部</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-038</div>
+              <div class="changelog-title">英雄魔物光圈復原、受阻微震與滿盤瀕危紅光警示</div>
+              <ul class="changelog-list">
+                <li>✨ 英雄魔物光圈完全恢復：解除裁切限制，5px 粗框伴隨水藍呼吸波浪與鮮紅脈衝光圈</li>
+                <li>📳 無效移動受阻微震：滑動無法合成/移動方向時，全體方塊快速輕震提供物理阻擋反饋</li>
+                <li>🚨 滿盤瀕危邊界紅光：剩餘 1 格或已滿時，戰鬥盤面邊緣脈衝閃爍鮮紅光芒緊急示警</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-037</div>
+              <div class="changelog-title">轉蛋機山形曲線擴展、科技費用重構與十連送道具革新</div>
+              <ul class="changelog-list">
+                <li>🎰 轉蛋機上限開放至 Lv.8：掉落峰值隨等級右移，最高直出 4096 裝備</li>
+                <li>🏛️ 科技費用平滑化：起點降至 600 🪙，大突破降為前階 3 倍，晉階無負擔</li>
+                <li>🎁 十連抽必送道具：每次十連抽必定額外贈送 1 個救急道具（單抽不贈送）</li>
+                <li>💰 初通賞金溫和增溫：Stage 65 賞金達 795 🪙，配合盤面金幣達成單場十連抽</li>
+                <li>⚔️ 裝備上限錨定：背包裝備上限設定為 65536 滿級神器</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-036</div>
+              <div class="changelog-title">Cache Busting 版本戳記與 iOS 主畫面無損熱更新</div>
+              <ul class="changelog-list">
+                <li>🛡️ 資源檔 Cache Busting：CSS 與入口 JS 嚴格注入版本號查詢字串，強制作廢舊快取</li>
+                <li>🔄 設定頁新增「檢查並刷新最新版本」按鈕，支援在主畫面模式下一鍵無損熱更新</li>
+                <li>💾 存檔資料與代碼更新完全隔離，保留全部既有金幣、關卡與裝備進度</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-035</div>
+              <div class="changelog-title">教學手勢重位隱藏與點擊指尖置中校準</div>
+              <ul class="changelog-list">
+                <li>🚫 消除手勢跨盤滑動：手勢重定位時先行隱藏，到達目標座標後瞬現，杜絕飄移干擾</li>
+                <li>🎯 點擊指尖精準校準：垂直補償高度偏移，使 👆 指尖精確指向金幣方塊幾何正中心</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-034</div>
+              <div class="changelog-title">戰敗教官覆盤提點與 2048 RPG 進階門道指南</div>
+              <ul class="changelog-list">
+                <li>🛡️ 戰敗結算新增教官覆盤提點卡片，點出與普通 2048 核心玩法的關鍵差異</li>
+                <li>🗡️ 提點一【先斬強敵】：魔物消滅戰力減半，由強至弱連環擊破以戰養戰</li>
+                <li>🐺 提點二【合怪騰地】：魔物佔地堵盤時主動相撞合體騰出空格，控場解圍</li>
+                <li>🪙 提點三【見好就收】：金幣合成翻倍高收益，擁擠時果斷點擊兌現清空格保命</li>
+                <li>🔄 提點卡片支援點擊切換與「換一則」按鈕，三大心法無縫輪播</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-033</div>
+              <div class="changelog-title">手勢位置優化、金幣收益結算修復、文案精簡與退關放棄機制</div>
+              <ul class="changelog-list">
+                <li>🎯 手指提示位置優化：滑動提示置於方塊下方微觸下緣，點擊領取絕對精準置中</li>
+                <li>🪙 修復教學關卡金幣收益：合成 8 + 點擊 8 完整累加為 16 🪙，初通總計 66 🪙</li>
+                <li>⚔️ 文案精簡：移除誤導性優先擊破，明確標註同級魔物合體升級規則</li>
+                <li>🚪 關卡退出機制：戰鬥中途退關放棄所有貨幣收益（回滾開局金幣），戰敗保留收益</li>
+                <li>⏱️ 操作視覺等待時間縮短為 1.0 秒，整體操作體驗更流暢</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-032</div>
+              <div class="changelog-title">新手教學節奏調優、自主演練、消除假規則與大廳序章訓練所</div>
+              <ul class="changelog-list">
+                <li>🏛️ 序章訓練所整合至大廳章節標籤，設定選單支援清除教學紀錄</li>
+                <li>👑 第四步自主實戰演練：戰力不足為阻擋而非陣亡，自由實戰打倒魔物</li>
+                <li>⏱️ 動態操作停留時間調整，刀光居中對準魔物</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-030</div>
+              <div class="changelog-title">新手引導序章 (Stage 0 Tutorial) 系統</div>
+              <ul class="changelog-list">
+                <li>🎓 新手首次進入遊戲自動觸發引導式序章關卡（Stage 0）</li>
+                <li>👆 四步微教學劇本：裝備合成升級、魔物討伐、金幣合成與點擊兌現、戰力不足懲罰</li>
+                <li>🔒 滑動方向限制與防呆晃動回饋，支援手指路徑動態動畫與跳過教學</li>
+                <li>⚙️ 大廳設定選單支援隨時重新體驗新手訓練</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-029</div>
+              <div class="changelog-title">金幣產出節奏重構與全關卡金礦獎勵池翻倍</div>
+              <ul class="changelog-list">
+                <li>🪙 富礦期延長至 8 次（前 8 次固定每 8 回合產出一次）</li>
+                <li>⏳ 動態間隔緩和遞增（每產出 +2 回合），最高封頂 16 回合，消除後期金幣乾涸</li>
+                <li>💰 全 350 關卡金幣獎勵池（goldCap）全額翻倍（第一章翻倍至 40~80、第二章翻倍至 90~240、後續篇章全面倍增）</li>
+                <li>⛏️ 維持每 4 次降一階折半衰減，最低鎖定 4 不出微型碎片</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-028</div>
+              <div class="changelog-title">設定頁版本履歷、安全邊距內收與體力愛心圖標</div>
+              <ul class="changelog-list">
+                <li>📜 設定頁新增版本更新履歷專區，支援流暢滑動瀏覽</li>
+                <li>📱 畫面頂部與底部安全邊距內收約 1 個內文字高，避開圓角與相機挖孔</li>
+                <li>❤️ 體力圖標全面由閃電更換為生動愛心（❤️ 5/5、-1 ❤️ 飄字演出）</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-027</div>
+              <div class="changelog-title">盤面固定尺寸防變形、Threes! 卡牌比例與全螢幕手勢</div>
+              <ul class="changelog-list">
+                <li>📐 5x5 網格鎖定 minmax(0, 1fr)，杜絕多位數文字撐開變形</li>
+                <li>🃏 盤面與方塊採用 5:6 垂直長方卡牌造型，契合手機縱向螢幕</li>
+                <li>📱 手勢擴展至全戰鬥區域，任意邊界滑動皆可靈敏響應</li>
+                <li>⚡ 戰敗結算紅光震顫與體力扣除動畫演出</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-026</div>
+              <div class="changelog-title">體力系統閉環與 5 秒沙盒廣告模擬器</div>
+              <ul class="changelog-list">
+                <li>⚡ 體力上限 5 點，勝戰不扣體力，戰敗扣 1 點</li>
+                <li>📺 每 3 場戰鬥觸發 5 秒沙盒插頁廣告，每日福利廣告領 500 金幣</li>
+                <li>👑 終身免廣告 PASS（秒領福利）、無限體力證（∞暢玩）特權生效</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-025</div>
+              <div class="changelog-title">營地卡片圓弧外框防穿模與視覺排版統一</div>
+              <ul class="changelog-list">
+                <li>🏛️ 軍備科技研發上移至第 2 位，突顯核心產出重要性</li>
+                <li>📦 消除倉庫標籤穿模，全面套用統一發光圓角外框</li>
+                <li>📐 按鈕文字置中且統一「先文字後金額」標準排版</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-024</div>
+              <div class="changelog-title">王國軍備科技大突破裝備實力門檻</div>
+              <ul class="changelog-list">
+                <li>🛡️ 大突破科技需穿戴對應階級武器始得研發，強化裝備養成深度</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-023</div>
+              <div class="changelog-title">商店與營地雙軌分流</div>
+              <ul class="changelog-list">
+                <li>💎 獨立第 4 分頁「皇家特許寶庫」，現金與廣告特權專屬櫥窗</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-badge">🌟 C-STORY-032</div>
+              <div class="changelog-title">新手教學節奏調優、自主演練、消除假規則與大廳序章訓練所</div>
+              <ul class="changelog-list">
+                <li>⏱️ 教學操作完成後停留 1.5 秒視覺緩衝，合成與消滅效果不再瞬間被打斷</li>
+                <li>🎯 魔物消滅刀光精準斜切幾何中心，貨幣點擊手勢座標絕對置中</li>
+                <li>🛡️ 修正錯誤指引：戰力小於魔物為「阻擋無法消滅」，絕非勇者死亡</li>
+                <li>👑 Step 4 開放全方向自由移動自主演練，任務目標調整為「打倒魔物」</li>
+                <li>🎓 大廳正式整合「序章：新手訓練所」與第 0 關卡片，隨時自由重溫訓練</li>
+                <li>🗑️ 設定頁獨立新增「清除新手教學紀錄」功能，支援隨時重置引導狀態</li>
+              </ul>
+            </div>
+          </div>
+          <div class="setting-desc" id="settings-changelog-desc" data-i18n="settings_changelog_desc" style="font-size: 0.8rem; color: #94a3b8; line-height: 1.4;">
+            商業製品測試版 (Phase 1)：<br>
+            獨立純前端運行環境，本地自動存檔。
+          </div>
+          </div>
+
+          <!-- 手動檢查版本更新 -->
+          <button class="cr-btn cr-btn-green btn-medium" id="btn-force-reload-version" data-i18n="settings_btn_check_update" style="width:100%;" onclick="alert('🔄 目前已是最新版本 (v6.9.1)！無須更新。')">🔄 手動檢查版本更新 (無損熱更新)</button>
+        </div>
+
+        <!-- ================= PANE 3: 開發測試用 ================= -->
+        <div class="settings-pane" id="pane-setting-developer">
+          <!-- 1. 方塊美術造型 -->
+          <div class="setting-row">
+            <span style="font-weight:700; color:#f8fafc;" id="settings-txt-style" data-i18n="settings_style">🖼️ 方塊美術造型</span>
+            <select id="setting-style-select" class="setting-select" onchange="alert('🎨 美術造型已切換為：' + this.options[this.selectedIndex].text)">
+              <option value="clay" selected>🗿 微縮模型 (3D黏土)</option>
+              <option value="emoji">🎭 立體 Emoji (Q版)</option>
+              <option value="comic">🎨 賽璐璐 (美漫風)</option>
+              <option value="pixel">👾 復古點陣 (16-Bit)</option>
+              <option value="voxel">🧱 體素方塊 (3D立體)</option>
+            </select>
+          </div>
+
+          <!-- 2. 測試：技能開場即就緒 -->
+          <div class="setting-row" style="background: rgba(56, 189, 248, 0.08); padding: 8px 10px; border-radius: 8px; border: 1px dashed rgba(56, 189, 248, 0.3);">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-weight: 700; color: #38bdf8;" id="settings-txt-instant-skill" data-i18n="settings_instant_skill">🛠️ [測試] 技能開場即就緒</span>
+              <span style="font-size: 0.72rem; color: #94a3b8;" id="settings-txt-instant-skill-desc" data-i18n="settings_instant_skill_desc">進入戰鬥技能充能即為 100% 滿額</span>
+            </div>
+            <input type="checkbox" id="setting-instant-skill" style="width:20px; height:20px; cursor:pointer;" onchange="alert(this.checked ? '⚡ 開場技能 100% 就緒已啟用' : '正常戰鬥充能模式')">
+          </div>
+
+          <!-- 3. 清除新手教學紀錄 -->
+          <div style="margin-top:6px;">
+            <button class="cr-btn cr-btn-amber btn-medium" id="btn-settings-clear-tut" data-i18n="settings_clear_tut" style="width:100%;" onclick="alert('🔄 新手教學引導狀態已重置！下次進入關卡將重新指引。')">🔄 清除新手教學紀錄 (重置引導狀態)</button>
+          </div>
+        </div>
+
+        <button class="cr-btn cr-btn-blue btn-medium" id="btn-settings-close" data-i18n="settings_close" style="width:100%; margin-top:4px;" onclick="closeSettingsModal()">確定關閉</button>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         MODAL: 📅 每日簽到 · 七日之約 (C-STORY-125 1:1 對齊遊戲正式版)
+         ======================================================== -->
+    <div class="modal-overlay" id="modal-daily-signin" onclick="handleSignInOverlayClick(event)">
+      <div class="cr-modal-box" id="box-daily-signin">
+        <div class="modal-close-btn" onclick="closeDailySignInModal()">✕</div>
+        <div style="text-align:center;">
+          <h3 style="font-size:var(--font-h1); color:#38bdf8;">📅 每日簽到 · 七日之約</h3>
+          <p style="font-size:var(--font-caption); color:#94a3b8; margin-top:4px;" id="signin-hint-text">
+            每天登入簽到領取豐厚軍資，連續簽到解鎖神級大禮！
+          </p>
+        </div>
+
+        <div class="signin-grid-container" id="signin-cards-container">
+          <!-- Populated dynamically by JS -->
+        </div>
+
+        <button class="cr-btn cr-btn-green btn-large" id="btn-claim-signin" style="width:100%;" onclick="handleSignInButtonClick()">
+          <span>立即簽到領取獎勵</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         MODAL: 📜 每日活躍任務 (C-STORY-125 1:1 對齊遊戲正式版)
+         ======================================================== -->
+    <div class="modal-overlay" id="modal-daily-quests" onclick="if(event.target===this) closeDailyQuestsModal()">
+      <div class="cr-modal-box">
+        <div class="modal-close-btn" onclick="closeDailyQuestsModal()">✕</div>
+        <h3 style="font-size:var(--font-h1); color:#fbbf24; text-align:center;">📜 每日活躍任務</h3>
+
+        <!-- Activity Header -->
+        <div style="background:#090d16; border-radius:14px; padding:10px 14px; display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; justify-content:space-between; font-size:var(--font-caption); font-weight:800;">
+            <span style="color:#94a3b8;">今日活躍度：</span>
+            <span style="color:#38bdf8;" id="activity-points-val">75 / 100</span>
+          </div>
+          <div style="width:100%; height:10px; background:#1e293b; border-radius:5px; overflow:hidden;">
+            <div style="width:75%; height:100%; background:linear-gradient(90deg, #38bdf8, #818cf8);"></div>
+          </div>
+          <div style="display:flex; justify-content:flex-end;">
+            <button class="cr-btn cr-btn-disabled btn-small" id="btn-claim-quest-chest" onclick="alert('⚠️ 活躍度尚未達到 100 點！')">🎁 全勤大寶箱 (需100點)</button>
+          </div>
+        </div>
+
+        <!-- Quests List (4 Quests aligned with Constants.js DAILY_QUEST_CONFIGS) -->
+        <div style="display:flex; flex-direction:column; gap:8px;" id="daily-quests-container">
+          <div class="quest-item-card">
+            <div>
+              <div style="font-weight:800; font-size:var(--font-body); color:#f8fafc;">⚔️ 魔物清剿 (15/15)</div>
+              <div style="font-size:var(--font-caption); color:#94a3b8;">在冒險關卡中累計擊倒 15 隻魔物</div>
+            </div>
+            <button class="cr-btn cr-btn-green btn-small" onclick="alert('🎉 領取成功：+300 🪙，活躍度+25！')">領取 🪙300</button>
+          </div>
+          <div class="quest-item-card">
+            <div>
+              <div style="font-weight:800; font-size:var(--font-body); color:#f8fafc;">🛡️ 精良合成 (10/10)</div>
+              <div style="font-size:var(--font-caption); color:#94a3b8;">任意合成 10 次</div>
+            </div>
+            <button class="cr-btn cr-btn-green btn-small" onclick="alert('🎉 領取成功：+300 🪙，活躍度+25！')">領取 🪙300</button>
+          </div>
+          <div class="quest-item-card">
+            <div>
+              <div style="font-weight:800; font-size:var(--font-body); color:#f8fafc;">🪙 開採財富 (32/50)</div>
+              <div style="font-size:var(--font-caption); color:#94a3b8;">在冒險關卡中累計回收 50 枚金幣</div>
+            </div>
+            <button class="cr-btn cr-btn-disabled btn-small" disabled>進行中 (32/50)</button>
+          </div>
+          <div class="quest-item-card">
+            <div>
+              <div style="font-weight:800; font-size:var(--font-body); color:#f8fafc;">🚩 勤勉遠征 (2/3)</div>
+              <div style="font-size:var(--font-caption); color:#94a3b8;">進行任意冒險關卡戰鬥累計達 3 場</div>
+            </div>
+            <button class="cr-btn cr-btn-disabled btn-small" disabled>進行中 (2/3)</button>
+          </div>
+        </div>
+
+        <button class="cr-btn cr-btn-purple btn-medium" style="width:100%;" onclick="closeDailyQuestsModal()">關閉任務</button>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         MODAL 2: 英雄詳細資訊 POPUP (HERO DETAIL WITH ENLARGED ARTWORK, TEXT-FIRST & SWAPPED BUTTONS)
+         ======================================================== -->
+    <div class="modal-overlay" id="modal-hero-detail" onclick="if(event.target===this) closeHeroDetailModal()">
+      <div class="cr-modal-box" style="max-height:88vh; overflow-y:auto; gap:10px;">
+        <div class="modal-close-btn" onclick="closeHeroDetailModal()">✕</div>
+        
+        <!-- Header: Hero Name (Enlarged) & Level (Prominent, No Status Tag) -->
+        <div style="display:flex; flex-direction:column; gap:4px; padding-right:32px;">
+          <h3 style="font-size:1.35rem; font-weight:900; color:#38bdf8; margin:0;" id="modal-hero-title">戰士 (Warrior)</h3>
+          <div style="font-size:1rem; font-weight:700; color:#fbbf24;" id="modal-hero-level">等級：LV.5 (已達最高階)</div>
+        </div>
+
+        <!-- 1. Enlarged Hero Appearance Card (No arrows, Large Rectangular Portrait 5:6) -->
+        <div style="display:flex; align-items:center; justify-content:center; gap:16px; background:#090d16; border-radius:18px; padding:12px; border:1.5px solid #334155;">
+          <div style="width:84px; height:102px; aspect-ratio:5/6; background:linear-gradient(180deg,#1e293b,#0f172a); border-radius:14px; border:2.5px solid #fbbf24; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 0 16px rgba(251,191,36,0.35);">
+            <img id="modal-hero-portrait" src="assets/images/hero_knight/hero_09.png" style="width:92%; height:92%; object-fit:contain; transform:scale(1.12);" alt="Hero Portrait" />
+          </div>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <div style="font-size:var(--font-caption); color:#94a3b8; font-weight:700;" id="modal-weapon-header" data-i18n="hero_modal_weapon_header">目前神兵形態</div>
+            <div style="font-size:1.05rem; font-weight:800; color:#fbbf24;" id="modal-hero-tier-label">Tier 9 (戰力 512)</div>
+            <div style="font-size:var(--font-caption); color:#38bdf8; font-weight:600;" id="modal-hero-posture-label">✦ 聖殿光刃戰鬥姿態</div>
+          </div>
+        </div>
+
+        <!-- 2. Skill Mechanism Details (Positioned ABOVE Skill Showcase per User Spec) -->
+        <div style="background:#090d16; border-radius:14px; padding:10px 12px; font-size:var(--font-caption); line-height:1.45; border:1px solid #1e293b;">
+          <div style="font-size:var(--font-body); font-weight:800; color:#fbbf24;" id="modal-skill-title">⚔️ 專屬技能：十字碎裂</div>
+          <div style="color:#cbd5e1; margin-top:4px;" id="modal-skill-desc">
+            以英雄為中心粉碎上下左右4格內的裝備與金幣（不傷魔物），滿盤瀕危時自動觸發保命。<br>
+            <span style="color:#94a3b8;">⚠️ 碎裂的金幣直接粉碎消除，無法折現入袋。</span>
+          </div>
+          <div style="margin-top:6px; color:#38bdf8; font-weight:700;" id="modal-skill-cd">冷卻回合：100 回合 (滿級極速)</div>
+        </div>
+
+        <!-- 3. Roomy Skill Demonstration Showcase (Video Demo / Animated Visual Concept) -->
+        <div class="hero-skill-demo-large" id="modal-skill-showcase-box" style="height:142px;">
+          <!-- Video Demo Container -->
+          <video id="hero-demo-video" src="assets/videos/skill_warrior_demo.mp4" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:contain; display:block;"></video>
+          
+          <!-- Conceptual Graphic Container (Active when no video) -->
+          <div class="hero-skill-concept-card" id="hero-demo-concept" style="display:none;">
+            <div style="font-size:2.4rem; filter:drop-shadow(0 4px 10px rgba(251,191,36,0.5));" id="concept-icon-badge">🪙✨</div>
+            <div style="font-size:var(--font-body); font-weight:800; color:#fbbf24;" id="concept-title">【黃金急召 實戰示意】</div>
+            <div style="font-size:var(--font-caption); color:#cbd5e1; max-width:92%; line-height:1.4;" id="concept-flow">
+              全場金幣瞬間強制折現入袋 ➔ 獲得大量財富 ➔ 極速騰出盤面空格
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Dual Bottom Action Buttons: Swapped (Left: Deploy, Right: Upgrade) & Overflow-Protected -->
+        <div style="display:flex; gap:8px; width:100%; margin-top:4px;">
+          <button class="cr-btn cr-btn-amber btn-medium" id="modal-bottom-deploy-btn" style="flex:1; padding:0 8px; font-size:var(--font-caption);" onclick="deployFromModal()">
+            <span>⚔️ 出擊中</span>
+          </button>
+          <button class="cr-btn cr-btn-disabled btn-medium" id="modal-upgrade-btn" style="flex:1; padding:0 8px; font-size:var(--font-caption);" onclick="upgradeHeroFromModal()">
+            <span>已滿級</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         DRAWER: 關卡快速換關抽屜 (QUICK STAGE DRAWER)
+         ======================================================== -->
+    <div class="drawer-overlay" id="drawer-quick-stage" onclick="if(event.target===this) closeQuickStageDrawer()">
+      <div class="drawer-sheet">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="font-size:var(--font-h1); color:#fbbf24;" id="drawer-txt-title" data-i18n="drawer_quick_jump">快速跳轉關卡</h3>
+          <span style="font-size:var(--font-caption); color:#94a3b8;" id="drawer-txt-sub" data-i18n="drawer_quick_tip">點選已通關關卡進行切換</span>
+        </div>
+        <div class="drawer-grid" id="quick-stage-grid">
+          <!-- Dynamically populated with 25 stages -->
+        </div>
+        <button class="cr-btn cr-btn-purple btn-medium" id="drawer-btn-close" data-i18n="drawer_close" style="width:100%;" onclick="closeQuickStageDrawer()">完成關閉</button>
+      </div>
+    </div>
+    </div>
+
+    <!-- OFFICIAL 2048 COMBAT OVERLAY (FULL SCREEN BATTLE) -->
+    <section class="combat-overlay" id="combat-overlay" style="display: none;">
+      <header class="combat-top-bar">
+        <button class="btn-combat-back" id="btn-combat-back" title="返回冒險大廳">◀ 大廳</button>
+        <div class="combat-stage-info">
+          <span class="combat-stage-name" id="combat-stage-name">微風平原</span>
+          <span class="combat-turn-count">回合: <b id="combat-turn-val">0</b></span>
+        </div>
+        <div class="combat-monsters-info">
+          <span class="combat-monster-icon">👾</span>
+          <span class="combat-monsters-val" id="combat-monsters-val">1</span>
+        </div>
+        <button class="btn-combat-skin" id="btn-combat-skin" title="點擊切換裝備風格 (3D Emoji / 黏土 / 像素)">
+          <span id="combat-skin-label">🎭 3D立體</span>
+        </button>
+      </header>
+
+      <!-- Combat Main Zone (Preview Shelf + Board Grid in unified flex container) -->
+      <div class="combat-main-zone">
+        <!-- Dedicated Next Tile Preview Shelf & Character Skill Badge (C-STORY-041 & C-STORY-093) -->
+        <div class="combat-preview-shelf" id="combat-preview-shelf">
+          <!-- Character Skill Badge & Charge Ring (C-STORY-093) -->
+          <div class="combat-skill-wrapper" id="combat-skill-wrapper" title="職業特殊技能（點擊施放）">
+            <button class="skill-badge-btn" id="skill-badge-btn" disabled>
+              <svg class="skill-ring-svg" viewBox="0 0 44 44">
+                <circle class="skill-ring-bg" cx="22" cy="22" r="18" />
+                <circle class="skill-ring-progress" id="skill-ring-progress" cx="22" cy="22" r="18" stroke-dasharray="113.1" stroke-dashoffset="113.1" />
+              </svg>
+              <span class="skill-badge-icon" id="skill-badge-icon">🗡️</span>
+              <span class="skill-ready-glow" id="skill-ready-glow"></span>
+            </button>
+            <div class="skill-meta-info">
+              <span class="skill-name-label" id="skill-name-label">十字碎裂</span>
+              <span class="skill-turn-label" id="skill-turn-label">0/500</span>
+            </div>
+          </div>
+
+          <div class="combat-next-preview" id="combat-next-preview" title="下一手登場方塊預告">
+            <span class="next-preview-label">NEXT</span>
+            <div class="next-preview-card" id="next-preview-card">
+              <span class="next-card-badge" id="next-card-badge">⚔️</span>
+              <span class="next-card-val" id="next-card-val">2</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5x5 Grid Board Area -->
+        <div class="board-wrapper">
+          <div class="board-grid" id="battle-board"></div>
+          <!-- C-STORY-096: High-Performance Canvas 2D Physics Lighting VFX Engine -->
+          <canvas id="combat-vfx-canvas" class="combat-vfx-canvas"></canvas>
+          <!-- C-STORY-095: Ultimate Skill Cut-in & Board VFX Layers -->
+          <div class="skill-cutin-layer" id="skill-cutin-layer" style="display: none;">
+            <div class="skill-cutin-backdrop"></div>
+            <div class="skill-cutin-box">
+              <img class="skill-cutin-avatar" id="skill-cutin-avatar" src="assets/images/cutin_hero_clay_ultimate.png" alt="Cut-in Hero" />
+              <div class="skill-cutin-flame-rings"></div>
+            </div>
+          </div>
+          <div class="skill-board-vfx-layer" id="skill-board-vfx-layer"></div>
+        </div>
+      </div>
+
+      <!-- Targeting Banner (C-STORY-007) -->
+      <div class="targeting-banner" id="targeting-banner" style="display: none;">
+        <span class="targeting-text" id="targeting-text">🎯 瞄準模式：點選目標</span>
+        <button class="btn-cancel-target" id="btn-cancel-target">取消</button>
+      </div>
+
+      <!-- Combat Item Bar (C-STORY-007) -->
+      <div class="combat-item-bar" id="combat-item-bar">
+        <button class="btn-item-slot" id="btn-item-undo" data-item="undo" title="時光沙漏：回溯上一步">
+          <span class="item-icon">⏳</span>
+          <span class="item-name">沙漏</span>
+          <span class="item-count" id="item-count-undo">0</span>
+        </button>
+        <button class="btn-item-slot" id="btn-item-hammer" data-item="hammer" title="破壞戰槌：粉碎任意 1 格非勇者方塊">
+          <span class="item-icon">🔨</span>
+          <span class="item-name">戰槌</span>
+          <span class="item-count" id="item-count-hammer">0</span>
+        </button>
+        <button class="btn-item-slot" id="btn-item-snipe" data-item="snipe" title="精準重弩：無損狙殺戰力嚴格小於勇者的魔物">
+          <span class="item-icon">🏹</span>
+          <span class="item-name">重弩</span>
+          <span class="item-count" id="item-count-snipe">0</span>
+        </button>
+      </div>
+
+      <footer class="combat-footer">
+        <div class="combat-tip">💡 上下左右滑動方向，合成裝備餵給勇者，斬殺全場魔物！</div>
+      </footer>
+    </section>
+
+    <!-- OFFICIAL COMBAT MODALS -->
+    
+<div class="modal-backdrop" id="modal-victory" style="display: none;">
+      <div class="modal-card victory-card">
+        <div class="victory-banner">🎉 遠征大捷！</div>
+        <div class="modal-body text-center">
+          <p id="victory-stage-name" style="font-size: 1.1rem; font-weight: bold; color: #38bdf8;">關卡名稱</p>
+          <p style="font-size: 0.85rem; color: #94a3b8; margin: 4px 0 10px 0;">耗費回合: <span id="victory-turns-val">0</span> 步</p>
+
+          <div class="revenue-box" style="text-align: left; background: rgba(0,0,0,0.3); border: 1px solid rgba(251, 191, 36, 0.2); padding: 12px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 0.85rem; line-height: 1.7;">
+            <div style="font-weight: bold; color: #93c5fd; margin-bottom: 4px;">闖關收益：</div>
+            <div id="victory-reward-detail" style="white-space: pre-line; color: #fef08a;"></div>
+            <div style="border-top: 1px solid rgba(255,255,255,0.15); margin-top: 8px; padding-top: 8px; font-weight: bold; color: #fbbf24; font-size: 1.1rem;">
+              總金額：<span id="victory-reward-val">🪙 +0</span>
+            </div>
+          </div>
+<div class="modal-backdrop" id="modal-defeat" style="display: none;">
+      <div class="modal-card defeat-card">
+        <div class="defeat-banner">💀 盤面困局 (戰敗)</div>
+        <div class="modal-body text-center">
+          <div class="defeat-stamina-badge" id="defeat-stamina-badge">❤️ 遠征消耗：-1 體力（當前 4/5）</div>
+          <p style="font-size: 0.92rem; color: #fca5a5; line-height: 1.5; margin-bottom: 12px;">
+            盤面已無可移動或合體之方塊！<br>
+            重整旗鼓，再次挑戰吧！
+          </p>
+          <div class="revenue-box" style="text-align: left; background: rgba(0,0,0,0.3); border: 1px solid rgba(248, 113, 113, 0.2); padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; font-size: 0.85rem; line-height: 1.6;">
+            <div style="font-weight: bold; color: #93c5fd; margin-bottom: 4px;">闖關收益：</div>
+            <div id="defeat-reward-detail" style="color: #fbbf24; font-weight: bold;">⚔️【戰鬥合成領取】+0 🪙</div>
+          </div>
+<div class="modal-backdrop" id="modal-stamina-empty" style="display: none; z-index: 120;">
+      <div class="modal-card stamina-empty-card" style="border: 2px solid #38bdf8; max-width: 380px;">
+        <div class="modal-header">
+          <span class="modal-badge">❤️</span>
+          <h3 class="modal-title">體力不足！</h3>
+        </div>
+        <div class="modal-body text-center">
+          <p style="font-size: 0.95rem; color: #bae6fd; margin-bottom: 12px; line-height: 1.5;">
+            當前體力已耗盡（0/5）！<br>
+            勝利闖關不扣體力，戰敗需休整補給。
+          </p>
+          <div class="stamina-recovery-box" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(56,189,248,0.25); border-radius: 10px; padding: 12px; margin-bottom: 14px; text-align: left; font-size: 0.85rem; line-height: 1.6;">
+            <div style="color: #93c5fd; font-weight: bold; margin-bottom: 4px;">補給方案：</div>
+            <div style="color: #f1f5f9;">• 📺 觀看宣傳短片：立即補滿 5 點體力</div>
+            <div style="color: #f1f5f9;">• 💎 皇家特許寶庫：購買無限體力通行證</div>
+            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 4px;">※ 自然恢復每 20 分鐘自動恢復 1 點</div>
+          </div>
+
+  </div>
+
+  <!-- PROTOTYPE METAGAME UI SCRIPT -->
+  <script src="proto_ui_logic.js?v=2.0.0"></script>
+  <!-- MAIN V2 INTEGRATED ES MODULE CONTROLLER -->
+  <script type="module" src="main_v2.js?v=2.0.0"></script>
+</body>
+</html>

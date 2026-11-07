@@ -391,7 +391,10 @@ export class GwtRunner {
       this.testGwt136_1_ZeroSyntaxErrorsAndAllInteractiveButtonsResponsive.bind(this),
       // C-STORY-137: 英雄與裝備 18 階天花板預留格展示 ＆ 職業獨立收集 ＆ 高階裝備向下自動點亮解鎖
       this.testGwt137_1_HeroAndGear18TierFullCapPlaceholders.bind(this),
-      this.testGwt137_2_CascadingGearUnlockAndIndependentHeroProgression.bind(this)
+      this.testGwt137_2_CascadingGearUnlockAndIndependentHeroProgression.bind(this),
+      // C-STORY-138: 雙軌整合沙盒入口 index_v2.html 與路由切換控制器
+      this.testGwt138_1_DualTrackIntegratedSandboxStructureAndFiles.bind(this),
+      this.testGwt138_2_AppStateRouterLobbyAndCombatTransition.bind(this)
     ];
 
     for (const test of testCases) {
@@ -7049,7 +7052,60 @@ export class GwtRunner {
     // 2. Independent hero progression
     this.assert(htmlText.includes('warrior: 512') && htmlText.includes('merchant: 32') && htmlText.includes('archer: 64'), 'Maintains independent hero progressions per class');
   }
+
+  // =========================================================================
+  // C-STORY-138: 建立雙軌整合沙盒入口 index_v2.html 與路由切換控制器
+  // =========================================================================
+
+  // C-STORY-138 GWT 138.1: 雙軌沙盒結構完整性 ＆ 舊版 100% 獨立不變
+  async testGwt138_1_DualTrackIntegratedSandboxStructureAndFiles() {
+    let v2Text = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./index_v2.html');
+        if (resp.ok) v2Text = await resp.text();
+      } catch (e) {}
+    }
+
+    // 1. Check index_v2.html structure
+    this.assert(v2Text.includes('id="lobby-wrapper"'), 'Contains lobby-wrapper in index_v2.html');
+    this.assert(v2Text.includes('id="combat-overlay"'), 'Contains official combat-overlay in index_v2.html');
+    this.assert(v2Text.includes('proto_ui_logic.js') && v2Text.includes('main_v2.js'), 'Loads proto_ui_logic and main_v2 in index_v2.html');
+
+    // 2. Verify legacy index.html remains clean
+    let legacyText = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp2 = await fetch('./index.html');
+        if (resp2.ok) legacyText = await resp2.text();
+      } catch (e) {}
+    }
+    this.assert(legacyText.includes('src="main.js?v=1.4.7"'), 'Legacy index.html remains untouched using original main.js');
+  }
+
+  // C-STORY-138 GWT 138.2: App Router 單一入口狀態機（LOBBY ⇄ COMBAT）與核心引擎共用
+  async testGwt138_2_AppStateRouterLobbyAndCombatTransition() {
+    let mainV2Text = '';
+    if (typeof fetch === 'function') {
+      try {
+        const resp = await fetch('./main_v2.js');
+        if (resp.ok) mainV2Text = await resp.text();
+      } catch (e) {}
+    }
+
+    // 1. AppRouter class and states
+    this.assert(mainV2Text.includes('class AppRouter'), 'AppRouter class defined in main_v2.js');
+    this.assert(mainV2Text.includes("switchAppState(newState)"), 'Implements switchAppState method');
+    this.assert(mainV2Text.includes("'COMBAT'") && mainV2Text.includes("'LOBBY'"), 'Supports COMBAT and LOBBY states');
+
+    // 2. Imports and shares official core engine
+    this.assert(mainV2Text.includes("from './src/core/StageManager.js'"), 'Shares core StageManager.js');
+    this.assert(mainV2Text.includes("from './src/presentation/ViewRenderer.js'"), 'Shares presentation ViewRenderer.js');
+    this.assert(mainV2Text.includes("from './src/presentation/CombatVfxEngine.js'"), 'Shares CombatVfxEngine.js');
+
+    // 3. Wires startCombat and exitCombat
+    this.assert(mainV2Text.includes("startCombat(stageId)") && mainV2Text.includes("exitCombat()"), 'Implements startCombat and exitCombat');
+    this.assert(mainV2Text.includes("window.launchStageBattle ="), 'Hooks into window.launchStageBattle');
+  }
 }
-
-
 
