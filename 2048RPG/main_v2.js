@@ -1,4 +1,4 @@
-// main_v2.js: Real Integrated Controller & Core App Router (C-STORY-139)
+// main_v2.js: Real Integrated Controller & Core App Router (C-STORY-139 / C-STORY-140)
 import { GameEventBus } from './src/core/GameEventBus.js';
 import { StageManager } from './src/core/StageManager.js';
 import { ViewRenderer } from './src/presentation/ViewRenderer.js';
@@ -7,6 +7,7 @@ import { CombatVfxEngine } from './src/presentation/CombatVfxEngine.js';
 import { DailyLoopManager } from './src/core/DailyLoopManager.js';
 import { GachaEngine } from './src/core/GachaEngine.js';
 import { InventoryManager } from './src/core/InventoryManager.js';
+import { TutorialOverlay } from './src/presentation/TutorialOverlay.js';
 import {
   Direction, TileType, STAGE_CONFIGS, STAGE_0_CONFIG, Events,
   MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS,
@@ -21,7 +22,8 @@ class AppRouter {
     this.eventBus = new GameEventBus();
     this.stageManager = new StageManager(this.eventBus);
     this.audio = new AudioEffects();
-    this.dailyLoopManager = new DailyLoopManager(this.eventBus);
+    this.dailyLoopManager = new DailyLoopManager(this.eventBus, this.stageManager);
+    this.stageManager.dailyLoopManager = this.dailyLoopManager;
 
     // Out-of-Combat Inventory Manager (C-STORY-139)
     this.initInventoryManager();
@@ -50,6 +52,12 @@ class AppRouter {
       this.vfxEngine = new CombatVfxEngine(vfxCanvas, this.boardGridEl);
     }
 
+    // Tutorial Presentation Overlay (C-STORY-030 / C-STORY-140)
+    const appContainer = document.getElementById('app-container') || document.body;
+    if (this.boardGridEl) {
+      this.tutorialOverlay = new TutorialOverlay(appContainer, this.boardGridEl, this.eventBus);
+    }
+
     this.bindCombatEvents();
     this.bindCombatControls();
     this.syncHud();
@@ -62,6 +70,9 @@ class AppRouter {
       }
       if (typeof window.renderGearInventory === 'function') {
         window.renderGearInventory();
+      }
+      if (typeof window.syncShopDisplay === 'function') {
+        window.syncShopDisplay();
       }
     }, 100);
   }
@@ -190,24 +201,42 @@ class AppRouter {
   }
 
   syncHud() {
-    const staminaEl = document.getElementById('top-stamina-val');
-    const goldEl = document.getElementById('top-gold-val');
-    const gemsEl = document.getElementById('top-gems-val');
+    const staminaEl = document.getElementById('txt-stamina') || document.getElementById('top-stamina-val');
+    const goldEl = document.getElementById('txt-gold') || document.getElementById('top-gold-val');
+    const gemsEl = document.getElementById('txt-gems') || document.getElementById('top-gems-val');
 
-    if (staminaEl) staminaEl.textContent = `${this.stageManager.stamina}/${this.stageManager.maxStamina}`;
-    if (goldEl) goldEl.textContent = Number(this.stageManager.gold || 0).toLocaleString();
+    if (staminaEl) {
+      if (this.stageManager.hasUnlimitedStamina) {
+        staminaEl.textContent = '∞';
+      } else {
+        staminaEl.textContent = `${this.stageManager.stamina} / ${this.stageManager.maxStamina}`;
+      }
+    }
+    if (goldEl) {
+      goldEl.textContent = `${Number(this.stageManager.gold || 0).toLocaleString()} +`;
+    }
     if (gemsEl) {
       const gems = localStorage.getItem('rpg_2048_gems') || '150';
       gemsEl.textContent = Number(gems).toLocaleString();
     }
+    if (typeof window.syncShopDisplay === 'function') {
+      window.syncShopDisplay();
+    }
   }
 
   startCombat(stageId) {
+    if (stageId === 0 || (this.stageManager && this.stageManager.tutorialManager && !this.stageManager.tutorialManager.isCompleted)) {
+      this.startTutorialCombat();
+      return;
+    }
+
     if (!this.stageManager.canStartStage()) {
       const staminaModal = document.getElementById('modal-stamina-empty');
       if (staminaModal) {
         staminaModal.classList.add('active');
         staminaModal.style.display = 'flex';
+      } else {
+        alert('⚠️ 體力不足！戰鬥需要體力。');
       }
       return;
     }
@@ -235,12 +264,45 @@ class AppRouter {
     this.updateItemCounts();
   }
 
+  startTutorialCombat() {
+    this.isSkillExecuting = false;
+    this.isSliding = false;
+    if (this.vfxEngine) {
+      this.vfxEngine.clear();
+      this.vfxEngine.resize();
+    }
+    const config = this.stageManager.startTutorialStage();
+    if (!config) return;
+
+    this.currentCombatStageId = 0;
+    this.switchAppState('COMBAT');
+
+    const stageNameEl = document.getElementById('combat-stage-name');
+    const turnValEl = document.getElementById('combat-turn-val');
+    const monsterValEl = document.getElementById('combat-monsters-val');
+    if (stageNameEl) stageNameEl.textContent = config.name;
+    if (turnValEl) turnValEl.textContent = '0';
+    if (monsterValEl) monsterValEl.textContent = config.monsters ? config.monsters.length : 1;
+
+    if (this.viewRenderer) {
+      this.viewRenderer.setChapterId(config.chapter || 1);
+      this.viewRenderer.renderBoard(this.stageManager.board);
+    }
+    this.updateNextPreview();
+    this.updateSkillUI();
+    this.updateItemCounts();
+  }
+
   handleMove(dir) {
     if (!this.stageManager.isInBattle || this.isSliding || this.isSkillExecuting) return;
     const res = this.stageManager.handleMove(dir);
     if (res.moved) {
       if (res.merges > 0) this.audio.playMerge();
       else this.audio.playSlide();
+    } else if (res.reason === 'TUTORIAL_RESTRICTED') {
+      if (this.tutorialOverlay) {
+        this.tutorialOverlay.triggerShakingFeedback();
+      }
     } else {
       if (this.viewRenderer && this.viewRenderer.triggerInvalidMoveShake) {
         this.viewRenderer.triggerInvalidMoveShake(dir);
@@ -249,6 +311,12 @@ class AppRouter {
   }
 
   exitCombat() {
+    if (this.tutorialOverlay) {
+      this.tutorialOverlay.hide();
+    }
+    if (this.stageManager.tutorialManager) {
+      this.stageManager.tutorialManager.isActive = false;
+    }
     if (this.stageManager.isInBattle && !this.stageManager.isVictory && !this.stageManager.isGameOver) {
       this.stageManager.abandonBattleRewards();
     }
@@ -317,6 +385,24 @@ class AppRouter {
       }
     });
 
+    this.eventBus.on('TUTORIAL_SKIP_REQUESTED', () => {
+      if (this.stageManager.tutorialManager) {
+        this.stageManager.tutorialManager.skipTutorial();
+      }
+      this.exitCombat();
+    });
+
+    this.eventBus.on(Events.TUTORIAL_COMPLETED, () => {
+      if (this.tutorialOverlay) {
+        this.tutorialOverlay.hide();
+      }
+      if (this.stageManager.isInBattle && this.stageManager.currentStageConfig && this.stageManager.currentStageConfig.id === 0) {
+        setTimeout(() => {
+          this.stageManager.handleVictory();
+        }, 500);
+      }
+    });
+
     this.eventBus.on(Events.GOLD_CHANGED, () => this.syncHud());
     this.eventBus.on(Events.STAMINA_CHANGED, () => this.syncHud());
   }
@@ -365,10 +451,19 @@ class AppRouter {
       if (this.state !== 'COMBAT' || !this.stageManager.isInBattle) return;
 
       let dir = null;
-      if (e.key === 'ArrowUp' || e.code === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'KeyW') dir = Direction.UP;
-      else if (e.key === 'ArrowDown' || e.code === 'ArrowDown' || e.key === 's' || e.key === 'S' || e.code === 'KeyS') dir = Direction.DOWN;
-      else if (e.key === 'ArrowLeft' || e.code === 'ArrowLeft' || e.key === 'a' || e.key === 'A' || e.code === 'KeyA') dir = Direction.LEFT;
-      else if (e.key === 'ArrowRight' || e.code === 'ArrowRight' || e.key === 'd' || e.key === 'D' || e.code === 'KeyD') dir = Direction.RIGHT;
+      const k = e.key;
+      const c = e.code;
+      const kc = e.keyCode;
+
+      if (e.key === 'ArrowUp' || e.code === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.code === 'KeyW' || kc === 38 || kc === 87 || kc === 104) {
+        dir = Direction.UP;
+      } else if (e.key === 'ArrowDown' || e.code === 'ArrowDown' || e.key === 's' || e.key === 'S' || e.code === 'KeyS' || kc === 40 || kc === 83 || kc === 98) {
+        dir = Direction.DOWN;
+      } else if (e.key === 'ArrowLeft' || e.code === 'ArrowLeft' || e.key === 'a' || e.key === 'A' || e.code === 'KeyA' || kc === 37 || kc === 65 || kc === 100) {
+        dir = Direction.LEFT;
+      } else if (e.key === 'ArrowRight' || e.code === 'ArrowRight' || e.key === 'd' || e.key === 'D' || e.code === 'KeyD' || kc === 39 || kc === 68 || kc === 102) {
+        dir = Direction.RIGHT;
+      }
 
       if (dir) {
         e.preventDefault();

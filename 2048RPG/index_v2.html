@@ -39,11 +39,11 @@
 
     <!-- Top Persistent Resources Bar -->
     <header class="phone-header">
-      <div class="resource-capsule stamina" onclick="alert('❤️ 體力：5/5（每20分鐘自然恢復1點）')">
+      <div class="resource-capsule stamina" onclick="showStaminaInfo()">
         <span>❤️</span>
         <span id="txt-stamina">5 / 5</span>
       </div>
-      <div class="resource-capsule gold" onclick="alert('🪙 金幣：445,699\n點擊可進入商城儲值！')">
+      <div class="resource-capsule gold" onclick="switchMainTab('shop')">
         <span>🪙</span>
         <span id="txt-gold">445,699 +</span>
       </div>
@@ -71,7 +71,7 @@
                 <p style="font-size:var(--font-caption); color:#cbd5e1;" id="shop-txt-pass-desc" data-i18n="shop_pass_desc">永久免除每 3 關插頁廣告！所有廣告獎勵直接「一鍵秒領」無需等待！</p>
               </div>
             </div>
-            <button class="cr-btn cr-btn-green btn-small" id="shop-btn-pass-price" data-i18n="shop_btn_pass_price" style="align-self:center; width:70%;" onclick="alert('🎉 恭喜解鎖【終身免廣告 PASS】！永久暢享無廣告遊戲體驗！')">NT$ 150 永久移除廣告</button>
+            <button class="cr-btn cr-btn-green btn-small" id="shop-btn-pass-price" data-i18n="shop_btn_pass_price" style="align-self:center; width:70%;" onclick="buyNoAdsPass()">NT$ 150 永久移除廣告</button>
           </div>
 
           <!-- Section 1: Daily Free Perks -->
@@ -86,7 +86,7 @@
                   <p style="font-size:var(--font-caption); color:#94a3b8;" id="shop-txt-free-desc" data-i18n="shop_daily_free_desc">王國軍資每日免費補給 (+200🪙)</p>
                 </div>
               </div>
-              <button class="cr-btn cr-btn-blue btn-medium" id="shop-btn-free" data-i18n="shop_btn_free" onclick="alert('📦 成功領取每日免費軍資：+200 🪙！')">免費領取</button>
+              <button class="cr-btn cr-btn-blue btn-medium" id="shop-btn-free" data-i18n="shop_btn_free" onclick="claimShopDailyGift()">免費領取</button>
             </div>
 
             <!-- 3. Daily Ad Reward (+500🪙, 3 times daily) -->
@@ -99,7 +99,7 @@
                   <div style="font-size:var(--font-mini); color:#fbbf24; font-weight:700; margin-top:2px;" id="shop-txt-ad-left" data-i18n="shop_ad_left">今日剩餘：3 / 3 次</div>
                 </div>
               </div>
-              <button class="cr-btn cr-btn-amber btn-medium" id="shop-btn-ad" data-i18n="shop_ad_btn" onclick="alert('📺 觀看宣傳短片完成：+500 🪙 入袋！')">觀看廣告</button>
+              <button class="cr-btn cr-btn-amber btn-medium" id="shop-btn-ad" data-i18n="shop_ad_btn" onclick="watchAdForGold()">觀看廣告</button>
             </div>
           </div>
 
@@ -111,7 +111,7 @@
               <div class="item-pedestal">❤️</div>
               <h4 style="font-size:var(--font-body); font-weight:800; text-align:center; color:#f8fafc;" id="shop-txt-stamina-title" data-i18n="shop_stamina_title">無限體力通行證</h4>
               <p style="font-size:var(--font-caption); color:#94a3b8; text-align:center; min-height:36px;" id="shop-txt-stamina-desc" data-i18n="shop_stamina_desc">遠征失利零負擔，敗戰 0 體力消耗，暢遊 350 大關！</p>
-              <button class="cr-btn cr-btn-purple btn-small" id="shop-btn-stamina-price" data-i18n="shop_btn_stamina_price" style="width:100%;" onclick="alert('❤️ 成功開通【無限體力通行證】！敗戰不再扣除體力！')">NT$ 90 立即開通</button>
+              <button class="cr-btn cr-btn-purple btn-small" id="shop-btn-stamina-price" data-i18n="shop_btn_stamina_price" style="width:100%;" onclick="buyUnlimitedStamina()">NT$ 90 立即開通</button>
             </div>
 
             <!-- 5. 50,000 Royal Gold Pouch -->
@@ -119,7 +119,7 @@
               <div class="item-pedestal">💰</div>
               <h4 style="font-size:var(--font-body); font-weight:800; text-align:center; color:#f8fafc;" id="shop-txt-gold-title" data-i18n="shop_gold_title">50,000 皇家金幣袋</h4>
               <p style="font-size:var(--font-caption); color:#94a3b8; text-align:center; min-height:36px;" id="shop-txt-gold-desc" data-i18n="shop_gold_desc">王國軍械庫鉅款！直購大量高級裝備，工坊科技狂飆！</p>
-              <button class="cr-btn cr-btn-green btn-small" id="shop-btn-gold-price" data-i18n="shop_btn_gold_price" style="width:100%;" onclick="alert('💰 儲值成功：獲得 50,000 🪙 + 首購贈禮 5,000 🪙！')">NT$ 60 儲值金幣</button>
+              <button class="cr-btn cr-btn-green btn-small" id="shop-btn-gold-price" data-i18n="shop_btn_gold_price" style="width:100%;" onclick="claimTestRecharge()">NT$ 60 儲值金幣</button>
             </div>
 
 
@@ -146,10 +146,10 @@
           <div class="camp-talent-card">
             <div class="talent-icon-box">🔨</div>
             <div style="flex:1;">
-              <h4 style="font-size:var(--font-body); font-weight:800;" id="camp-txt-forge-title" data-i18n="camp_forge_title">皇家鐵匠鋪 LV.3</h4>
+              <h4 style="font-size:var(--font-body); font-weight:800;" id="camp-txt-forge-title" data-i18n="camp_forge_title">皇家鐵匠鋪 LV.1</h4>
               <p style="font-size:var(--font-caption); color:#94a3b8;" id="camp-txt-forge-desc" data-i18n="camp_forge_desc">初始棋盤生成裝備基礎階級提升至 T02</p>
             </div>
-            <button class="cr-btn cr-btn-green btn-small" id="camp-btn-forge-upgrade" data-i18n="camp_btn_forge" onclick="alert('🔨 鐵匠鋪升級成功！')">升級 🪙800</button>
+            <button class="cr-btn cr-btn-green btn-small" id="camp-btn-forge-upgrade" data-i18n="camp_btn_forge" onclick="upgradeCampBuilding('forge')">升級 🪙800</button>
           </div>
 
           <!-- 2. 裝備轉蛋機 -->
@@ -162,8 +162,8 @@
               </div>
             </div>
             <div style="display:flex; gap:8px; width:100%;">
-              <button class="cr-btn cr-btn-purple btn-small" id="camp-btn-gacha-single" data-i18n="camp_btn_single" style="flex:1;" onclick="alert('🎰 單抽 (🪙100)：獲得 T02 青銅刃 (4)！')">單抽 🪙100</button>
-              <button class="cr-btn cr-btn-amber btn-small" id="camp-btn-gacha-ten" data-i18n="camp_btn_ten" style="flex:1;" onclick="alert('🎰 十連抽 (🪙1,000)：獲得 10 件裝備！\n🎁 保底贈送應急道具：⏳ 時光沙漏 x1！')">十連抽 🪙1000</button>
+              <button class="cr-btn cr-btn-purple btn-small" id="camp-btn-gacha-single" data-i18n="camp_btn_single" style="flex:1;" onclick="handleQuickGachaPull(1)">單抽 🪙100</button>
+              <button class="cr-btn cr-btn-amber btn-small" id="camp-btn-gacha-ten" data-i18n="camp_btn_ten" style="flex:1;" onclick="handleQuickGachaPull(10)">十連抽 🪙1000</button>
             </div>
           </div>
 
@@ -171,10 +171,10 @@
           <div class="camp-talent-card">
             <div class="talent-icon-box">🎒</div>
             <div style="flex:1;">
-              <h4 style="font-size:var(--font-body); font-weight:800;" id="camp-txt-bag-title" data-i18n="camp_bag_title">軍需行囊 (24 ➔ 28格)</h4>
+              <h4 style="font-size:var(--font-body); font-weight:800;" id="camp-txt-bag-title" data-i18n="camp_bag_title">軍需行囊 (16 ➔ 20格)</h4>
               <p style="font-size:var(--font-caption); color:#94a3b8;" id="camp-txt-bag-desc" data-i18n="camp_bag_desc">擴充 4 格裝備庫容量，通關金幣結算額外+20%</p>
             </div>
-            <button class="cr-btn cr-btn-green btn-small" id="camp-btn-bag-expand" data-i18n="camp_btn_expand" onclick="alert('🎒 行囊擴充成功！容量已提升至 28 格！')">擴充 🪙2000</button>
+            <button class="cr-btn cr-btn-green btn-small" id="camp-btn-bag-expand" data-i18n="camp_btn_expand" onclick="upgradeCampBuilding('capacity')">擴充 🪙2000</button>
           </div>
         </div>
       </section>
@@ -191,7 +191,7 @@
             <div class="hub-chapter-center" onclick="openQuickStageDrawer()">
               <div class="chapter-tag" id="hub-chap-tag">第一章：林地平原</div>
               <div class="stage-title">
-                <span id="hub-stage-num">Stage 12</span>
+                <span id="hub-stage-num">Stage 1</span>
                 <span class="hub-btn-stage-select" title="快速選關">☰</span>
               </div>
             </div>
@@ -288,9 +288,9 @@
                 <div class="deploy-slot-card">
                   <span class="slot-name" id="gear-txt-slot-gear" data-i18n="gear_slot_gear">配戴裝備</span>
                   <div class="slot-visual">
-                    <img id="deploy-gear-img" src="assets/images/equipment_clay/equip_09.png" alt="Equipped Gear" />
+                    <img id="deploy-gear-img" src="assets/images/equipment_clay/equip_01.png" alt="Equipped Gear" />
                   </div>
-                  <span style="font-size:var(--font-caption); font-weight:800; color:#fbbf24;" id="deploy-gear-name">聖殿光刃 (512)</span>
+                  <span style="font-size:var(--font-caption); font-weight:800; color:#fbbf24;" id="deploy-gear-name">泥木劍 (2)</span>
                   <button class="cr-btn cr-btn-purple btn-medium" id="gear-btn-unequip" data-i18n="gear_btn_unequip" style="width:85%;" onclick="unequipActiveGear()">解除</button>
                 </div>
 
@@ -313,9 +313,9 @@
             </div>
 
             <div class="inventory-actions-bar">
-              <button class="cr-btn cr-btn-purple" id="gear-btn-act-gacha" data-i18n="gear_btn_gacha" onclick="alert('🎁 前往裝備轉蛋機！')">🎁 裝備轉蛋</button>
-              <button class="cr-btn cr-btn-blue" id="gear-btn-act-expand" data-i18n="gear_btn_expand" onclick="alert('📦 花費 1,000 金幣擴充 4 格背包！')">📦 擴充容量</button>
-              <button class="cr-btn cr-btn-green" id="gear-btn-act-merge" data-i18n="gear_btn_merge" onclick="alert('✨ 一鍵合成：已自動合併相同裝備！')">✨ 一鍵合成</button>
+              <button class="cr-btn cr-btn-purple" id="gear-btn-act-gacha" data-i18n="gear_btn_gacha" onclick="openQuickGachaModal()">🎁 裝備轉蛋</button>
+              <button class="cr-btn cr-btn-blue" id="gear-btn-act-expand" data-i18n="gear_btn_expand" onclick="openUpgradeCapacityModal()">📦 擴充容量</button>
+              <button class="cr-btn cr-btn-green" id="gear-btn-act-merge" data-i18n="gear_btn_merge" onclick="handleOneKeyMerge()">✨ 一鍵合成</button>
             </div>
 
             <!-- Gear Grid (Bounded, no overflow) -->
@@ -358,7 +358,7 @@
                 </div>
                 <div class="hero-actions-lower">
                   <button class="cr-btn cr-btn-blue" id="btn-deploy-merchant" onclick="deployHero('merchant')">指派上陣</button>
-                  <button class="cr-btn cr-btn-green" onclick="alert('🪙 花費 5,000 金幣升級戰地商人！')">升級 🪙5000</button>
+                  <button class="cr-btn cr-btn-green" onclick="upgradeHero('merchant')">升級 🪙5000</button>
                 </div>
               </div>
 
@@ -374,7 +374,7 @@
                 </div>
                 <div class="hero-actions-lower">
                   <button class="cr-btn cr-btn-blue" id="btn-deploy-archer" onclick="deployHero('archer')">指派上陣</button>
-                  <button class="cr-btn cr-btn-green" onclick="alert('🪙 花費 5,000 金幣升級精靈弓箭手！')">升級 🪙5000</button>
+                  <button class="cr-btn cr-btn-green" onclick="upgradeHero('archer')">升級 🪙5000</button>
                 </div>
               </div>
 
@@ -564,7 +564,7 @@
 
           <!-- 5. 清除紀錄 (清除本地存檔) -->
           <div style="margin-top:6px;">
-            <button class="cr-btn cr-btn-purple btn-medium" id="btn-settings-reset-save" data-i18n="settings_reset_save" style="width:100%; background:linear-gradient(180deg, #991b1b, #7f1d1d); border-color:#ef4444;" onclick="if(confirm('⚠️ 警告：確定要清除本地存檔並重置所有進度嗎？此操作不可逆！')) alert('🗑️ 本地存檔已重置回初始狀態！')">🗑️ 清除本地存檔 (重置紀錄)</button>
+            <button class="cr-btn cr-btn-purple btn-medium" id="btn-settings-reset-save" data-i18n="settings_reset_save" style="width:100%; background:linear-gradient(180deg, #991b1b, #7f1d1d); border-color:#ef4444;" onclick="handleResetAllSaveData()">🗑️ 清除本地存檔 (重置紀錄)</button>
           </div>
         </div>
 
@@ -1085,7 +1085,7 @@
           </div>
 
           <!-- 手動檢查版本更新 -->
-          <button class="cr-btn cr-btn-green btn-medium" id="btn-force-reload-version" data-i18n="settings_btn_check_update" style="width:100%;" onclick="alert('🔄 目前已是最新版本 (v6.9.1)！無須更新。')">🔄 手動檢查版本更新 (無損熱更新)</button>
+          <button class="cr-btn cr-btn-green btn-medium" id="btn-force-reload-version" data-i18n="settings_btn_check_update" style="width:100%;" onclick="alert('🔄 目前已是最新版本 (v6.9.1)！')">🔄 手動檢查版本更新 (無損熱更新)</button>
         </div>
 
         <!-- ================= PANE 3: 開發測試用 ================= -->
@@ -1093,7 +1093,7 @@
           <!-- 1. 方塊美術造型 -->
           <div class="setting-row">
             <span style="font-weight:700; color:#f8fafc;" id="settings-txt-style" data-i18n="settings_style">🖼️ 方塊美術造型</span>
-            <select id="setting-style-select" class="setting-select" onchange="alert('🎨 美術造型已切換為：' + this.options[this.selectedIndex].text)">
+            <select id="setting-style-select" class="setting-select" onchange="changeTileStyle(this.value)">
               <option value="clay" selected>🗿 微縮模型 (3D黏土)</option>
               <option value="emoji">🎭 立體 Emoji (Q版)</option>
               <option value="comic">🎨 賽璐璐 (美漫風)</option>
@@ -1108,12 +1108,12 @@
               <span style="font-weight: 700; color: #38bdf8;" id="settings-txt-instant-skill" data-i18n="settings_instant_skill">🛠️ [測試] 技能開場即就緒</span>
               <span style="font-size: 0.72rem; color: #94a3b8;" id="settings-txt-instant-skill-desc" data-i18n="settings_instant_skill_desc">進入戰鬥技能充能即為 100% 滿額</span>
             </div>
-            <input type="checkbox" id="setting-instant-skill" style="width:20px; height:20px; cursor:pointer;" onchange="alert(this.checked ? '⚡ 開場技能 100% 就緒已啟用' : '正常戰鬥充能模式')">
+            <input type="checkbox" id="setting-instant-skill" style="width:20px; height:20px; cursor:pointer;" onchange="toggleInstantSkill(this.checked)">
           </div>
 
           <!-- 3. 清除新手教學紀錄 -->
           <div style="margin-top:6px;">
-            <button class="cr-btn cr-btn-amber btn-medium" id="btn-settings-clear-tut" data-i18n="settings_clear_tut" style="width:100%;" onclick="alert('🔄 新手教學引導狀態已重置！下次進入關卡將重新指引。')">🔄 清除新手教學紀錄 (重置引導狀態)</button>
+            <button class="cr-btn cr-btn-amber btn-medium" id="btn-settings-clear-tut" data-i18n="settings_clear_tut" style="width:100%;" onclick="handleResetTutorial()">🔄 清除新手教學紀錄 (重置引導狀態)</button>
           </div>
         </div>
 
@@ -1162,7 +1162,7 @@
             <div style="width:75%; height:100%; background:linear-gradient(90deg, #38bdf8, #818cf8);"></div>
           </div>
           <div style="display:flex; justify-content:flex-end;">
-            <button class="cr-btn cr-btn-disabled btn-small" id="btn-claim-quest-chest" onclick="alert('⚠️ 活躍度尚未達到 100 點！')">🎁 全勤大寶箱 (需100點)</button>
+            <button class="cr-btn cr-btn-disabled btn-small" id="btn-claim-quest-chest" onclick="claimDailyActivityChest()">🎁 全勤大寶箱 (需100點)</button>
           </div>
         </div>
 
