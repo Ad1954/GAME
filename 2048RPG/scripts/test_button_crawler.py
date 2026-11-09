@@ -121,7 +121,7 @@ def run_crawler():
             drawer_display = page.evaluate("document.getElementById('drawer-quick-stage').style.display")
             assert drawer_display in ("flex", "block"), "Quick Stage Drawer failed to open"
             nodes_count = page.locator(".quick-stage-node").count()
-            assert nodes_count >= 25, f"Expected 25 stage nodes in drawer, found {nodes_count}"
+            assert nodes_count == 351, f"Expected 351 stage nodes (Stage 0 + 350 stages) in drawer, found {nodes_count}"
             print(f"  [PASS] Quick Stage Drawer open with {nodes_count} stage nodes")
             passed_checks += 1
 
@@ -157,11 +157,12 @@ def run_crawler():
             stg_modal_display = page.evaluate("document.getElementById('modal-stage-detail').style.display")
             assert stg_modal_display in ("flex", "block"), "Stage detail modal failed to open"
             rec_power = page.inner_text("#modal-stage-rec-power")
-            assert "建議戰力" in rec_power and "建議鍛造" in rec_power, f"Expected recommended power & forge, got: {rec_power}"
+            assert "初次通關獎勵" in rec_power and "建議鐵匠鋪等級" in rec_power and "建議裝備" in rec_power, f"Expected 3-zone metrics in Zone 1, got: {rec_power}"
             minion_cards = page.locator("#modal-minions-list .mini-stage-card").count()
             gear_cards = page.locator("#modal-stage-gears .mini-stage-card").count()
-            assert gear_cards >= 1, f"Expected at least 1 gear card, found {gear_cards}"
-            print(f"  [PASS] Stage Detail Modal: RecPower='{rec_power}', Minions={minion_cards}, Gears={gear_cards}")
+            assert minion_cards == 3, f"Expected 3 monster cards for Stage 1 (8, 2, 4), found {minion_cards}"
+            assert gear_cards == 2, f"Expected 2 gear cards for Stage 1 (2, 2), found {gear_cards}"
+            print(f"  [PASS] Stage Detail Modal: 3-Zone Metrics Verified, Minions={minion_cards}, Gears={gear_cards}")
             passed_checks += 1
             page.evaluate("window.closeStageDetailModal()")
             page.wait_for_timeout(100)

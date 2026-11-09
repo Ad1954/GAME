@@ -2288,3 +2288,101 @@
   background: #64748b !important;
   color: #cbd5e1 !important;
 }
+
+
+/* ========================================================
+   C-STORY-147: STAGE DETAIL 3-ZONE & 4-COLUMN COMBAT TILE GRID
+   ======================================================== */
+#modal-stage-detail .cr-modal-box {
+  max-width: 384px !important;
+  padding: 16px !important;
+}
+
+.stage-detail-tile-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 8px !important;
+  width: 100% !important;
+  padding-top: 6px !important;
+}
+
+.stage-detail-tile-cell,
+.stage-detail-tile-cell.mini-stage-card {
+  aspect-ratio: 1 / 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.stage-detail-tile-cell .tile {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 10px !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+}
+
+.stage-detail-tile-cell .tile .tile-icon-img {
+  width: auto !important;
+  height: auto !important;
+  max-width: 92% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+
+.stage-detail-tile-cell .tile.tile-equipment {
+  border-width: 2.5px !important;
+  border-style: solid !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.15) !important;
+  overflow: hidden !important;
+}
+
+.stage-detail-tile-cell .tile.tile-monster {
+  border: 4px solid #f43f5e !important;
+  box-shadow: 0 0 14px rgba(244, 63, 94, 0.8), inset 0 0 6px rgba(0, 0, 0, 0.5) !important;
+  overflow: visible !important;
+}
+
+.tile-boss-ribbon {
+  position: absolute !important;
+  top: -8px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  background: linear-gradient(135deg, #f43f5e, #be123c) !important;
+  color: #ffffff !important;
+  font-size: 0.68rem !important;
+  font-weight: 900 !important;
+  line-height: 1.1 !important;
+  padding: 2px 8px !important;
+  border-radius: 6px !important;
+  border: 1.5px solid #fecdd3 !important;
+  z-index: 25 !important;
+  letter-spacing: 0.5px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.85) !important;
+  white-space: nowrap !important;
+  pointer-events: none !important;
+}
+
+.quick-chapter-header {
+  grid-column: 1 / -1 !important;
+  background: rgba(30, 41, 59, 0.85) !important;
+  color: #38bdf8 !important;
+  font-size: 0.8rem !important;
+  font-weight: 800 !important;
+  padding: 6px 10px !important;
+  border-radius: 6px !important;
+  border-left: 3px solid #38bdf8 !important;
+  margin-top: 6px !important;
+  margin-bottom: 2px !important;
+}

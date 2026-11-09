@@ -245,12 +245,12 @@
           <div class="hub-stage-brief" onclick="openStageDetailModal()">
             <div class="brief-col">
               <span class="label" id="txt-brief-power-lbl" data-i18n="adv_rec_power">推薦戰力</span>
-              <span class="val" id="brief-rec-power">2 裝備</span>
+              <span class="val" id="brief-rec-power">8 裝備</span>
             </div>
             <div style="width:1.5px; height:24px; background:#334155; opacity:0.6;"></div>
             <div class="brief-col">
               <span class="label" id="txt-brief-gold-lbl" data-i18n="adv_first_clear">首通金幣獎勵</span>
-              <span class="val" style="color:#fbbf24;" id="brief-first-gold">🪙 1,560</span>
+              <span class="val" style="color:#fbbf24;" id="brief-first-gold">🪙 100</span>
             </div>
             <div style="width:1.5px; height:24px; background:#334155; opacity:0.6;"></div>
             <div class="brief-col">
@@ -466,45 +466,46 @@
     </nav>
 
     <!-- ========================================================
-         MODAL 1: 關卡詳細資訊 POPUP (STAGE DETAIL)
+         MODAL 1: 關卡詳細資訊 POPUP (STAGE DETAIL - C-STORY-147 三區原尺寸底板架構)
          ======================================================== -->
     <div class="modal-overlay" id="modal-stage-detail" onclick="if(event.target===this) closeStageDetailModal()">
-      <div class="cr-modal-box" style="gap:10px; max-height:88vh; overflow-y:auto;">
+      <div class="cr-modal-box" style="gap:12px; max-height:90vh; overflow-y:auto;">
         <div class="modal-close-btn" onclick="closeStageDetailModal()">✕</div>
         <div style="text-align:center;">
-          <h3 style="font-size:var(--font-h1); color:#fbbf24; margin-bottom:2px;" id="modal-stage-title">Stage 1 · 微風平原</h3>
-          <p style="font-size:var(--font-caption); color:#94a3b8;" id="modal-stage-rec-power">建議戰力：20 裝備 · 建議鍛造：LV.1</p>
+          <h3 style="font-size:var(--font-h1); color:#fbbf24; margin-bottom:4px;" id="modal-stage-title">第 1 關：微風平原</h3>
+          <p style="font-size:var(--font-caption); color:#94a3b8; margin:0;" id="modal-stage-objective">討伐哥布林前鋒！場上盤踞 3 隻敵軍，合成裝備餵給勇者一舉擊破！</p>
         </div>
-        
-        <!-- 怪物資訊 -->
-        <div style="background:#1e293b; border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:8px;">
-          <div style="display:flex; gap:12px; align-items:center;">
-            <div class="modal-boss-container" id="modal-boss-container">
-              <img id="modal-boss-img" src="assets/images/monsters_clay/monster_ch01_08.png" alt="Modal Boss Artwork" />
-            </div>
-            <div style="flex:1;">
-              <h4 style="font-size:var(--font-h2); color:#f8fafc; margin-bottom:2px;" id="modal-boss-name">首領：哥布林斥候 (8)</h4>
-              <p style="font-size:var(--font-caption); color:#38bdf8;" id="modal-stage-objective">作戰目標：消滅盤面所有魔物</p>
-            </div>
+
+        <!-- (第一區) 初次通關獎勵 / 建議鐵匠鋪等級 / 建議裝備 -->
+        <div class="stage-detail-zone stage-detail-zone-metrics" id="modal-stage-rec-power" style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--font-body);">
+            <span style="color:#cbd5e1; font-weight:700;" id="modal-txt-gold-lbl" data-i18n="stage_first_gold_title">初次通關獎勵：</span>
+            <strong style="color:#fbbf24; font-size:1rem; font-weight:900;" id="modal-gold-reward">100 金幣</strong>
           </div>
-          <!-- 其他魔物 (卡片式) -->
-          <div style="background:#0f172a; border-radius:8px; padding:8px 10px; font-size:var(--font-caption);">
-            <div style="color:#94a3b8; font-weight:700; margin-bottom:6px;" id="modal-txt-minions-lbl" data-i18n="stage_minions_title">登場魔物：</div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;" id="modal-minions-list">
-              <!-- Populated dynamically as mini-stage-card -->
-            </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--font-body);">
+            <span style="color:#cbd5e1; font-weight:700;" id="modal-txt-forge-lbl">建議鐵匠鋪等級：</span>
+            <strong style="color:#38bdf8; font-size:1rem; font-weight:900;" id="modal-forge-level">LV.2</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--font-body);">
+            <span style="color:#cbd5e1; font-weight:700;" id="modal-txt-equip-lbl">建議裝備：</span>
+            <strong style="color:#4ade80; font-size:1rem; font-weight:900;" id="modal-rec-equip">8</strong>
           </div>
         </div>
 
-        <!-- 場景資源與獎勵 (卡片式) -->
-        <div style="background:#090d16; border-radius:12px; padding:10px 12px; font-size:var(--font-caption); color:#cbd5e1; display:flex; flex-direction:column; gap:6px;">
-          <div>
-            <div style="color:#38bdf8; font-weight:700; margin-bottom:6px;" id="modal-txt-gears-lbl" data-i18n="stage_gears_title">場景資源 (裝備品)：</div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;" id="modal-stage-gears">
-              <!-- Populated dynamically as mini-stage-card -->
-            </div>
+        <!-- (第二區) 物資 -->
+        <div class="stage-detail-zone" style="background:#0f172a; border:1px solid #1e293b; border-radius:12px; padding:12px;">
+          <div style="color:#38bdf8; font-weight:800; font-size:var(--font-body); margin-bottom:10px;" id="modal-txt-gears-lbl" data-i18n="stage_gears_title">物資</div>
+          <div class="stage-detail-tile-grid" id="modal-stage-gears">
+            <!-- Populated dynamically with 1:1 combat-sized equipment tiles (4 per row) -->
           </div>
-          <div style="margin-top:4px;"><span id="modal-txt-gold-lbl" data-i18n="stage_first_gold_title">🪙 初次通關獎勵：</span><strong style="color:#fbbf24; font-size:var(--font-body);" id="modal-gold-reward">100 金幣</strong></div>
+        </div>
+
+        <!-- (第三區) 登場魔物 -->
+        <div class="stage-detail-zone" style="background:#0f172a; border:1px solid #1e293b; border-radius:12px; padding:12px;">
+          <div style="color:#f43f5e; font-weight:800; font-size:var(--font-body); margin-bottom:10px;" id="modal-txt-minions-lbl" data-i18n="stage_minions_title">登場魔物</div>
+          <div class="stage-detail-tile-grid" id="modal-minions-list">
+            <!-- Populated dynamically with 1:1 combat-sized monster tiles (4 per row, Boss badged) -->
+          </div>
         </div>
 
         <!-- 統一按鈕文字為「出擊」 -->

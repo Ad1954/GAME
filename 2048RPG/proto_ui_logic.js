@@ -118,12 +118,120 @@
   // ADVENTURE & STAGE NAVIGATION
   // ----------------------------------------------------
   function getMaxUnlocked() {
-    return window.appRouter ? (window.appRouter.stageManager.maxUnlockedStage || 1) : 1;
+    if (!window.appRouter || !window.appRouter.stageManager) return 1;
+    return window.appRouter.stageManager.unlockedStageId || window.appRouter.stageManager.maxUnlockedStage || 1;
   }
 
   function isTutorialCompleted() {
     if (!window.appRouter || !window.appRouter.stageManager || !window.appRouter.stageManager.tutorialManager) return true;
     return window.appRouter.stageManager.tutorialManager.isCompleted;
+  }
+
+  function getStageConfigById(stageId) {
+    if (stageId === 0) {
+      return (window.appRouter && window.appRouter.STAGE_0_CONFIG) ? window.appRouter.STAGE_0_CONFIG : {
+        id: 0, chapter: 0, name: '第 0 關：王國勇者試煉 (教學)', subtitle: '皇家訓練營',
+        desc: '皇家騎士團教官親授！學習裝備合成、魔物討伐、金幣兌現與戰力法則！',
+        recPower: 2, recTechTier: 1, rewardGold: 50, monsters: [4, 8], starterEquipment: [2, 2], icon: '🎓'
+      };
+    }
+    const configs = (window.appRouter && window.appRouter.STAGE_CONFIGS) ? window.appRouter.STAGE_CONFIGS : [];
+    return configs.find(s => s.id === stageId) || null;
+  }
+
+  function getMonsterThemeInfo(chapterId, val) {
+    if (window.appRouter && typeof window.appRouter.getMonsterThemeByChapter === 'function') {
+      return window.appRouter.getMonsterThemeByChapter(chapterId, val);
+    }
+    return { name: '魔物', badge: '👾', bg: '#4c0519', text: '#fecdd3', border: '#e11d48' };
+  }
+
+  function getEquipThemeInfo(val) {
+    if (window.appRouter && window.appRouter.EQUIPMENT_THEMES && window.appRouter.EQUIPMENT_THEMES[val]) {
+      return window.appRouter.EQUIPMENT_THEMES[val];
+    }
+    return { name: '裝備', badge: '⚔️', bg: '#78350f', text: '#fef3c7', border: '#b45309' };
+  }
+
+  function createCombatStyleTileCard(type, val, chapterId, isBoss = false) {
+    const cell = document.createElement('div');
+    cell.className = 'stage-detail-tile-cell mini-stage-card';
+
+    const activeSkin = (window.appRouter && window.appRouter.activeThemeSkin) ? window.appRouter.activeThemeSkin : 'kingdom';
+    const activeIconStyle = (window.appRouter && window.appRouter.activeIconStyle) ? window.appRouter.activeIconStyle : 'style_e_clay';
+
+    const tileEl = document.createElement('div');
+    const isMonster = (type === 'monster');
+    tileEl.className = `tile tile-${isMonster ? 'monster' : 'equipment'} skin-${activeSkin} theme-${activeSkin} layout_modern_pure`;
+    tileEl.dataset.value = val;
+
+    let theme = null;
+    if (window.appRouter && typeof window.appRouter.getTileTheme === 'function') {
+      theme = window.appRouter.getTileTheme(isMonster ? 'MONSTER' : 'EQUIPMENT', val, activeSkin);
+    }
+    if (isMonster) {
+      const chTheme = getMonsterThemeInfo(chapterId, val);
+      theme = { ...(theme || {}), ...(chTheme || {}) };
+    } else if (!theme) {
+      theme = getEquipThemeInfo(val);
+    }
+
+    if (theme) {
+      if (theme.bg) tileEl.style.backgroundColor = theme.bg;
+      if (theme.text) tileEl.style.color = theme.text;
+      if (!isMonster && theme.border) {
+        tileEl.style.borderColor = theme.border;
+      }
+    }
+
+    if (isBoss) {
+      const bossRibbon = document.createElement('div');
+      bossRibbon.className = 'tile-boss-ribbon';
+      bossRibbon.textContent = 'Boss';
+      cell.appendChild(bossRibbon);
+    }
+
+    const badgeSpan = document.createElement('div');
+    badgeSpan.className = 'tile-badge';
+
+    let imgPath = null;
+    if (isMonster) {
+      imgPath = (window.appRouter && typeof window.appRouter.getMonsterImagePath === 'function')
+        ? window.appRouter.getMonsterImagePath(chapterId, val, activeIconStyle)
+        : getMonsterImg(val, chapterId);
+    } else {
+      imgPath = (window.appRouter && typeof window.appRouter.getEquipmentImagePath === 'function')
+        ? window.appRouter.getEquipmentImagePath(val, activeIconStyle)
+        : getEquipImg(val);
+    }
+
+    if (imgPath) {
+      badgeSpan.classList.add('has-tile-img');
+      const img = document.createElement('img');
+      img.className = 'tile-icon-img';
+      img.src = imgPath;
+      img.alt = String(val);
+      img.onerror = () => {
+        img.remove();
+        badgeSpan.classList.remove('has-tile-img');
+        badgeSpan.textContent = (theme && theme.badge) ? theme.badge : (isMonster ? '👾' : '⚔️');
+      };
+      badgeSpan.appendChild(img);
+    } else {
+      badgeSpan.textContent = (theme && theme.badge) ? theme.badge : (isMonster ? '👾' : '⚔️');
+    }
+
+    const valueSpan = document.createElement('div');
+    valueSpan.className = 'tile-value mini-card-badge';
+    if (val >= 10000) {
+      valueSpan.classList.add('tile-value-compact');
+    }
+    valueSpan.textContent = val;
+
+    tileEl.appendChild(badgeSpan);
+    tileEl.appendChild(valueSpan);
+    cell.appendChild(tileEl);
+    return cell;
   }
 
   function changeStageByStep(step) {
@@ -146,7 +254,7 @@
     } else if (!tutDone) {
       window.currentSelectedStage = 0; // Default to Tutorial if not completed
     } else if (window.currentSelectedStage === undefined) {
-      window.currentSelectedStage = 1;
+      window.currentSelectedStage = maxU || 1;
     }
 
     const cur = window.currentSelectedStage;
@@ -155,18 +263,27 @@
     const arenaBossImg = document.getElementById('arena-boss-img');
     const arenaBossName = document.getElementById('arena-boss-name');
     const briefRecPower = document.getElementById('brief-rec-power');
+    const briefFirstGold = document.getElementById('brief-first-gold');
     const btnPrev = document.getElementById('btn-stage-prev');
     const btnNext = document.getElementById('btn-stage-next');
 
+    const cfg = getStageConfigById(cur);
+    const isCleared = (cur === 0)
+      ? tutDone
+      : !!(window.appRouter && window.appRouter.stageManager && window.appRouter.stageManager.clearedStages && window.appRouter.stageManager.clearedStages[cur]);
+
     if (cur === 0) {
       if (hubStageNum) hubStageNum.textContent = '序章 (教學)';
-      if (hubChapTag) hubChapTag.textContent = '序章 · 皇家訓練營';
+      if (hubChapTag) hubChapTag.textContent = '序章 · 新手訓練所';
       if (arenaBossImg) {
-        arenaBossImg.src = 'assets/images/monsters_clay/monster_ch01_04.png';
-        arenaBossImg.onerror = () => { arenaBossImg.src = 'assets/images/monsters_clay/monster_ch01_08.png'; };
+        arenaBossImg.src = 'assets/images/monsters_clay/monster_ch01_08.png';
+        arenaBossImg.onerror = () => { arenaBossImg.src = 'assets/images/monsters_clay/monster_ch01_04.png'; };
       }
-      if (arenaBossName) arenaBossName.textContent = '試煉首領：洞穴蝙蝠 (4)';
+      if (arenaBossName) arenaBossName.textContent = '首領：哥布林首領 (8)';
       if (briefRecPower) briefRecPower.textContent = '2 裝備';
+      if (briefFirstGold) {
+        briefFirstGold.textContent = isCleared ? '✔ 已領取 (50)' : '🪙 50';
+      }
       if (btnPrev) btnPrev.disabled = true;
       if (btnNext) btnNext.disabled = (maxU < 1 && !tutDone);
 
@@ -176,29 +293,39 @@
       return;
     }
 
-    const configs = (window.appRouter && window.appRouter.STAGE_CONFIGS) ? window.appRouter.STAGE_CONFIGS : null;
-    const cfg = configs ? configs[cur] : null;
-
     if (hubStageNum) hubStageNum.textContent = `Stage ${cur}`;
     if (hubChapTag) {
       const ch = cfg ? (cfg.chapter || 1) : 1;
-      const chNames = { 1: '微風之境', 2: '荒漠熔岩', 3: '星空祭壇' };
-      hubChapTag.textContent = `第 ${ch} 章 · ${chNames[ch] || '冒險征途'}`;
+      const chConfigs = (window.appRouter && window.appRouter.CHAPTER_CONFIGS) ? window.appRouter.CHAPTER_CONFIGS : [];
+      const chObj = chConfigs.find(c => c.id === ch);
+      const chTitle = chObj ? chObj.name.replace('：', ' · ') : `第 ${ch} 章`;
+      hubChapTag.textContent = chTitle;
     }
 
     if (cfg) {
       const ch = cfg.chapter || 1;
-      const bossVal = (cfg.monsters && cfg.monsters[0]) ? (typeof cfg.monsters[0] === 'object' ? cfg.monsters[0].value : cfg.monsters[0]) : 8;
+      const rawMonsters = Array.isArray(cfg.monsters) ? cfg.monsters : [8];
+      const bossEntry = rawMonsters[0];
+      const bossVal = (typeof bossEntry === 'object' && bossEntry !== null) ? bossEntry.value : (bossEntry || 8);
+      const bossTheme = getMonsterThemeInfo(ch, bossVal);
+      const activeIconStyle = (window.appRouter && window.appRouter.activeIconStyle) ? window.appRouter.activeIconStyle : 'style_e_clay';
+
       if (arenaBossImg) {
-        arenaBossImg.src = getMonsterImg(bossVal, ch);
+        const imgPath = (window.appRouter && typeof window.appRouter.getMonsterImagePath === 'function')
+          ? window.appRouter.getMonsterImagePath(ch, bossVal, activeIconStyle)
+          : getMonsterImg(bossVal, ch);
+        arenaBossImg.src = imgPath || getMonsterImg(bossVal, ch);
         arenaBossImg.onerror = () => { arenaBossImg.src = 'assets/images/monsters_clay/monster_ch01_08.png'; };
       }
       if (arenaBossName) {
-        const bName = cfg.name.split('：')[1] || cfg.name;
-        arenaBossName.textContent = `首領：${bName} (${bossVal})`;
+        arenaBossName.textContent = `首領：${bossTheme.name || '魔物'} (${bossVal})`;
       }
       if (briefRecPower) {
-        briefRecPower.textContent = `${(cfg.recPower || 2) * 10} 裝備`;
+        briefRecPower.textContent = `${cfg.recPower || 2} 裝備`;
+      }
+      if (briefFirstGold) {
+        const rGold = Number(cfg.rewardGold || 100).toLocaleString();
+        briefFirstGold.textContent = isCleared ? `✔ 已領取 (${rGold})` : `🪙 ${rGold}`;
       }
     }
 
@@ -221,113 +348,68 @@
     const modal = document.getElementById('modal-stage-detail');
     if (!modal) return;
 
+    const cfg = getStageConfigById(sId);
+    if (!cfg) return;
+
+    const isCleared = (sId === 0)
+      ? tutDone
+      : !!(window.appRouter && window.appRouter.stageManager && window.appRouter.stageManager.clearedStages && window.appRouter.stageManager.clearedStages[sId]);
+
     const titleEl = document.getElementById('modal-stage-title');
-    const recPowerEl = document.getElementById('modal-stage-rec-power');
-    const bossNameEl = document.getElementById('modal-boss-name');
-    const bossImgEl = document.getElementById('modal-boss-img');
     const objectiveEl = document.getElementById('modal-stage-objective');
-    const minionsList = document.getElementById('modal-minions-list');
-    const gearsList = document.getElementById('modal-stage-gears');
     const goldRewardEl = document.getElementById('modal-gold-reward');
+    const forgeLevelEl = document.getElementById('modal-forge-level');
+    const recEquipEl = document.getElementById('modal-rec-equip');
+    const gearsList = document.getElementById('modal-stage-gears');
+    const minionsList = document.getElementById('modal-minions-list');
 
-    if (sId === 0) {
-      if (titleEl) titleEl.textContent = '序章 · 王國勇者試煉 (教學)';
-      if (recPowerEl) recPowerEl.textContent = '建議戰力：20 裝備 · 建議鍛造：LV.1';
-      if (bossNameEl) bossNameEl.textContent = '試煉首領：洞穴蝙蝠 (4)';
-      if (bossImgEl) {
-        bossImgEl.src = 'assets/images/monsters_clay/monster_ch01_04.png';
-        bossImgEl.onerror = () => { bossImgEl.src = 'assets/images/monsters_clay/monster_ch01_08.png'; };
-      }
-      if (objectiveEl) objectiveEl.textContent = '作戰目標：跟隨教官指引完成試煉';
-      if (minionsList) {
-        minionsList.innerHTML = `
-          <div class="mini-stage-card">
-            <img src="assets/images/monsters_clay/monster_ch01_04.png" alt="4">
-            <span class="mini-card-badge">4</span>
-          </div>
-        `;
-      }
-      if (gearsList) {
-        gearsList.innerHTML = `
-          <div class="mini-stage-card">
-            <img src="assets/images/equipment_clay/equip_01.png" alt="2">
-            <span class="mini-card-badge">2</span>
-          </div>
-          <div class="mini-stage-card">
-            <img src="assets/images/equipment_clay/equip_01.png" alt="2">
-            <span class="mini-card-badge">2</span>
-          </div>
-        `;
-      }
-      if (goldRewardEl) goldRewardEl.textContent = '50 金幣';
-      modal.classList.add('active');
-      modal.style.display = 'flex';
-      return;
+    if (titleEl) titleEl.textContent = cfg.name || `第 ${sId} 關`;
+    if (objectiveEl) objectiveEl.textContent = cfg.desc || '作戰目標：消滅盤面所有魔物';
+
+    // (第一區) 初次通關獎勵 / 建議鐵匠鋪等級 / 建議裝備
+    const rGold = Number(cfg.rewardGold || (sId === 0 ? 50 : 100)).toLocaleString();
+    if (goldRewardEl) {
+      goldRewardEl.textContent = isCleared ? `已領取 (${rGold} 金幣)` : `${rGold} 金幣`;
+    }
+    const techTier = cfg.recTechTier || 1;
+    if (forgeLevelEl) {
+      forgeLevelEl.textContent = `LV.${techTier}`;
+    }
+    const recPower = cfg.recPower || 2;
+    if (recEquipEl) {
+      recEquipEl.textContent = `${recPower}`;
     }
 
-    const configs = (window.appRouter && window.appRouter.STAGE_CONFIGS) ? window.appRouter.STAGE_CONFIGS : null;
-    const cfg = configs ? configs[sId] : null;
+    const ch = cfg.chapter || (sId === 0 ? 1 : 1);
 
-    const ch = cfg ? (cfg.chapter || 1) : 1;
-    const bossVal = (cfg && cfg.monsters && cfg.monsters[0]) ? (typeof cfg.monsters[0] === 'object' ? cfg.monsters[0].value : cfg.monsters[0]) : 8;
-
-    if (titleEl) titleEl.textContent = `Stage ${sId} · ${cfg ? cfg.name : '關卡情報'}`;
-    if (recPowerEl) {
-      const recP = cfg ? (cfg.recPower || 2) : 2;
-      const forgeLvl = Math.max(1, Math.round(Math.log2(recP)));
-      recPowerEl.textContent = `建議戰力：${recP * 10} 裝備 · 建議鍛造：LV.${forgeLvl}`;
-    }
-
-    if (bossNameEl) {
-      const bossName = cfg ? (cfg.name.split('：')[1] || cfg.name) : '魔物首領';
-      bossNameEl.textContent = `首領：${bossName} (${bossVal})`;
-    }
-    if (bossImgEl) {
-      bossImgEl.src = getMonsterImg(bossVal, ch);
-      bossImgEl.onerror = () => { bossImgEl.src = 'assets/images/monsters_clay/monster_ch01_08.png'; };
-    }
-    if (objectiveEl) {
-      objectiveEl.textContent = '作戰目標：消滅盤面所有魔物';
-    }
-
-    // Minions mini-cards (aspect-ratio 5:6)
-    if (minionsList) {
-      minionsList.innerHTML = '';
-      const minions = (cfg && cfg.monsters) ? cfg.monsters.slice(1) : [];
-      if (minions.length === 0) {
-        minionsList.innerHTML = '<span style="color:#64748b; font-size:var(--font-caption);">無其他護衛魔物</span>';
-      } else {
-        minions.forEach(m => {
-          const mVal = typeof m === 'object' ? m.value : m;
-          const card = document.createElement('div');
-          card.className = 'mini-stage-card';
-          card.innerHTML = `
-            <img src="${getMonsterImg(mVal, ch)}" onerror="this.src='assets/images/monsters_clay/monster_ch01_02.png'" alt="${mVal}">
-            <span class="mini-card-badge">${mVal}</span>
-          `;
-          minionsList.appendChild(card);
-        });
-      }
-    }
-
-    // Stage resource gears mini-cards (aspect-ratio 5:6)
+    // (第二區) 物資 (starterEquipment - 4 per row, 1:1 combat board tile size & baseplate)
     if (gearsList) {
       gearsList.innerHTML = '';
-      const gears = (cfg && cfg.starterEquipment) ? cfg.starterEquipment : [2, 2];
+      const gears = Array.isArray(cfg.starterEquipment) ? cfg.starterEquipment : [2, 2];
       gears.forEach(g => {
-        const gVal = typeof g === 'object' ? g.value : g;
-        const card = document.createElement('div');
-        card.className = 'mini-stage-card';
-        card.innerHTML = `
-          <img src="${getEquipImg(gVal)}" onerror="this.src='assets/images/equipment_clay/equip_01.png'" alt="${gVal}">
-          <span class="mini-card-badge">${gVal}</span>
-        `;
+        const gVal = (typeof g === 'object' && g !== null) ? g.value : g;
+        const card = createCombatStyleTileCard('equipment', gVal, ch, false);
         gearsList.appendChild(card);
       });
     }
 
-    if (goldRewardEl) {
-      goldRewardEl.textContent = `${cfg ? Number(cfg.rewardGold || 100).toLocaleString() : 100} 金幣`;
+    // (第三區) 登場魔物 (ALL monsters in cfg.monsters - 4 per row, 1:1 combat board tile size & baseplate, Boss badged)
+    if (minionsList) {
+      minionsList.innerHTML = '';
+      const monsters = Array.isArray(cfg.monsters) ? cfg.monsters : [8];
+      let maxVal = -1;
+      monsters.forEach(m => {
+        const v = (typeof m === 'object' && m !== null) ? m.value : m;
+        if (v > maxVal) maxVal = v;
+      });
+      let bossMarked = false;
+      monsters.forEach((m, idx) => {
+        const mVal = (typeof m === 'object' && m !== null) ? m.value : m;
+        const isBoss = (!bossMarked && (mVal === maxVal || idx === 0));
+        if (isBoss) bossMarked = true;
+        const card = createCombatStyleTileCard('monster', mVal, ch, isBoss);
+        minionsList.appendChild(card);
+      });
     }
 
     modal.classList.add('active');
@@ -352,7 +434,7 @@
   }
 
   // ----------------------------------------------------
-  // QUICK STAGE DRAWER
+  // QUICK STAGE DRAWER (ALL 350 STAGES + PROLOGUE)
   // ----------------------------------------------------
   function openQuickStageDrawer() {
     const drawer = document.getElementById('drawer-quick-stage');
@@ -363,45 +445,81 @@
     const tutDone = isTutorialCompleted();
     grid.innerHTML = '';
 
-    // Stage 0 (教學) node
-    const tutNode = document.createElement('div');
-    const isTutCur = (window.currentSelectedStage === 0);
-    tutNode.className = `quick-stage-node ${isTutCur ? 'active' : ''}`;
-    tutNode.style.cssText = `padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; font-weight: 700; ${
-      isTutCur ? 'background: #3b82f6; color: #fff; border: 2px solid #60a5fa;' :
-      'background: #1e293b; color: #fbbf24; border: 1px solid #f59e0b;'
-    }`;
-    tutNode.innerHTML = '🎓 序章 (教學)';
-    tutNode.onclick = () => {
-      window.currentSelectedStage = 0;
-      renderAdventureStage(0);
-      closeQuickStageDrawer();
-    };
-    grid.appendChild(tutNode);
+    const chConfigs = (window.appRouter && window.appRouter.CHAPTER_CONFIGS) ? window.appRouter.CHAPTER_CONFIGS : [
+      { id: 0, name: '序章：新手訓練所', range: [0, 0], icon: '🎓' },
+      { id: 1, name: '第 I 章：微風之境', range: [1, 5], icon: '🌾' },
+      { id: 2, name: '第 II 章：灼熱熔岩', range: [6, 20], icon: '🔥' },
+      { id: 3, name: '第 III 章：孤峰岩地', range: [21, 50], icon: '⛰️' },
+      { id: 4, name: '第 IV 章：蛛魔荒漠', range: [51, 90], icon: '🏜️' },
+      { id: 5, name: '第 V 章：遠古地宮', range: [91, 150], icon: '🏛️' },
+      { id: 6, name: '第 VI 章：滅世黑曜', range: [151, 220], icon: '🌋' },
+      { id: 7, name: '第 VII 章：神魔深淵', range: [221, 280], icon: '🌌' },
+      { id: 8, name: '第 VIII 章：終焉神域', range: [281, 350], icon: '👑' }
+    ];
 
-    for (let s = 1; s <= 25; s++) {
-      const isUnlocked = s <= maxU && tutDone;
-      const isCurrent = s === window.currentSelectedStage;
-      const btn = document.createElement('div');
-      btn.className = `quick-stage-node ${isCurrent ? 'active' : ''} ${!isUnlocked ? 'locked' : ''}`;
-      btn.style.cssText = `padding: 10px; border-radius: 8px; text-align: center; cursor: ${isUnlocked ? 'pointer' : 'not-allowed'}; font-weight: 700; ${
-        isCurrent ? 'background: #3b82f6; color: #fff; border: 2px solid #60a5fa;' :
-        isUnlocked ? 'background: #1e293b; color: #f8fafc; border: 1px solid #334155;' :
-        'background: #0f172a; color: #475569; border: 1px solid #1e293b;'
-      }`;
-      btn.innerHTML = `${isUnlocked ? `Stage ${s}` : `🔒 ${s}`}`;
-      if (isUnlocked) {
-        btn.onclick = () => {
-          window.currentSelectedStage = s;
-          renderAdventureStage(s);
+    let activeNodeEl = null;
+
+    chConfigs.forEach(ch => {
+      const header = document.createElement('div');
+      header.className = 'quick-chapter-header';
+      const rangeStr = ch.id === 0 ? 'Stage 0' : `Stage ${ch.range[0]} ~ ${ch.range[1]}`;
+      header.textContent = `${ch.icon || '⚔️'} ${ch.name} (${rangeStr})`;
+      grid.appendChild(header);
+
+      if (ch.id === 0) {
+        const tutNode = document.createElement('div');
+        const isTutCur = (window.currentSelectedStage === 0);
+        tutNode.className = `quick-stage-node ${isTutCur ? 'active' : ''}`;
+        tutNode.dataset.stageId = '0';
+        tutNode.style.cssText = `grid-column: span 2; padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; font-weight: 700; ${
+          isTutCur ? 'background: #3b82f6; color: #fff; border: 2px solid #60a5fa;' :
+          'background: #1e293b; color: #fbbf24; border: 1px solid #f59e0b;'
+        }`;
+        tutNode.innerHTML = '🎓 序章 (教學)';
+        tutNode.onclick = () => {
+          window.currentSelectedStage = 0;
+          renderAdventureStage(0);
           closeQuickStageDrawer();
         };
+        grid.appendChild(tutNode);
+        if (isTutCur) activeNodeEl = tutNode;
+        return;
       }
-      grid.appendChild(btn);
-    }
+
+      for (let s = ch.range[0]; s <= ch.range[1]; s++) {
+        const isUnlocked = (s <= maxU) && tutDone;
+        const isCurrent = (s === window.currentSelectedStage);
+        const isCleared = !!(window.appRouter && window.appRouter.stageManager && window.appRouter.stageManager.clearedStages && window.appRouter.stageManager.clearedStages[s]);
+        const btn = document.createElement('div');
+        btn.className = `quick-stage-node ${isCurrent ? 'active' : ''} ${!isUnlocked ? 'locked' : ''}`;
+        btn.dataset.stageId = String(s);
+        btn.style.cssText = `padding: 8px 4px; border-radius: 8px; text-align: center; cursor: ${isUnlocked ? 'pointer' : 'not-allowed'}; font-weight: 700; font-size: 0.78rem; ${
+          isCurrent ? 'background: #3b82f6; color: #fff; border: 2px solid #60a5fa;' :
+          isCleared ? 'background: #064e3b; color: #6ee7b7; border: 1px solid #10b981;' :
+          isUnlocked ? 'background: #1e293b; color: #f8fafc; border: 1px solid #334155;' :
+          'background: #0f172a; color: #475569; border: 1px solid #1e293b;'
+        }`;
+        btn.innerHTML = `${isUnlocked ? `${isCleared ? '★ ' : ''}${s}` : `🔒 ${s}`}`;
+        if (isUnlocked) {
+          btn.onclick = () => {
+            window.currentSelectedStage = s;
+            renderAdventureStage(s);
+            closeQuickStageDrawer();
+          };
+        }
+        grid.appendChild(btn);
+        if (isCurrent) activeNodeEl = btn;
+      }
+    });
 
     drawer.classList.add('active');
     drawer.style.display = 'flex';
+
+    if (activeNodeEl && typeof activeNodeEl.scrollIntoView === 'function') {
+      setTimeout(() => {
+        activeNodeEl.scrollIntoView({ behavior: 'instant', block: 'center' });
+      }, 50);
+    }
   }
 
   function closeQuickStageDrawer() {

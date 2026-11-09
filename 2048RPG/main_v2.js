@@ -12,13 +12,23 @@ import {
   Direction, TileType, STAGE_CONFIGS, STAGE_0_CONFIG, Events,
   MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS,
   DEFEAT_TACTICAL_TIPS, getEquipmentImagePath, getMonsterImagePath,
-  getHeroImagePath, getMonsterThemeByChapter, CharacterClass, CHARACTER_SKILL_CONFIGS
+  getHeroImagePath, getMonsterThemeByChapter, getTileTheme, CharacterClass, CHARACTER_SKILL_CONFIGS
 } from './src/core/Constants.js';
 
 class AppRouter {
   constructor() {
     this.state = 'LOBBY'; // 'LOBBY' | 'COMBAT'
     this.STAGE_CONFIGS = STAGE_CONFIGS;
+    this.STAGE_0_CONFIG = STAGE_0_CONFIG;
+    this.CHAPTER_CONFIGS = CHAPTER_CONFIGS;
+    this.MONSTER_THEMES = MONSTER_THEMES;
+    this.HERO_THEMES = HERO_THEMES;
+    this.EQUIPMENT_THEMES = EQUIPMENT_THEMES;
+    this.getMonsterThemeByChapter = getMonsterThemeByChapter;
+    this.getMonsterImagePath = getMonsterImagePath;
+    this.getEquipmentImagePath = getEquipmentImagePath;
+    this.getHeroImagePath = getHeroImagePath;
+    this.getTileTheme = getTileTheme;
     this.eventBus = new GameEventBus();
     this.stageManager = new StageManager(this.eventBus);
     this.audio = new AudioEffects();
@@ -414,8 +424,21 @@ class AppRouter {
     }
     this.eventBus.on(Events.ITEMS_CHANGED, () => this.updateItemCounts());
 
+    this.eventBus.on(Events.STAGE_UNLOCKED, (payload) => {
+      const nextStageId = (payload && payload.stageId) ? payload.stageId : this.stageManager.unlockedStageId;
+      if (nextStageId) {
+        window.currentSelectedStage = nextStageId;
+      }
+    });
+
     this.eventBus.on(Events.STAGE_VICTORY, (data) => {
       this.audio.playVictory();
+      if (data && data.stage && typeof data.stage.id === 'number' && data.stage.id > 0) {
+        const nextId = Math.min(STAGE_CONFIGS.length, data.stage.id + 1);
+        if (this.stageManager.unlockedStageId >= nextId) {
+          window.currentSelectedStage = nextId;
+        }
+      }
       const vModal = document.getElementById('modal-victory');
       if (vModal) {
         const titleEl = document.getElementById('victory-stage-name');
@@ -455,7 +478,8 @@ class AppRouter {
       if (this.tutorialOverlay) {
         this.tutorialOverlay.hide();
       }
-      this.stageManager.maxUnlockedStage = Math.max(1, this.stageManager.maxUnlockedStage || 1);
+      this.stageManager.unlockedStageId = Math.max(1, this.stageManager.unlockedStageId || 1);
+      this.stageManager.maxUnlockedStage = this.stageManager.unlockedStageId;
       this.stageManager.saveData();
       window.currentSelectedStage = 1;
       if (typeof window.renderAdventureStage === 'function') {
