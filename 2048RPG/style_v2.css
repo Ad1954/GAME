@@ -2183,13 +2183,15 @@
 }
 
 /* ========================================================
-   C-STORY-145: RESPONSIVE FLEX TUTORIAL DIALOGUE BANNER
+   C-STORY-145 & C-STORY-146: RESPONSIVE FLEX TUTORIAL BANNER & ISOLATION
    ======================================================== */
 .combat-overlay.tutorial-mode #combat-preview-shelf {
   display: none !important;
 }
 
+/* Tutorial banner is hidden by default in normal stages and lobby */
 .tutorial-dialogue-banner {
+  display: none !important;
   pointer-events: none !important;
   position: relative !important;
   top: auto !important;
@@ -2209,6 +2211,11 @@
   overflow: visible !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
+}
+
+/* ONLY displayed when combat overlay is in tutorial mode */
+.combat-overlay.tutorial-mode .tutorial-dialogue-banner {
+  display: block !important;
 }
 
 .tutorial-dialogue-header {

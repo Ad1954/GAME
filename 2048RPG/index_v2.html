@@ -1118,8 +1118,9 @@
             <input type="checkbox" id="setting-instant-skill" style="width:20px; height:20px; cursor:pointer;" onchange="toggleInstantSkill(this.checked)">
           </div>
 
-          <!-- 3. 清除新手教學紀錄 -->
-          <div style="margin-top:6px;">
+          <!-- 3. 重新體驗新手教學 & 清除新手教學紀錄 -->
+          <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">
+            <button class="cr-btn cr-btn-blue btn-medium" id="btn-settings-replay-tut" style="width:100%;" onclick="replayTutorialCombat()">🎓 重新體驗新手教學 (Stage 0)</button>
             <button class="cr-btn cr-btn-amber btn-medium" id="btn-settings-clear-tut" data-i18n="settings_clear_tut" style="width:100%;" onclick="handleResetTutorial()">🔄 清除新手教學紀錄 (重置引導狀態)</button>
           </div>
         </div>

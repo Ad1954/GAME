@@ -128,9 +128,7 @@
 
   function changeStageByStep(step) {
     const maxU = getMaxUnlocked();
-    const tutDone = isTutorialCompleted();
-    const minS = tutDone ? 1 : 0;
-    const nextStage = window.currentSelectedStage + step;
+    const nextStage = (window.currentSelectedStage !== undefined ? window.currentSelectedStage : 1) + step;
     if (nextStage >= 0 && nextStage <= maxU) {
       window.currentSelectedStage = nextStage;
       renderAdventureStage(nextStage);
@@ -147,7 +145,7 @@
       window.currentSelectedStage = stageId;
     } else if (!tutDone) {
       window.currentSelectedStage = 0; // Default to Tutorial if not completed
-    } else if (window.currentSelectedStage === undefined || window.currentSelectedStage === 0) {
+    } else if (window.currentSelectedStage === undefined) {
       window.currentSelectedStage = 1;
     }
 
@@ -170,7 +168,7 @@
       if (arenaBossName) arenaBossName.textContent = '試煉首領：洞穴蝙蝠 (4)';
       if (briefRecPower) briefRecPower.textContent = '2 裝備';
       if (btnPrev) btnPrev.disabled = true;
-      if (btnNext) btnNext.disabled = !tutDone;
+      if (btnNext) btnNext.disabled = (maxU < 1 && !tutDone);
 
       document.querySelectorAll('.stage-node-item').forEach(node => {
         node.classList.remove('current');
@@ -204,7 +202,7 @@
       }
     }
 
-    if (btnPrev) btnPrev.disabled = (cur <= (tutDone ? 1 : 0));
+    if (btnPrev) btnPrev.disabled = (cur <= 0);
     if (btnNext) btnNext.disabled = (cur >= maxU);
 
     // Update active node styling in any visible stage nodes
@@ -1409,8 +1407,22 @@
     if (window.appRouter && window.appRouter.stageManager && window.appRouter.stageManager.tutorialManager) {
       window.appRouter.stageManager.tutorialManager.setCompleted(false);
     }
+    window.currentSelectedStage = 0;
+    renderAdventureStage(0);
     closeSettingsModal();
     alert('🔄 新手教學記錄已重置！即刻為您開啟新手教學。');
+    if (window.appRouter && typeof window.appRouter.startTutorialCombat === 'function') {
+      window.appRouter.startTutorialCombat();
+    }
+  }
+
+  function replayTutorialCombat() {
+    closeSettingsModal();
+    localStorage.removeItem('2048RPG_Tutorial_Completed');
+    if (window.appRouter && window.appRouter.stageManager && window.appRouter.stageManager.tutorialManager) {
+      window.appRouter.stageManager.tutorialManager.setCompleted(false);
+    }
+    window.currentSelectedStage = 0;
     if (window.appRouter && typeof window.appRouter.startTutorialCombat === 'function') {
       window.appRouter.startTutorialCombat();
     }
@@ -1527,6 +1539,7 @@
   window.changeTileStyle = changeTileStyle;
   window.toggleInstantSkill = toggleInstantSkill;
   window.handleResetTutorial = handleResetTutorial;
+  window.replayTutorialCombat = replayTutorialCombat;
   window.handleResetAllSaveData = handleResetAllSaveData;
   window.syncShopDisplay = syncShopDisplay;
   window.buyNoAdsPass = buyNoAdsPass;

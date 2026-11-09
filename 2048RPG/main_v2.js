@@ -61,7 +61,10 @@ class AppRouter {
     this.bindCombatEvents();
     this.bindCombatControls();
     this.syncHud();
-    window.launchStageBattle = (stageId) => this.startCombat(stageId || window.currentSelectedStage || 1);
+    window.launchStageBattle = (stageId) => {
+      const s = stageId !== undefined ? stageId : (window.currentSelectedStage !== undefined ? window.currentSelectedStage : 1);
+      this.startCombat(s);
+    };
 
     // Initial render
     setTimeout(() => {
@@ -269,6 +272,8 @@ class AppRouter {
 
     this.currentCombatStageId = stageId;
     this.switchAppState('COMBAT');
+    if (this.combatOverlay) this.combatOverlay.classList.remove('tutorial-mode');
+    if (this.tutorialOverlay) this.tutorialOverlay.hide();
 
     // Update Header Info
     const stageNameEl = document.getElementById('combat-stage-name');
@@ -293,6 +298,9 @@ class AppRouter {
     if (this.vfxEngine) {
       this.vfxEngine.clear();
       this.vfxEngine.resize();
+    }
+    if (this.stageManager && this.stageManager.tutorialManager) {
+      this.stageManager.tutorialManager.isCompleted = false;
     }
     const config = this.stageManager.startTutorialStage();
     if (!config) return;

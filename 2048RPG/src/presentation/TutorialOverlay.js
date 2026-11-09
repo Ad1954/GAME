@@ -39,7 +39,7 @@ export class TutorialOverlay {
       el.style.display = 'none';
       el.innerHTML = `
         <!-- Top Dialogue Banner -->
-        <div class="tutorial-dialogue-banner" id="tutorial-dialogue-banner">
+        <div class="tutorial-dialogue-banner" id="tutorial-dialogue-banner" style="display: none;">
           <div class="tutorial-dialogue-header">
             <span class="tutorial-badge">👑 新手引導</span>
             <span class="tutorial-title" id="tutorial-dialogue-title">教學指示</span>
@@ -82,6 +82,7 @@ export class TutorialOverlay {
     const mainZone = document.querySelector('.combat-main-zone');
     const boardWrapperEl = document.querySelector('.board-wrapper');
     if (mainZone && boardWrapperEl && this.dialogueBox) {
+      this.dialogueBox.style.display = 'none';
       mainZone.insertBefore(this.dialogueBox, boardWrapperEl);
     }
 
