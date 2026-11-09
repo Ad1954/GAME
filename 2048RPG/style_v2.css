@@ -1729,7 +1729,7 @@
   justify-content: space-between;
   position: relative;
   width: 100%;
-  padding: 4px 8px;
+  padding: 2px 2px;
   box-sizing: border-box;
   min-height: 0;
   overflow: hidden;
@@ -1749,27 +1749,29 @@
 .board-wrapper {
   position: relative;
   width: 100%;
-  max-width: 380px;
+  max-width: 414px;
   flex: 1;
   min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto;
+  padding: 0 2px;
+  box-sizing: border-box;
 }
 
 .board-grid {
-  width: min(100%, calc((100% - 10px) * 5 / 6), 360px);
+  width: min(calc(100% - 4px), calc((100dvh - 250px) * 5 / 6), calc((100vh - 250px) * 5 / 6), 400px);
   aspect-ratio: 5 / 6;
   max-height: 100%;
   background: #0f172a;
   border: 2px solid #334155;
-  border-radius: 14px;
-  padding: 6px;
+  border-radius: 16px;
+  padding: 8px;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   grid-template-rows: repeat(5, minmax(0, 1fr));
-  gap: 5px;
+  gap: 6px;
   box-sizing: border-box;
 }
 

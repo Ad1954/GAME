@@ -358,11 +358,24 @@ class AppRouter {
   }
 
   bindCombatEvents() {
-    this.eventBus.on(Events.MOVE_COMPLETED, (state) => {
+    const handleBoardUpdate = (state) => {
+      if (!state) return;
+      if (this.stageManager && this.stageManager.currentStageConfig && this.viewRenderer) {
+        this.viewRenderer.setChapterId(this.stageManager.currentStageConfig.chapter || 1);
+      }
+
       const turnValEl = document.getElementById('combat-turn-val');
       const monsterValEl = document.getElementById('combat-monsters-val');
-      if (turnValEl) turnValEl.textContent = this.stageManager.turnCount;
-      if (monsterValEl) monsterValEl.textContent = this.stageManager.board.getMonstersCount();
+      if (turnValEl && this.stageManager) {
+        turnValEl.textContent = state.turnCount !== undefined ? state.turnCount : this.stageManager.turnCount;
+      }
+      if (monsterValEl) {
+        if (state.monstersRemaining !== undefined) {
+          monsterValEl.textContent = state.monstersRemaining;
+        } else if (this.stageManager && this.stageManager.board && typeof this.stageManager.board.getMonsters === 'function') {
+          monsterValEl.textContent = this.stageManager.board.getMonsters().length;
+        }
+      }
 
       this.updateNextPreview();
       this.updateSkillUI();
@@ -378,10 +391,17 @@ class AppRouter {
         });
         setTimeout(() => { this.isSliding = false; }, 350);
       } else {
-        this.viewRenderer.renderBoard(state.board);
+        if (state.board && this.viewRenderer) {
+          this.viewRenderer.renderBoard(state.board);
+        }
         this.isSliding = false;
       }
-    });
+    };
+
+    this.eventBus.on(Events.BOARD_CHANGED, handleBoardUpdate);
+    if (Events.MOVE_COMPLETED) {
+      this.eventBus.on(Events.MOVE_COMPLETED, handleBoardUpdate);
+    }
 
     this.eventBus.on(Events.STAGE_VICTORY, (data) => {
       this.audio.playVictory();
