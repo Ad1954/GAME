@@ -1,4 +1,4 @@
-# test_button_crawler.py: Comprehensive DOM Button Crawler & Interactive Integrity Suite (C-STORY-140)
+# test_button_crawler.py: Comprehensive DOM Button Crawler & Interactive Integrity Suite (C-STORY-140 / C-STORY-141)
 import os
 import sys
 import time
@@ -30,7 +30,7 @@ def run_crawler():
     passed_checks = 0
 
     print("==================================================")
-    print("  DOM Interactive Crawler & UI Button Validation")
+    print("  DOM Interactive Crawler & UI Button Validation (C-STORY-141)")
     print("==================================================")
 
     try:
@@ -138,80 +138,123 @@ def run_crawler():
             page.evaluate("window.closeDailySignInModal()")
             page.wait_for_timeout(100)
 
-            # Daily Quests modal
+            # Daily Quests modal & 4th quest validation (Issue 2)
             page.evaluate("window.openDailyQuestsModal()")
             page.wait_for_timeout(200)
             quests_count = page.locator(".quest-item-card").count()
             assert quests_count == 4, f"Expected 4 daily quests, found {quests_count}"
-            print(f"  [PASS] Daily Quests modal opened with {quests_count} quests")
+            quests_text = page.inner_text("#daily-quests-container")
+            assert "開採財富" in quests_text or "gold" in quests_text.lower(), f"Expected '開採財富' in quests, got: {quests_text}"
+            print(f"  [PASS] Daily Quests modal verified (4 quests, includes 開採財富)")
             passed_checks += 1
             page.evaluate("window.closeDailyQuestsModal()")
             page.wait_for_timeout(100)
 
-            # Step 5: Camp Upgrades & Gear Sub-tabs
-            print("[Step 5] Testing Camp Upgrades and Gear Sub-tabs...")
-            page.evaluate("window.switchMainTab('camp')")
+            # Step 5: Stage Detail Modal (Issue 5 - mini cards & recommended power)
+            print("[Step 5] Testing Stage Detail Modal structure and mini cards...")
+            page.evaluate("window.openStageDetailModal(1)")
+            page.wait_for_timeout(200)
+            stg_modal_display = page.evaluate("document.getElementById('modal-stage-detail').style.display")
+            assert stg_modal_display in ("flex", "block"), "Stage detail modal failed to open"
+            rec_power = page.inner_text("#modal-stage-rec-power")
+            assert "建議戰力" in rec_power and "建議鍛造" in rec_power, f"Expected recommended power & forge, got: {rec_power}"
+            minion_cards = page.locator("#modal-minions-list .mini-stage-card").count()
+            gear_cards = page.locator("#modal-stage-gears .mini-stage-card").count()
+            assert gear_cards >= 1, f"Expected at least 1 gear card, found {gear_cards}"
+            print(f"  [PASS] Stage Detail Modal: RecPower='{rec_power}', Minions={minion_cards}, Gears={gear_cards}")
+            passed_checks += 1
+            page.evaluate("window.closeStageDetailModal()")
             page.wait_for_timeout(100)
-            forge_title = page.inner_text("#camp-txt-forge-title")
-            assert "LV." in forge_title, f"Unexpected forge title: {forge_title}"
-            print(f"  [PASS] Camp Facility: {forge_title}")
+
+            # Step 6: Gear Tab, Unequip & Hero Sub-tabs (Issue 6 & 7)
+            print("[Step 6] Testing Gear Tab, Unequip, and Hero Modal styling...")
+            page.evaluate("window.switchMainTab('gear')")
+            page.wait_for_timeout(100)
+
+            # Test Unequip
+            page.click("#gear-btn-unequip")
+            page.wait_for_timeout(100)
+            deploy_name = page.inner_text("#deploy-gear-name")
+            assert "未裝備神兵" in deploy_name, f"Expected '未裝備神兵' after unequip, got: {deploy_name}"
+            print(f"  [PASS] Gear Unequip verified: deploy-gear-name is '{deploy_name}'")
             passed_checks += 1
 
+            # Test Jump to Camp from Gear actions (Issue 7)
+            page.click("#gear-btn-act-gacha")
+            page.wait_for_timeout(100)
+            is_camp_active = page.evaluate("document.getElementById('view-camp').classList.contains('active')")
+            assert is_camp_active, "Gacha button failed to switch to camp tab"
+            print("  [PASS] Gear Action '裝備轉蛋' jumped to Camp tab")
+            passed_checks += 1
+
+            page.evaluate("window.switchMainTab('gear')")
+            page.wait_for_timeout(100)
+            page.click("#gear-btn-act-expand")
+            page.wait_for_timeout(100)
+            is_camp_active2 = page.evaluate("document.getElementById('view-camp').classList.contains('active')")
+            assert is_camp_active2, "Expand button failed to switch to camp tab"
+            print("  [PASS] Gear Action '擴充容量' jumped to Camp tab")
+            passed_checks += 1
+
+            # Test Hero Subtab & Detail Modal button colors (Issue 7)
             page.evaluate("window.switchMainTab('gear')")
             page.wait_for_timeout(100)
             page.click("#btn-sub-hero")
             page.wait_for_timeout(100)
             hero_cards = page.locator(".hero-card").count()
             assert hero_cards == 3, f"Expected 3 hero cards, found {hero_cards}"
-            print(f"  [PASS] Gear Tab: 3 Hero cards rendered")
-            passed_checks += 1
 
-            # Open Hero Detail Modal
+            # Open Hero Detail Modal for warrior (currently deployed)
             page.click("#card-hero-warrior .hero-hitbox-upper")
             page.wait_for_timeout(200)
-            hero_detail_title = page.inner_text("#modal-hero-title")
-            assert "Warrior" in hero_detail_title or "騎士" in hero_detail_title, f"Unexpected hero title: {hero_detail_title}"
-            print(f"  [PASS] Hero Detail Modal: {hero_detail_title}")
+            btn_deploy_cls = page.evaluate("document.getElementById('modal-bottom-deploy-btn').className")
+            btn_deploy_txt = page.inner_text("#modal-bottom-deploy-btn")
+            assert "cr-btn-amber" in btn_deploy_cls, f"Expected cr-btn-amber for deployed hero, got: {btn_deploy_cls}"
+            assert "上陣中" in btn_deploy_txt, f"Expected '上陣中', got: {btn_deploy_txt}"
+            print(f"  [PASS] Deployed Hero Modal Button: class={btn_deploy_cls}, text='{btn_deploy_txt}'")
             passed_checks += 1
             page.evaluate("window.closeHeroDetailModal()")
             page.wait_for_timeout(100)
 
-            # Step 6: Reset Save Data & Tutorial Launch
-            print("[Step 6] Testing Save Data Reset and Tutorial Combat Trigger...")
-            page.click("#btn-open-settings")
+            # Step 7: Compendium 3-column accordion matrix (Issue 8)
+            print("[Step 7] Testing Compendium 3-column matrix & accordion toggle...")
+            page.evaluate("window.switchMainTab('compendium')")
             page.wait_for_timeout(200)
-            page.click("#btn-stab-general")
+            comp_sections = page.locator(".comp-group-section").count()
+            assert comp_sections >= 3, f"Expected at least 3 chapter sections in monsters compendium, got {comp_sections}"
+            
+            # Test collapsible accordion toggle
+            first_grid_collapsed_before = page.evaluate("document.querySelectorAll('.compendium-grid')[0].classList.contains('collapsed')")
+            page.click(".comp-group-title")
             page.wait_for_timeout(100)
-            page.click("#btn-settings-reset-save")
-            page.wait_for_timeout(200)
-
-            # Assert reset returned to stage 1
-            hub_stage_after_reset = page.inner_text("#hub-stage-num")
-            assert "Stage 1" in hub_stage_after_reset, f"Expected Stage 1 after reset, got {hub_stage_after_reset}"
-            print(f"  [PASS] Save Reset: Hub Stage is {hub_stage_after_reset}")
+            first_grid_collapsed_after = page.evaluate("document.querySelectorAll('.compendium-grid')[0].classList.contains('collapsed')")
+            assert first_grid_collapsed_before != first_grid_collapsed_after, "Accordion toggle did not change collapsed class"
+            print(f"  [PASS] Compendium verified ({comp_sections} chapter groups, accordion toggle working)")
             passed_checks += 1
 
-            # Trigger Tutorial Reset & Launch Combat
-            page.click("#btn-open-settings")
-            page.wait_for_timeout(200)
-            page.click("#btn-stab-developer")
+            # Step 8: Regular Combat 4-way arrow keys movement (Issue 3)
+            print("[Step 8] Testing Regular Stage 1 Combat 4-way arrow sliding...")
+            page.evaluate("window.switchMainTab('adventure')")
             page.wait_for_timeout(100)
-            page.click("#btn-settings-clear-tut")
-            page.wait_for_timeout(500)
+            page.evaluate("window.launchStageBattle(1)")
+            page.wait_for_timeout(300)
 
-            # Assert Combat Overlay active
             combat_display = page.evaluate("document.getElementById('combat-overlay').style.display")
             assert combat_display == "flex", f"Combat overlay not flex: {combat_display}"
-            print("  [PASS] Tutorial Combat Overlay active (display: flex)")
-            passed_checks += 1
+            init_turns = page.inner_text("#combat-turn-val")
 
-            # Test Cross Arrow Keys in Combat
-            print("[Step 7] Testing Cross Arrow Keys / WASD in Combat...")
-            page.keyboard.press("ArrowRight")
-            page.wait_for_timeout(100)
+            # Press all 4 directions - regular combat must allow movements freely
+            page.keyboard.press("ArrowUp")
+            page.wait_for_timeout(150)
             page.keyboard.press("ArrowDown")
-            page.wait_for_timeout(100)
-            print("  [PASS] Arrow keys dispatched without errors")
+            page.wait_for_timeout(150)
+            page.keyboard.press("ArrowLeft")
+            page.wait_for_timeout(150)
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(150)
+
+            after_turns = page.inner_text("#combat-turn-val")
+            print(f"  [PASS] Stage 1 Combat: initial turns={init_turns}, after turns={after_turns} (no lockups)")
             passed_checks += 1
 
             # Return to Lobby

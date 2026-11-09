@@ -102,24 +102,46 @@ class AppRouter {
 
   getEquippedGear() {
     const raw = localStorage.getItem('rpg_2048_equipped_gear');
+    if (raw === 'none' || raw === 'null') return null;
     if (raw) {
       try { return JSON.parse(raw); } catch (e) {}
     }
-    return { id: 'starter_sword', name: '泥木劍', val: 2, img: 'assets/images/equipment_clay/equip_01.png' };
+    return { id: 'starter_sword', name: '泥木劍', val: 2, value: 2, img: 'assets/images/equipment_clay/equip_01.png' };
+  }
+
+  unequipGear() {
+    localStorage.setItem('rpg_2048_equipped_gear', 'none');
+    if (this.inventoryManager) {
+      this.inventoryManager.equippedItem = null;
+    }
+    if (this.audio) this.audio.playClick();
+    this.syncHud();
+    if (typeof window.renderGearInventory === 'function') {
+      window.renderGearInventory();
+    }
   }
 
   equipGearItem(item) {
     if (!item) return;
+    const v = item.value || item.val || 2;
+    const tier = Math.max(1, Math.min(16, Math.round(Math.log2(v))));
+    const pad = String(tier).padStart(2, '0');
     const gear = {
-      id: item.id,
-      name: `神兵裝備`,
-      val: item.value,
-      img: item.img || 'assets/images/equipment_clay/equip_01.png'
+      id: item.id || `gear_${Date.now()}`,
+      name: item.name || '神兵裝備',
+      val: v,
+      value: v,
+      img: `assets/images/equipment_clay/equip_${pad}.png`
     };
     localStorage.setItem('rpg_2048_equipped_gear', JSON.stringify(gear));
-    this.inventoryManager.equippedItem = gear;
+    if (this.inventoryManager) {
+      this.inventoryManager.equippedItem = gear;
+    }
     if (this.audio) this.audio.playCoin();
     this.syncHud();
+    if (typeof window.renderGearInventory === 'function') {
+      window.renderGearInventory();
+    }
   }
 
   // ----------------------------------------------------
@@ -225,7 +247,7 @@ class AppRouter {
   }
 
   startCombat(stageId) {
-    if (stageId === 0 || (this.stageManager && this.stageManager.tutorialManager && !this.stageManager.tutorialManager.isCompleted)) {
+    if (stageId === 0) {
       this.startTutorialCombat();
       return;
     }
@@ -350,6 +372,7 @@ class AppRouter {
           }
           this.isSliding = false;
         });
+        setTimeout(() => { this.isSliding = false; }, 350);
       } else {
         this.viewRenderer.renderBoard(state.board);
         this.isSliding = false;
@@ -473,7 +496,6 @@ class AppRouter {
     };
 
     window.addEventListener('keydown', handleKeyDown, { capture: true });
-    document.addEventListener('keydown', handleKeyDown, { capture: true });
 
     // Touch Swipe Controls
     const combatArea = this.combatOverlay;

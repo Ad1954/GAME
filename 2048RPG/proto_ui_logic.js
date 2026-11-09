@@ -53,6 +53,23 @@
   window.currentHeroModalKey = 'warrior';
   window.currentCompTab = 'monsters';
 
+  // Helper functions for Clay Art Assets
+  function getEquipImg(val) {
+    const v = Number(val) || 2;
+    const tier = Math.max(1, Math.min(16, Math.round(Math.log2(v))));
+    const pad = String(tier).padStart(2, '0');
+    return `assets/images/equipment_clay/equip_${pad}.png`;
+  }
+
+  function getMonsterImg(val, ch = 1) {
+    const v = Number(val) || 2;
+    const c = Math.max(1, Math.min(3, Number(ch) || 1));
+    const padVal = String(v).padStart(2, '0');
+    const padCh = String(c).padStart(2, '0');
+    return `assets/images/monsters_clay/monster_ch${padCh}_${padVal}.png`;
+  }
+
+
   // ----------------------------------------------------
   // NAVIGATION & TAB SWITCHING
   // ----------------------------------------------------
@@ -132,25 +149,31 @@
     const hubChapTag = document.getElementById('hub-chap-tag');
     const arenaBossImg = document.getElementById('arena-boss-img');
     const arenaBossName = document.getElementById('arena-boss-name');
+    const briefRecPower = document.getElementById('brief-rec-power');
     const btnPrev = document.getElementById('btn-stage-prev');
     const btnNext = document.getElementById('btn-stage-next');
 
     if (hubStageNum) hubStageNum.textContent = `Stage ${cur}`;
     if (hubChapTag) {
       const ch = cfg ? (cfg.chapter || 1) : 1;
-      const chNames = { 1: '大地平原', 2: '荒漠熔岩', 3: '星空祭壇' };
+      const chNames = { 1: '微風之境', 2: '荒漠熔岩', 3: '星空祭壇' };
       hubChapTag.textContent = `第 ${ch} 章 · ${chNames[ch] || '冒險征途'}`;
     }
 
-    if (arenaBossImg && cfg) {
+    if (cfg) {
       const ch = cfg.chapter || 1;
-      const bossVal = (cfg.monsters && cfg.monsters[0]) ? (typeof cfg.monsters[0] === 'object' ? cfg.monsters[0].value : cfg.monsters[0]) : 16;
-      const formattedVal = bossVal >= 10 ? bossVal : '0' + bossVal;
-      arenaBossImg.src = `assets/images/monsters_clay/monster_ch0${Math.min(ch, 3)}_${formattedVal}.png`;
-      arenaBossImg.onerror = () => { arenaBossImg.src = 'assets/images/monsters_clay/monster_ch01_16.png'; };
-    }
-    if (arenaBossName && cfg) {
-      arenaBossName.textContent = `首領：${cfg.name} (${cfg.bossMonsterValue || 64})`;
+      const bossVal = (cfg.monsters && cfg.monsters[0]) ? (typeof cfg.monsters[0] === 'object' ? cfg.monsters[0].value : cfg.monsters[0]) : 8;
+      if (arenaBossImg) {
+        arenaBossImg.src = getMonsterImg(bossVal, ch);
+        arenaBossImg.onerror = () => { arenaBossImg.src = 'assets/images/monsters_clay/monster_ch01_08.png'; };
+      }
+      if (arenaBossName) {
+        const bName = cfg.name.split('：')[1] || cfg.name;
+        arenaBossName.textContent = `首領：${bName} (${bossVal})`;
+      }
+      if (briefRecPower) {
+        briefRecPower.textContent = `${(cfg.recPower || 2) * 10} 裝備`;
+      }
     }
 
     if (btnPrev) btnPrev.disabled = (cur <= 1);
@@ -165,7 +188,7 @@
   }
 
   function openStageDetailModal(stageId) {
-    const sId = stageId !== undefined ? stageId : window.currentSelectedStage;
+    const sId = stageId !== undefined ? stageId : (window.currentSelectedStage || 1);
     window.currentSelectedStage = sId;
 
     const modal = document.getElementById('modal-stage-detail');
@@ -175,20 +198,74 @@
     const cfg = configs ? configs[sId] : null;
 
     const titleEl = document.getElementById('modal-stage-title');
+    const recPowerEl = document.getElementById('modal-stage-rec-power');
     const bossNameEl = document.getElementById('modal-boss-name');
     const bossImgEl = document.getElementById('modal-boss-img');
+    const objectiveEl = document.getElementById('modal-stage-objective');
+    const minionsList = document.getElementById('modal-minions-list');
+    const gearsList = document.getElementById('modal-stage-gears');
     const goldRewardEl = document.getElementById('modal-gold-reward');
 
-    if (titleEl) titleEl.textContent = `Stage ${sId} · ${cfg ? cfg.name : '關卡情報'}`;
-    if (bossNameEl) bossNameEl.textContent = `作戰目標：消滅所有盤面魔物`;
-    if (goldRewardEl) goldRewardEl.textContent = `${cfg ? Number(cfg.rewardGold).toLocaleString() : 500} 金幣`;
+    const ch = cfg ? (cfg.chapter || 1) : 1;
+    const bossVal = (cfg && cfg.monsters && cfg.monsters[0]) ? (typeof cfg.monsters[0] === 'object' ? cfg.monsters[0].value : cfg.monsters[0]) : 8;
 
+    if (titleEl) titleEl.textContent = `Stage ${sId} · ${cfg ? cfg.name : '關卡情報'}`;
+    if (recPowerEl) {
+      const recP = cfg ? (cfg.recPower || 2) : 2;
+      const forgeLvl = Math.max(1, Math.round(Math.log2(recP)));
+      recPowerEl.textContent = `建議戰力：${recP * 10} 裝備 · 建議鍛造：LV.${forgeLvl}`;
+    }
+
+    if (bossNameEl) {
+      const bossName = cfg ? (cfg.name.split('：')[1] || cfg.name) : '魔物首領';
+      bossNameEl.textContent = `首領：${bossName} (${bossVal})`;
+    }
     if (bossImgEl) {
-      const ch = cfg ? (cfg.chapter || 1) : 1;
-      const bossVal = (cfg && cfg.monsters && cfg.monsters[0]) ? (typeof cfg.monsters[0] === 'object' ? cfg.monsters[0].value : cfg.monsters[0]) : 16;
-      const formattedVal = bossVal >= 10 ? bossVal : '0' + bossVal;
-      bossImgEl.src = `assets/images/monsters_clay/monster_ch0${Math.min(ch, 3)}_${formattedVal}.png`;
-      bossImgEl.onerror = () => { bossImgEl.src = 'assets/images/monsters_clay/monster_ch01_16.png'; };
+      bossImgEl.src = getMonsterImg(bossVal, ch);
+      bossImgEl.onerror = () => { bossImgEl.src = 'assets/images/monsters_clay/monster_ch01_08.png'; };
+    }
+    if (objectiveEl) {
+      objectiveEl.textContent = '作戰目標：消滅盤面所有魔物';
+    }
+
+    // Minions mini-cards (aspect-ratio 5:6)
+    if (minionsList) {
+      minionsList.innerHTML = '';
+      const minions = (cfg && cfg.monsters) ? cfg.monsters.slice(1) : [];
+      if (minions.length === 0) {
+        minionsList.innerHTML = '<span style="color:#64748b; font-size:var(--font-caption);">無其他護衛魔物</span>';
+      } else {
+        minions.forEach(m => {
+          const mVal = typeof m === 'object' ? m.value : m;
+          const card = document.createElement('div');
+          card.className = 'mini-stage-card';
+          card.innerHTML = `
+            <img src="${getMonsterImg(mVal, ch)}" onerror="this.src='assets/images/monsters_clay/monster_ch01_02.png'" alt="${mVal}">
+            <span class="mini-card-badge">${mVal}</span>
+          `;
+          minionsList.appendChild(card);
+        });
+      }
+    }
+
+    // Stage resource gears mini-cards (aspect-ratio 5:6)
+    if (gearsList) {
+      gearsList.innerHTML = '';
+      const gears = (cfg && cfg.starterEquipment) ? cfg.starterEquipment : [2, 2];
+      gears.forEach(g => {
+        const gVal = typeof g === 'object' ? g.value : g;
+        const card = document.createElement('div');
+        card.className = 'mini-stage-card';
+        card.innerHTML = `
+          <img src="${getEquipImg(gVal)}" onerror="this.src='assets/images/equipment_clay/equip_01.png'" alt="${gVal}">
+          <span class="mini-card-badge">${gVal}</span>
+        `;
+        gearsList.appendChild(card);
+      });
+    }
+
+    if (goldRewardEl) {
+      goldRewardEl.textContent = `${cfg ? Number(cfg.rewardGold || 100).toLocaleString() : 100} 金幣`;
     }
 
     modal.classList.add('active');
@@ -319,12 +396,12 @@
     if (btn) {
       if (dlm.hasSignInPending()) {
         btn.disabled = false;
+        btn.className = 'cr-btn cr-btn-green btn-large glow-pulse';
         btn.textContent = '立即簽到領取獎勵';
-        btn.classList.add('glow-pulse');
       } else {
         btn.disabled = true;
-        btn.textContent = '今日已簽到 (明日重置)';
-        btn.classList.remove('glow-pulse');
+        btn.className = 'cr-btn cr-btn-disabled btn-large';
+        btn.textContent = '今日已簽到 (已領取)';
       }
     }
   }
@@ -392,10 +469,10 @@
 
     if (container) {
       const QUEST_DEFS = [
-        { id: 'quest_defeat_monsters', name: '魔物清剿', desc: '在冒險戰鬥中擊倒魔物', target: 15, unit: '隻', pts: 25, gold: 300, icon: '⚔️' },
-        { id: 'quest_merge_tiles', name: '煉金融合', desc: '在戰鬥中合成方塊', target: 20, unit: '次', pts: 25, gold: 300, icon: '⚡' },
-        { id: 'quest_complete_stages', name: '深入險境', desc: '完成任意冒險關卡', target: 2, unit: '關', pts: 25, gold: 400, icon: '🏰' },
-        { id: 'quest_use_items', name: '道具運用', desc: '在戰鬥中使用任意輔助道具', target: 1, unit: '次', pts: 25, gold: 200, icon: '🧪' }
+        { id: 'quest_kill_monsters', name: '魔物清剿', desc: '在冒險關卡中累計擊倒魔物', target: 15, unit: '隻', pts: 25, gold: 300, icon: '⚔️' },
+        { id: 'quest_high_merge', name: '精良合成', desc: '任意合成 10 次', target: 10, unit: '次', pts: 25, gold: 300, icon: '🛡️' },
+        { id: 'quest_collect_gold', name: '開採財富', desc: '在冒險關卡中累計回收金幣', target: 50, unit: '枚', pts: 25, gold: 300, icon: '🪙' },
+        { id: 'quest_combat_count', name: '勤勉遠征', desc: '進行任意冒險關卡戰鬥', target: 3, unit: '場', pts: 25, gold: 300, icon: '🚩' }
       ];
 
       container.innerHTML = '';
@@ -411,7 +488,7 @@
 
         card.innerHTML = `
           <div>
-            <div style="font-weight:800; font-size:var(--font-body); color:#f8fafc;">${q.icon} ${q.name} (${curProg}/${q.target})</div>
+            <div style="font-weight:800; font-size:var(--font-body); color:#f8fafc;">${q.icon} ${q.name} (${curProg}/${q.target}${q.unit})</div>
             <div style="font-size:var(--font-caption); color:#94a3b8;">${q.desc} (活躍+${q.pts})</div>
           </div>
           <button class="cr-btn ${isClaimed ? 'cr-btn-disabled' : (isDone ? 'cr-btn-green' : 'cr-btn-disabled')} btn-small"
@@ -522,11 +599,7 @@
   // GACHA & EQUIPMENT BACKPACK
   // ----------------------------------------------------
   function openQuickGachaModal() {
-    const modal = document.getElementById('modal-quick-gacha');
-    if (modal) {
-      modal.classList.add('active');
-      modal.style.display = 'flex';
-    }
+    switchMainTab('camp');
   }
 
   function closeQuickGachaModal() {
@@ -576,23 +649,7 @@
   }
 
   function openUpgradeCapacityModal() {
-    const modal = document.getElementById('modal-upgrade-capacity');
-    const body = document.getElementById('upgrade-capacity-body');
-    if (!modal || !body) return;
-
-    const upg = getCampUpgrades();
-    const curCap = 16 + (upg.capacity - 1) * 4;
-    const nextCap = curCap + 4;
-    const cost = 200 * upg.capacity;
-
-    body.innerHTML = `
-      <div>當前背包容量：<strong style="color:#f8fafc;">${curCap} 格</strong> (Lv.${upg.capacity})</div>
-      <div>下一級容量：<strong style="color:#4ade80;">${nextCap} 格</strong> (Lv.${upg.capacity + 1})</div>
-      <div style="margin-top:6px; color:#fbbf24;">升級費用：<strong>${cost.toLocaleString()} 🪙 金幣</strong></div>
-    `;
-
-    modal.classList.add('active');
-    modal.style.display = 'flex';
+    switchMainTab('camp');
   }
 
   function closeUpgradeCapacityModal() {
@@ -611,9 +668,7 @@
 
   function unequipActiveGear() {
     if (!window.appRouter) return;
-    const starter = { id: 'starter_sword', name: '泥木劍', val: 2, img: 'assets/images/equipment_clay/equip_01.png' };
-    window.appRouter.equipGearItem(starter);
-    renderGearInventory();
+    window.appRouter.unequipGear();
   }
 
   function handleOneKeyMerge() {
@@ -648,22 +703,29 @@
     const weaponCardImg = document.getElementById('deploy-gear-img');
     const weaponCardName = document.getElementById('deploy-gear-name');
 
-    if (weaponCardImg) weaponCardImg.src = equipped.img;
-    if (weaponCardName) weaponCardName.textContent = `${equipped.name} (${equipped.val})`;
+    if (equipped) {
+      const v = equipped.value || equipped.val || 2;
+      if (weaponCardImg) weaponCardImg.src = getEquipImg(v);
+      if (weaponCardName) weaponCardName.textContent = `${equipped.name || '神兵'} (${v})`;
+    } else {
+      if (weaponCardImg) weaponCardImg.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>';
+      if (weaponCardName) weaponCardName.textContent = '未裝備神兵';
+    }
 
-    // Render backpack slots
+    // Render backpack slots (aspect-ratio 5:6)
     for (let i = 0; i < maxCap; i++) {
       const slot = document.createElement('div');
       slot.className = 'gear-slot-item';
-      slot.style.cssText = 'background:#1e293b; border:1px solid #334155; border-radius:10px; aspect-ratio:1/1; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; cursor:pointer;';
+      slot.style.cssText = 'background:#1e293b; border:1px solid #334155; border-radius:10px; aspect-ratio: 5 / 6 !important; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; cursor:pointer;';
 
       const it = items[i];
       if (it) {
-        const isEq = it.id === equipped.id;
+        const isEq = equipped && (it.id === equipped.id);
         if (isEq) slot.style.borderColor = '#fbbf24';
+        const v = it.value || it.val || 2;
         slot.innerHTML = `
-          <img src="${it.img || 'assets/images/equipment_clay/equip_01.png'}" style="width:36px; height:36px; object-fit:contain;">
-          <span style="font-size:0.7rem; color:#38bdf8; font-weight:bold;">${it.value}</span>
+          <img src="${getEquipImg(v)}" style="width:38px; height:38px; object-fit:contain;">
+          <span style="font-size:0.75rem; color:#38bdf8; font-weight:bold; margin-top:2px;">${v}</span>
           ${isEq ? '<span style="position:absolute; top:2px; right:2px; font-size:0.6rem; background:#fbbf24; color:#000; border-radius:3px; padding:1px 3px; font-weight:bold;">E</span>' : ''}
         `;
         slot.onclick = () => {
@@ -672,6 +734,7 @@
         };
       } else {
         slot.style.opacity = '0.3';
+        slot.innerHTML = '<span style="color:#475569; font-size:0.8rem;">空</span>';
       }
       grid.appendChild(slot);
     }
@@ -686,9 +749,9 @@
     const selected = sm.getSelectedCharacter() || 'warrior';
 
     const heroes = [
-      { key: 'warrior', name: '騎士', cardId: 'card-hero-warrior', btnId: 'btn-deploy-warrior' },
-      { key: 'merchant', name: '見習商人', cardId: 'card-hero-merchant', btnId: 'btn-deploy-merchant' },
-      { key: 'archer', name: '精準遊俠', cardId: 'card-hero-archer', btnId: 'btn-deploy-archer' }
+      { key: 'warrior', name: '戰士', cardId: 'card-hero-warrior', btnId: 'btn-deploy-warrior' },
+      { key: 'merchant', name: '戰地商人', cardId: 'card-hero-merchant', btnId: 'btn-deploy-merchant' },
+      { key: 'archer', name: '精靈弓手', cardId: 'card-hero-archer', btnId: 'btn-deploy-archer' }
     ];
 
     heroes.forEach(h => {
@@ -728,14 +791,14 @@
     const isSelected = sm.getSelectedCharacter() === heroKey;
 
     const HERO_NAMES = {
-      warrior: '騎士 (Warrior)',
-      merchant: '見習商人 (Merchant)',
-      archer: '精準遊俠 (Archer)'
+      warrior: '戰士 (Warrior)',
+      merchant: '戰地商人 (Merchant)',
+      archer: '精靈弓手 (Archer)'
     };
     const HERO_SKILLS = {
-      warrior: '十字斬 (清除橫豎十字魔物)',
-      merchant: '點石成金 (將低階魔物化為金幣)',
-      archer: '精準狙擊 (升級或狙殺指定目標)'
+      warrior: '十字衝擊 (斬斷十字障礙物)',
+      merchant: '點石成金 (將低階物資轉為金幣)',
+      archer: '精準箭雨 (鎖定消除指定目標)'
     };
 
     const titleEl = document.getElementById('modal-hero-title');
@@ -745,31 +808,31 @@
     const upgBtn = document.getElementById('modal-upgrade-btn');
 
     if (titleEl) titleEl.textContent = HERO_NAMES[heroKey] || heroKey;
-    if (levelEl) levelEl.textContent = `等級：LV.${curLevel + 1} ${curLevel >= 4 ? '(已達最高階)' : ''}`;
+    if (levelEl) levelEl.textContent = `等級：LV.${curLevel + 1} ${curLevel >= 4 ? '(已達最高)' : ''}`;
     if (descEl) descEl.textContent = HERO_SKILLS[heroKey] || '';
 
     if (deployBtn) {
       if (isSelected) {
         deployBtn.disabled = true;
-        deployBtn.className = 'cr-btn cr-btn-disabled btn-medium';
-        deployBtn.innerHTML = '<span>已在陣中</span>';
+        deployBtn.className = 'cr-btn cr-btn-amber btn-medium';
+        deployBtn.innerHTML = '<span>上陣中</span>';
       } else {
         deployBtn.disabled = false;
-        deployBtn.className = 'cr-btn cr-btn-amber btn-medium';
-        deployBtn.innerHTML = '<span>⚔️ 委派上陣</span>';
+        deployBtn.className = 'cr-btn cr-btn-blue btn-medium';
+        deployBtn.innerHTML = '<span>委派上陣</span>';
       }
     }
 
     if (upgBtn) {
+      const cost = Math.floor(200 * Math.pow(1.5, curLevel));
       if (curLevel >= 4) {
         upgBtn.disabled = true;
         upgBtn.className = 'cr-btn cr-btn-disabled btn-medium';
-        upgBtn.innerHTML = '<span>已滿級</span>';
+        upgBtn.textContent = '技能已滿級';
       } else {
-        const cost = [500, 1500, 3000, 5000][curLevel] || 5000;
         upgBtn.disabled = false;
         upgBtn.className = 'cr-btn cr-btn-green btn-medium';
-        upgBtn.innerHTML = `<span>升級 🪙 ${cost.toLocaleString()}</span>`;
+        upgBtn.textContent = `技能升級 🪙${cost.toLocaleString()}`;
       }
     }
 
@@ -976,70 +1039,229 @@
 
   function renderCompendiumView() {
     const tab = window.currentCompTab || 'monsters';
-    const grid = document.getElementById('compendium-content-area');
-    if (!grid || !window.appRouter) return;
+    const area = document.getElementById('compendium-content-area');
+    if (!area || !window.appRouter) return;
 
-    grid.innerHTML = '';
+    area.innerHTML = '';
     const maxU = getMaxUnlocked();
     const equipped = window.appRouter.getEquippedGear();
+    const equippedVal = equipped ? (equipped.value || equipped.val || 2) : 2;
 
     if (tab === 'monsters') {
-      const TIER_VALS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144];
-      TIER_VALS.forEach((val, idx) => {
-        const isUnlocked = idx < Math.min(18, Math.floor(maxU / 2) + 2);
-        const card = document.createElement('div');
-        card.className = 'comp-card';
-        card.style.cssText = 'background:#1e293b; border-radius:10px; padding:10px; display:flex; flex-direction:column; align-items:center; gap:6px;';
-        if (isUnlocked) {
-          card.innerHTML = `
-            <img src="assets/images/monsters_clay/monster_ch01_16.png" style="width:48px; height:48px;">
-            <span style="font-size:0.75rem; color:#f8fafc; font-weight:bold;">魔物 (${val})</span>
-          `;
-        } else {
-          card.style.opacity = '0.5';
-          card.innerHTML = `
-            <div style="font-size:1.8rem; line-height:48px;">🔒</div>
-            <span style="font-size:0.75rem; color:#64748b;">??? (${val})</span>
-          `;
+      const CHAPTER_GROUPS = [
+        {
+          chapter: 1,
+          name: '第一章：微風之境 (Stage 1~5)',
+          monsters: [
+            { name: '洞穴蝙蝠', val: 2 },
+            { name: '森林幼狼', val: 4 },
+            { name: '哥布林斥候', val: 8 },
+            { name: '野生史萊姆', val: 16 },
+            { name: '獸人督軍', val: 32 }
+          ]
+        },
+        {
+          chapter: 2,
+          name: '第二章：荒漠熔岩 (Stage 6~10)',
+          monsters: [
+            { name: '火苗蜥蜴', val: 16 },
+            { name: '熔岩火靈', val: 32 },
+            { name: '熔岩史萊姆', val: 64 },
+            { name: '炎魔督軍', val: 128 },
+            { name: '赤炎巨魔', val: 256 },
+            { name: '黑曜熔岩龍', val: 512 }
+          ]
+        },
+        {
+          chapter: 3,
+          name: '第三章：暗夜聖殿 (Stage 11~15)',
+          monsters: [
+            { name: '暗影魔狼', val: 64 },
+            { name: '骷髏騎士', val: 128 },
+            { name: '巫妖祭司', val: 256 },
+            { name: '幽冥死神', val: 512 },
+            { name: '深淵魔皇', val: 1024 },
+            { name: '滅世黑龍', val: 2048 }
+          ]
         }
-        grid.appendChild(card);
+      ];
+
+      CHAPTER_GROUPS.forEach(grp => {
+        const sec = document.createElement('div');
+        sec.className = 'comp-group-section';
+
+        let unlockedCount = 0;
+        grp.monsters.forEach(m => {
+          if (maxU >= grp.chapter * 2 - 1 || maxU >= 5) unlockedCount++;
+        });
+
+        const title = document.createElement('div');
+        title.className = 'comp-group-title';
+        title.innerHTML = `
+          <span>${grp.name} <span style="font-size:var(--font-caption); color:#38bdf8; font-weight:700;">(${unlockedCount}/${grp.monsters.length} 已解鎖)</span></span>
+          <span class="collapse-arrow">▼</span>
+        `;
+        sec.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'compendium-grid';
+
+        title.onclick = () => {
+          const isCollapsed = grid.classList.toggle('collapsed');
+          const arrow = title.querySelector('.collapse-arrow');
+          if (arrow) arrow.textContent = isCollapsed ? '▲' : '▼';
+        };
+
+        grp.monsters.forEach((m, idx) => {
+          const isUnlocked = (maxU >= grp.chapter * 2 - 1) || (grp.chapter === 1 && idx < 3) || (maxU >= 5);
+          const card = document.createElement('div');
+          card.className = 'compendium-card' + (isUnlocked ? '' : ' locked');
+          card.style.aspectRatio = '5 / 6';
+
+          if (isUnlocked) {
+            card.innerHTML = `
+              <img src="${getMonsterImg(m.val, grp.chapter)}" onerror="this.src='assets/images/monsters_clay/monster_ch01_08.png'" style="width:48px; height:48px; object-fit:contain;" alt="${m.name}">
+              <span style="font-size:0.75rem; color:#f8fafc; font-weight:bold; text-align:center; margin-top:2px;">${m.name}</span>
+              <span style="font-size:0.65rem; color:#fbbf24; font-weight:800;">${m.val}</span>
+            `;
+          } else {
+            card.innerHTML = `
+              <span style="font-size:2rem; filter:grayscale(1); opacity:0.5;">🔒</span>
+              <span style="font-size:0.7rem; color:#64748b; margin-top:2px;">??? (${m.val})</span>
+            `;
+          }
+          grid.appendChild(card);
+        });
+
+        sec.appendChild(grid);
+        area.appendChild(sec);
       });
     } else if (tab === 'gears') {
-      const TIER_VALS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144];
-      TIER_VALS.forEach((val) => {
-        const isUnlocked = val <= equipped.val;
+      const GEAR_TIERS = [
+        { name: '泥木劍', val: 2 },
+        { name: '青銅刃', val: 4 },
+        { name: '泥盾靴', val: 8 },
+        { name: '鐵甲胸鎧', val: 16 },
+        { name: '秘銀闊劍', val: 32 },
+        { name: '皇家重甲', val: 64 },
+        { name: '榮耀法靴', val: 128 },
+        { name: '輝煌神盾', val: 256 },
+        { name: '聖殿光刃', val: 512 },
+        { name: '永恆聖劍', val: 1024 },
+        { name: '滅神狂斬', val: 2048 }
+      ];
+
+      const sec = document.createElement('div');
+      sec.className = 'comp-group-section';
+
+      const unlockedCount = GEAR_TIERS.filter(g => g.val <= equippedVal || g.val <= 4).length;
+
+      const title = document.createElement('div');
+      title.className = 'comp-group-title';
+      title.innerHTML = `
+        <span>⚔️ 王國神兵裝備庫 <span style="font-size:var(--font-caption); color:#38bdf8; font-weight:700;">(${unlockedCount}/${GEAR_TIERS.length} 已解鎖)</span></span>
+        <span class="collapse-arrow">▼</span>
+      `;
+      sec.appendChild(title);
+
+      const grid = document.createElement('div');
+      grid.className = 'compendium-grid';
+
+      title.onclick = () => {
+        const isCollapsed = grid.classList.toggle('collapsed');
+        const arrow = title.querySelector('.collapse-arrow');
+        if (arrow) arrow.textContent = isCollapsed ? '▲' : '▼';
+      };
+
+      GEAR_TIERS.forEach(g => {
+        const isUnlocked = g.val <= equippedVal || g.val <= 4;
         const card = document.createElement('div');
-        card.className = 'comp-card';
-        card.style.cssText = 'background:#1e293b; border-radius:10px; padding:10px; display:flex; flex-direction:column; align-items:center; gap:6px;';
+        card.className = 'compendium-card' + (isUnlocked ? '' : ' locked');
+        card.style.aspectRatio = '5 / 6';
+
         if (isUnlocked) {
           card.innerHTML = `
-            <img src="assets/images/equipment_clay/equip_01.png" style="width:48px; height:48px;">
-            <span style="font-size:0.75rem; color:#38bdf8; font-weight:bold;">裝備品 (${val})</span>
+            <img src="${getEquipImg(g.val)}" style="width:44px; height:44px; object-fit:contain;" alt="${g.name}">
+            <span style="font-size:0.75rem; color:#38bdf8; font-weight:bold; text-align:center; margin-top:2px;">${g.name}</span>
+            <span style="font-size:0.65rem; color:#fbbf24; font-weight:800;">${g.val}</span>
           `;
         } else {
-          card.style.opacity = '0.5';
           card.innerHTML = `
-            <div style="font-size:1.8rem; line-height:48px;">🔒</div>
-            <span style="font-size:0.75rem; color:#64748b;">??? (${val})</span>
+            <span style="font-size:2rem; filter:grayscale(1); opacity:0.5;">🔒</span>
+            <span style="font-size:0.7rem; color:#64748b; margin-top:2px;">??? (${g.val})</span>
           `;
         }
         grid.appendChild(card);
       });
+
+      sec.appendChild(grid);
+      area.appendChild(sec);
     } else if (tab === 'heroes') {
-      const HERO_DEFS = [
-        { key: 'warrior', name: '騎士', icon: 'assets/images/hero_knight/hero_09.png' },
-        { key: 'merchant', name: '見習商人', icon: 'assets/images/hero_knight/hero_09.png' },
-        { key: 'archer', name: '精準遊俠', icon: 'assets/images/hero_knight/hero_09.png' }
+      const HERO_SECTIONS = [
+        {
+          name: '⚔️ 鐵甲狂戰士 (Warrior)',
+          tiers: [
+            { name: '泥木戰士', val: 2, img: 'assets/images/hero_knight/hero_01.png' },
+            { name: '青銅衛兵', val: 4, img: 'assets/images/hero_knight/hero_02.png' },
+            { name: '重裝前鋒', val: 8, img: 'assets/images/hero_knight/hero_03.png' },
+            { name: '鐵衛騎士', val: 16, img: 'assets/images/hero_knight/hero_04.png' },
+            { name: '鋼刃領主', val: 32, img: 'assets/images/hero_knight/hero_05.png' },
+            { name: '皇家禁衛', val: 64, img: 'assets/images/hero_knight/hero_06.png' }
+          ]
+        },
+        {
+          name: '💰 戰地商人 (Merchant)',
+          tiers: [
+            { name: '行腳學徒', val: 2, img: 'assets/images/hero_knight/hero_07.png' },
+            { name: '商隊斥候', val: 4, img: 'assets/images/hero_knight/hero_08.png' },
+            { name: '財富守衛', val: 8, img: 'assets/images/hero_knight/hero_09.png' }
+          ]
+        },
+        {
+          name: '🏹 精靈弓手 (Archer)',
+          tiers: [
+            { name: '巡林斥候', val: 2, img: 'assets/images/hero_knight/hero_10.png' },
+            { name: '追風射手', val: 4, img: 'assets/images/hero_knight/hero_11.png' },
+            { name: '穿雲幻箭', val: 8, img: 'assets/images/hero_knight/hero_12.png' }
+          ]
+        }
       ];
-      HERO_DEFS.forEach(h => {
-        const card = document.createElement('div');
-        card.className = 'comp-card';
-        card.style.cssText = 'background:#1e293b; border-radius:10px; padding:10px; display:flex; flex-direction:column; align-items:center; gap:6px;';
-        card.innerHTML = `
-          <img src="${h.icon}" style="width:48px; height:48px;">
-          <span style="font-size:0.75rem; color:#f8fafc; font-weight:bold;">${h.name}</span>
+
+      HERO_SECTIONS.forEach(grp => {
+        const sec = document.createElement('div');
+        sec.className = 'comp-group-section';
+
+        const title = document.createElement('div');
+        title.className = 'comp-group-title';
+        title.innerHTML = `
+          <span>${grp.name} <span style="font-size:var(--font-caption); color:#38bdf8; font-weight:700;">(${grp.tiers.length}/${grp.tiers.length} 已解鎖)</span></span>
+          <span class="collapse-arrow">▼</span>
         `;
-        grid.appendChild(card);
+        sec.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'compendium-grid';
+
+        title.onclick = () => {
+          const isCollapsed = grid.classList.toggle('collapsed');
+          const arrow = title.querySelector('.collapse-arrow');
+          if (arrow) arrow.textContent = isCollapsed ? '▲' : '▼';
+        };
+
+        grp.tiers.forEach(t => {
+          const card = document.createElement('div');
+          card.className = 'compendium-card';
+          card.style.aspectRatio = '5 / 6';
+          card.innerHTML = `
+            <img src="${t.img}" onerror="this.src='assets/images/hero_knight/hero_09.png'" style="width:48px; height:48px; object-fit:contain;" alt="${t.name}">
+            <span style="font-size:0.75rem; color:#f8fafc; font-weight:bold; text-align:center; margin-top:2px;">${t.name}</span>
+            <span style="font-size:0.65rem; color:#38bdf8; font-weight:800;">${t.val}</span>
+          `;
+          grid.appendChild(card);
+        });
+
+        sec.appendChild(grid);
+        area.appendChild(sec);
       });
     }
   }
