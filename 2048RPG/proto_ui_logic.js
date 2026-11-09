@@ -121,30 +121,37 @@
     return window.appRouter ? (window.appRouter.stageManager.maxUnlockedStage || 1) : 1;
   }
 
+  function isTutorialCompleted() {
+    if (!window.appRouter || !window.appRouter.stageManager || !window.appRouter.stageManager.tutorialManager) return true;
+    return window.appRouter.stageManager.tutorialManager.isCompleted;
+  }
+
   function changeStageByStep(step) {
     const maxU = getMaxUnlocked();
+    const tutDone = isTutorialCompleted();
+    const minS = tutDone ? 1 : 0;
     const nextStage = window.currentSelectedStage + step;
-    if (nextStage >= 1 && nextStage <= maxU) {
+    if (nextStage >= 0 && nextStage <= maxU) {
       window.currentSelectedStage = nextStage;
-      renderAdventureStage();
+      renderAdventureStage(nextStage);
     } else if (nextStage > maxU) {
-      alert(`🔒 第 ${nextStage} 關尚未解鎖，請先通關第 ${maxU} 關！`);
+      alert(`🔒 第 ${nextStage} 關尚未解鎖，請先通關前面的關卡！`);
     }
   }
 
   function renderAdventureStage(stageId) {
     const maxU = getMaxUnlocked();
+    const tutDone = isTutorialCompleted();
+
     if (stageId !== undefined) {
-      window.currentSelectedStage = Math.max(1, Math.min(stageId, maxU));
-    } else if (!window.currentSelectedStage || window.currentSelectedStage > maxU) {
-      window.currentSelectedStage = maxU;
+      window.currentSelectedStage = stageId;
+    } else if (!tutDone) {
+      window.currentSelectedStage = 0; // Default to Tutorial if not completed
+    } else if (window.currentSelectedStage === undefined || window.currentSelectedStage === 0) {
+      window.currentSelectedStage = 1;
     }
 
     const cur = window.currentSelectedStage;
-    const configs = (window.appRouter && window.appRouter.STAGE_CONFIGS) ? window.appRouter.STAGE_CONFIGS : null;
-    const cfg = configs ? configs[cur] : null;
-
-    // Update Header Stage & Chapter Tag
     const hubStageNum = document.getElementById('hub-stage-num');
     const hubChapTag = document.getElementById('hub-chap-tag');
     const arenaBossImg = document.getElementById('arena-boss-img');
@@ -152,6 +159,27 @@
     const briefRecPower = document.getElementById('brief-rec-power');
     const btnPrev = document.getElementById('btn-stage-prev');
     const btnNext = document.getElementById('btn-stage-next');
+
+    if (cur === 0) {
+      if (hubStageNum) hubStageNum.textContent = '序章 (教學)';
+      if (hubChapTag) hubChapTag.textContent = '序章 · 皇家訓練營';
+      if (arenaBossImg) {
+        arenaBossImg.src = 'assets/images/monsters_clay/monster_ch01_04.png';
+        arenaBossImg.onerror = () => { arenaBossImg.src = 'assets/images/monsters_clay/monster_ch01_08.png'; };
+      }
+      if (arenaBossName) arenaBossName.textContent = '試煉首領：洞穴蝙蝠 (4)';
+      if (briefRecPower) briefRecPower.textContent = '2 裝備';
+      if (btnPrev) btnPrev.disabled = true;
+      if (btnNext) btnNext.disabled = !tutDone;
+
+      document.querySelectorAll('.stage-node-item').forEach(node => {
+        node.classList.remove('current');
+      });
+      return;
+    }
+
+    const configs = (window.appRouter && window.appRouter.STAGE_CONFIGS) ? window.appRouter.STAGE_CONFIGS : null;
+    const cfg = configs ? configs[cur] : null;
 
     if (hubStageNum) hubStageNum.textContent = `Stage ${cur}`;
     if (hubChapTag) {
@@ -176,7 +204,7 @@
       }
     }
 
-    if (btnPrev) btnPrev.disabled = (cur <= 1);
+    if (btnPrev) btnPrev.disabled = (cur <= (tutDone ? 1 : 0));
     if (btnNext) btnNext.disabled = (cur >= maxU);
 
     // Update active node styling in any visible stage nodes
@@ -188,14 +216,12 @@
   }
 
   function openStageDetailModal(stageId) {
-    const sId = stageId !== undefined ? stageId : (window.currentSelectedStage || 1);
+    const tutDone = isTutorialCompleted();
+    const sId = stageId !== undefined ? stageId : (window.currentSelectedStage !== undefined ? window.currentSelectedStage : (tutDone ? 1 : 0));
     window.currentSelectedStage = sId;
 
     const modal = document.getElementById('modal-stage-detail');
     if (!modal) return;
-
-    const configs = (window.appRouter && window.appRouter.STAGE_CONFIGS) ? window.appRouter.STAGE_CONFIGS : null;
-    const cfg = configs ? configs[sId] : null;
 
     const titleEl = document.getElementById('modal-stage-title');
     const recPowerEl = document.getElementById('modal-stage-rec-power');
@@ -205,6 +231,44 @@
     const minionsList = document.getElementById('modal-minions-list');
     const gearsList = document.getElementById('modal-stage-gears');
     const goldRewardEl = document.getElementById('modal-gold-reward');
+
+    if (sId === 0) {
+      if (titleEl) titleEl.textContent = '序章 · 王國勇者試煉 (教學)';
+      if (recPowerEl) recPowerEl.textContent = '建議戰力：20 裝備 · 建議鍛造：LV.1';
+      if (bossNameEl) bossNameEl.textContent = '試煉首領：洞穴蝙蝠 (4)';
+      if (bossImgEl) {
+        bossImgEl.src = 'assets/images/monsters_clay/monster_ch01_04.png';
+        bossImgEl.onerror = () => { bossImgEl.src = 'assets/images/monsters_clay/monster_ch01_08.png'; };
+      }
+      if (objectiveEl) objectiveEl.textContent = '作戰目標：跟隨教官指引完成試煉';
+      if (minionsList) {
+        minionsList.innerHTML = `
+          <div class="mini-stage-card">
+            <img src="assets/images/monsters_clay/monster_ch01_04.png" alt="4">
+            <span class="mini-card-badge">4</span>
+          </div>
+        `;
+      }
+      if (gearsList) {
+        gearsList.innerHTML = `
+          <div class="mini-stage-card">
+            <img src="assets/images/equipment_clay/equip_01.png" alt="2">
+            <span class="mini-card-badge">2</span>
+          </div>
+          <div class="mini-stage-card">
+            <img src="assets/images/equipment_clay/equip_01.png" alt="2">
+            <span class="mini-card-badge">2</span>
+          </div>
+        `;
+      }
+      if (goldRewardEl) goldRewardEl.textContent = '50 金幣';
+      modal.classList.add('active');
+      modal.style.display = 'flex';
+      return;
+    }
+
+    const configs = (window.appRouter && window.appRouter.STAGE_CONFIGS) ? window.appRouter.STAGE_CONFIGS : null;
+    const cfg = configs ? configs[sId] : null;
 
     const ch = cfg ? (cfg.chapter || 1) : 1;
     const bossVal = (cfg && cfg.monsters && cfg.monsters[0]) ? (typeof cfg.monsters[0] === 'object' ? cfg.monsters[0].value : cfg.monsters[0]) : 8;
@@ -283,7 +347,9 @@
   function launchStageBattle() {
     closeStageDetailModal();
     if (window.appRouter) {
-      window.appRouter.startCombat(window.currentSelectedStage || 1);
+      const tutDone = isTutorialCompleted();
+      const targetStage = window.currentSelectedStage !== undefined ? window.currentSelectedStage : (tutDone ? 1 : 0);
+      window.appRouter.startCombat(targetStage);
     }
   }
 
@@ -296,9 +362,27 @@
     if (!drawer || !grid) return;
 
     const maxU = getMaxUnlocked();
+    const tutDone = isTutorialCompleted();
     grid.innerHTML = '';
+
+    // Stage 0 (教學) node
+    const tutNode = document.createElement('div');
+    const isTutCur = (window.currentSelectedStage === 0);
+    tutNode.className = `quick-stage-node ${isTutCur ? 'active' : ''}`;
+    tutNode.style.cssText = `padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; font-weight: 700; ${
+      isTutCur ? 'background: #3b82f6; color: #fff; border: 2px solid #60a5fa;' :
+      'background: #1e293b; color: #fbbf24; border: 1px solid #f59e0b;'
+    }`;
+    tutNode.innerHTML = '🎓 序章 (教學)';
+    tutNode.onclick = () => {
+      window.currentSelectedStage = 0;
+      renderAdventureStage(0);
+      closeQuickStageDrawer();
+    };
+    grid.appendChild(tutNode);
+
     for (let s = 1; s <= 25; s++) {
-      const isUnlocked = s <= maxU;
+      const isUnlocked = s <= maxU && tutDone;
       const isCurrent = s === window.currentSelectedStage;
       const btn = document.createElement('div');
       btn.className = `quick-stage-node ${isCurrent ? 'active' : ''} ${!isUnlocked ? 'locked' : ''}`;
@@ -311,7 +395,7 @@
       if (isUnlocked) {
         btn.onclick = () => {
           window.currentSelectedStage = s;
-          renderAdventureStage();
+          renderAdventureStage(s);
           closeQuickStageDrawer();
         };
       }
@@ -1344,6 +1428,9 @@
 
     if (window.appRouter) {
       window.appRouter.stageManager.resetSaveData();
+      if (window.appRouter.stageManager.tutorialManager) {
+        window.appRouter.stageManager.tutorialManager.setCompleted(false);
+      }
       if (window.appRouter.dailyLoopManager) {
         window.appRouter.dailyLoopManager.resetAll();
       }
@@ -1351,10 +1438,10 @@
       window.appRouter.syncHud();
     }
 
-    window.currentSelectedStage = 1;
+    window.currentSelectedStage = 0;
     saveCampUpgrades({ forge: 1, capacity: 1, afk: 1 });
 
-    renderAdventureStage(1);
+    renderAdventureStage(0);
     renderGearInventory();
     renderHeroCards();
     renderCampUpgrades();
@@ -1362,7 +1449,7 @@
     syncShopDisplay();
 
     closeSettingsModal();
-    alert('🗑️ 本地存檔已徹底重置！所有進度、金幣與裝備已恢復為初始狀態。');
+    alert('🗑️ 本地存檔已徹底重置！所有進度、金幣與裝備已恢復為初始狀態，冒險主頁已為您就緒序章新手教學。');
   }
 
   // Hook into Camp Facility Buttons

@@ -53,7 +53,7 @@ class AppRouter {
     }
 
     // Tutorial Presentation Overlay (C-STORY-030 / C-STORY-140)
-    const appContainer = document.getElementById('app-container') || document.body;
+    const appContainer = document.getElementById('combat-overlay') || document.getElementById('app-container') || document.body;
     if (this.boardGridEl) {
       this.tutorialOverlay = new TutorialOverlay(appContainer, this.boardGridEl, this.eventBus);
     }
@@ -247,7 +247,8 @@ class AppRouter {
   }
 
   startCombat(stageId) {
-    if (stageId === 0) {
+    const isTutPending = this.stageManager && this.stageManager.tutorialManager && !this.stageManager.tutorialManager.isCompleted;
+    if (stageId === 0 || (isTutPending && (stageId === undefined || stageId === 1))) {
       this.startTutorialCombat();
       return;
     }
@@ -351,6 +352,9 @@ class AppRouter {
     if (dModal) dModal.style.display = 'none';
 
     this.switchAppState('LOBBY');
+    if (typeof window.renderAdventureStage === 'function') {
+      window.renderAdventureStage();
+    }
   }
 
   bindCombatEvents() {
@@ -419,6 +423,12 @@ class AppRouter {
       if (this.tutorialOverlay) {
         this.tutorialOverlay.hide();
       }
+      this.stageManager.maxUnlockedStage = Math.max(1, this.stageManager.maxUnlockedStage || 1);
+      this.stageManager.saveData();
+      window.currentSelectedStage = 1;
+      if (typeof window.renderAdventureStage === 'function') {
+        window.renderAdventureStage(1);
+      }
       if (this.stageManager.isInBattle && this.stageManager.currentStageConfig && this.stageManager.currentStageConfig.id === 0) {
         setTimeout(() => {
           this.stageManager.handleVictory();
@@ -443,7 +453,7 @@ class AppRouter {
     }
 
     // Victory confirm
-    const btnVictoryConfirm = document.getElementById('btn-victory-confirm');
+    const btnVictoryConfirm = document.getElementById('btn-victory-confirm') || document.getElementById('btn-victory-claim');
     if (btnVictoryConfirm) {
       btnVictoryConfirm.addEventListener('click', () => {
         this.audio.playClick();
@@ -497,8 +507,41 @@ class AppRouter {
 
     window.addEventListener('keydown', handleKeyDown, { capture: true });
 
-    // Touch Swipe Controls
+    // PC Mouse Drag Controls (C-STORY-142)
     const combatArea = this.combatOverlay;
+    if (combatArea) {
+      let isMouseDown = false;
+      let mouseStartX = 0, mouseStartY = 0;
+
+      combatArea.addEventListener('mousedown', (e) => {
+        if (this.state !== 'COMBAT' || !this.stageManager.isInBattle) return;
+        if (e.target.closest('button') || e.target.closest('.combat-top-bar') || e.target.closest('.cr-modal-box') || e.target.closest('.tutorial-popup-card') || e.target.closest('#btn-tutorial-skip')) {
+          return;
+        }
+        isMouseDown = true;
+        mouseStartX = e.clientX;
+        mouseStartY = e.clientY;
+      });
+
+      window.addEventListener('mouseup', (e) => {
+        if (!isMouseDown || this.state !== 'COMBAT' || !this.stageManager.isInBattle) return;
+        isMouseDown = false;
+        const dx = e.clientX - mouseStartX;
+        const dy = e.clientY - mouseStartY;
+        const absX = Math.abs(dx);
+        const absY = Math.abs(dy);
+
+        if (Math.max(absX, absY) > 20) {
+          if (absX > absY) {
+            this.handleMove(dx > 0 ? Direction.RIGHT : Direction.LEFT);
+          } else {
+            this.handleMove(dy > 0 ? Direction.DOWN : Direction.UP);
+          }
+        }
+      });
+    }
+
+    // Touch Swipe Controls
     if (combatArea) {
       let isTracking = false;
       let startX = 0, startY = 0;

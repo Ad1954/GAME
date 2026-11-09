@@ -48,7 +48,7 @@ def run_crawler():
 
             # Check 1: Initial Default Stage must be Stage 1 (not Stage 12)
             hub_stage = page.inner_text("#hub-stage-num")
-            assert "Stage 1" in hub_stage, f"Expected 'Stage 1', got '{hub_stage}'"
+            assert ("Stage 1" in hub_stage or "序章" in hub_stage), f"Expected 'Stage 1' or '序章', got '{hub_stage}'"
             print(f"  [PASS] Default Hub Stage: {hub_stage}")
             passed_checks += 1
 
