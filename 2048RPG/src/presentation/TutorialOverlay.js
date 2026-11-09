@@ -78,6 +78,13 @@ export class TutorialOverlay {
     this.popupWarning = el.querySelector('#tutorial-popup-warning');
     this.popupBtnConfirm = el.querySelector('#btn-tutorial-popup-confirm');
 
+    // C-STORY-145: Anchor Dialogue Banner in Flex flow (before .board-wrapper in .combat-main-zone)
+    const mainZone = document.querySelector('.combat-main-zone');
+    const boardWrapperEl = document.querySelector('.board-wrapper');
+    if (mainZone && boardWrapperEl && this.dialogueBox) {
+      mainZone.insertBefore(this.dialogueBox, boardWrapperEl);
+    }
+
     // 2. Hand Pointer: Anchor DIRECTLY inside .board-wrapper / .board-grid
     let boardWrapper = this.boardGrid ? this.boardGrid.parentElement : null;
     let hand = document.getElementById('tutorial-hand-pointer');
@@ -145,6 +152,9 @@ export class TutorialOverlay {
   showStep(stepConfig, subStepPhase = 1, extra = null) {
     if (!this.overlayElement) return;
     this.overlayElement.style.display = 'block';
+    if (this.dialogueBox) {
+      this.dialogueBox.style.display = 'block';
+    }
 
     let title = stepConfig.title;
     let dialogue = stepConfig.dialogue;
@@ -388,6 +398,9 @@ export class TutorialOverlay {
   hide() {
     if (this.overlayElement) {
       this.overlayElement.style.display = 'none';
+    }
+    if (this.dialogueBox) {
+      this.dialogueBox.style.display = 'none';
     }
     if (this.popupModal) {
       this.popupModal.style.display = 'none';

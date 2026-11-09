@@ -2183,23 +2183,32 @@
 }
 
 /* ========================================================
-   C-STORY-144: TUTORIAL BANNER COMPACT & ITEM BADGE POLISH
+   C-STORY-145: RESPONSIVE FLEX TUTORIAL DIALOGUE BANNER
    ======================================================== */
+.combat-overlay.tutorial-mode #combat-preview-shelf {
+  display: none !important;
+}
+
 .tutorial-dialogue-banner {
   pointer-events: none !important;
-  position: absolute !important;
-  top: 46px !important;
-  left: 8px !important;
-  right: 8px !important;
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  width: calc(100% - 16px) !important;
+  margin: 4px auto 6px auto !important;
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96)) !important;
   border: 1.5px solid #38bdf8 !important;
-  border-radius: 10px !important;
-  padding: 4px 8px !important;
+  border-radius: 12px !important;
+  padding: 8px 12px !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 10px rgba(56, 189, 248, 0.25) !important;
   z-index: 610 !important;
-  max-height: 56px !important;
-  overflow: hidden !important;
+  height: auto !important;
+  min-height: 52px !important;
+  max-height: none !important;
+  overflow: visible !important;
   box-sizing: border-box !important;
+  flex-shrink: 0 !important;
 }
 
 .tutorial-dialogue-header {
@@ -2207,18 +2216,18 @@
   align-items: center !important;
   justify-content: space-between !important;
   gap: 6px !important;
-  margin-bottom: 2px !important;
+  margin-bottom: 4px !important;
 }
 
 .tutorial-badge {
-  font-size: 0.7rem !important;
-  padding: 2px 6px !important;
+  font-size: 0.72rem !important;
+  padding: 2px 8px !important;
   border-radius: 6px !important;
   line-height: 1 !important;
 }
 
 .tutorial-title {
-  font-size: 0.78rem !important;
+  font-size: 0.82rem !important;
   font-weight: 800 !important;
   color: #38bdf8 !important;
   white-space: nowrap !important;
@@ -2229,20 +2238,21 @@
 
 .tutorial-btn-skip {
   pointer-events: auto !important;
-  font-size: 0.68rem !important;
-  padding: 2px 6px !important;
+  font-size: 0.7rem !important;
+  padding: 3px 8px !important;
   border-radius: 6px !important;
   flex-shrink: 0 !important;
+  cursor: pointer !important;
 }
 
 .tutorial-dialogue-body {
-  font-size: 0.72rem !important;
-  line-height: 1.25 !important;
+  font-size: 0.78rem !important;
+  line-height: 1.35 !important;
   color: #e2e8f0 !important;
-  display: -webkit-box !important;
-  -webkit-line-clamp: 2 !important;
-  -webkit-box-orient: vertical !important;
-  overflow: hidden !important;
+  display: block !important;
+  overflow: visible !important;
+  white-space: normal !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
 /* Item Badges Stable Dimensions */

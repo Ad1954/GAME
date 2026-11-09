@@ -6,8 +6,8 @@ export const TUTORIAL_STEPS = [
   {
     stepIndex: 1,
     id: 'step_1_equip_fusion',
-    title: '第一步：裝備合成與戰力提升',
-    dialogue: '【移動與裝備升級】\n向上滑動！讓勇者 (2) 吸收鐵劍 (2)，升級為更強戰力 (4)！',
+    title: '第一步：裝備合成',
+    dialogue: '【戰力提升】向上滑動！讓勇者 (2) 吸收鐵劍 (2)，升級為戰力 (4)！',
     allowedDirections: [Direction.UP],
     popupCard: {
       title: '基礎機制：戰力提升',
@@ -37,8 +37,8 @@ export const TUTORIAL_STEPS = [
   {
     stepIndex: 2,
     id: 'step_2_combat_defeat_monster',
-    title: '第二步：討伐戰鬥與勝負判定',
-    dialogue: '【討伐戰鬥】\n右方出現了野狼魔物 (4)！向右滑動消滅它！\n⚠️ 注意：同等級魔物會互相合體升級變強！',
+    title: '第二步：討伐魔物',
+    dialogue: '【討伐魔物】向右滑動消滅野狼 (4)！\n💡 提示：同等級魔物會互相合體升級變強！',
     allowedDirections: [Direction.RIGHT],
     popupCard: {
       title: '戰鬥機制：魔物討伐',
@@ -70,8 +70,8 @@ export const TUTORIAL_STEPS = [
   {
     stepIndex: 3,
     id: 'step_3_gold_merge_and_tap',
-    title: '第三步：金幣合成與點擊兌現',
-    dialogue: '【金幣經濟】\n盤面上出現兩枚金幣 (4)！\n先向左滑動讓金幣合成翻倍為 (8)，隨後直接「點擊」金幣即可立即兌現入袋！',
+    title: '第三步：金幣合成',
+    dialogue: '【金幣合成】向左滑動將兩枚金幣 (4) 合成為 (8)！',
     allowedDirections: [Direction.LEFT],
     popupCard: {
       title: '經濟機制：金幣合成與兌現',
@@ -94,7 +94,7 @@ export const TUTORIAL_STEPS = [
       label: '向左合成金幣'
     },
     subStep: {
-      dialogue: '【點擊立即兌現】\n很好！金幣已合成為 (8)！\n現在直接點擊這枚金幣方塊，將黃金存入國庫！',
+      dialogue: '【點擊兌現】直接點擊金幣 (8) 方塊，將黃金存入國庫！',
       handGuide: {
         type: 'tap',
         label: '點擊兌現金幣'
@@ -110,8 +110,8 @@ export const TUTORIAL_STEPS = [
   {
     stepIndex: 4,
     id: 'step_4_power_check_boss',
-    title: '第四步：打倒魔物 (自主實戰驗收)',
-    dialogue: '【綜合實戰：打倒魔物】\n前方出現哥布林隊長 (8)！此時勇者僅有 (4) 會被阻擋無法擊退！\n運用所學合出更強裝備，將哥布林隊長消滅以完成試煉吧！',
+    title: '第四步：打倒魔物',
+    dialogue: '【終極試煉】勇者戰力 (4) 小於魔物 (8) 會被阻擋！\n請先吃同級裝備提升戰力，再迎戰魔物！',
     allowedDirections: [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT], // Free movement for open practice!
     isOpenCombat: true, // Player self-directed final practice
     popupCard: {

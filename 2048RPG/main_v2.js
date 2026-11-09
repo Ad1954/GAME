@@ -299,6 +299,7 @@ class AppRouter {
 
     this.currentCombatStageId = 0;
     this.switchAppState('COMBAT');
+    if (this.combatOverlay) this.combatOverlay.classList.add('tutorial-mode');
 
     const stageNameEl = document.getElementById('combat-stage-name');
     const turnValEl = document.getElementById('combat-turn-val');
@@ -334,6 +335,7 @@ class AppRouter {
   }
 
   exitCombat() {
+    if (this.combatOverlay) this.combatOverlay.classList.remove('tutorial-mode');
     if (this.tutorialOverlay) {
       this.tutorialOverlay.hide();
     }
@@ -441,6 +443,7 @@ class AppRouter {
     });
 
     this.eventBus.on(Events.TUTORIAL_COMPLETED, () => {
+      if (this.combatOverlay) this.combatOverlay.classList.remove('tutorial-mode');
       if (this.tutorialOverlay) {
         this.tutorialOverlay.hide();
       }
