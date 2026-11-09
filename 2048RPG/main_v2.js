@@ -402,6 +402,7 @@ class AppRouter {
     if (Events.MOVE_COMPLETED) {
       this.eventBus.on(Events.MOVE_COMPLETED, handleBoardUpdate);
     }
+    this.eventBus.on(Events.ITEMS_CHANGED, () => this.updateItemCounts());
 
     this.eventBus.on(Events.STAGE_VICTORY, (data) => {
       this.audio.playVictory();
@@ -527,7 +528,21 @@ class AppRouter {
 
     window.addEventListener('keydown', handleKeyDown, { capture: true });
 
-    // PC Mouse Drag Controls (C-STORY-142)
+    // Direct Click on Board Grid (C-STORY-144: Gold Tap & Item Target)
+    if (this.boardGridEl) {
+      this.boardGridEl.addEventListener('click', (e) => {
+        if (this.state !== 'COMBAT' || !this.stageManager.isInBattle) return;
+        const cell = e.target.closest('.grid-cell');
+        if (!cell) return;
+        const r = parseInt(cell.dataset.r, 10);
+        const c = parseInt(cell.dataset.c, 10);
+        if (!isNaN(r) && !isNaN(c)) {
+          this.handleCellTap(r, c);
+        }
+      });
+    }
+
+    // PC Mouse Drag & Tap Controls (C-STORY-142 & C-STORY-144)
     const combatArea = this.combatOverlay;
     if (combatArea) {
       let isMouseDown = false;
@@ -557,11 +572,22 @@ class AppRouter {
           } else {
             this.handleMove(dy > 0 ? Direction.DOWN : Direction.UP);
           }
+        } else {
+          // Tap / Click fallback
+          const targetEl = document.elementFromPoint(e.clientX, e.clientY);
+          const cell = targetEl ? targetEl.closest('.grid-cell') : null;
+          if (cell) {
+            const r = parseInt(cell.dataset.r, 10);
+            const c = parseInt(cell.dataset.c, 10);
+            if (!isNaN(r) && !isNaN(c)) {
+              this.handleCellTap(r, c);
+            }
+          }
         }
       });
     }
 
-    // Touch Swipe Controls
+    // Touch Swipe & Tap Controls
     if (combatArea) {
       let isTracking = false;
       let startX = 0, startY = 0;
@@ -593,15 +619,70 @@ class AppRouter {
           } else {
             this.handleMove(dy > 0 ? Direction.DOWN : Direction.UP);
           }
+        } else {
+          const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+          const cell = targetEl ? targetEl.closest('.grid-cell') : null;
+          if (cell) {
+            const r = parseInt(cell.dataset.r, 10);
+            const c = parseInt(cell.dataset.c, 10);
+            if (!isNaN(r) && !isNaN(c)) {
+              this.handleCellTap(r, c);
+            }
+          }
         }
       });
     }
 
-    // Item Buttons
+    // Item Buttons (Undo, Hammer, Snipe)
     const btnUndo = document.getElementById('btn-item-undo');
     if (btnUndo) {
       btnUndo.addEventListener('click', () => {
-        if (this.stageManager.useItem('undo')) this.audio.playUndo();
+        if (this.stageManager.useItem('undo')) {
+          if (this.audio) this.audio.playUndo();
+          this.updateItemCounts();
+        }
+      });
+    }
+
+    const btnHammer = document.getElementById('btn-item-hammer');
+    if (btnHammer) {
+      btnHammer.addEventListener('click', () => {
+        if (this.currentAimingItem === 'hammer') {
+          this.setAimingMode(null);
+          return;
+        }
+        const count = (this.stageManager.items && this.stageManager.items.hammer) || 0;
+        if (count <= 0) {
+          alert('破壞戰槌數量不足，可至商店免費領取！');
+          return;
+        }
+        if (this.audio) this.audio.playClick();
+        this.setAimingMode('hammer');
+      });
+    }
+
+    const btnSnipe = document.getElementById('btn-item-snipe');
+    if (btnSnipe) {
+      btnSnipe.addEventListener('click', () => {
+        if (this.currentAimingItem === 'snipe') {
+          this.setAimingMode(null);
+          return;
+        }
+        const count = (this.stageManager.items && this.stageManager.items.snipe) || 0;
+        if (count <= 0) {
+          alert('精準重弩數量不足，可至商店免費領取！');
+          return;
+        }
+        if (this.audio) this.audio.playClick();
+        this.setAimingMode('snipe');
+      });
+    }
+
+    const btnCancelTarget = document.getElementById('btn-cancel-target');
+    if (btnCancelTarget) {
+      btnCancelTarget.addEventListener('click', () => {
+        if (this.audio) this.audio.playClick();
+        this.setAimingMode(null);
       });
     }
   }
@@ -647,14 +728,86 @@ class AppRouter {
     }
   }
 
+  handleCellTap(r, c) {
+    if (!this.stageManager.isInBattle || this.isSliding || this.isSkillExecuting) return;
+
+    if (this.currentAimingItem === 'hammer') {
+      const res = this.stageManager.useHammerItem(r, c);
+      if (!res.success) {
+        alert(res.reason);
+      } else {
+        this.setAimingMode(null);
+        if (res.action === 'cash_out') {
+          if (this.audio) this.audio.playCoin();
+        }
+      }
+      return;
+    }
+
+    if (this.currentAimingItem === 'snipe') {
+      const res = this.stageManager.useSnipeItem(r, c);
+      if (!res.success) {
+        alert(res.reason);
+      } else {
+        this.setAimingMode(null);
+      }
+      return;
+    }
+
+    const tile = this.stageManager.board.getTile(r, c);
+    if (tile && tile.isGold()) {
+      const res = this.stageManager.cashOutGoldTile(r, c);
+      if (res && res.success) {
+        if (this.viewRenderer && this.viewRenderer.playVfx) {
+          this.viewRenderer.playVfx([{ type: 'gold_merge', r, c, value: res.amount }]);
+        }
+        if (this.audio) this.audio.playCoin();
+      } else if (res && !res.success && res.reason) {
+        alert(res.reason);
+      }
+    }
+  }
+
+  setAimingMode(mode) {
+    this.currentAimingItem = mode;
+    const btnHammer = document.getElementById('btn-item-hammer');
+    const btnSnipe = document.getElementById('btn-item-snipe');
+    const banner = document.getElementById('targeting-banner');
+    const text = document.getElementById('targeting-text');
+
+    if (btnHammer) btnHammer.classList.toggle('active', mode === 'hammer');
+    if (btnSnipe) btnSnipe.classList.toggle('active', mode === 'snipe');
+
+    if (banner) {
+      if (mode === 'hammer') {
+        banner.style.display = 'flex';
+        if (text) text.textContent = '🔨 瞄準模式：點選裝備粉碎，點選金幣直接領取（不耗戰槌）';
+      } else if (mode === 'snipe') {
+        banner.style.display = 'flex';
+        if (text) text.textContent = '🏹 瞄準模式：點選任意 1 隻魔物無損狙殺！';
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+  }
+
   updateItemCounts() {
-    const inv = this.stageManager.inventory;
+    const items = (this.stageManager && this.stageManager.items) ? this.stageManager.items : { undo: 0, hammer: 0, snipe: 0 };
     const undoCount = document.getElementById('item-count-undo');
     const hammerCount = document.getElementById('item-count-hammer');
     const snipeCount = document.getElementById('item-count-snipe');
-    if (undoCount) undoCount.textContent = inv ? inv.undo : 0;
-    if (hammerCount) hammerCount.textContent = inv ? inv.hammer : 0;
-    if (snipeCount) snipeCount.textContent = inv ? inv.snipe : 0;
+    if (undoCount) {
+      undoCount.textContent = items.undo !== undefined ? items.undo : 0;
+      undoCount.classList.toggle('empty', (items.undo || 0) <= 0);
+    }
+    if (hammerCount) {
+      hammerCount.textContent = items.hammer !== undefined ? items.hammer : 0;
+      hammerCount.classList.toggle('empty', (items.hammer || 0) <= 0);
+    }
+    if (snipeCount) {
+      snipeCount.textContent = items.snipe !== undefined ? items.snipe : 0;
+      snipeCount.classList.toggle('empty', (items.snipe || 0) <= 0);
+    }
   }
 }
 

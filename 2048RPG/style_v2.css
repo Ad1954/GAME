@@ -2181,3 +2181,93 @@
 .modal-backdrop {
   z-index: 700 !important;
 }
+
+/* ========================================================
+   C-STORY-144: TUTORIAL BANNER COMPACT & ITEM BADGE POLISH
+   ======================================================== */
+.tutorial-dialogue-banner {
+  pointer-events: none !important;
+  position: absolute !important;
+  top: 46px !important;
+  left: 8px !important;
+  right: 8px !important;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96)) !important;
+  border: 1.5px solid #38bdf8 !important;
+  border-radius: 10px !important;
+  padding: 4px 8px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 10px rgba(56, 189, 248, 0.25) !important;
+  z-index: 610 !important;
+  max-height: 56px !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.tutorial-dialogue-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 6px !important;
+  margin-bottom: 2px !important;
+}
+
+.tutorial-badge {
+  font-size: 0.7rem !important;
+  padding: 2px 6px !important;
+  border-radius: 6px !important;
+  line-height: 1 !important;
+}
+
+.tutorial-title {
+  font-size: 0.78rem !important;
+  font-weight: 800 !important;
+  color: #38bdf8 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  flex: 1 !important;
+}
+
+.tutorial-btn-skip {
+  pointer-events: auto !important;
+  font-size: 0.68rem !important;
+  padding: 2px 6px !important;
+  border-radius: 6px !important;
+  flex-shrink: 0 !important;
+}
+
+.tutorial-dialogue-body {
+  font-size: 0.72rem !important;
+  line-height: 1.25 !important;
+  color: #e2e8f0 !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+/* Item Badges Stable Dimensions */
+.btn-item-slot .item-count {
+  position: absolute !important;
+  top: -4px !important;
+  right: -4px !important;
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+  font-size: 0.7rem !important;
+  font-weight: 800 !important;
+  padding: 2px 6px !important;
+  border-radius: 10px !important;
+  border: 1.5px solid #0f172a !important;
+  min-width: 18px !important;
+  height: 16px !important;
+  line-height: 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  z-index: 10 !important;
+}
+
+.btn-item-slot .item-count.empty {
+  background: #64748b !important;
+  color: #cbd5e1 !important;
+}
