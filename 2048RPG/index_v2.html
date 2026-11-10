@@ -1406,7 +1406,7 @@
       </div>
     </div>
 
-    <div class="modal-backdrop" id="modal-defeat" style="display: none;">
+    <div class="modal-backdrop" id="modal-defeat" style="display: none; cursor: pointer;">
       <div class="modal-card defeat-card">
         <div class="defeat-banner">💀 盤面困局 (戰敗)</div>
         <div class="modal-body text-center">
@@ -1415,11 +1415,19 @@
             盤面已無可移動或合體之方塊！<br>
             重整旗鼓，再次挑戰吧！
           </p>
-          <div class="revenue-box" style="text-align: left; background: rgba(0,0,0,0.3); border: 1px solid rgba(248, 113, 113, 0.2); padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; font-size: 0.85rem; line-height: 1.6;">
+          <div class="revenue-box" style="text-align: left; background: rgba(0,0,0,0.3); border: 1px solid rgba(248, 113, 113, 0.2); padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 0.85rem; line-height: 1.6;">
             <div style="font-weight: bold; color: #93c5fd; margin-bottom: 4px;">闖關收益：</div>
             <div id="defeat-reward-detail" style="color: #fbbf24; font-weight: bold;">⚔️【戰鬥合成領取】+0 🪙</div>
           </div>
-<div class="modal-backdrop" id="modal-stamina-empty" style="display: none; z-index: 120;">
+        </div>
+        <div class="modal-actions" style="display:flex; flex-direction:column; align-items:center; gap:6px; padding: 10px 16px 14px 16px;">
+          <button class="cr-btn cr-btn-blue btn-large" id="btn-defeat-lobby" style="width:100%;">確認 (返回主頁面)</button>
+          <div style="font-size:0.75rem; color:#94a3b8;">（點擊畫面任意處亦可關閉返回）</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="modal-stamina-empty" style="display: none; z-index: 120;" onclick="if(event.target===this){this.style.display='none';this.classList.remove('active');}">
       <div class="modal-card stamina-empty-card" style="border: 2px solid #38bdf8; max-width: 380px;">
         <div class="modal-header">
           <span class="modal-badge">❤️</span>
@@ -1436,6 +1444,12 @@
             <div style="color: #f1f5f9;">• 💎 皇家特許寶庫：購買無限體力通行證</div>
             <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 4px;">※ 自然恢復每 20 分鐘自動恢復 1 點</div>
           </div>
+        </div>
+        <div class="modal-actions" style="display:flex; justify-content:center; padding: 10px 16px;">
+          <button class="cr-btn cr-btn-blue btn-medium" style="width:100%;" onclick="document.getElementById('modal-stamina-empty').style.display='none';document.getElementById('modal-stamina-empty').classList.remove('active');">關閉</button>
+        </div>
+      </div>
+    </div>
 
   </div>
 

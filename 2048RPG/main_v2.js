@@ -114,6 +114,10 @@ class AppRouter {
       this.inventoryManager.addItem(4); // 青銅短刃 (4)
       this.saveInventory();
     }
+    this.inventoryManager.equippedItem = this.getEquippedGear();
+    if (this.stageManager) {
+      this.stageManager.inventory = this.inventoryManager;
+    }
   }
 
   saveInventory() {
@@ -287,7 +291,9 @@ class AppRouter {
       return;
     }
 
-    const config = this.stageManager.startStage(stageId);
+    const eqGear = this.getEquippedGear();
+    const heroStartPower = (eqGear && (eqGear.value || eqGear.val)) ? Number(eqGear.value || eqGear.val) : 2;
+    const config = this.stageManager.startStage(stageId, heroStartPower);
     if (!config) return;
 
     this.currentCombatStageId = stageId;
@@ -465,13 +471,15 @@ class AppRouter {
         const battleHarvest = bGold + sGold;
         const isFirst = data.isFirstClear !== false && data.rewardGold > 0;
         if (detailEl) {
-          const firstClearValHtml = isFirst
-            ? `+${data.rewardGold} 🪙`
-            : `<span style="color:#94a3b8;">已領取</span>`;
-          let html = `
-            <div class="victory-detail-row" style="display:flex; align-items:center;">
-              <span class="victory-row-icon" style="display:inline-block; width:1.65em; text-align:center; flex-shrink:0;">★</span><span class="victory-row-label">【初次過關獎勵】${firstClearValHtml}</span>
-            </div>
+          let html = '';
+          if (isFirst) {
+            html += `
+              <div class="victory-detail-row" style="display:flex; align-items:center;">
+                <span class="victory-row-icon" style="display:inline-block; width:1.65em; text-align:center; flex-shrink:0;">★</span><span class="victory-row-label">【初次過關獎勵】+${data.rewardGold} 🪙</span>
+              </div>
+            `;
+          }
+          html += `
             <div class="victory-detail-row" style="display:flex; align-items:center;">
               <span class="victory-row-icon" style="display:inline-block; width:1.65em; text-align:center; flex-shrink:0;">⚔️</span><span class="victory-row-label">【戰鬥收穫】+${battleHarvest} 🪙</span>
             </div>
@@ -495,6 +503,13 @@ class AppRouter {
       this.audio.playDefeat();
       const dModal = document.getElementById('modal-defeat');
       if (dModal) {
+        const stamBadge = document.getElementById('defeat-stamina-badge');
+        if (stamBadge && this.stageManager) {
+          const curStam = this.stageManager.hasUnlimitedStamina ? '∞' : `${this.stageManager.stamina}/${this.stageManager.maxStamina}`;
+          stamBadge.textContent = this.stageManager.hasUnlimitedStamina
+            ? `❤️ 遠征消耗：無限體力通行證生效中（當前 ∞）`
+            : `❤️ 遠征消耗：-1 體力（當前 ${curStam}）`;
+        }
         const detailEl = document.getElementById('defeat-reward-detail');
         if (detailEl) detailEl.textContent = `⚔️【戰鬥合成領取】+${data.inBattleGold || 0} 🪙`;
         dModal.style.display = 'flex';
@@ -552,10 +567,19 @@ class AppRouter {
       });
     }
 
-    // Defeat options
+    // Defeat options: Confirm button OR tap anywhere on #modal-defeat returns to Lobby (C-STORY-151)
+    const dModalEl = document.getElementById('modal-defeat');
+    if (dModalEl) {
+      dModalEl.addEventListener('click', (e) => {
+        if (e.target && e.target.id === 'btn-defeat-retry') return;
+        this.audio.playClick();
+        this.exitCombat();
+      });
+    }
     const btnDefeatLobby = document.getElementById('btn-defeat-lobby');
     if (btnDefeatLobby) {
-      btnDefeatLobby.addEventListener('click', () => {
+      btnDefeatLobby.addEventListener('click', (e) => {
+        e.stopPropagation();
         this.audio.playClick();
         this.exitCombat();
       });

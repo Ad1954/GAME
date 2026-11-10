@@ -152,7 +152,8 @@ def run_tests():
         repeat_total = page.locator('#victory-reward-val').text_content().strip()
         gold_after_repeat = page.evaluate('() => window.appRouter.stageManager.gold')
         print(f"  Repeat Clear Stage 1 -> Total: '{repeat_total}', Gold Delta: +{gold_after_repeat - gold_before_repeat} (Expected +4, NOT +104)")
-        assert '【初次過關獎勵】已領取' in repeat_detail, f"FAIL: Expected '【初次過關獎勵】已領取' on repeat clear, got '{repeat_detail}'"
+        assert '初次過關獎勵' not in repeat_detail, f"FAIL: Repeat clear must NOT show '初次過關獎勵' row, got '{repeat_detail}'"
+        assert '【戰鬥收穫】+4 🪙' in repeat_detail, f"FAIL: Expected '【戰鬥收穫】+4 🪙' on repeat clear, got '{repeat_detail}'"
         assert repeat_total == '🪙 +4', f"FAIL: Expected '🪙 +4' on repeat clear, got '{repeat_total}'"
         assert (gold_after_repeat - gold_before_repeat) == 4, f"FAIL: Repeat clear granted extra gold! Delta={gold_after_repeat - gold_before_repeat}"
         page.evaluate('() => window.appRouter.exitCombat()')
@@ -294,10 +295,53 @@ def run_tests():
         page.screenshot(path='Commercial_Edition/scripts/c_story_150_gear_sorted.png')
         print("  [PASS] Camp dynamic description, Coin Fly VFX & Gear prototype backplates + descending sort verified!")
 
+        # ----------------------------------------------------
+        # Scenario 8: Equipped Gear (32) Reflected in Combat & Defeat Modal Exit (Confirm Button + Tap Anywhere) (C-STORY-151)
+        # ----------------------------------------------------
+        print("\n[Scenario 8] Verifying Equipped Gear (32) in Combat & Defeat Modal Exit (C-STORY-151)...")
+        page.evaluate('''() => {
+            const im = window.appRouter.inventoryManager;
+            const gear32 = im.items.find(it => it.value === 32) || im.addItem(32);
+            window.appRouter.equipGearItem(gear32);
+            window.appRouter.startCombat(1);
+        }''')
+        hero_val_model = page.evaluate('() => window.appRouter.stageManager.board.getHero().value')
+        hero_val_dom = page.locator('#battle-board .tile-hero .tile-value').text_content().strip()
+        print(f"  Equipped 32 Gear -> Combat Hero Model Value: {hero_val_model} | DOM Hero Tile Text: '{hero_val_dom}'")
+        assert hero_val_model == 32 and hero_val_dom == '32', f"FAIL: Expected Hero starting power 32, got model={hero_val_model}, dom='{hero_val_dom}'"
+
+        # Trigger Defeat and verify #btn-defeat-lobby confirm button
+        page.evaluate('() => window.appRouter.stageManager.handleDefeat()')
+        page.wait_for_selector('#modal-defeat', state='visible')
+        defeat_btn_visible = page.locator('#btn-defeat-lobby').is_visible()
+        defeat_btn_text = page.locator('#btn-defeat-lobby').text_content().strip()
+        print(f"  Defeat Modal Confirm Button Visible: {defeat_btn_visible} ('{defeat_btn_text}')")
+        assert defeat_btn_visible, "FAIL: #btn-defeat-lobby is not visible on Defeat Modal!"
+        page.screenshot(path='Commercial_Edition/scripts/c_story_151_defeat_modal.png')
+
+        # 1) Exit via Confirm Button (#btn-defeat-lobby)
+        page.click('#btn-defeat-lobby')
+        state_after_btn = page.evaluate('() => window.appRouter.state')
+        defeat_display_after_btn = page.evaluate('() => document.getElementById("modal-defeat").style.display')
+        assert state_after_btn == 'LOBBY' and defeat_display_after_btn == 'none', f"FAIL: Confirm button did not exit defeat screen! state={state_after_btn}"
+
+        # 2) Re-enter combat, trigger Defeat, and exit by tapping non-button area of #modal-defeat
+        page.evaluate('''() => {
+            window.appRouter.startCombat(1);
+            window.appRouter.stageManager.handleDefeat();
+        }''')
+        page.wait_for_selector('#modal-defeat', state='visible')
+        page.click('#modal-defeat .defeat-banner')
+        state_after_tap = page.evaluate('() => window.appRouter.state')
+        defeat_display_after_tap = page.evaluate('() => document.getElementById("modal-defeat").style.display')
+        print(f"  After Tapping Defeat Banner -> AppState: '{state_after_tap}', Modal Display: '{defeat_display_after_tap}'")
+        assert state_after_tap == 'LOBBY' and defeat_display_after_tap == 'none', f"FAIL: Tapping defeat screen did not return to LOBBY! state={state_after_tap}"
+        print("  [PASS] Equipped gear (32) reflected on Hero & Defeat Modal exits via both Confirm Button and Tap Anywhere!")
+
         browser.close()
 
     print("\n" + "=" * 65)
-    print("  ALL 7 C-STORY-147~150 SCENARIOS PASSED WITH 100% PERFECTION!")
+    print("  ALL 8 C-STORY-147~151 SCENARIOS PASSED WITH 100% PERFECTION!")
     print("=" * 65)
 
 if __name__ == '__main__':
