@@ -450,7 +450,19 @@ class AppRouter {
         if (turnsEl) turnsEl.textContent = data.turns;
         const total = data.totalEarned !== undefined ? data.totalEarned : (data.rewardGold + (data.inBattleGold || 0));
         if (rewardEl) rewardEl.textContent = `🪙 +${total}`;
-        if (detailEl) detailEl.textContent = `★【關卡獎勵】+${data.rewardGold} 🪙\n⚔️【戰鬥收穫】+${data.inBattleGold || 0} 🪙`;
+        const bGold = data.inBattleGold || 0;
+        const sGold = data.sweepGold || 0;
+        const battleHarvest = bGold + sGold;
+        if (detailEl) {
+          const lines = [
+            `★【關卡獎勵】+${data.rewardGold} 🪙`,
+            `⚔️【戰鬥收穫】+${battleHarvest} 🪙`
+          ];
+          if (sGold > 0) {
+            lines.push(`   └ 含盤面殘存自動結算 +${sGold} 🪙`);
+          }
+          detailEl.textContent = lines.join('\n');
+        }
 
         vModal.style.display = 'flex';
       }

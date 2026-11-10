@@ -91,23 +91,39 @@ def run_tests():
         print(f"  Monster Imgs: {monster_imgs}")
         print(f"  Tile Dimensions: {first_tile_rect['w']}px x {first_tile_rect['h']}px (1:1 Combat Board Scale)")
 
-        assert monster_vals == ['8', '2', '4'], f"FAIL: Expected all 3 monsters ['8', '2', '4'], got {monster_vals}"
+        assert monster_vals == ['8', '4', '2'], f"FAIL: Expected sorted monsters ['8', '4', '2'], got {monster_vals}"
         assert boss_ribbons == ['Boss'], f"FAIL: Expected ['Boss'] ribbon on boss tile, got {boss_ribbons}"
         assert first_tile_rect['w'] >= 60 and abs(first_tile_rect['w'] - first_tile_rect['h']) <= 2, f"FAIL: Expected 1:1 full size tile >=60px, got {first_tile_rect}"
-        print("  [PASS] Stage Detail Modal 3-Zone layout & 1:1 Combat-sized 4-col tiles verified!")
+        print("  [PASS] Stage Detail Modal 3-Zone layout, sorted monsters ['8', '4', '2'] & 1:1 Combat-sized 4-col tiles verified!")
 
         page.screenshot(path='Commercial_Edition/scripts/c_story_147_modal_stage1.png')
         page.evaluate('() => window.closeStageDetailModal()')
 
         # ----------------------------------------------------
-        # Scenario 3: Clearing Stage 1 Unlocks Stage 2
+        # Scenario 3: Clearing Stage 1 with Board Gold -> Auto-Sweep, Quest & Stage 2 Unlock
         # ----------------------------------------------------
-        print("\n[Scenario 3] Verifying Stage 1 Victory Unlocks Stage 2...")
+        print("\n[Scenario 3] Verifying Stage 1 Victory with Board Gold Sweep, Daily Quest & Stage 2 Unlock...")
         page.evaluate('''() => {
+            window.appRouter.dailyLoopManager.state.quests['quest_collect_gold'] = { progress: 0, claimed: false };
             window.appRouter.startCombat(1);
+            // Spawn 2 gold tiles of value 4 (total 8 gold remaining on board)
+            window.appRouter.stageManager.spawner.spawnGold(4, { r: 2, c: 0 });
+            window.appRouter.stageManager.spawner.spawnGold(4, { r: 2, c: 1 });
             window.appRouter.stageManager.handleVictory();
-            window.appRouter.exitCombat();
         }''')
+
+        victory_detail = page.locator('#victory-reward-detail').text_content().strip()
+        victory_total = page.locator('#victory-reward-val').text_content().strip()
+        quest_gold_prog = page.evaluate('() => window.appRouter.dailyLoopManager.state.quests["quest_collect_gold"].progress')
+        print(f"  Victory Detail:\n{victory_detail}")
+        print(f"  Victory Total: '{victory_total}' | Daily Quest Gold Progress: {quest_gold_prog}/50")
+
+        assert '+8 🪙' in victory_detail, f"FAIL: Expected '+8 🪙' battle harvest in victory detail, got '{victory_detail}'"
+        assert '含盤面殘存自動結算 +8 🪙' in victory_detail, f"FAIL: Expected sweep gold note in victory detail, got '{victory_detail}'"
+        assert victory_total == '🪙 +108', f"FAIL: Expected '🪙 +108', got '{victory_total}'"
+        assert quest_gold_prog == 8, f"FAIL: Expected quest_collect_gold progress 8, got {quest_gold_prog}"
+
+        page.evaluate('() => window.appRouter.exitCombat()')
 
         unlocked_id = page.evaluate('() => window.appRouter.stageManager.unlockedStageId')
         cur_selected = page.evaluate('() => window.currentSelectedStage')
@@ -119,7 +135,22 @@ def run_tests():
         assert cur_selected == 2, f"FAIL: currentSelectedStage expected 2, got {cur_selected}"
         assert hub_stage_after == 'Stage 2', f"FAIL: Hub expected 'Stage 2', got '{hub_stage_after}'"
         assert boss_name_stage2 == '首領：野生史萊姆 (16)', f"FAIL: Stage 2 Boss expected '首領：野生史萊姆 (16)', got '{boss_name_stage2}'"
-        print("  [PASS] Clearing Stage 1 unlocks & advances to Stage 2 seamlessly!")
+
+        # Switch back to Stage 1 (which is now cleared) to verify '已領取' gray text without amount
+        page.evaluate('() => window.renderAdventureStage(1)')
+        cleared_brief_text = page.locator('#brief-first-gold').text_content().strip()
+        cleared_brief_color = page.evaluate('() => getComputedStyle(document.getElementById("brief-first-gold")).color')
+        page.click('.hub-stage-brief')
+        page.wait_for_selector('#modal-stage-detail', state='visible')
+        cleared_modal_text = page.locator('#modal-gold-reward').text_content().strip()
+        cleared_modal_color = page.evaluate('() => getComputedStyle(document.getElementById("modal-gold-reward")).color')
+        print(f"  Stage 1 Cleared Brief: '{cleared_brief_text}' ({cleared_brief_color}) | Modal: '{cleared_modal_text}' ({cleared_modal_color})")
+        assert cleared_brief_text == '已領取', f"FAIL: Expected '已領取' without amount, got '{cleared_brief_text}'"
+        assert cleared_modal_text == '已領取', f"FAIL: Expected '已領取' without amount, got '{cleared_modal_text}'"
+        assert cleared_brief_color == 'rgb(100, 116, 139)', f"FAIL: Expected gray rgb(100, 116, 139), got '{cleared_brief_color}'"
+        assert cleared_modal_color == 'rgb(100, 116, 139)', f"FAIL: Expected gray rgb(100, 116, 139), got '{cleared_modal_color}'"
+        page.evaluate('() => window.closeStageDetailModal()')
+        print("  [PASS] Cleared stage shows gray '已領取' (no amount), board gold auto-swept & counted in quest!")
 
         # ----------------------------------------------------
         # Scenario 4: Quick Stage Drawer Full 350 Stages

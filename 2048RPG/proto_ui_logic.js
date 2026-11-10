@@ -10,7 +10,7 @@
     'zh-TW': {
       nav_shop: '商店', nav_camp: '軍備', nav_adventure: '冒險', nav_gear: '裝備', nav_compendium: '圖鑑',
       btn_deploy: '⚔️ 出擊！', btn_stage_deploy: '⚔️ 出擊',
-      stage_minions_title: '其他魔物：', stage_gears_title: '場景資源：', stage_first_gold_title: '🪙 初次通關獎勵：'
+      stage_minions_title: '登場魔物', stage_gears_title: '物資', stage_first_gold_title: '初次通關獎勵：'
     },
     'zh-CN': {
       nav_shop: '商店', nav_camp: '军备', nav_adventure: '冒险', nav_gear: '装备', nav_compendium: '图鉴',
@@ -282,7 +282,8 @@
       if (arenaBossName) arenaBossName.textContent = '首領：哥布林首領 (8)';
       if (briefRecPower) briefRecPower.textContent = '2 裝備';
       if (briefFirstGold) {
-        briefFirstGold.textContent = isCleared ? '✔ 已領取 (50)' : '🪙 50';
+        briefFirstGold.textContent = isCleared ? '已領取' : '🪙 50';
+        briefFirstGold.style.color = isCleared ? '#64748b' : '#fbbf24';
       }
       if (btnPrev) btnPrev.disabled = true;
       if (btnNext) btnNext.disabled = (maxU < 1 && !tutDone);
@@ -325,7 +326,8 @@
       }
       if (briefFirstGold) {
         const rGold = Number(cfg.rewardGold || 100).toLocaleString();
-        briefFirstGold.textContent = isCleared ? `✔ 已領取 (${rGold})` : `🪙 ${rGold}`;
+        briefFirstGold.textContent = isCleared ? '已領取' : `🪙 ${rGold}`;
+        briefFirstGold.style.color = isCleared ? '#64748b' : '#fbbf24';
       }
     }
 
@@ -369,7 +371,8 @@
     // (第一區) 初次通關獎勵 / 建議鐵匠鋪等級 / 建議裝備
     const rGold = Number(cfg.rewardGold || (sId === 0 ? 50 : 100)).toLocaleString();
     if (goldRewardEl) {
-      goldRewardEl.textContent = isCleared ? `已領取 (${rGold} 金幣)` : `${rGold} 金幣`;
+      goldRewardEl.textContent = isCleared ? '已領取' : `${rGold} 金幣`;
+      goldRewardEl.style.color = isCleared ? '#64748b' : '#fbbf24';
     }
     const techTier = cfg.recTechTier || 1;
     if (forgeLevelEl) {
@@ -396,7 +399,12 @@
     // (第三區) 登場魔物 (ALL monsters in cfg.monsters - 4 per row, 1:1 combat board tile size & baseplate, Boss badged)
     if (minionsList) {
       minionsList.innerHTML = '';
-      const monsters = Array.isArray(cfg.monsters) ? cfg.monsters : [8];
+      const rawMonsters = Array.isArray(cfg.monsters) ? cfg.monsters : [8];
+      const monsters = [...rawMonsters].sort((a, b) => {
+        const va = (typeof a === 'object' && a !== null) ? a.value : a;
+        const vb = (typeof b === 'object' && b !== null) ? b.value : b;
+        return vb - va;
+      });
       let maxVal = -1;
       monsters.forEach(m => {
         const v = (typeof m === 'object' && m !== null) ? m.value : m;
@@ -671,7 +679,7 @@
       const QUEST_DEFS = [
         { id: 'quest_kill_monsters', name: '魔物清剿', desc: '在冒險關卡中累計擊倒魔物', target: 15, unit: '隻', pts: 25, gold: 300, icon: '⚔️' },
         { id: 'quest_high_merge', name: '精良合成', desc: '任意合成 10 次', target: 10, unit: '次', pts: 25, gold: 300, icon: '🛡️' },
-        { id: 'quest_collect_gold', name: '開採財富', desc: '在冒險關卡中累計回收金幣', target: 50, unit: '枚', pts: 25, gold: 300, icon: '🪙' },
+        { id: 'quest_collect_gold', name: '開採財富', desc: '在冒險關卡中累計收集 50 金幣', target: 50, unit: '金幣', pts: 25, gold: 300, icon: '🪙' },
         { id: 'quest_combat_count', name: '勤勉遠征', desc: '進行任意冒險關卡戰鬥', target: 3, unit: '場', pts: 25, gold: 300, icon: '🚩' }
       ];
 

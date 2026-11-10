@@ -175,7 +175,7 @@ export const DAILY_QUEST_CONFIGS = [
   {
     id: 'quest_collect_gold',
     name: '開採財富',
-    desc: '在冒險關卡中累計回收 50 枚金幣',
+    desc: '在冒險關卡中累計收集 50 金幣',
     icon: '🪙',
     target: 50,
     rewardGold: 300,

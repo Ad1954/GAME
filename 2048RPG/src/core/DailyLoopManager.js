@@ -134,7 +134,10 @@ export class DailyLoopManager {
     });
 
     // 4. Combat Finished (Victory or Defeat)
-    this.eventBus.on(Events.STAGE_VICTORY, () => {
+    this.eventBus.on(Events.STAGE_VICTORY, (payload) => {
+      if (payload && typeof payload.sweepGold === 'number' && payload.sweepGold > 0) {
+        this.incrementQuestProgress('quest_collect_gold', payload.sweepGold);
+      }
       this.incrementQuestProgress('quest_combat_count', 1);
     });
     this.eventBus.on(Events.STAGE_DEFEAT, () => {
