@@ -12,7 +12,8 @@ import {
   Direction, TileType, STAGE_CONFIGS, STAGE_0_CONFIG, Events,
   MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS,
   DEFEAT_TACTICAL_TIPS, getEquipmentImagePath, getMonsterImagePath,
-  getHeroImagePath, getMonsterThemeByChapter, getTileTheme, CharacterClass, CHARACTER_SKILL_CONFIGS
+  getHeroImagePath, getMonsterThemeByChapter, getTileTheme, CharacterClass, CHARACTER_SKILL_CONFIGS,
+  DAILY_SIGNIN_REWARDS, DAILY_QUEST_CONFIGS, DAILY_ACTIVITY_CHEST_CONFIG
 } from './src/core/Constants.js';
 
 class AppRouter {
@@ -29,6 +30,9 @@ class AppRouter {
     this.getEquipmentImagePath = getEquipmentImagePath;
     this.getHeroImagePath = getHeroImagePath;
     this.getTileTheme = getTileTheme;
+    this.DAILY_SIGNIN_REWARDS = DAILY_SIGNIN_REWARDS;
+    this.DAILY_QUEST_CONFIGS = DAILY_QUEST_CONFIGS;
+    this.DAILY_ACTIVITY_CHEST_CONFIG = DAILY_ACTIVITY_CHEST_CONFIG;
     this.eventBus = new GameEventBus();
     this.stageManager = new StageManager(this.eventBus);
     this.audio = new AudioEffects();
@@ -76,7 +80,9 @@ class AppRouter {
       this.startCombat(s);
     };
 
-    // Initial render
+    // Initial render: Follow saved progression stage (C-STORY-149)
+    const initTutDone = !(this.stageManager && this.stageManager.tutorialManager && !this.stageManager.tutorialManager.isCompleted);
+    window.currentSelectedStage = initTutDone ? (this.stageManager.unlockedStageId || 1) : 0;
     setTimeout(() => {
       if (typeof window.renderAdventureStage === 'function') {
         window.renderAdventureStage();

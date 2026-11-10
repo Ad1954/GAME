@@ -11,7 +11,8 @@ def run_tests():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page(viewport={'width': 412, 'height': 915})
-        page.on("dialog", lambda d: d.accept())
+        alerts = []
+        page.on("dialog", lambda d: (alerts.append(d.message), d.accept()))
 
         page.goto('http://localhost:8081/index_v2.html', wait_until='networkidle')
 
@@ -170,12 +171,58 @@ def run_tests():
         assert chapter_headers == 9, f"FAIL: Expected 9 chapter headers, got {chapter_headers}"
         assert stage_350_exists == 1, "FAIL: Stage 350 node missing"
         print("  [PASS] Quick Stage Drawer renders all 350 stages + Stage 0 across 9 chapters!")
+        page.evaluate('() => window.closeQuickStageDrawer()')
 
-        page.screenshot(path='Commercial_Edition/scripts/c_story_147_drawer_350.png')
+        # ----------------------------------------------------
+        # Scenario 5: Daily Sign-In Claim Alert (No undefined) & Claimed Card Badge
+        # ----------------------------------------------------
+        print("\n[Scenario 5] Verifying Daily Sign-In Claim Alert & Claimed Badge (C-STORY-149)...")
+
+        page.evaluate('() => window.openDailySignInModal()')
+        page.wait_for_selector('#modal-daily-signin', state='visible')
+        btn_before = page.locator('#btn-claim-signin').text_content().strip()
+        day1_before = page.locator('.signin-day-card').nth(0).text_content().strip()
+        print(f"  Before Claim -> Button: '{btn_before}' | Day 1 Card: '{day1_before}'")
+        assert '第 1 天' in btn_before, f"FAIL: Expected Day 1 in button text, got '{btn_before}'"
+        assert '今日可領' in day1_before, f"FAIL: Expected '今日可領' on Day 1 card, got '{day1_before}'"
+
+        page.click('#btn-claim-signin')
+        btn_after = page.locator('#btn-claim-signin').text_content().strip()
+        day1_after = page.locator('.signin-day-card').nth(0).text_content().strip()
+        last_alert = alerts[-1] if alerts else ''
+        print(f"  Claim Alert: '{last_alert}'")
+        print(f"  After Claim -> Button: '{btn_after}' | Day 1 Card: '{day1_after}'")
+        assert 'undefined' not in last_alert, f"FAIL: Alert contains 'undefined': {last_alert}"
+        assert '第 1 天簽到成功' in last_alert and '1,000' in last_alert, f"FAIL: Unexpected alert: {last_alert}"
+        assert '✓ 已領取' in day1_after, f"FAIL: Expected '✓ 已領取' on Day 1 card after claim, got '{day1_after}'"
+        assert '第 1 天已領取' in btn_after, f"FAIL: Expected '第 1 天已領取' on button after claim, got '{btn_after}'"
+        page.screenshot(path='Commercial_Edition/scripts/c_story_149_signin_claimed.png')
+        page.evaluate('() => window.closeDailySignInModal()')
+        print("  [PASS] Daily Sign-In shows exact reward (no undefined) and marks Day 1 card with '✓ 已領取'!")
+
+        # ----------------------------------------------------
+        # Scenario 6: Game Reload Resumes Saved Stage Progress (e.g. Stage 4)
+        # ----------------------------------------------------
+        print("\n[Scenario 6] Verifying Reload Resumes Saved Stage Progress (Stage 4)...")
+        page.evaluate('''() => {
+            window.appRouter.stageManager.unlockedStageId = 4;
+            window.appRouter.stageManager.clearedStages = { 1: true, 2: true, 3: true };
+            window.appRouter.stageManager.saveData();
+        }''')
+        page.reload(wait_until='networkidle')
+        page.wait_for_function('() => window.appRouter && window.appRouter.stageManager')
+
+        resumed_stage = page.evaluate('() => window.currentSelectedStage')
+        resumed_hub_title = page.locator('#hub-stage-num').text_content().strip()
+        print(f"  After Reload -> currentSelectedStage: {resumed_stage} | Hub Title: '{resumed_hub_title}'")
+        assert resumed_stage == 4, f"FAIL: Expected currentSelectedStage=4 after reload, got {resumed_stage}"
+        assert resumed_hub_title == 'Stage 4', f"FAIL: Expected 'Stage 4' in #hub-stage-num after reload, got '{resumed_hub_title}'"
+        print("  [PASS] Game reload automatically resumes at the latest unlocked stage (Stage 4)!")
+
         browser.close()
 
     print("\n" + "=" * 65)
-    print("  ALL 4 C-STORY-147 SCENARIOS PASSED WITH 100% PERFECTION!")
+    print("  ALL 6 C-STORY-147/148/149 SCENARIOS PASSED WITH 100% PERFECTION!")
     print("=" * 65)
 
 if __name__ == '__main__':

@@ -49,7 +49,7 @@
   // ----------------------------------------------------
   // REAL APP STATE & CACHE
   // ----------------------------------------------------
-  window.currentSelectedStage = 1;
+  window.currentSelectedStage = undefined;
   window.currentHeroModalKey = 'warrior';
   window.currentCompTab = 'monsters';
 
@@ -333,6 +333,7 @@
 
     if (btnPrev) btnPrev.disabled = (cur <= 0);
     if (btnNext) btnNext.disabled = (cur >= maxU);
+    syncDailyRedDots();
 
     // Update active node styling in any visible stage nodes
     document.querySelectorAll('.stage-node-item').forEach(node => {
@@ -564,38 +565,60 @@
     }
   }
 
+  function syncDailyRedDots() {
+    if (!window.appRouter || !window.appRouter.dailyLoopManager) return;
+    const dlm = window.appRouter.dailyLoopManager;
+    const signInDot = document.querySelector('[onclick="openDailySignInModal()"] .hud-badge-dot');
+    if (signInDot) {
+      signInDot.style.display = dlm.hasSignInPending() ? 'block' : 'none';
+    }
+    const questsDot = document.querySelector('[onclick="openDailyQuestsModal()"] .hud-badge-dot');
+    if (questsDot) {
+      questsDot.style.display = (typeof dlm.hasQuestPending === 'function' && dlm.hasQuestPending()) ? 'block' : 'none';
+    }
+  }
+
   function renderSignInStatus() {
     if (!window.appRouter || !window.appRouter.dailyLoopManager) return;
     const dlm = window.appRouter.dailyLoopManager;
     const btn = document.getElementById('btn-claim-signin');
     const container = document.getElementById('signin-cards-container');
 
+    const curDay = dlm.state.signInDay || 1;
+    const isClaimedToday = !!dlm.state.signInClaimedToday;
+
     if (container) {
-      const SIGNIN_DAYS = [
-        { day: 1, gold: 300, icon: '🪙' },
-        { day: 2, gold: 500, icon: '⚔️' },
-        { day: 3, gold: 800, icon: '🪙' },
-        { day: 4, gold: 1200, icon: '🛡️' },
-        { day: 5, gold: 1500, icon: '🪙' },
-        { day: 6, gold: 2000, icon: '👑' },
-        { day: 7, gold: 3000, icon: '💎' }
+      const SIGNIN_ICONS = ['🪙', '⚔️', '🪙', '🛡️', '🪙', '👑', '💎'];
+      const rawConfigs = (window.appRouter && window.appRouter.DAILY_SIGNIN_REWARDS) || [
+        { day: 1, gold: 1000, desc: '金幣 x1,000' },
+        { day: 2, gold: 1200, desc: '金幣 x1,200' },
+        { day: 3, gold: 1500, desc: '金幣 x1,500' },
+        { day: 4, gold: 1800, desc: '金幣 x1,800' },
+        { day: 5, gold: 2200, desc: '金幣 x2,200' },
+        { day: 6, gold: 3000, desc: '金幣 x3,000' },
+        { day: 7, gold: 5000, desc: '第7天大禮包：金幣 x5,000 + 破壞戰槌 x2 + 時間沙漏 x2' }
       ];
       container.innerHTML = '';
-      const curStreak = dlm.state.signInStreak || 0;
-      const isClaimedToday = !dlm.hasSignInPending();
 
-      SIGNIN_DAYS.forEach(d => {
-        const isPast = d.day < curStreak || (d.day === curStreak && isClaimedToday);
-        const isToday = (d.day === curStreak + 1 && !isClaimedToday) || (d.day === curStreak && !isClaimedToday);
+      rawConfigs.forEach((d, idx) => {
+        const isPast = (d.day < curDay) || (d.day === curDay && isClaimedToday);
+        const isToday = (d.day === curDay && !isClaimedToday);
+        const icon = SIGNIN_ICONS[idx] || '🪙';
 
         const card = document.createElement('div');
         card.className = `signin-day-card ${isToday ? 'today' : ''} ${isPast ? 'claimed' : ''}`;
-        card.style.cssText = `background:#1e293b; border:${isToday ? '2px solid #38bdf8' : '1px solid #334155'}; border-radius:8px; padding:8px; text-align:center; position:relative;`;
+        const borderCss = isToday ? '2px solid #38bdf8' : (isPast ? '1.5px solid #10b981' : '1px solid #334155');
+        const bgCss = isPast ? 'rgba(16, 185, 129, 0.14)' : (isToday ? 'rgba(56, 189, 248, 0.16)' : '#1e293b');
+        card.style.cssText = `background:${bgCss}; border:${borderCss}; border-radius:8px; padding:8px 6px; text-align:center; position:relative;`;
         card.innerHTML = `
-          <div style="font-size:0.75rem; color:#94a3b8;">第 ${d.day} 天</div>
-          <div style="font-size:1.4rem; margin:2px 0;">${d.icon}</div>
-          <div style="font-size:0.75rem; color:#fbbf24; font-weight:bold;">+${d.gold}</div>
-          ${isPast ? '<div style="position:absolute; top:2px; right:2px; font-size:0.7rem; color:#4ade80;">✓</div>' : ''}
+          <div style="font-size:0.75rem; color:${isPast ? '#4ade80' : '#94a3b8'}; font-weight:700;">第 ${d.day} 天</div>
+          <div style="font-size:1.35rem; margin:2px 0;">${icon}</div>
+          <div style="font-size:0.75rem; color:${isPast ? '#64748b' : '#fbbf24'}; font-weight:bold;">+${Number(d.gold).toLocaleString()}</div>
+          ${isPast
+            ? '<div style="font-size:0.7rem; color:#4ade80; font-weight:800; margin-top:2px;">✓ 已領取</div>'
+            : (isToday
+              ? '<div style="font-size:0.7rem; color:#38bdf8; font-weight:800; margin-top:2px;">今日可領</div>'
+              : '<div style="font-size:0.7rem; color:#64748b; margin-top:2px;">未解鎖</div>')}
         `;
         container.appendChild(card);
       });
@@ -605,13 +628,14 @@
       if (dlm.hasSignInPending()) {
         btn.disabled = false;
         btn.className = 'cr-btn cr-btn-green btn-large glow-pulse';
-        btn.textContent = '立即簽到領取獎勵';
+        btn.textContent = `立即簽到 · 領取第 ${curDay} 天獎勵`;
       } else {
         btn.disabled = true;
         btn.className = 'cr-btn cr-btn-disabled btn-large';
-        btn.textContent = '今日已簽到 (已領取)';
+        btn.textContent = `今日已簽到 (第 ${curDay} 天已領取)`;
       }
     }
+    syncDailyRedDots();
   }
 
   function handleSignInButtonClick() {
@@ -622,8 +646,10 @@
       if (res.success) {
         if (window.appRouter.audio) window.appRouter.audio.playCoin();
         window.appRouter.syncHud();
+        if (window.appRouter.updateItemCounts) window.appRouter.updateItemCounts();
         renderSignInStatus();
-        alert(`🎉 簽到成功！獲得 ${res.reward.amount} 🪙 金幣！`);
+        const rDesc = (res.reward && res.reward.desc) ? res.reward.desc : `+${res.reward ? res.reward.gold : 1000} 🪙 金幣`;
+        alert(`🎉 第 ${res.day} 天簽到成功！獲得：${rDesc}！`);
       }
     }
   }
@@ -701,7 +727,7 @@
           </div>
           <button class="cr-btn ${isClaimed ? 'cr-btn-disabled' : (isDone ? 'cr-btn-green' : 'cr-btn-disabled')} btn-small"
             ${(!isDone || isClaimed) ? 'disabled' : ''} style="min-width:85px;">
-            ${isClaimed ? '已領取' : (isDone ? `領取 🪙${q.gold}` : '進行中')}
+            ${isClaimed ? '✓ 已領取' : (isDone ? `領取 🪙${q.gold}` : '進行中')}
           </button>
         `;
 
@@ -714,6 +740,8 @@
               if (window.appRouter.audio) window.appRouter.audio.playCoin();
               window.appRouter.syncHud();
               renderDailyQuests();
+              syncDailyRedDots();
+              alert(`🎉 領取【${q.name}】任務獎勵成功！獲得 +${res.rewardGold} 🪙 金幣（活躍度 +${q.pts}）！`);
             }
           };
         }
@@ -721,6 +749,7 @@
         container.appendChild(card);
       });
     }
+    syncDailyRedDots();
   }
 
   function claimDailyActivityChest() {
@@ -730,8 +759,11 @@
     if (res.success) {
       if (window.appRouter.audio) window.appRouter.audio.playVictory();
       window.appRouter.syncHud();
+      if (window.appRouter.updateItemCounts) window.appRouter.updateItemCounts();
       renderDailyQuests();
-      alert('🎉 恭喜開啟 100 活躍度冒險大寶箱！獲得 +1,000 🪙 金幣與豐富道具獎勵！');
+      syncDailyRedDots();
+      const cDesc = (res.reward && res.reward.desc) ? res.reward.desc : '金幣 x600 + 精準重弩 x2 + 破壞戰槌 x1';
+      alert(`🎉 恭喜開啟 100 活躍度全勤大寶箱！獲得：${cDesc}！`);
     } else {
       alert(`⚠️ 領取失敗：${res.reason === 'ALREADY_CLAIMED' ? '今日大寶箱已領取過！' : '活躍度不足 100 點！'}`);
     }
