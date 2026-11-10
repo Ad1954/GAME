@@ -1661,6 +1661,10 @@
   // SETTINGS & SAVE RESET
   // ----------------------------------------------------
   function openSettingsModal() {
+    const chkInstant = document.getElementById('setting-instant-skill');
+    if (chkInstant) {
+      chkInstant.checked = (localStorage.getItem('rpg_2048_instant_skill_ready') === 'true');
+    }
     const modal = document.getElementById('modal-settings');
     if (modal) {
       modal.classList.add('active');
@@ -1706,8 +1710,15 @@
   }
 
   function toggleInstantSkill(enabled) {
+    localStorage.setItem('rpg_2048_instant_skill_ready', enabled ? 'true' : 'false');
     if (window.appRouter) {
       window.appRouter.instantSkillMode = enabled;
+      if (window.appRouter.stageManager && enabled) {
+        const maxCd = window.appRouter.stageManager.getCharacterSkillCooldown();
+        window.appRouter.stageManager.skillChargeTurns = maxCd;
+        window.appRouter.stageManager.isSkillReady = true;
+        window.appRouter.updateSkillUI();
+      }
     }
   }
 

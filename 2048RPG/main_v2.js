@@ -274,6 +274,13 @@ class AppRouter {
   }
 
   startCombat(stageId) {
+    this.isSkillExecuting = false;
+    this.isSliding = false;
+    if (this.vfxEngine) {
+      this.vfxEngine.clear();
+      this.vfxEngine.resize();
+    }
+
     const isTutPending = this.stageManager && this.stageManager.tutorialManager && !this.stageManager.tutorialManager.isCompleted;
     if (stageId === 0 || (isTutPending && (stageId === undefined || stageId === 1))) {
       this.startTutorialCombat();
@@ -291,10 +298,27 @@ class AppRouter {
       return;
     }
 
+    // Sync Camp Forge level to StageManager baseTier before rolling initial Next Tile Preview (C-STORY-152)
+    try {
+      const rawCamp = localStorage.getItem('rpg_2048_camp_upgrades');
+      if (rawCamp) {
+        const parsedCamp = JSON.parse(rawCamp);
+        if (parsedCamp && typeof parsedCamp.forge === 'number') {
+          this.stageManager.baseTier = Math.max(1, Math.min(48, parsedCamp.forge));
+        }
+      }
+    } catch (e) {}
+
     const eqGear = this.getEquippedGear();
     const heroStartPower = (eqGear && (eqGear.value || eqGear.val)) ? Number(eqGear.value || eqGear.val) : 2;
     const config = this.stageManager.startStage(stageId, heroStartPower);
     if (!config) return;
+
+    if (this.instantSkillMode) {
+      const maxCd = this.stageManager.getCharacterSkillCooldown();
+      this.stageManager.skillChargeTurns = maxCd;
+      this.stageManager.isSkillReady = true;
+    }
 
     this.currentCombatStageId = stageId;
     this.switchAppState('COMBAT');
@@ -313,7 +337,7 @@ class AppRouter {
       this.viewRenderer.setChapterId(config.chapter || 1);
       this.viewRenderer.renderBoard(this.stageManager.board);
     }
-    this.updateNextPreview();
+    this.updateNextPreview(this.stageManager.nextTilePreview);
     this.updateSkillUI();
     this.updateItemCounts();
   }
@@ -369,6 +393,8 @@ class AppRouter {
   }
 
   exitCombat() {
+    this.isSkillExecuting = false;
+    this.isSliding = false;
     if (this.combatOverlay) this.combatOverlay.classList.remove('tutorial-mode');
     if (this.tutorialOverlay) {
       this.tutorialOverlay.hide();
@@ -413,7 +439,7 @@ class AppRouter {
         }
       }
 
-      this.updateNextPreview();
+      this.updateNextPreview(state.nextTilePreview !== undefined ? state.nextTilePreview : (this.stageManager ? this.stageManager.nextTilePreview : null));
       this.updateSkillUI();
 
       if (state.moves && state.moves.length > 0) {
@@ -439,6 +465,21 @@ class AppRouter {
       this.eventBus.on(Events.MOVE_COMPLETED, handleBoardUpdate);
     }
     this.eventBus.on(Events.ITEMS_CHANGED, () => this.updateItemCounts());
+
+    // C-STORY-152: Character Skill Charge & Auto-Rescue Events
+    this.eventBus.on(Events.SKILL_CHARGE_CHANGED, (payload) => {
+      this.updateSkillUI(payload);
+    });
+
+    this.eventBus.on(Events.SKILL_USED, (payload) => {
+      this.updateSkillUI();
+      if (this.viewRenderer && this.stageManager && this.stageManager.board) {
+        this.viewRenderer.renderBoard(this.stageManager.board);
+      }
+      if (payload && payload.isAutoRescue && !this.isSkillExecuting) {
+        this.playAutoRescueCutin(payload);
+      }
+    });
 
     this.eventBus.on(Events.STAGE_UNLOCKED, (payload) => {
       const nextStageId = (payload && payload.stageId) ? payload.stageId : this.stageManager.unlockedStageId;
@@ -779,47 +820,360 @@ class AppRouter {
         this.setAimingMode(null);
       });
     }
-  }
 
-  updateNextPreview() {
-    const cardEl = document.getElementById('next-preview-card');
-    const badgeEl = document.getElementById('next-card-badge');
-    const valEl = document.getElementById('next-card-val');
-    if (!cardEl || !this.stageManager.spawner) return;
-
-    const nextTile = this.stageManager.spawner.nextTile;
-    if (nextTile) {
-      valEl.textContent = nextTile.value;
-      if (nextTile.type === TileType.MONSTER) {
-        badgeEl.textContent = '👾';
-      } else if (nextTile.type === TileType.HERO) {
-        badgeEl.textContent = '🛡️';
-      } else {
-        badgeEl.textContent = '⚔️';
+    // Character Skill Button & Wrapper Click Trigger (C-STORY-152)
+    const handleSkillClick = (e) => {
+      e.stopPropagation();
+      if (!this.stageManager || !this.stageManager.isInBattle) return;
+      if (this.isSkillExecuting) return;
+      if (!this.stageManager.isSkillReady) {
+        const cur = this.stageManager.skillChargeTurns || 0;
+        const max = this.stageManager.getCharacterSkillCooldown();
+        this.showFloatingCombatText(`⏳ 技能充能中（${cur}/${max} 回合）`, '#94a3b8');
+        return;
       }
+      this.triggerSkillWithVfx(false);
+    };
+
+    const skillBtn = document.getElementById('skill-badge-btn');
+    const skillWrapper = document.getElementById('combat-skill-wrapper');
+    if (skillBtn) {
+      skillBtn.addEventListener('click', handleSkillClick);
+    }
+    if (skillWrapper) {
+      skillWrapper.style.cursor = 'pointer';
+      skillWrapper.addEventListener('click', (e) => {
+        if (e.target && e.target.closest('#skill-badge-btn')) return;
+        handleSkillClick(e);
+      });
     }
   }
 
-  updateSkillUI() {
+  // C-STORY-152: Real Next Tile Preview Renderer synced with StageManager.nextTilePreview
+  updateNextPreview(previewOverride) {
+    const cardEl = document.getElementById('next-preview-card');
+    const badgeEl = document.getElementById('next-card-badge');
+    const valEl = document.getElementById('next-card-val');
+    if (!cardEl || !badgeEl || !valEl || !this.stageManager) return;
+
+    const preview = (previewOverride !== undefined && previewOverride !== null)
+      ? previewOverride
+      : this.stageManager.nextTilePreview;
+
+    if (!preview) {
+      cardEl.style.display = 'none';
+      return;
+    }
+    cardEl.style.display = 'flex';
+
+    if (preview.type === TileType.GOLD) {
+      valEl.textContent = preview.value;
+      cardEl.classList.add('preview-gold');
+      cardEl.style.backgroundColor = '';
+      cardEl.style.borderColor = '';
+      badgeEl.innerHTML = '🪙';
+      badgeEl.style.display = 'flex';
+    } else {
+      let theme = null;
+      let previewImgPath = null;
+      const chId = (this.stageManager && this.stageManager.currentStageConfig)
+        ? this.stageManager.currentStageConfig.chapter
+        : 1;
+
+      if (preview.type === TileType.MONSTER) {
+        theme = getMonsterThemeByChapter(chId, preview.value);
+        previewImgPath = getMonsterImagePath(chId, preview.value, this.activeIconStyle);
+      } else if (preview.type === TileType.HERO) {
+        theme = HERO_THEMES[preview.value];
+        previewImgPath = getHeroImagePath(preview.value, this.activeIconStyle, 'knight');
+      } else {
+        theme = EQUIPMENT_THEMES[preview.value] || { bg: '#334155', border: '#475569', text: '#ffffff', badge: '⚔️' };
+        previewImgPath = getEquipmentImagePath(preview.value, this.activeIconStyle);
+      }
+
+      valEl.textContent = preview.value;
+      cardEl.classList.remove('preview-gold');
+      cardEl.style.backgroundColor = (theme && theme.bg) || '#334155';
+      cardEl.style.borderColor = (theme && theme.border) || '#475569';
+
+      if (previewImgPath) {
+        badgeEl.style.display = 'flex';
+        badgeEl.innerHTML = `<img src="${previewImgPath}" class="next-preview-img" alt="next-tile" onerror="this.parentElement.textContent='⚔️'">`;
+      } else if (theme && theme.badge) {
+        badgeEl.style.display = 'flex';
+        badgeEl.textContent = theme.badge;
+      } else {
+        badgeEl.style.display = 'flex';
+        badgeEl.textContent = '⚔️';
+      }
+    }
+
+    cardEl.classList.remove('pop-effect');
+    void cardEl.offsetWidth;
+    cardEl.classList.add('pop-effect');
+  }
+
+  // C-STORY-152: Real Character Skill Charge & Readiness UI Sync
+  updateSkillUI(payload) {
     const progressEl = document.getElementById('skill-ring-progress');
     const turnLabelEl = document.getElementById('skill-turn-label');
     const skillBtn = document.getElementById('skill-badge-btn');
-    if (!progressEl || !turnLabelEl || !skillBtn) return;
+    const iconEl = document.getElementById('skill-badge-icon');
+    const nameLabelEl = document.getElementById('skill-name-label');
+    if (!progressEl || !turnLabelEl || !skillBtn || !this.stageManager) return;
 
-    const maxCharge = 500;
-    const currentCharge = Math.min(maxCharge, (this.stageManager.turnCount || 0) * 100);
-    turnLabelEl.textContent = `${currentCharge}/${maxCharge}`;
-    const percent = currentCharge / maxCharge;
-    const circumference = 2 * Math.PI * 18;
+    const character = (payload && payload.character) ? payload.character : this.stageManager.getSelectedCharacter();
+    const chargeTurns = (payload && payload.chargeTurns !== undefined) ? payload.chargeTurns : (this.stageManager.skillChargeTurns || 0);
+    const maxTurns = (payload && payload.maxTurns !== undefined) ? payload.maxTurns : this.stageManager.getCharacterSkillCooldown();
+    const isReady = (payload && payload.isReady !== undefined) ? payload.isReady : !!this.stageManager.isSkillReady;
+
+    const cfg = CHARACTER_SKILL_CONFIGS[character] || CHARACTER_SKILL_CONFIGS.warrior;
+    if (iconEl) iconEl.textContent = cfg.avatar;
+    if (nameLabelEl) nameLabelEl.textContent = cfg.skillName;
+    turnLabelEl.textContent = isReady ? '就緒！點擊施放' : `${chargeTurns}/${maxTurns}`;
+
+    const circumference = 113.1;
+    const percent = maxTurns > 0 ? Math.min(1, chargeTurns / maxTurns) : 1;
     progressEl.style.strokeDashoffset = (circumference * (1 - percent)).toString();
 
-    if (currentCharge >= maxCharge) {
+    if (isReady) {
       skillBtn.disabled = false;
       skillBtn.classList.add('ready');
     } else {
       skillBtn.disabled = true;
       skillBtn.classList.remove('ready');
     }
+  }
+
+  // C-STORY-152: Active Skill Cut-in & Canvas 2D VFX Execution
+  async triggerSkillWithVfx(isAutoRescue = false) {
+    if (this.isSkillExecuting) return;
+    if (!this.stageManager || !this.stageManager.isSkillReady) return;
+
+    this.isSkillExecuting = true;
+    try {
+      const classId = this.stageManager.getSelectedCharacter();
+
+      // Pre-check for Merchant when no gold exists on board
+      if (classId === CharacterClass.MERCHANT) {
+        let hasGold = false;
+        for (let r = 0; r < 5; r++) {
+          for (let c = 0; c < 5; c++) {
+            const t = this.stageManager.board.getTile(r, c);
+            if (t && t.isGold()) {
+              hasGold = true;
+              break;
+            }
+          }
+          if (hasGold) break;
+        }
+        if (!hasGold) {
+          this.showFloatingCombatText('⚠️ 盤面無金幣可供回收！', '#f59e0b');
+          this.isSkillExecuting = false;
+          return;
+        }
+      }
+
+      // Pre-check for Archer when no monsters exist on board
+      if (classId === CharacterClass.ARCHER) {
+        const monsters = this.stageManager.board.getMonsters();
+        if (!monsters || monsters.length === 0) {
+          this.showFloatingCombatText('⚠️ 場上無魔物目標！', '#f59e0b');
+          this.isSkillExecuting = false;
+          return;
+        }
+      }
+
+      // Step 1: Cut-in Presentation
+      const cutinLayer = document.getElementById('skill-cutin-layer');
+      const cutinAvatar = document.getElementById('skill-cutin-avatar');
+      if (cutinLayer && cutinAvatar) {
+        cutinAvatar.className = 'skill-cutin-avatar';
+        if (classId === CharacterClass.WARRIOR) cutinAvatar.classList.add('aura-warrior');
+        else if (classId === CharacterClass.ARCHER) cutinAvatar.classList.add('aura-archer');
+        else if (classId === CharacterClass.MERCHANT) cutinAvatar.classList.add('aura-merchant');
+        cutinLayer.style.display = 'flex';
+        if (this.audio && this.audio.playVictory) this.audio.playVictory();
+        await new Promise(resolve => setTimeout(resolve, 450));
+        cutinLayer.style.display = 'none';
+      }
+
+      // Step 2: Canvas 2D Physics VFX & Skill State Mutation
+      if (this.vfxEngine) {
+        if (classId === CharacterClass.WARRIOR) {
+          const hero = this.stageManager.board.getHero();
+          if (hero) {
+            const hr = (hero.r !== undefined) ? hero.r : hero.row;
+            const hc = (hero.c !== undefined) ? hero.c : hero.col;
+            const crossOffsets = [{ r: -1, c: 0 }, { r: 1, c: 0 }, { r: 0, c: -1 }, { r: 0, c: 1 }];
+            const targetCoords = [];
+            crossOffsets.forEach(off => {
+              const nr = hr + off.r;
+              const nc = hc + off.c;
+              if (nr >= 0 && nr < 5 && nc >= 0 && nc < 5) {
+                const t = this.stageManager.board.getTile(nr, nc);
+                if (t && (t.isEquipment() || t.isGold())) {
+                  targetCoords.push({ r: nr, c: nc });
+                }
+              }
+            });
+
+            await this.vfxEngine.playCrossBreaker(hr, hc, targetCoords, () => {
+              const res = this.stageManager.triggerCharacterSkill(isAutoRescue);
+              if (this.audio && this.audio.playSkillCrossCleave) this.audio.playSkillCrossCleave();
+              else if (this.audio && this.audio.playMerge) this.audio.playMerge();
+              if (res.success) {
+                this.showFloatingCombatText(`💥 十字碎裂！大地岩崩粉碎周邊 ${res.destroyedTiles.length} 個方塊！`);
+              }
+            });
+          } else {
+            this.stageManager.triggerCharacterSkill(isAutoRescue);
+          }
+        } else if (classId === CharacterClass.ARCHER) {
+          const hero = this.stageManager.board.getHero();
+          const monsters = this.stageManager.board.getMonsters();
+          let maxVal = -1;
+          monsters.forEach(m => { if (m.value > maxVal) maxVal = m.value; });
+          const candidates = monsters.filter(m => m.value === maxVal);
+          const targetMonster = candidates[0];
+
+          if (hero && targetMonster) {
+            const hr = (hero.r !== undefined) ? hero.r : hero.row;
+            const hc = (hero.c !== undefined) ? hero.c : hero.col;
+            const mr = (targetMonster.r !== undefined) ? targetMonster.r : targetMonster.row;
+            const mc = (targetMonster.c !== undefined) ? targetMonster.c : targetMonster.col;
+
+            await this.vfxEngine.playArmorPiercingArrow(hr, hc, mr, mc, () => {
+              const res = this.stageManager.triggerCharacterSkill(isAutoRescue);
+              if (this.audio && this.audio.playSkillArmorPiercingArrow) this.audio.playSkillArmorPiercingArrow();
+              else if (this.audio && this.audio.playMerge) this.audio.playMerge();
+              if (res.success) {
+                if (res.action === 'slain') {
+                  this.showFloatingCombatText(`🏹 破甲重矢！極光流星一擊秒殺魔物！`);
+                } else {
+                  this.showFloatingCombatText(`🏹 破甲重矢！流星重擊破甲折半（${res.originalVal} ➔ ${res.newVal}）！`);
+                }
+              }
+            });
+          } else {
+            this.stageManager.triggerCharacterSkill(isAutoRescue);
+          }
+        } else if (classId === CharacterClass.MERCHANT) {
+          const goldCoords = [];
+          for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
+              const t = this.stageManager.board.getTile(r, c);
+              if (t && t.isGold()) {
+                goldCoords.push({ r, c });
+              }
+            }
+          }
+
+          await this.vfxEngine.playGoldenEmergency(goldCoords, () => {
+            const res = this.stageManager.triggerCharacterSkill(isAutoRescue);
+            if (this.audio && this.audio.playSkillGoldenEmergency) this.audio.playSkillGoldenEmergency();
+            else if (this.audio && this.audio.playMerge) this.audio.playMerge();
+            if (res.success) {
+              this.showFloatingCombatText(`🪙 黃金急召！純金金幣狂潮瞬間回收 ${res.totalCashed} 金幣！`);
+            }
+          });
+        }
+      } else {
+        this.stageManager.triggerCharacterSkill(isAutoRescue);
+      }
+    } catch (err) {
+      console.error('Error during triggerSkillWithVfx:', err);
+    } finally {
+      const vfxLayer = document.getElementById('skill-board-vfx-layer');
+      if (vfxLayer) vfxLayer.innerHTML = '';
+      if (this.viewRenderer && this.stageManager && this.stageManager.board) {
+        this.viewRenderer.renderBoard(this.stageManager.board);
+      }
+      this.updateSkillUI();
+      this.isSkillExecuting = false;
+    }
+  }
+
+  // C-STORY-152: Passive Auto-Rescue Cut-in & Board VFX when Full Board Deadlock is Rescued
+  async playAutoRescueCutin(payload) {
+    if (this.isSkillExecuting) return;
+    this.isSkillExecuting = true;
+
+    try {
+      const cutinLayer = document.getElementById('skill-cutin-layer');
+      const cutinAvatar = document.getElementById('skill-cutin-avatar');
+      if (cutinLayer && cutinAvatar) {
+        cutinAvatar.className = 'skill-cutin-avatar';
+        if (payload.classId === CharacterClass.WARRIOR) cutinAvatar.classList.add('aura-warrior');
+        if (payload.classId === CharacterClass.ARCHER) cutinAvatar.classList.add('aura-archer');
+        if (payload.classId === CharacterClass.MERCHANT) cutinAvatar.classList.add('aura-merchant');
+        cutinLayer.style.display = 'flex';
+        this.showFloatingCombatText('🛡️ 絕處逢生！瀕死自動觸發技能自救！', '#38bdf8');
+        if (this.audio && this.audio.playVictory) this.audio.playVictory();
+        await new Promise(r => setTimeout(r, 450));
+        cutinLayer.style.display = 'none';
+      }
+
+      if (this.vfxEngine && this.stageManager) {
+        const hero = this.stageManager.board.getHero();
+        const hr = hero ? ((hero.r !== undefined) ? hero.r : hero.row) : 2;
+        const hc = hero ? ((hero.c !== undefined) ? hero.c : hero.col) : 2;
+
+        if (payload.classId === CharacterClass.WARRIOR) {
+          const targets = payload.destroyedTiles || [];
+          await this.vfxEngine.playCrossBreaker(hr, hc, targets);
+          if (this.audio && this.audio.playSkillCrossCleave) this.audio.playSkillCrossCleave();
+          this.showFloatingCombatText(`💥 絕處逢生·十字碎裂！大地岩崩粉碎 ${targets.length} 個方塊脫困！`);
+        } else if (payload.classId === CharacterClass.ARCHER) {
+          const tm = payload.targetMonster;
+          if (tm) {
+            const mr = (tm.r !== undefined) ? tm.r : tm.row;
+            const mc = (tm.c !== undefined) ? tm.c : tm.col;
+            await this.vfxEngine.playArmorPiercingArrow(hr, hc, mr, mc);
+            if (this.audio && this.audio.playSkillArmorPiercingArrow) this.audio.playSkillArmorPiercingArrow();
+            this.showFloatingCombatText(`🏹 絕處逢生·破甲重矢！極光流星一擊秒殺魔物脫困！`);
+          }
+        } else if (payload.classId === CharacterClass.MERCHANT) {
+          const goldCoords = payload.cashedCoords || [];
+          await this.vfxEngine.playGoldenEmergency(goldCoords);
+          if (this.audio && this.audio.playSkillGoldenEmergency) this.audio.playSkillGoldenEmergency();
+          this.showFloatingCombatText(`🪙 絕處逢生·黃金急召！純金金幣狂潮回收 ${payload.totalCashed} 金幣脫困！`);
+        }
+      }
+    } catch (err) {
+      console.error('Error during playAutoRescueCutin:', err);
+    } finally {
+      const vfxLayer = document.getElementById('skill-board-vfx-layer');
+      if (vfxLayer) vfxLayer.innerHTML = '';
+      if (this.viewRenderer && this.stageManager && this.stageManager.board) {
+        this.viewRenderer.renderBoard(this.stageManager.board);
+      }
+      this.updateSkillUI();
+      this.isSkillExecuting = false;
+    }
+  }
+
+  showFloatingCombatText(text, color = '#facc15') {
+    const floatEl = document.createElement('div');
+    floatEl.style.position = 'fixed';
+    floatEl.style.top = '120px';
+    floatEl.style.left = '50%';
+    floatEl.style.transform = 'translateX(-50%)';
+    floatEl.style.background = 'rgba(15, 23, 42, 0.95)';
+    floatEl.style.border = `1px solid ${color}`;
+    floatEl.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.6)';
+    floatEl.style.color = color;
+    floatEl.style.fontWeight = '900';
+    floatEl.style.fontSize = '0.9rem';
+    floatEl.style.padding = '8px 16px';
+    floatEl.style.borderRadius = '20px';
+    floatEl.style.zIndex = '9999';
+    floatEl.style.pointerEvents = 'none';
+    floatEl.textContent = text;
+    document.body.appendChild(floatEl);
+    setTimeout(() => {
+      if (floatEl.parentNode) floatEl.parentNode.removeChild(floatEl);
+    }, 1800);
   }
 
   handleCellTap(r, c) {
