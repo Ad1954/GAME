@@ -120,10 +120,41 @@ def run_tests():
         print(f"  Victory Total: '{victory_total}' | Daily Quest Gold Progress: {quest_gold_prog}/50")
 
         assert '+8 🪙' in victory_detail, f"FAIL: Expected '+8 🪙' battle harvest in victory detail, got '{victory_detail}'"
+        assert '【初次過關獎勵】' in victory_detail, f"FAIL: Expected '【初次過關獎勵】' in victory detail, got '{victory_detail}'"
         assert '含盤面殘存自動結算 +8 🪙' in victory_detail, f"FAIL: Expected sweep gold note in victory detail, got '{victory_detail}'"
         assert victory_total == '🪙 +108', f"FAIL: Expected '🪙 +108', got '{victory_total}'"
         assert quest_gold_prog == 8, f"FAIL: Expected quest_collect_gold progress 8, got {quest_gold_prog}"
 
+        # Verify pixel alignment of Row 1 【, Row 2 【, and Row 3 └ in #victory-reward-detail
+        align_rects = page.evaluate('''() => {
+            const labels = Array.from(document.querySelectorAll('#victory-reward-detail .victory-row-label'));
+            const branch = document.querySelector('#victory-reward-detail .victory-row-branch');
+            return {
+                r1Left: labels[0] ? Math.round(labels[0].getBoundingClientRect().left) : -1,
+                r2Left: labels[1] ? Math.round(labels[1].getBoundingClientRect().left) : -2,
+                r3Left: branch ? Math.round(branch.getBoundingClientRect().left) : -3
+            };
+        }''')
+        print(f"  Victory Alignment Left X -> Row1 【: {align_rects['r1Left']}px, Row2 【: {align_rects['r2Left']}px, Row3 └: {align_rects['r3Left']}px")
+        assert align_rects['r1Left'] == align_rects['r2Left'] == align_rects['r3Left'], f"FAIL: Misaligned victory rows: {align_rects}"
+        page.screenshot(path='Commercial_Edition/scripts/c_story_150_victory_aligned.png')
+
+        page.evaluate('() => window.appRouter.exitCombat()')
+
+        # Verify Repeat Clear of Stage 1 does NOT grant First-Clear Reward again
+        gold_before_repeat = page.evaluate('() => window.appRouter.stageManager.gold')
+        page.evaluate('''() => {
+            window.appRouter.startCombat(1);
+            window.appRouter.stageManager.spawner.spawnGold(4, { r: 2, c: 0 });
+            window.appRouter.stageManager.handleVictory();
+        }''')
+        repeat_detail = page.locator('#victory-reward-detail').text_content().strip()
+        repeat_total = page.locator('#victory-reward-val').text_content().strip()
+        gold_after_repeat = page.evaluate('() => window.appRouter.stageManager.gold')
+        print(f"  Repeat Clear Stage 1 -> Total: '{repeat_total}', Gold Delta: +{gold_after_repeat - gold_before_repeat} (Expected +4, NOT +104)")
+        assert '【初次過關獎勵】已領取' in repeat_detail, f"FAIL: Expected '【初次過關獎勵】已領取' on repeat clear, got '{repeat_detail}'"
+        assert repeat_total == '🪙 +4', f"FAIL: Expected '🪙 +4' on repeat clear, got '{repeat_total}'"
+        assert (gold_after_repeat - gold_before_repeat) == 4, f"FAIL: Repeat clear granted extra gold! Delta={gold_after_repeat - gold_before_repeat}"
         page.evaluate('() => window.appRouter.exitCombat()')
 
         unlocked_id = page.evaluate('() => window.appRouter.stageManager.unlockedStageId')
@@ -219,10 +250,54 @@ def run_tests():
         assert resumed_hub_title == 'Stage 4', f"FAIL: Expected 'Stage 4' in #hub-stage-num after reload, got '{resumed_hub_title}'"
         print("  [PASS] Game reload automatically resumes at the latest unlocked stage (Stage 4)!")
 
+        # ----------------------------------------------------
+        # Scenario 7: Camp Dynamic Plain Description + Coin Fly VFX & Gear Prototype Backplates + Descending Sort (C-STORY-150)
+        # ----------------------------------------------------
+        print("\n[Scenario 7] Verifying Camp Dynamic Desc, Coin Fly VFX & Gear Descending Sort (C-STORY-150)...")
+        page.evaluate('''() => {
+            window.appRouter.stageManager.gold = 50000;
+            window.appRouter.stageManager.saveData();
+            window.appRouter.syncHud();
+            window.switchMainTab('camp');
+        }''')
+        desc_lv1 = page.locator('#camp-txt-forge-desc').text_content().strip()
+        print(f"  Forge LV.1 Desc: '{desc_lv1}'")
+        assert 'T02' not in desc_lv1 and 'T03' not in desc_lv1, f"FAIL: Jargon found in desc_lv1: '{desc_lv1}'"
+
+        page.click('#camp-btn-forge-upgrade')
+        desc_lv2 = page.locator('#camp-txt-forge-desc').text_content().strip()
+        vfx_particles = page.locator('.coin-spend-vfx-container .coin-fly-particle').count()
+        print(f"  Forge LV.2 Desc: '{desc_lv2}' | Active Coin Fly Particles: {vfx_particles}")
+        assert desc_lv2 != desc_lv1, f"FAIL: Forge description did not change on upgrade! '{desc_lv2}'"
+        assert 'T02' not in desc_lv2 and 'T03' not in desc_lv2, f"FAIL: Jargon found in desc_lv2: '{desc_lv2}'"
+        assert vfx_particles >= 5, f"FAIL: Expected >=5 coin fly particles over button, got {vfx_particles}"
+        page.screenshot(path='Commercial_Edition/scripts/c_story_150_camp_vfx.png')
+
+        # Verify Gear Inventory prototype backplates, enlarged font, and descending sort
+        page.evaluate('''() => {
+            const im = window.appRouter.inventoryManager;
+            im.items = [];
+            [2, 4, 2, 64, 16, 8, 256, 32, 128].forEach(v => im.addItem(v));
+            window.appRouter.equipGearItem(im.items.find(it => it.value === 256));
+            window.switchMainTab('gear');
+            window.renderGearInventory();
+        }''')
+        page.wait_for_timeout(350)
+        gear_vals = page.evaluate('''() => Array.from(document.querySelectorAll('#gear-grid-container .gear-val')).map(el => el.textContent.trim())''')
+        gear_classes = page.evaluate('''() => Array.from(document.querySelectorAll('#gear-grid-container .gear-cell')).slice(0, 9).map(el => el.className)''')
+        gear_font_px = page.evaluate('''() => parseFloat(getComputedStyle(document.querySelector('#gear-grid-container .gear-val')).fontSize)''')
+        print(f"  Sorted Gear Values: {gear_vals}")
+        print(f"  Top Gear Slot Class: '{gear_classes[0]}' | .gear-val Font Size: {gear_font_px}px")
+        assert gear_vals == ['256', '128', '64', '32', '16', '8', '4', '2', '2'], f"FAIL: Expected descending gear order, got {gear_vals}"
+        assert 'tier-256' in gear_classes[0] and 'tier-128' in gear_classes[1], f"FAIL: Missing prototype tier backplate classes: {gear_classes}"
+        assert gear_font_px >= 18.0, f"FAIL: Expected enlarged .gear-val font >= 18px, got {gear_font_px}px"
+        page.screenshot(path='Commercial_Edition/scripts/c_story_150_gear_sorted.png')
+        print("  [PASS] Camp dynamic description, Coin Fly VFX & Gear prototype backplates + descending sort verified!")
+
         browser.close()
 
     print("\n" + "=" * 65)
-    print("  ALL 6 C-STORY-147/148/149 SCENARIOS PASSED WITH 100% PERFECTION!")
+    print("  ALL 7 C-STORY-147~150 SCENARIOS PASSED WITH 100% PERFECTION!")
     print("=" * 65)
 
 if __name__ == '__main__':

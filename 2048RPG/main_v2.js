@@ -13,7 +13,7 @@ import {
   MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS,
   DEFEAT_TACTICAL_TIPS, getEquipmentImagePath, getMonsterImagePath,
   getHeroImagePath, getMonsterThemeByChapter, getTileTheme, CharacterClass, CHARACTER_SKILL_CONFIGS,
-  DAILY_SIGNIN_REWARDS, DAILY_QUEST_CONFIGS, DAILY_ACTIVITY_CHEST_CONFIG
+  DAILY_SIGNIN_REWARDS, DAILY_QUEST_CONFIGS, DAILY_ACTIVITY_CHEST_CONFIG, BASE_STAT_TIERS
 } from './src/core/Constants.js';
 
 class AppRouter {
@@ -33,6 +33,7 @@ class AppRouter {
     this.DAILY_SIGNIN_REWARDS = DAILY_SIGNIN_REWARDS;
     this.DAILY_QUEST_CONFIGS = DAILY_QUEST_CONFIGS;
     this.DAILY_ACTIVITY_CHEST_CONFIG = DAILY_ACTIVITY_CHEST_CONFIG;
+    this.BASE_STAT_TIERS = BASE_STAT_TIERS;
     this.eventBus = new GameEventBus();
     this.stageManager = new StageManager(this.eventBus);
     this.audio = new AudioEffects();
@@ -145,9 +146,10 @@ class AppRouter {
     const v = item.value || item.val || 2;
     const tier = Math.max(1, Math.min(16, Math.round(Math.log2(v))));
     const pad = String(tier).padStart(2, '0');
+    const themeName = (EQUIPMENT_THEMES[v] && EQUIPMENT_THEMES[v].name) ? EQUIPMENT_THEMES[v].name : (item.name || '神兵裝備');
     const gear = {
       id: item.id || `gear_${Date.now()}`,
-      name: item.name || '神兵裝備',
+      name: themeName,
       val: v,
       value: v,
       img: `assets/images/equipment_clay/equip_${pad}.png`
@@ -189,8 +191,10 @@ class AppRouter {
     rolledTiers.forEach((tier) => {
       const it = this.inventoryManager.addItem(tier);
       if (it) {
-        it.name = `神裝`;
-        it.img = `assets/images/equipment_clay/equip_01.png`;
+        const tIdx = Math.max(1, Math.min(16, Math.round(Math.log2(tier))));
+        const pad = String(tIdx).padStart(2, '0');
+        it.name = (EQUIPMENT_THEMES[tier] && EQUIPMENT_THEMES[tier].name) ? EQUIPMENT_THEMES[tier].name : '神裝';
+        it.img = `assets/images/equipment_clay/equip_${pad}.png`;
         rolledItems.push(it);
       }
     });
@@ -459,15 +463,28 @@ class AppRouter {
         const bGold = data.inBattleGold || 0;
         const sGold = data.sweepGold || 0;
         const battleHarvest = bGold + sGold;
+        const isFirst = data.isFirstClear !== false && data.rewardGold > 0;
         if (detailEl) {
-          const lines = [
-            `★【關卡獎勵】+${data.rewardGold} 🪙`,
-            `⚔️【戰鬥收穫】+${battleHarvest} 🪙`
-          ];
+          const firstClearValHtml = isFirst
+            ? `+${data.rewardGold} 🪙`
+            : `<span style="color:#94a3b8;">已領取</span>`;
+          let html = `
+            <div class="victory-detail-row" style="display:flex; align-items:center;">
+              <span class="victory-row-icon" style="display:inline-block; width:1.65em; text-align:center; flex-shrink:0;">★</span><span class="victory-row-label">【初次過關獎勵】${firstClearValHtml}</span>
+            </div>
+            <div class="victory-detail-row" style="display:flex; align-items:center;">
+              <span class="victory-row-icon" style="display:inline-block; width:1.65em; text-align:center; flex-shrink:0;">⚔️</span><span class="victory-row-label">【戰鬥收穫】+${battleHarvest} 🪙</span>
+            </div>
+          `;
           if (sGold > 0) {
-            lines.push(`   └ 含盤面殘存自動結算 +${sGold} 🪙`);
+            html += `
+              <div class="victory-detail-row victory-sub-row" style="display:flex; align-items:center; color:#fde68a;">
+                <span class="victory-row-icon" style="display:inline-block; width:1.65em; flex-shrink:0;"></span><span class="victory-row-branch" style="display:inline-block; width:1em; text-align:center;">└</span><span>含盤面殘存自動結算 +${sGold} 🪙</span>
+              </div>
+            `;
           }
-          detailEl.textContent = lines.join('\n');
+          detailEl.style.whiteSpace = 'normal';
+          detailEl.innerHTML = html;
         }
 
         vModal.style.display = 'flex';

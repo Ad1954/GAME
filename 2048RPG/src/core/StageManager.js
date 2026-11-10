@@ -1294,17 +1294,17 @@ export class StageManager {
     this.gold += totalEarned - inBattleGold; // inBattleGold already credited during combat!
 
     // Record clear & unlock next stage
+    if (isFirstClear || typeof this.clearedStages[currentId] !== 'object') {
+      this.clearedStages[currentId] = { stars: 3, clearedCount: isFirstClear ? 1 : 2 };
+    } else {
+      this.clearedStages[currentId].clearedCount = (this.clearedStages[currentId].clearedCount || 1) + 1;
+    }
+
     if (currentId === 0) {
       if (this.tutorialManager) {
         this.tutorialManager.setCompleted(true);
       }
     } else {
-      if (isFirstClear) {
-        this.clearedStages[currentId] = { stars: 3, clearedCount: 1 };
-      } else {
-        this.clearedStages[currentId].clearedCount++;
-      }
-
       if (currentId >= this.unlockedStageId && currentId < STAGE_CONFIGS.length) {
         this.unlockedStageId = currentId + 1;
         this.eventBus.emit(Events.STAGE_UNLOCKED, { stageId: this.unlockedStageId });

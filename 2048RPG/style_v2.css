@@ -2386,3 +2386,111 @@
   margin-top: 6px !important;
   margin-bottom: 2px !important;
 }
+
+
+/* ========================================================
+   C-STORY-150: GEAR INVENTORY PROTOTYPE BACKPLATE & ENLARGED NUMBER
+   + BUTTON COIN FLY-AWAY VFX
+   ======================================================== */
+.gear-cell .gear-val {
+  position: absolute !important;
+  bottom: 4px !important;
+  right: 6px !important;
+  font-size: 1.18rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  color: #ffffff !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95), 0 0 6px #000000 !important;
+  -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.85);
+  letter-spacing: -0.5px !important;
+  z-index: 3 !important;
+  pointer-events: none !important;
+}
+
+.gear-cell.tier-16384, .compendium-card.tier-16384 {
+  background: linear-gradient(135deg, #4c1d95, #0f172a);
+  border-color: #a855f7;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.45);
+}
+.gear-cell.tier-32768, .compendium-card.tier-32768 {
+  background: linear-gradient(135deg, #701a75, #0f172a);
+  border-color: #f0abfc;
+  box-shadow: 0 0 14px rgba(240, 171, 252, 0.5);
+}
+.gear-cell.tier-65536, .compendium-card.tier-65536 {
+  background: linear-gradient(135deg, #78350f, #450a0a);
+  border-color: #fde047;
+  box-shadow: 0 0 16px rgba(253, 224, 71, 0.6);
+}
+
+.gear-cell.equipped-slot {
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.75), inset 0 0 8px rgba(251, 191, 36, 0.35) !important;
+}
+
+.gear-cell.empty-slot {
+  background: rgba(15, 23, 42, 0.55) !important;
+  border: 1.5px dashed #334155 !important;
+  cursor: default !important;
+  opacity: 0.45 !important;
+}
+
+/* Coin Fly-Away & Fade-Out at Top VFX over Purchase Buttons */
+.coin-spend-vfx-container {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: visible;
+}
+
+.coin-fly-particle {
+  position: absolute;
+  font-size: 1.25rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.75));
+  animation: coinFlyUpFade 0.8s cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.coin-fly-amount {
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  transform: translateX(-50%);
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #fde047;
+  white-space: nowrap;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95), 0 0 6px #000000;
+  animation: coinAmountFlyUpFade 0.85s cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes coinFlyUpFade {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(0.75) rotate(0deg);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(calc(var(--tx, 0px) * 0.5), calc(var(--ty, -65px) * 0.45)) scale(1.15) rotate(calc(var(--rot, 25deg) * 0.5));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tx, 0px), var(--ty, -75px)) scale(0.55) rotate(var(--rot, 45deg));
+  }
+}
+
+@keyframes coinAmountFlyUpFade {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(0.85);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, -22px) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -68px) scale(0.95);
+  }
+}

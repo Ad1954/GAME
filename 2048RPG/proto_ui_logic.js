@@ -74,6 +74,7 @@
   // NAVIGATION & TAB SWITCHING
   // ----------------------------------------------------
   function switchMainTab(tabId) {
+    document.querySelectorAll('.coin-spend-vfx-container').forEach(el => el.remove());
     document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
@@ -770,8 +771,57 @@
   }
 
   // ----------------------------------------------------
-  // CAMP / WORKSHOP REAL UPGRADES
+  // BUTTON COIN FLY-AWAY VFX & CAMP UPGRADES (C-STORY-150)
   // ----------------------------------------------------
+  function playButtonCoinSpendVfx(btnEl, costAmount) {
+    if (!btnEl) return;
+    const rect = btnEl.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    const container = document.createElement('div');
+    container.className = 'coin-spend-vfx-container';
+    container.style.left = `${cx}px`;
+    container.style.top = `${cy}px`;
+    container.style.width = '1px';
+    container.style.height = '1px';
+
+    const offsets = [
+      { tx: -36, ty: -68, rot: -35, delay: 0 },
+      { tx: -18, ty: -82, rot: -20, delay: 35 },
+      { tx: 0,   ty: -88, rot: 8,   delay: 15 },
+      { tx: 18,  ty: -80, rot: 24,  delay: 50 },
+      { tx: 36,  ty: -66, rot: 40,  delay: 25 },
+      { tx: -26, ty: -58, rot: -28, delay: 75 },
+      { tx: 26,  ty: -60, rot: 30,  delay: 65 }
+    ];
+
+    offsets.forEach(off => {
+      const p = document.createElement('span');
+      p.className = 'coin-fly-particle';
+      p.textContent = '🪙';
+      p.style.left = '-10px';
+      p.style.top = '-10px';
+      p.style.setProperty('--tx', `${off.tx}px`);
+      p.style.setProperty('--ty', `${off.ty}px`);
+      p.style.setProperty('--rot', `${off.rot}deg`);
+      p.style.animationDelay = `${off.delay}ms`;
+      container.appendChild(p);
+    });
+
+    if (costAmount !== undefined && costAmount > 0) {
+      const amt = document.createElement('div');
+      amt.className = 'coin-fly-amount';
+      amt.textContent = `-🪙 ${Number(costAmount).toLocaleString()}`;
+      container.appendChild(amt);
+    }
+
+    document.body.appendChild(container);
+    setTimeout(() => {
+      if (container.parentNode) container.parentNode.removeChild(container);
+    }, 950);
+  }
+
   function getCampUpgrades() {
     const raw = localStorage.getItem('rpg_2048_camp_upgrades');
     if (raw) {
@@ -784,23 +834,97 @@
     localStorage.setItem('rpg_2048_camp_upgrades', JSON.stringify(upg));
   }
 
+  function getForgeTierConfigByLevel(lv) {
+    const clamped = Math.max(1, Math.min(48, Number(lv) || 1));
+    if (window.appRouter && Array.isArray(window.appRouter.BASE_STAT_TIERS)) {
+      const found = window.appRouter.BASE_STAT_TIERS.find(t => t.tier === clamped);
+      if (found) return found;
+    }
+    // Deterministic fallback matching BASE_STAT_TIERS (1~48)
+    let cycleIdx = 0;
+    let stepWeights = [0.80, 0.18, 0.02];
+    if (clamped <= 5) {
+      cycleIdx = 0;
+      const wTable = [
+        [0.80, 0.18, 0.02],
+        [0.75, 0.22, 0.03],
+        [0.70, 0.25, 0.05],
+        [0.65, 0.28, 0.07],
+        [0.60, 0.30, 0.10]
+      ];
+      stepWeights = wTable[clamped - 1];
+    } else {
+      cycleIdx = Math.min(7, Math.floor(clamped / 6));
+      const subIdx = clamped % 6;
+      const wTable = [
+        [0.75, 0.22, 0.03],
+        [0.70, 0.25, 0.05],
+        [0.65, 0.28, 0.07],
+        [0.60, 0.30, 0.10],
+        [0.55, 0.32, 0.13],
+        [0.50, 0.34, 0.16]
+      ];
+      stepWeights = wTable[subIdx];
+    }
+    const r0 = Math.pow(2, cycleIdx + 1);
+    return {
+      tier: clamped,
+      baseRange: [r0, r0 * 2, r0 * 4],
+      weights: stepWeights
+    };
+  }
+
+  function getForgePlainDescription(lv) {
+    const curLv = Math.max(1, Math.min(48, Number(lv) || 1));
+    const curCfg = getForgeTierConfigByLevel(curLv);
+    const [r0, r1, r2] = curCfg.baseRange;
+    const [w0, w1, w2] = curCfg.weights.map(w => Math.round(w * 100));
+
+    if (curLv >= 48) {
+      return `已達最高等級！棋盤固定產出頂級裝備 ${r0}、${r1}、${r2}（出現率 ${w0}% / ${w1}% / ${w2}%）`;
+    }
+
+    const nextCfg = getForgeTierConfigByLevel(curLv + 1);
+    const [nr0, nr1, nr2] = nextCfg.baseRange;
+    const [nw0, nw1, nw2] = nextCfg.weights.map(w => Math.round(w * 100));
+
+    if (nr0 > r0) {
+      return `目前棋盤產出裝備 ${r0}、${r1}、${r2}（機率 ${w0}% / ${w1}% / ${w2}%）➔ 下一級：淘汰裝備 ${r0}，全面改產出 ${nr0}、${nr1}、${nr2}！`;
+    }
+    return `目前棋盤產出裝備 ${r0}、${r1}、${r2}（機率 ${w0}% / ${w1}% / ${w2}%）➔ 下一級：裝備 ${r1}、${r2} 出現率提升至 ${nw1}% / ${nw2}%`;
+  }
+
   function renderCampUpgrades() {
     const upg = getCampUpgrades();
 
-    // 1. 鐵匠鋪
+    // 1. 鐵匠鋪 (動態更新標題與直白說明，不含 T02/T03 術語)
     const forgeTitleEl = document.getElementById('camp-txt-forge-title');
+    const forgeDescEl = document.getElementById('camp-txt-forge-desc');
     const forgeBtnEl = document.getElementById('camp-btn-forge-upgrade');
     const forgeCost = Math.floor(100 * Math.pow(1.5, upg.forge - 1));
     if (forgeTitleEl) forgeTitleEl.textContent = `皇家鐵匠鋪 LV.${upg.forge}`;
-    if (forgeBtnEl) forgeBtnEl.textContent = `升級 🪙${forgeCost.toLocaleString()}`;
+    if (forgeDescEl) forgeDescEl.textContent = getForgePlainDescription(upg.forge);
+    if (forgeBtnEl) {
+      if (upg.forge >= 48) {
+        forgeBtnEl.disabled = true;
+        forgeBtnEl.className = 'cr-btn cr-btn-disabled btn-small';
+        forgeBtnEl.textContent = '已滿級';
+      } else {
+        forgeBtnEl.disabled = false;
+        forgeBtnEl.className = 'cr-btn cr-btn-green btn-small';
+        forgeBtnEl.textContent = `升級 🪙${forgeCost.toLocaleString()}`;
+      }
+    }
 
     // 2. 軍需背包行囊
     const bagTitleEl = document.getElementById('camp-txt-bag-title');
+    const bagDescEl = document.getElementById('camp-txt-bag-desc');
     const bagBtnEl = document.getElementById('camp-btn-bag-expand');
     const curCap = 16 + (upg.capacity - 1) * 4;
     const nextCap = curCap + 4;
     const capCost = 200 * upg.capacity;
     if (bagTitleEl) bagTitleEl.textContent = `軍需行囊 (${curCap} ➔ ${nextCap}格)`;
+    if (bagDescEl) bagDescEl.textContent = `目前可存放 ${curCap} 件裝備 ➔ 擴充後容量提升至 ${nextCap} 格，可儲備更多合成神裝`;
     if (bagBtnEl) bagBtnEl.textContent = `擴充 🪙${capCost.toLocaleString()}`;
   }
 
@@ -808,6 +932,10 @@
     if (!window.appRouter) return;
     const sm = window.appRouter.stageManager;
     const upg = getCampUpgrades();
+
+    if (type === 'forge' && upg.forge >= 48) {
+      return;
+    }
 
     let cost = 100;
     if (type === 'forge') cost = Math.floor(100 * Math.pow(1.5, upg.forge - 1));
@@ -819,9 +947,17 @@
       return;
     }
 
+    const btnEl = type === 'forge'
+      ? document.getElementById('camp-btn-forge-upgrade')
+      : document.getElementById('camp-btn-bag-expand');
+    playButtonCoinSpendVfx(btnEl, cost);
+
     sm.gold -= cost;
-    sm.saveData();
     upg[type] = (upg[type] || 1) + 1;
+    if (type === 'forge') {
+      sm.baseTier = Math.min(48, upg.forge);
+    }
+    sm.saveData();
     saveCampUpgrades(upg);
 
     if (type === 'capacity' && window.appRouter.inventoryManager) {
@@ -832,7 +968,6 @@
     window.appRouter.syncHud();
     renderCampUpgrades();
     if (type === 'capacity') renderGearInventory();
-    alert(`🎉 升級成功！目前等級提升至 Lv.${upg[type]}！`);
   }
 
   // ----------------------------------------------------
@@ -852,8 +987,13 @@
 
   function handleQuickGachaPull(count) {
     if (!window.appRouter) return;
+    const cost = count === 1 ? 100 : 900;
+    const btnEl = count === 1
+      ? document.getElementById('camp-btn-gacha-single')
+      : document.getElementById('camp-btn-gacha-ten');
     const res = window.appRouter.performGacha(count);
     if (res.success && res.items) {
+      playButtonCoinSpendVfx(btnEl, cost);
       closeQuickGachaModal();
       showGachaResults(res.items);
       renderGearInventory();
@@ -867,11 +1007,13 @@
 
     grid.innerHTML = '';
     items.forEach(it => {
+      const v = it.value || it.val || 2;
       const card = document.createElement('div');
-      card.className = `gacha-item-card ${it.value >= 64 ? 'epic' : (it.value >= 16 ? 'rare' : '')}`;
+      card.className = `gear-cell tier-${v}`;
+      card.style.cssText = 'aspect-ratio: 5 / 6; cursor: default;';
       card.innerHTML = `
-        <img src="${it.img}" alt="gear">
-        <span class="tier-val">${it.name} (${it.value})</span>
+        <img src="${getEquipImg(v)}" alt="裝備 ${v}">
+        <span class="gear-val">${v}</span>
       `;
       grid.appendChild(card);
     });
@@ -932,6 +1074,10 @@
     const capEl = document.getElementById('gear-txt-capacity');
     if (!grid) return;
 
+    // Sort owned equipment in descending order (largest numbers at top!)
+    if (Array.isArray(im.items)) {
+      im.items.sort((a, b) => ((b.value || b.val || 0) - (a.value || a.val || 0)));
+    }
     const items = im.items || [];
     const maxCap = im.maxCapacity || 16;
     if (capEl) capEl.textContent = `容量：${items.length} / ${maxCap}`;
@@ -945,36 +1091,38 @@
 
     if (equipped) {
       const v = equipped.value || equipped.val || 2;
+      const themes = window.appRouter.EQUIPMENT_THEMES || {};
+      const realName = (themes[v] && themes[v].name) ? themes[v].name : (equipped.name && equipped.name !== '神兵' && equipped.name !== '神裝' ? equipped.name : '泥木劍');
       if (weaponCardImg) weaponCardImg.src = getEquipImg(v);
-      if (weaponCardName) weaponCardName.textContent = `${equipped.name || '神兵'} (${v})`;
+      if (weaponCardName) weaponCardName.textContent = `${realName} (${v})`;
     } else {
       if (weaponCardImg) weaponCardImg.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>';
       if (weaponCardName) weaponCardName.textContent = '未裝備神兵';
     }
 
-    // Render backpack slots (aspect-ratio 5:6)
+    // Render backpack slots matching Prototype (.gear-cell.tier-X, 88% image scale, enlarged bottom-right value)
     for (let i = 0; i < maxCap; i++) {
       const slot = document.createElement('div');
-      slot.className = 'gear-slot-item';
-      slot.style.cssText = 'background:#1e293b; border:1px solid #334155; border-radius:10px; aspect-ratio: 5 / 6 !important; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; cursor:pointer;';
-
       const it = items[i];
       if (it) {
-        const isEq = equipped && (it.id === equipped.id);
-        if (isEq) slot.style.borderColor = '#fbbf24';
         const v = it.value || it.val || 2;
+        const isEq = equipped && (it.id === equipped.id);
+        slot.className = `gear-cell gear-slot-item tier-${v}${isEq ? ' equipped-slot' : ''}`;
+        if (isEq) {
+          slot.style.borderColor = '#fbbf24';
+        }
         slot.innerHTML = `
-          <img src="${getEquipImg(v)}" style="width:38px; height:38px; object-fit:contain;">
-          <span style="font-size:0.75rem; color:#38bdf8; font-weight:bold; margin-top:2px;">${v}</span>
-          ${isEq ? '<span style="position:absolute; top:2px; right:2px; font-size:0.6rem; background:#fbbf24; color:#000; border-radius:3px; padding:1px 3px; font-weight:bold;">E</span>' : ''}
+          <img src="${getEquipImg(v)}" alt="裝備 ${v}">
+          <span class="gear-val">${v}</span>
+          ${isEq ? '<span style="position:absolute; top:4px; left:4px; font-size:0.65rem; background:#fbbf24; color:#000; border-radius:4px; padding:1px 4px; font-weight:900; box-shadow:0 1px 3px rgba(0,0,0,0.8); z-index:4;">E</span>' : ''}
         `;
         slot.onclick = () => {
           window.appRouter.equipGearItem(it);
           renderGearInventory();
         };
       } else {
-        slot.style.opacity = '0.3';
-        slot.innerHTML = '<span style="color:#475569; font-size:0.8rem;">空</span>';
+        slot.className = 'gear-cell gear-slot-item empty-slot';
+        slot.innerHTML = '<span style="color:#475569; font-size:0.8rem; font-weight:700;">空</span>';
       }
       grid.appendChild(slot);
     }
@@ -1115,8 +1263,11 @@
   function upgradeHero(heroKey) {
     if (!window.appRouter) return;
     const sm = window.appRouter.stageManager;
+    const curLv = sm.getCharacterSkillLevel(heroKey);
+    const upgCost = Math.floor(200 * Math.pow(1.5, curLv));
     const res = sm.upgradeCharacterSkill(heroKey);
     if (res.success) {
+      playButtonCoinSpendVfx(document.getElementById('modal-upgrade-btn'), upgCost);
       if (window.appRouter.audio) window.appRouter.audio.playVictory();
       renderHeroCards();
       window.appRouter.syncHud();
@@ -1670,6 +1821,7 @@
   window.renderDailyQuests = renderDailyQuests;
   window.claimDailyActivityChest = claimDailyActivityChest;
   window.upgradeCampBuilding = upgradeCampBuilding;
+  window.playButtonCoinSpendVfx = playButtonCoinSpendVfx;
   window.openQuickGachaModal = openQuickGachaModal;
   window.closeQuickGachaModal = closeQuickGachaModal;
   window.handleQuickGachaPull = handleQuickGachaPull;
