@@ -1280,11 +1280,13 @@ export class StageManager {
     const baseReward = isFirstClear ? (this.currentStageConfig.rewardGold || 100) : 0;
     const cap = (this.currentStageConfig && this.currentStageConfig.goldCap) ? this.currentStageConfig.goldCap : this.goldSpawnBudget;
 
-    // Auto-Sweep remaining gold tiles from the battlefield (100% full sweep, C-STORY-017)
+    // Auto-Sweep remaining gold tiles from the battlefield (100% full sweep, C-STORY-017 & C-STORY-154 VFX)
     const remainingGoldTiles = this.board.getAllTiles().filter(t => t.isGold());
     let sweepGold = 0;
+    const sweptGoldVfx = [];
     remainingGoldTiles.forEach(t => {
       sweepGold += t.value;
+      sweptGoldVfx.push({ type: 'gold_merge', r: t.r, c: t.c, value: t.value });
       this.board.removeTile(t.r, t.c);
     });
     this.stageGoldEarned += sweepGold;
@@ -1313,8 +1315,9 @@ export class StageManager {
 
     this.saveData();
 
-    // Emit final board state first so monster removal renders before victory settlement (C-STORY-153)
-    this.emitState(extraState);
+    // Emit final board state first (including swept gold coin pop VFX) before victory settlement (C-STORY-153 & C-STORY-154)
+    const mergedVfxEvents = [...(extraState.vfxEvents || []), ...sweptGoldVfx];
+    this.emitState({ ...extraState, vfxEvents: mergedVfxEvents });
     this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
     this.eventBus.emit(Events.STAGE_VICTORY, {
       stage: this.currentStageConfig,
@@ -1322,6 +1325,7 @@ export class StageManager {
       rewardGold: baseReward,
       inBattleGold: inBattleGold,
       sweepGold: sweepGold,
+      sweptGoldVfx: sweptGoldVfx,
       totalEarned: totalEarned,
       totalGold: this.gold,
       stageGoldEarned: this.stageGoldEarned,

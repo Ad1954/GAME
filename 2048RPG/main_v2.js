@@ -481,6 +481,13 @@ class AppRouter {
       } else {
         if (state.board && this.viewRenderer) {
           this.viewRenderer.renderBoard(state.board);
+          if (state.vfxEvents && state.vfxEvents.length > 0) {
+            this.viewRenderer.playVfx(state.vfxEvents);
+            const hasGoldMerge = state.vfxEvents.some(e => e.type === 'gold_merge');
+            if (hasGoldMerge && this.audio && this.audio.playCoin) {
+              this.audio.playCoin();
+            }
+          }
         }
         this.isSliding = false;
       }
@@ -535,12 +542,9 @@ class AppRouter {
         }
       }
 
-      // Immediately update monster count and ensure board renders with 0 monsters before 0.6s delay (C-STORY-153)
+      // Immediately update monster count; board & swept gold VFX are rendered by emitState (C-STORY-153 & C-STORY-154)
       const monsterValEl = document.getElementById('combat-monsters-val');
       if (monsterValEl) monsterValEl.textContent = '0';
-      if (!this.isSliding && this.viewRenderer && this.stageManager && this.stageManager.board) {
-        this.viewRenderer.renderBoard(this.stageManager.board);
-      }
 
       const vModal = document.getElementById('modal-victory');
       if (vModal) {
@@ -583,7 +587,8 @@ class AppRouter {
           detailEl.innerHTML = html;
         }
 
-        // Wait 0.6s (600ms) so player clearly sees all monsters have disappeared before popping up Victory modal (C-STORY-153)
+        // Wait 0.8s (800ms) when sweeping remaining board gold so coin pop VFX finishes completely, or 0.6s (600ms) otherwise (C-STORY-153 & C-STORY-154)
+        const victoryDelayMs = (sGold > 0) ? 800 : 600;
         if (this._victoryModalTimer) {
           clearTimeout(this._victoryModalTimer);
         }
@@ -593,7 +598,7 @@ class AppRouter {
             if (this.audio && this.audio.playVictory) this.audio.playVictory();
             vModal.style.display = 'flex';
           }
-        }, 600);
+        }, victoryDelayMs);
       }
     });
 
@@ -932,24 +937,37 @@ class AppRouter {
       badgeEl.style.display = 'none';
     } else {
       let theme = null;
+      let previewImgPath = null;
       const chId = (this.stageManager && this.stageManager.currentStageConfig)
         ? this.stageManager.currentStageConfig.chapter
         : 1;
 
       if (preview.type === TileType.MONSTER) {
         theme = getMonsterThemeByChapter(chId, preview.value);
+        previewImgPath = getMonsterImagePath(chId, preview.value, this.activeIconStyle);
       } else if (preview.type === TileType.HERO) {
         theme = HERO_THEMES[preview.value];
+        previewImgPath = getHeroImagePath(preview.value, this.activeIconStyle, 'knight');
       } else {
         theme = EQUIPMENT_THEMES[preview.value] || { bg: '#334155', border: '#475569', text: '#ffffff', badge: '⚔️' };
+        previewImgPath = getEquipmentImagePath(preview.value, this.activeIconStyle);
       }
 
       valEl.textContent = preview.value;
       cardEl.classList.remove('preview-gold');
       cardEl.style.backgroundColor = (theme && theme.bg) || '#334155';
       cardEl.style.borderColor = (theme && theme.border) || '#475569';
-      badgeEl.innerHTML = '';
-      badgeEl.style.display = 'none';
+
+      if (previewImgPath) {
+        badgeEl.style.display = 'flex';
+        badgeEl.innerHTML = `<img src="${previewImgPath}" class="next-preview-img" alt="next-tile" onerror="this.parentElement.textContent='⚔️'">`;
+      } else if (theme && theme.badge) {
+        badgeEl.style.display = 'flex';
+        badgeEl.textContent = theme.badge;
+      } else {
+        badgeEl.style.display = 'flex';
+        badgeEl.textContent = '⚔️';
+      }
     }
 
     cardEl.classList.remove('pop-effect');
