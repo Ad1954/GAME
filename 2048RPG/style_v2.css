@@ -2494,3 +2494,83 @@
     transform: translate(-50%, -68px) scale(0.95);
   }
 }
+
+/* ========================================================
+   C-STORY-153: NEXT PREVIEW NUMBER CENTER ALIGNMENT &
+   UPPER COMBAT SHELF VERTICAL CENTERING BALANCE
+   ======================================================== */
+.combat-main-zone {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+}
+
+.combat-main-zone::after {
+  content: '' !important;
+  display: block !important;
+  flex: 0.35 1 0px !important;
+  width: 100% !important;
+  pointer-events: none !important;
+}
+
+.combat-preview-shelf {
+  flex: 1 1 0px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 18px !important;
+  width: 100% !important;
+  min-height: 56px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.combat-main-zone > .board-wrapper {
+  flex: 0 0 auto !important;
+  padding: 0 2px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+}
+
+.combat-main-zone > .board-wrapper > .board-grid {
+  width: min(calc(100% - 4px), calc((100dvh - 250px) * 5 / 6), calc((100vh - 250px) * 5 / 6), 400px) !important;
+  max-height: calc(100dvh - 250px) !important;
+}
+
+#next-preview-card {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+#next-card-badge,
+.next-card-badge {
+  display: none !important;
+}
+
+#next-card-val,
+.next-card-val {
+  position: relative !important;
+  z-index: 2 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: center !important;
+  letter-spacing: 0 !important;
+  line-height: 1 !important;
+}
+

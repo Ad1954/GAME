@@ -1006,7 +1006,7 @@ export class StageManager {
           this.emitState();
           return result;
         } else {
-          this.handleVictory();
+          this.handleVictory({ moves: result.moves, vfxEvents: result.vfxEvents });
           return result;
         }
       }
@@ -1270,7 +1270,7 @@ export class StageManager {
     return { success: true, remaining: this.items.snipe, slainMonster: slain };
   }
 
-  handleVictory() {
+  handleVictory(extraState = {}) {
     this.isVictory = true;
     this.isInBattle = false;
 
@@ -1313,6 +1313,9 @@ export class StageManager {
 
     this.saveData();
 
+    // Emit final board state first so monster removal renders before victory settlement (C-STORY-153)
+    this.emitState(extraState);
+    this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
     this.eventBus.emit(Events.STAGE_VICTORY, {
       stage: this.currentStageConfig,
       turns: this.turnCount,
@@ -1325,8 +1328,6 @@ export class StageManager {
       goldCap: cap,
       isFirstClear: isFirstClear
     });
-    this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
-    this.emitState();
   }
 
   handleDefeat() {

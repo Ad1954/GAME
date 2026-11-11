@@ -274,6 +274,10 @@ class AppRouter {
   }
 
   startCombat(stageId) {
+    if (this._victoryModalTimer) {
+      clearTimeout(this._victoryModalTimer);
+      this._victoryModalTimer = null;
+    }
     this.isSkillExecuting = false;
     this.isSliding = false;
     if (this.vfxEngine) {
@@ -343,6 +347,10 @@ class AppRouter {
   }
 
   startTutorialCombat() {
+    if (this._victoryModalTimer) {
+      clearTimeout(this._victoryModalTimer);
+      this._victoryModalTimer = null;
+    }
     this.isSkillExecuting = false;
     this.isSliding = false;
     if (this.vfxEngine) {
@@ -393,6 +401,10 @@ class AppRouter {
   }
 
   exitCombat() {
+    if (this._victoryModalTimer) {
+      clearTimeout(this._victoryModalTimer);
+      this._victoryModalTimer = null;
+    }
     this.isSkillExecuting = false;
     this.isSliding = false;
     if (this.combatOverlay) this.combatOverlay.classList.remove('tutorial-mode');
@@ -444,10 +456,24 @@ class AppRouter {
 
       if (state.moves && state.moves.length > 0) {
         this.isSliding = true;
+        const preSlideSlashEvents = (state.vfxEvents || []).filter(e => e.type === 'hero_slash_monster');
+        const postSlideEvents = (state.vfxEvents || []).filter(e => e.type !== 'hero_slash_monster');
+
+        if (preSlideSlashEvents.length > 0) {
+          this.viewRenderer.playVfx(preSlideSlashEvents);
+          if (this.audio && this.audio.playSlash) {
+            this.audio.playSlash();
+          }
+        }
+
         this.viewRenderer.animateSlide(state.moves, () => {
           this.viewRenderer.renderBoard(state.board);
-          if (state.vfxEvents && state.vfxEvents.length > 0) {
-            this.viewRenderer.playVfx(state.vfxEvents);
+          if (postSlideEvents.length > 0) {
+            this.viewRenderer.playVfx(postSlideEvents);
+            const hasGoldMerge = postSlideEvents.some(e => e.type === 'gold_merge');
+            if (hasGoldMerge && this.audio && this.audio.playCoin) {
+              this.audio.playCoin();
+            }
           }
           this.isSliding = false;
         });
@@ -465,6 +491,19 @@ class AppRouter {
       this.eventBus.on(Events.MOVE_COMPLETED, handleBoardUpdate);
     }
     this.eventBus.on(Events.ITEMS_CHANGED, () => this.updateItemCounts());
+
+    // C-STORY-153: Monster Kill & Gold Cash-out Sound Effects
+    this.eventBus.on(Events.MONSTER_KILLED, () => {
+      if (this.audio) {
+        if (this.audio.playSlash) this.audio.playSlash();
+        if (this.audio.playKill) this.audio.playKill();
+      }
+    });
+    this.eventBus.on(Events.GOLD_CASHED_OUT, () => {
+      if (this.audio && this.audio.playCoin) {
+        this.audio.playCoin();
+      }
+    });
 
     // C-STORY-152: Character Skill Charge & Auto-Rescue Events
     this.eventBus.on(Events.SKILL_CHARGE_CHANGED, (payload) => {
@@ -489,15 +528,23 @@ class AppRouter {
     });
 
     this.eventBus.on(Events.STAGE_VICTORY, (data) => {
-      this.audio.playVictory();
       if (data && data.stage && typeof data.stage.id === 'number' && data.stage.id > 0) {
         const nextId = Math.min(STAGE_CONFIGS.length, data.stage.id + 1);
         if (this.stageManager.unlockedStageId >= nextId) {
           window.currentSelectedStage = nextId;
         }
       }
+
+      // Immediately update monster count and ensure board renders with 0 monsters before 0.6s delay (C-STORY-153)
+      const monsterValEl = document.getElementById('combat-monsters-val');
+      if (monsterValEl) monsterValEl.textContent = '0';
+      if (!this.isSliding && this.viewRenderer && this.stageManager && this.stageManager.board) {
+        this.viewRenderer.renderBoard(this.stageManager.board);
+      }
+
       const vModal = document.getElementById('modal-victory');
       if (vModal) {
+        vModal.style.display = 'none';
         const titleEl = document.getElementById('victory-stage-name');
         const turnsEl = document.getElementById('victory-turns-val');
         const rewardEl = document.getElementById('victory-reward-val');
@@ -536,7 +583,17 @@ class AppRouter {
           detailEl.innerHTML = html;
         }
 
-        vModal.style.display = 'flex';
+        // Wait 0.6s (600ms) so player clearly sees all monsters have disappeared before popping up Victory modal (C-STORY-153)
+        if (this._victoryModalTimer) {
+          clearTimeout(this._victoryModalTimer);
+        }
+        this._victoryModalTimer = setTimeout(() => {
+          this._victoryModalTimer = null;
+          if (this.state === 'COMBAT') {
+            if (this.audio && this.audio.playVictory) this.audio.playVictory();
+            vModal.style.display = 'flex';
+          }
+        }, 600);
       }
     });
 
@@ -871,41 +928,28 @@ class AppRouter {
       cardEl.classList.add('preview-gold');
       cardEl.style.backgroundColor = '';
       cardEl.style.borderColor = '';
-      badgeEl.innerHTML = '🪙';
-      badgeEl.style.display = 'flex';
+      badgeEl.innerHTML = '';
+      badgeEl.style.display = 'none';
     } else {
       let theme = null;
-      let previewImgPath = null;
       const chId = (this.stageManager && this.stageManager.currentStageConfig)
         ? this.stageManager.currentStageConfig.chapter
         : 1;
 
       if (preview.type === TileType.MONSTER) {
         theme = getMonsterThemeByChapter(chId, preview.value);
-        previewImgPath = getMonsterImagePath(chId, preview.value, this.activeIconStyle);
       } else if (preview.type === TileType.HERO) {
         theme = HERO_THEMES[preview.value];
-        previewImgPath = getHeroImagePath(preview.value, this.activeIconStyle, 'knight');
       } else {
         theme = EQUIPMENT_THEMES[preview.value] || { bg: '#334155', border: '#475569', text: '#ffffff', badge: '⚔️' };
-        previewImgPath = getEquipmentImagePath(preview.value, this.activeIconStyle);
       }
 
       valEl.textContent = preview.value;
       cardEl.classList.remove('preview-gold');
       cardEl.style.backgroundColor = (theme && theme.bg) || '#334155';
       cardEl.style.borderColor = (theme && theme.border) || '#475569';
-
-      if (previewImgPath) {
-        badgeEl.style.display = 'flex';
-        badgeEl.innerHTML = `<img src="${previewImgPath}" class="next-preview-img" alt="next-tile" onerror="this.parentElement.textContent='⚔️'">`;
-      } else if (theme && theme.badge) {
-        badgeEl.style.display = 'flex';
-        badgeEl.textContent = theme.badge;
-      } else {
-        badgeEl.style.display = 'flex';
-        badgeEl.textContent = '⚔️';
-      }
+      badgeEl.innerHTML = '';
+      badgeEl.style.display = 'none';
     }
 
     cardEl.classList.remove('pop-effect');
