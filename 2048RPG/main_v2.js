@@ -75,6 +75,7 @@ class AppRouter {
 
     this.bindCombatEvents();
     this.bindCombatControls();
+    this.bindTitleScreen();
     this.syncHud();
     window.launchStageBattle = (stageId) => {
       const s = stageId !== undefined ? stageId : (window.currentSelectedStage !== undefined ? window.currentSelectedStage : 1);
@@ -647,6 +648,44 @@ class AppRouter {
 
     this.eventBus.on(Events.GOLD_CHANGED, () => this.syncHud());
     this.eventBus.on(Events.STAMINA_CHANGED, () => this.syncHud());
+  }
+
+  // C-STORY-155: Title Splash Screen Controller & Progress Loading
+  bindTitleScreen() {
+    const titleScreen = document.getElementById('view-title-screen');
+    const btnStart = document.getElementById('btn-start-game');
+    if (!titleScreen) return;
+
+    let isDismissed = false;
+    const enterGame = () => {
+      if (isDismissed) return;
+      isDismissed = true;
+      if (this.audio && this.audio.playClick) this.audio.playClick();
+      titleScreen.classList.add('fade-out');
+
+      // Check tutorial status: if not completed, automatically launch Stage 0
+      const isTutPending = this.stageManager && this.stageManager.tutorialManager && !this.stageManager.tutorialManager.isCompleted;
+      if (isTutPending) {
+        setTimeout(() => {
+          this.startTutorialCombat();
+        }, 350);
+      } else {
+        if (typeof window.renderAdventureStage === 'function') {
+          window.renderAdventureStage();
+        }
+      }
+    };
+
+    if (btnStart) {
+      btnStart.addEventListener('click', (e) => {
+        e.stopPropagation();
+        enterGame();
+      });
+    }
+
+    titleScreen.addEventListener('click', () => {
+      enterGame();
+    });
   }
 
   bindCombatControls() {
