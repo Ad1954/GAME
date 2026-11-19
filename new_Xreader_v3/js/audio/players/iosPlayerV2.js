@@ -1,14 +1,14 @@
 /**
- * new_Xreader - iOS Voice Player v2 (Story 58, 59)
+ * new_Xreader - iOS Voice Player v2 (Story 58, 59, 60)
  * High-performance mobile voice player optimized for modern iOS/iPadOS (M-series / iOS 17.2+ / 18+ / 27+).
  * 
  * Key Architecture & Resiliency:
- * 1. Micro-Dither Dynamic KeepAlive Audio (prevents WebKit Energy Silence Suspension)
+ * 1. Micro-Dither Dynamic KeepAlive Audio (Data URL Base64 avoids WebKit Blob sandbox issues)
  * 2. Background Persistence (pagehide persisted checks strictly protect background playback)
  * 3. Seamless Chapter Transitions (keeps audio session running, zero pause-play collisions)
  * 4. WebKit Utterance GC Protection Anchor (window.__xreaderActiveUtterances)
- * 5. Dynamic Watchdog Auto-Advance Timer (recovers from dropped onend events)
- * 6. Self-Healing Transient Interruption Recovery (auto-retries on WebKit transient cancel)
+ * 5. Strict User Gesture Preservation (synchronous call stack invocation for iOS Safari)
+ * 6. Dynamic Watchdog Auto-Advance Timer (recovers from dropped onend events)
  * 7. Full MediaSession Integration (remote control for Lock Screen & Bluetooth)
  */
 
@@ -21,45 +21,53 @@ if (typeof window !== 'undefined' && !window.__xreaderActiveUtterances) {
 }
 
 /**
- * Dynamically generates a 15-second WAV audio Blob URL with inaudible micro-dither.
- * Non-zero PCM samples (alternating 127..129 around center 128) bypass modern WebKit's
- * zero-energy media suspension heuristics.
+ * Generates a 15-second WAV Data URL with inaudible micro-dither (±1 LSB @ 10Hz).
+ * Using Base64 Data URL instead of Blob URL avoids WebKit media sandbox restrictions on iOS.
  */
-function generateMicroDitherWavUrl() {
+function generateMicroDitherBase64Wav() {
   const sampleRate = 8000;
   const duration = 15;
   const numSamples = sampleRate * duration;
-  const buffer = new ArrayBuffer(44 + numSamples);
-  const view = new DataView(buffer);
+  const buffer = new Uint8Array(44 + numSamples);
 
-  function writeString(offset, str) {
-    for (let i = 0; i < str.length; i++) {
-      view.setUint8(offset + i, str.charCodeAt(i));
-    }
-  }
+  const headerStr = 'RIFF';
+  for (let i = 0; i < 4; i++) buffer[i] = headerStr.charCodeAt(i);
+  const fileLen = 36 + numSamples;
+  buffer[4] = fileLen & 0xff;
+  buffer[5] = (fileLen >> 8) & 0xff;
+  buffer[6] = (fileLen >> 16) & 0xff;
+  buffer[7] = (fileLen >> 24) & 0xff;
 
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + numSamples, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true); // PCM format
-  view.setUint16(22, 1, true); // Mono channel
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate, true); // Byte rate (8000 * 1 * 1)
-  view.setUint16(32, 1, true); // Block align (1 * 1)
-  view.setUint16(34, 8, true); // 8-bit PCM
-  writeString(36, 'data');
-  view.setUint32(40, numSamples, true);
+  const waveStr = 'WAVEfmt ';
+  for (let i = 0; i < 8; i++) buffer[8 + i] = waveStr.charCodeAt(i);
 
-  const bytes = new Uint8Array(buffer, 44, numSamples);
+  buffer[16] = 16; buffer[17] = 0; buffer[18] = 0; buffer[19] = 0; // fmt chunk size
+  buffer[20] = 1; buffer[21] = 0; // PCM format (1)
+  buffer[22] = 1; buffer[23] = 0; // 1 channel (mono)
+  buffer[24] = 0x40; buffer[25] = 0x1f; buffer[26] = 0; buffer[27] = 0; // 8000 Hz
+  buffer[28] = 0x40; buffer[29] = 0x1f; buffer[30] = 0; buffer[31] = 0; // 8000 bytes/sec
+  buffer[32] = 1; buffer[33] = 0; // 1 block align
+  buffer[34] = 8; buffer[35] = 0; // 8 bits per sample
+
+  const dataStr = 'data';
+  for (let i = 0; i < 4; i++) buffer[36 + i] = dataStr.charCodeAt(i);
+  buffer[40] = numSamples & 0xff;
+  buffer[41] = (numSamples >> 8) & 0xff;
+  buffer[42] = (numSamples >> 16) & 0xff;
+  buffer[43] = (numSamples >> 24) & 0xff;
+
+  // 10Hz inaudible sub-wave with 1 LSB amplitude (samples 127..129)
   for (let i = 0; i < numSamples; i++) {
-    // 10Hz inaudible sub-wave with 1 LSB amplitude (127 to 129)
-    bytes[i] = 128 + Math.round(Math.sin(2 * Math.PI * 10 * i / sampleRate));
+    buffer[44 + i] = 128 + Math.round(Math.sin(2 * Math.PI * 10 * i / sampleRate));
   }
 
-  const blob = new Blob([buffer], { type: 'audio/wav' });
-  return URL.createObjectURL(blob);
+  let binary = '';
+  const chunkSize = 8192;
+  for (let i = 0; i < buffer.length; i += chunkSize) {
+    const chunk = buffer.subarray(i, i + chunkSize);
+    binary += String.fromCharCode.apply(null, chunk);
+  }
+  return 'data:audio/wav;base64,' + btoa(binary);
 }
 
 export class IosVoicePlayerV2 {
@@ -86,9 +94,9 @@ export class IosVoicePlayerV2 {
     // Watchdog Timer
     this.watchdogTimer = null;
 
-    // Background Keep-Alive Audio Element with Micro-Dither
+    // Background Keep-Alive Audio Element with Micro-Dither Data URL
     this.silentAudio = null;
-    this.microDitherUrl = null;
+    this.microDitherDataUrl = null;
     this.isAudioSessionActive = false;
   }
 
@@ -122,10 +130,10 @@ export class IosVoicePlayerV2 {
     }
 
     try {
-      this.microDitherUrl = generateMicroDitherWavUrl();
-      audio.src = this.microDitherUrl;
+      this.microDitherDataUrl = generateMicroDitherBase64Wav();
+      audio.src = this.microDitherDataUrl;
     } catch (e) {
-      console.warn('[iOS v2] Failed to generate micro-dither URL, using empty fallback', e);
+      console.warn('[iOS v2] Failed to generate micro-dither Data URL, fallback to silent:', e);
     }
 
     audio.loop = true;
@@ -147,10 +155,9 @@ export class IosVoicePlayerV2 {
       if (this.silentAudio.paused) {
         this.silentAudio.play().then(() => {
           this.isAudioSessionActive = true;
-          logger.info('iOS v2 KeepAlive', '動態微振保活音訊播放中 (AudioSession 已啟動)');
+          logger.info('iOS v2 KeepAlive', '微振保活音訊播放中 (AudioSession 已啟動)');
         }).catch(err => {
           console.warn('[iOS v2] KeepAlive play blocked (waiting user interaction):', err);
-          logger.warn('iOS v2 KeepAlive', '微振保活音訊需手勢授權: ' + err);
         });
       } else {
         this.isAudioSessionActive = true;
@@ -189,7 +196,7 @@ export class IosVoicePlayerV2 {
 
   setupLifecycleCleanup() {
     const forceCleanup = (e) => {
-      // 關鍵防護 1：在 iOS Safari 中，鎖屏或切換至其他 App 會觸發 pagehide (e.persisted === true)
+      // 關鍵防護：在 iOS Safari 中，鎖屏或切換至其他 App 會觸發 pagehide (e.persisted === true)
       // 若此時調用 stop() 或 cancel() 會直接誤殺背景播放並造成 WebKit 語音通道死鎖！
       if (e && e.persisted) {
         logger.info('iOS v2 Lifecycle', '偵測到頁面進入背景快取 (pagehide persisted)，維持背景播放');
@@ -219,7 +226,6 @@ export class IosVoicePlayerV2 {
   setupVisibilitySync() {
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && this.isPlaying) {
-        // Unlock screen or return to foreground: sync UI instantly
         this.notifySentenceChange();
         this.updateMediaSessionMetadata();
       }
@@ -290,16 +296,13 @@ export class IosVoicePlayerV2 {
   }
 
   loadChapter(chapter, startSentenceIndex = 0, bookTitle = 'Xreader', isContinuousTransition = false) {
-    // 世代 Token 遞增：立即失效前一章節的所有非同步事件與句子回調
     this.playbackToken++;
     this.clearWatchdog();
 
-    // 關鍵修復：換章時絕不暫停保活音訊，絕不呼叫 this.stop()！
-    // 保持保活音訊不斷流，AudioSession 不會被 iOS 釋放
+    // 換章時維持保活音訊不斷流，絕不呼叫 this.stop()
     this.isPausedByUser = false;
     this.isProactiveEvade = false;
 
-    // 清理前一個 utterance
     if (this.currentUtterance) {
       if (window.__xreaderActiveUtterances) {
         window.__xreaderActiveUtterances.delete(this.currentUtterance);
@@ -334,7 +337,6 @@ export class IosVoicePlayerV2 {
       return;
     }
 
-    // 跨實例搶佔廣播
     if (this.mutexChannel) {
       try {
         this.mutexChannel.postMessage({ type: 'CLAIM_PLAYBACK', instanceId: this.instanceId });
@@ -361,22 +363,16 @@ export class IosVoicePlayerV2 {
       try { this.synth.resume(); } catch(e) {}
     }
 
+    // 關鍵修復：絕不在此使用 setTimeout！
+    // 在 iOS Safari 中，speechSynthesis.speak() 必須處於手勢點擊的同步堆疊中，否則被視為未授權調用
+    if (this.synth.speaking) {
+      try { this.synth.cancel(); } catch(e) {}
+    }
+
     logger.info('iOS v2 Player', `開始朗讀 (第 ${this.currentIndex + 1}/${this.flatSentences.length} 句, force=${force})`);
     this.notifyStateChange();
     this.updateMediaSessionMetadata();
-
-    // 關鍵平順過渡：若底層發音引擎當前正處於前一句/前一章的發音中，給予 60ms 安全排空間隔
-    // 讓 WebKit cancel 乾淨沉澱，防止新句子的 speak() 撞上 cancel 產生 canceled 錯誤
-    if (this.synth.speaking) {
-      try { this.synth.cancel(); } catch(e) {}
-      setTimeout(() => {
-        if (this.isPlaying && !this.isPausedByUser) {
-          this.speakCurrentSentence();
-        }
-      }, 60);
-    } else {
-      this.speakCurrentSentence();
-    }
+    this.speakCurrentSentence();
   }
 
   speakCurrentSentence() {
@@ -385,8 +381,6 @@ export class IosVoicePlayerV2 {
     if (!this.isPlaying || this.currentIndex >= this.flatSentences.length) {
       if (this.currentIndex >= this.flatSentences.length && this.isPlaying) {
         logger.info('iOS v2 Player', `本章全數朗讀完成 (共 ${this.flatSentences.length} 句)，維持保活音訊並立即跨章銜接`);
-        // 核心保活：絕不將 this.isPlaying 設為 false，絕不暫停保活音訊！
-        // 保持 MediaSession 處於 playing，防止 iOS 凍結背景行程
         eventBus.emit('audio:chapterEnd', {
           chapterIndex: this.currentChapter ? this.currentChapter.index : 0,
           isAutoTransition: true
@@ -397,7 +391,6 @@ export class IosVoicePlayerV2 {
 
     const currentToken = ++this.playbackToken;
 
-    // 清理前一個 utterance
     if (this.currentUtterance) {
       if (window.__xreaderActiveUtterances) {
         window.__xreaderActiveUtterances.delete(this.currentUtterance);
@@ -418,7 +411,7 @@ export class IosVoicePlayerV2 {
 
     this.currentUtterance = utterance;
 
-    // 【核心防護 1: GC 錨定】註冊至全域 Set，杜絕 Safari JSC 在朗讀途中垃圾回收引發斷流
+    // 【核心防護 1: GC 錨定】註冊至全域 Set
     if (window.__xreaderActiveUtterances) {
       window.__xreaderActiveUtterances.add(utterance);
     }
@@ -458,15 +451,8 @@ export class IosVoicePlayerV2 {
       if (this.playbackToken !== currentToken) return;
       if (this.isProactiveEvade || !this.isPlaying) return;
 
-      // 【核心防護 2: 自癒重試機制】
-      // 若在播放狀態下收到 canceled 或 interrupted（常見於 WebKit 引擎微暫態或音軌切換）
-      if (e.error === 'canceled' || e.error === 'interrupted') {
-        logger.warn('iOS v2 Player', `偵測到 WebKit 非預期中斷 (${e.error})，啟動自癒重試...`);
-        setTimeout(() => {
-          if (this.playbackToken === currentToken && this.isPlaying && !this.isPausedByUser) {
-            this.speakCurrentSentence();
-          }
-        }, 100);
+      // 若為正常中斷或取消，不進行非同步遞迴重試 (防止失去手勢導致無限死鎖)
+      if (e.error === 'interrupted' || e.error === 'canceled') {
         return;
       }
 
@@ -476,10 +462,9 @@ export class IosVoicePlayerV2 {
       this.speakCurrentSentence();
     };
 
-    // 【核心防護 3: 動態看門狗 Watchdog】
-    // WebKit 在短句、數字或標點符號常發生丟失 onend 事件的已知系統缺陷
+    // 【核心防護 2: 動態看門狗 Watchdog】防止 WebKit 在標點/符號丟失 onend
     const textLen = (text || '').length;
-    const estimatedDurationMs = Math.max(2200, Math.round((textLen / (Math.max(this.rate, 0.5) * 3.5)) * 1000) + 1800);
+    const estimatedDurationMs = Math.max(2000, Math.round((textLen / (Math.max(this.rate, 0.5) * 3.5)) * 1000) + 1800);
     this.watchdogTimer = setTimeout(() => {
       if (this.playbackToken === currentToken && this.isPlaying) {
         logger.warn('iOS v2 Watchdog', `第 ${this.currentIndex + 1} 句逾時 (${estimatedDurationMs}ms)，Watchdog 自動推進至下一句`);
@@ -492,11 +477,7 @@ export class IosVoicePlayerV2 {
     } catch (err) {
       console.warn('[iOS v2] synth.speak error:', err);
       logger.error('iOS v2 Player', `synth.speak 調用失敗: ${err}`);
-      setTimeout(() => {
-        if (this.playbackToken === currentToken && this.isPlaying) {
-          cleanupAndNext();
-        }
-      }, 200);
+      cleanupAndNext();
     }
   }
 
@@ -549,11 +530,7 @@ export class IosVoicePlayerV2 {
     this.notifySentenceChange();
 
     if (wasPlaying) {
-      setTimeout(() => {
-        if (this.isPlaying || wasPlaying) {
-          this.play(true);
-        }
-      }, 60);
+      this.play(true);
     }
   }
 
@@ -571,11 +548,7 @@ export class IosVoicePlayerV2 {
     this.rate = rate;
 
     if (wasPlaying) {
-      setTimeout(() => {
-        if (this.isPlaying || wasPlaying) {
-          this.play(true);
-        }
-      }, 60);
+      this.play(true);
     }
   }
 

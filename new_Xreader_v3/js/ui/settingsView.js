@@ -3,15 +3,16 @@
  * Manages platform display, independent PC vs iOS voice memories, default rate, and themes.
  */
 
-import { player, currentPlatform } from '../audio/playerFactory.js';
+import { player, currentPlatform, activeConfig } from '../audio/playerFactory.js';
 import { eventBus } from '../eventBus.js';
 import { logger } from '../core/logger.js';
 
 export class SettingsView {
   constructor() {
     this.platformBadge = document.getElementById('settings-platform-badge');
-    this.platformOverrideSelect = document.getElementById('settings-platform-override');
-    this.iosEngineSelect = document.getElementById('settings-ios-engine');
+    this.unifiedEngineSelect = document.getElementById('settings-unified-engine');
+    this.activeEngineBadge = document.getElementById('settings-active-engine-badge');
+    this.btnForceReloadCache = document.getElementById('btn-force-reload-cache');
     this.voiceSelect = document.getElementById('settings-voice-select');
     this.defaultRateSlider = document.getElementById('settings-default-rate');
     this.defaultRateVal = document.getElementById('settings-default-rate-val');
@@ -54,14 +55,13 @@ export class SettingsView {
       this.platformBadge.textContent = currentPlatform;
     }
 
-    if (this.platformOverrideSelect) {
-      const savedOverride = localStorage.getItem('platformOverride') || 'auto';
-      this.platformOverrideSelect.value = savedOverride;
+    if (this.activeEngineBadge && activeConfig) {
+      this.activeEngineBadge.textContent = activeConfig.modeText;
     }
 
-    if (this.iosEngineSelect) {
-      const savedEngine = localStorage.getItem('iosEngineVersion') || 'auto';
-      this.iosEngineSelect.value = savedEngine;
+    if (this.unifiedEngineSelect) {
+      const savedEngine = localStorage.getItem('xreaderEngine') || 'auto';
+      this.unifiedEngineSelect.value = savedEngine;
     }
   }
 
@@ -156,37 +156,41 @@ export class SettingsView {
   }
 
   bindEvents() {
-    // Platform override with cancel rollback (Story 16, GWT 16.1, 16.2)
-    if (this.platformOverrideSelect) {
-      this.platformOverrideSelect.addEventListener('change', (e) => {
-        const previousVal = localStorage.getItem('platformOverride') || 'auto';
+    // Unified engine / platform selector (Story 60)
+    if (this.unifiedEngineSelect) {
+      this.unifiedEngineSelect.addEventListener('change', (e) => {
+        const previousVal = localStorage.getItem('xreaderEngine') || 'auto';
         const nextVal = e.target.value;
         if (previousVal === nextVal) return;
 
-        const confirmed = confirm('變更模擬平台需要重新載入頁面以套用實體檔案隔離，是否確定切換並立即重新整理？');
+        const confirmed = confirm('變更核心引擎需要重新載入頁面，是否確定切換並立即重新整理？');
         if (confirmed) {
-          localStorage.setItem('platformOverride', nextVal);
-          location.reload();
+          localStorage.setItem('xreaderEngine', nextVal);
+          // Auto sync platformOverride for backward compatibility
+          if (nextVal === 'pc') localStorage.setItem('platformOverride', 'PC');
+          else if (nextVal.startsWith('ios')) localStorage.setItem('platformOverride', 'iOS');
+          else if (nextVal === 'android') localStorage.setItem('platformOverride', 'Android');
+          else localStorage.setItem('platformOverride', 'auto');
+
+          window.location.href = window.location.pathname + '?v=' + Date.now();
         } else {
-          // Rollback to previous option on cancel
-          this.platformOverrideSelect.value = previousVal;
+          this.unifiedEngineSelect.value = previousVal;
         }
       });
     }
 
-    // iOS Engine Version toggle (Story 58, 59)
-    if (this.iosEngineSelect) {
-      this.iosEngineSelect.addEventListener('change', (e) => {
-        const previousVal = localStorage.getItem('iosEngineVersion') || 'auto';
-        const nextVal = e.target.value;
-        if (previousVal === nextVal) return;
-
-        const confirmed = confirm('變更 iOS 朗讀核心引擎需要重新載入頁面，是否確定切換並立即重新整理？');
+    // Force reload cache button (Story 60)
+    if (this.btnForceReloadCache) {
+      this.btnForceReloadCache.addEventListener('click', async () => {
+        const confirmed = confirm('確定要清除瀏覽器快取並強制重載最新版本嗎？\n(這能徹底解決 iPad/Safari 讀到舊版本代碼的問題)');
         if (confirmed) {
-          localStorage.setItem('iosEngineVersion', nextVal);
-          location.reload();
-        } else {
-          this.iosEngineSelect.value = previousVal;
+          try {
+            if ('caches' in window) {
+              const keys = await caches.keys();
+              await Promise.all(keys.map(k => caches.delete(k)));
+            }
+          } catch (err) {}
+          window.location.href = window.location.pathname + '?v=' + Date.now();
         }
       });
     }
