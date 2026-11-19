@@ -114,6 +114,7 @@ export class CrawlerService {
     // 3. Extract Chapter Links with Dedicated Container Targeting (Story 40, Story 42, Story 43)
     // First, search for dedicated chapter containers BEFORE modifying the DOM
     const containerSelectors = [
+      '#allchapter',
       '#chapter-list', '.chapter-list', '#chapterlist', '#chapters', '.chapters',
       '#list', '.list-group', '.catalog', '#catalog',
       'ul[class*="chapter"]', 'div[class*="chapter"]',
@@ -195,19 +196,58 @@ export class CrawlerService {
   }
 
   /**
-   * Fetch and extract text content from single chapter URL
+   * Helper: Fetch a single HTML page and extract text, chapterTitle, nextUrl, and nextLinkText
+   * @param {string} pageUrl
    */
-  async fetchChapterContent(chapterUrl) {
-    const html = await this.fetchHTML(chapterUrl);
+  async _fetchSinglePage(pageUrl) {
+    const html = await this.fetchHTML(pageUrl);
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
 
-    // Remove scripts, styles, comments, ad containers
-    doc.querySelectorAll('script, style, noscript, iframe, .ad, .ads, header, footer, nav').forEach(el => el.remove());
+    // Extract nextUrl & chapterTitle BEFORE removing headers/nav
+    let nextUrl = null;
+    let nextLinkText = '';
+    let pageChapterTitle = '';
+
+    const titleH1 = doc.querySelector('h1, .txtnav h1, .title, .chapter-title');
+    if (titleH1 && titleH1.textContent.trim()) {
+      pageChapterTitle = titleH1.textContent.trim();
+    }
+
+    const allLinks = Array.from(doc.querySelectorAll('a'));
+
+    // Prioritize explicit next page / section link ('下一頁', '下一页', '下一節', '下一节')
+    let nextLink = allLinks.find(a => {
+      const t = a.textContent.trim();
+      return t === '下一頁' || t === '下一页' || t === '下一節' || t === '下一节' ||
+             t.includes('下一頁') || t.includes('下一页') || t.includes('下一節') || t.includes('下一节');
+    });
+
+    // Fallback: look for '下一章'
+    if (!nextLink) {
+      nextLink = allLinks.find(a => {
+        const t = a.textContent.trim();
+        return t === '下一章' || t.includes('下一章');
+      });
+    }
+
+    if (nextLink) {
+      nextLinkText = nextLink.textContent.trim();
+      const href = nextLink.getAttribute('href');
+      if (href && !href.startsWith('javascript:') && !href.includes('index.html') && !href.includes('/dir')) {
+        try {
+          nextUrl = new URL(href, pageUrl).href;
+        } catch (e) {}
+      }
+    }
+
+    // Remove scripts, styles, comments, ad containers, and novel543 clickforce blocks
+    doc.querySelectorAll('script, style, noscript, iframe, .ad, .ads, .gadBlock, [data-ad], ins, header, footer, nav').forEach(el => el.remove());
 
     // Target content selectors common in novel sites (Story 40)
     const contentSelectors = [
       '#content', '.content', '#chaptercontent', '#htmlContent',
+      '#txtcontent', '.txtcontent',
       'article', '.read-content', '#TextContent', 'div[id*="content"]',
       'div[style*="font-size: 20px"]', 'div[style*="word-wrap: break-word"]'
     ];
@@ -266,7 +306,131 @@ export class CrawlerService {
       throw new Error('來源網頁回傳防爬蟲驗證挑戰 (JavaScript/WAF)');
     }
 
-    return cleanText;
+    return {
+      content: cleanText,
+      nextUrl,
+      nextLinkText,
+      chapterTitle: pageChapterTitle
+    };
+  }
+
+  /**
+   * Fetch chapter content from URL with automatic multi-page stitching (Story 54)
+   * @param {string} chapterUrl - URL of chapter
+   * @param {boolean} [returnDetails=false] - If true, returns { content, nextUrl, chapterTitle }
+   */
+  async fetchChapterContent(chapterUrl, returnDetails = false) {
+    const page1 = await this._fetchSinglePage(chapterUrl);
+    let mergedContent = page1.content;
+    let pageChapterTitle = page1.chapterTitle;
+    let lastNextUrl = page1.nextUrl;
+
+    // Detect if this chapter is split into multiple sub-pages (e.g. 1/2, 2/2 or _2.html)
+    let rootBase = '';
+    try {
+      const parsedRoot = new URL(chapterUrl);
+      const rootFilename = parsedRoot.pathname.split('/').filter(Boolean).pop() || '';
+      rootBase = rootFilename.replace(/\.(html?|php|aspx?)$/i, '');
+    } catch (e) {}
+
+    const isSubpageUrl = (candidateUrl) => {
+      if (!candidateUrl || !rootBase) return false;
+      try {
+        const parsed = new URL(candidateUrl);
+        const candFilename = parsed.pathname.split('/').filter(Boolean).pop() || '';
+        const candBase = candFilename.replace(/\.(html?|php|aspx?)$/i, '');
+        const escaped = rootBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`^${escaped}[_-]\\d+$`, 'i').test(candBase);
+      } catch (e) {
+        return false;
+      }
+    };
+
+    let curPart = null;
+    let totalParts = null;
+    if (pageChapterTitle) {
+      const fractionMatch = pageChapterTitle.match(/[\(（](\d+)\s*[/／]\s*(\d+)[\)）]/);
+      if (fractionMatch) {
+        curPart = parseInt(fractionMatch[1], 10);
+        totalParts = parseInt(fractionMatch[2], 10);
+      }
+    }
+
+    let currentUrl = chapterUrl;
+    let currentNextUrl = page1.nextUrl;
+    let currentNextText = page1.nextLinkText;
+    const visitedUrls = new Set([chapterUrl]);
+    const MAX_SUBPAGES = 10;
+    let subpageCount = 0;
+
+    while (currentNextUrl && subpageCount < MAX_SUBPAGES) {
+      if (visitedUrls.has(currentNextUrl)) break;
+
+      const isExplicitNextPage = currentNextText && (
+        currentNextText === '下一頁' || currentNextText === '下一页' ||
+        currentNextText === '下一節' || currentNextText === '下一节' ||
+        currentNextText.includes('下一頁') || currentNextText.includes('下一页') ||
+        currentNextText.includes('下一節') || currentNextText.includes('下一节')
+      );
+      const isSubUrl = isSubpageUrl(currentNextUrl);
+      const isTitleFractionNext = (totalParts !== null && curPart !== null && curPart < totalParts && isSubUrl);
+
+      // If this next link is definitely a continuation of the same chapter:
+      if (isExplicitNextPage || isSubUrl || isTitleFractionNext) {
+        visitedUrls.add(currentNextUrl);
+        subpageCount++;
+
+        try {
+          // Polite delay between sub-pages
+          await new Promise(r => setTimeout(r, 400));
+          const subPage = await this._fetchSinglePage(currentNextUrl);
+
+          if (subPage.content) {
+            mergedContent += '\n\n' + subPage.content;
+          }
+
+          currentUrl = currentNextUrl;
+          currentNextUrl = subPage.nextUrl;
+          currentNextText = subPage.nextLinkText;
+          lastNextUrl = subPage.nextUrl;
+
+          // Check if sub-page title has new fraction
+          if (subPage.chapterTitle) {
+            const subFraction = subPage.chapterTitle.match(/[\(（](\d+)\s*[/／]\s*(\d+)[\)）]/);
+            if (subFraction) {
+              curPart = parseInt(subFraction[1], 10);
+              totalParts = parseInt(subFraction[2], 10);
+            }
+          }
+
+          // If reached final part (e.g. 2/2 or 3/3), stop fetching further sub-pages
+          if (totalParts !== null && curPart !== null && curPart >= totalParts) {
+            break;
+          }
+        } catch (subErr) {
+          console.warn(`[Crawler] 抓取同章第 ${subpageCount + 1} 頁 (${currentNextUrl}) 受阻:`, subErr.message);
+          break;
+        }
+      } else {
+        // Not a continuation sub-page (points to next chapter or elsewhere)
+        break;
+      }
+    }
+
+    // Clean (1/2) fraction from pageChapterTitle for canonical display
+    if (pageChapterTitle) {
+      pageChapterTitle = pageChapterTitle.replace(/[\(（]\s*\d+\s*[/／]\s*\d+\s*[\)）]/g, '').trim();
+    }
+
+    if (returnDetails) {
+      return {
+        content: mergedContent,
+        nextUrl: lastNextUrl,
+        chapterTitle: pageChapterTitle
+      };
+    }
+
+    return mergedContent;
   }
 
   /**
@@ -352,7 +516,9 @@ export class CrawlerService {
     const existingMap = new Map(existingChapters.map(c => [c.index, c]));
     const existingUrlMap = new Map(existingChapters.filter(c => c.url).map(c => [c.url, c]));
 
-    const total = targetChapters.length;
+    let total = targetChapters.length;
+    const isTwkan = Boolean(catalogUrl && catalogUrl.includes('twkan.com'));
+    const seenQueueUrls = new Set(targetChapters.map(c => c.url).filter(Boolean));
 
     for (let i = 0; i < total; i++) {
       if (this.isCancelled) {
@@ -379,6 +545,14 @@ export class CrawlerService {
             message: `[已略過快取] 第 ${i + 1} / ${total} 章: ${chapMeta.title}`
           });
           continue;
+        } else if (!chapMeta.url) {
+          // If this chapter was a placeholder, restore its source url so it can be re-downloaded
+          if (existChap.url) {
+            chapMeta.url = existChap.url;
+          } else if (existChap.content && existChap.content.includes('來源網址：')) {
+            const m = existChap.content.match(/來源網址：\s*(https?:\/\/[^\s\]]+)/);
+            if (m) chapMeta.url = m[1].trim();
+          }
         }
       }
 
@@ -391,29 +565,49 @@ export class CrawlerService {
         message: `正在下載 (${i + 1}/${total}): ${chapMeta.title}`
       });
 
-      // Story 40: Auto-retry up to 2 times with 2.5s delay
-      const MAX_RETRIES = 2;
+      // Story 40 & Smart Backoff: 一般錯誤重試 2 次 (2.5s)；遇 HTTP 429 (Too Many Requests) 則進行指數退避重試最多 4 次 (6s, 10s, 15s, 20s)
+      const DEFAULT_MAX_RETRIES = 2;
       let rawContent = '';
       let downloadError = null;
+      let chapterDetails = null;
 
-      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      for (let attempt = 0; attempt <= 4; attempt++) {
         if (this.isCancelled || this.isPaused) break;
         try {
-          rawContent = await this.fetchChapterContent(chapMeta.url);
+          if (isTwkan) {
+            chapterDetails = await this.fetchChapterContent(chapMeta.url, true);
+            rawContent = chapterDetails.content;
+            if (chapterDetails.chapterTitle && (!chapMeta.title || chapMeta.title.includes('連載章節') || chapMeta.title.includes('未命名') || chapMeta.title.includes('探測中'))) {
+              chapMeta.title = chapterDetails.chapterTitle;
+            }
+          } else {
+            rawContent = await this.fetchChapterContent(chapMeta.url);
+          }
           downloadError = null;
           break;
         } catch (err) {
           downloadError = err;
-          if (attempt < MAX_RETRIES && !this.isCancelled && !this.isPaused) {
+          const is429 = String(err.message).includes('429');
+          const maxRetries = is429 ? 4 : DEFAULT_MAX_RETRIES;
+
+          if (attempt < maxRetries && !this.isCancelled && !this.isPaused) {
+            const backoffDelays = [6000, 10000, 15000, 20000];
+            const waitMs = is429 ? (backoffDelays[attempt] || 15000) : 2500;
+            const waitSec = Math.round(waitMs / 1000);
+
             onProgress({
               status: 'downloading',
               current: i + 1,
               total,
               percent: Math.round(((i + 1) / total) * 100),
               title: chapMeta.title,
-              message: `⚠️ 第 ${i + 1} 章受阻 (${err.message})，2.5秒後自動重試 (${attempt + 1}/${MAX_RETRIES})...`
+              message: is429
+                ? `⚠️ 第 ${i + 1} 章遇頻率限制 (HTTP 429)，冷卻等待 ${waitSec} 秒後自動重試 (${attempt + 1}/${maxRetries})...`
+                : `⚠️ 第 ${i + 1} 章受阻 (${err.message})，${waitSec}秒後自動重試 (${attempt + 1}/${maxRetries})...`
             });
-            await new Promise(r => setTimeout(r, 2500));
+            await new Promise(r => setTimeout(r, waitMs));
+          } else {
+            break;
           }
         }
       }
@@ -448,6 +642,27 @@ export class CrawlerService {
       book.downloadedChaptersCount = i + 1;
       await storage.saveBook(book);
 
+      // twkan 專屬特製：內文「下一章」鏈式接力探測（補足被收納按鍵隱藏的中間章節）
+      if (isTwkan && chapterDetails && chapterDetails.nextUrl) {
+        const nextUrl = chapterDetails.nextUrl;
+        const nextInQueue = targetChapters[i + 1]?.url;
+        if (
+          nextUrl.includes('/txt/') &&
+          nextUrl !== nextInQueue &&
+          !existingUrlMap.has(nextUrl) &&
+          !seenQueueUrls.has(nextUrl)
+        ) {
+          seenQueueUrls.add(nextUrl);
+          targetChapters.splice(i + 1, 0, {
+            title: `連載章節 (接力探測中...)`,
+            url: nextUrl,
+            isLikelyChapter: true
+          });
+          total = targetChapters.length;
+          book.totalChapters = total;
+        }
+      }
+
       // Story 2: 即時更新爬蟲斷點記錄，確保隨時中斷皆能精確記錄進度與最後章節網址
       storage.saveCrawlerRecord({
         id: recordId || undefined,
@@ -461,9 +676,10 @@ export class CrawlerService {
         historicalKeys: targetChapters.slice(0, i + 1).map(c => c.url).filter(Boolean)
       });
 
-      // Respectful delay to avoid WAF IP blocking
-      if (i < total - 1 && delay > 0 && !this.isCancelled && !this.isPaused) {
-        await new Promise(r => setTimeout(r, delay * 1000));
+      // Respectful delay to avoid WAF / Rate Limit IP blocking (twkan 限制每章間隔至少 3.0 秒)
+      const effectiveDelay = isTwkan ? Math.max(delay, 3.0) : delay;
+      if (i < total - 1 && effectiveDelay > 0 && !this.isCancelled && !this.isPaused) {
+        await new Promise(r => setTimeout(r, effectiveDelay * 1000));
       }
     }
 

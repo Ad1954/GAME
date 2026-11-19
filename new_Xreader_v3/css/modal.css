@@ -218,13 +218,14 @@
 }
 
 /* ============================================================
-   Crawler Catalog Preview Modal (Story 42 & Mobile Adaption)
+   Crawler Catalog Preview & Update Modals (Story 42, 56 Mobile Adaptation)
    ============================================================ */
-#crawler-catalog-modal .modal-card {
+#crawler-catalog-modal .modal-card,
+#crawler-update-modal .modal-card {
   max-width: 720px;
   width: 95%;
-  max-height: calc(100vh - 20px);
-  max-height: calc(100dvh - 20px);
+  max-height: calc(100vh - 28px);
+  max-height: calc(100dvh - 28px);
 }
 
 #crawler-catalog-modal .catalog-preview-body {
@@ -250,30 +251,56 @@
   -webkit-overflow-scrolling: touch;
 }
 
+#crawler-update-chapters-list {
+  flex: 1 1 auto;
+  min-height: 140px;
+  max-height: none;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 @media (max-width: 600px) {
-  #crawler-catalog-modal .modal-card {
+  #crawler-catalog-modal .modal-card,
+  #crawler-update-modal .modal-card {
     width: 96%;
-    max-height: calc(100vh - 12px);
-    max-height: calc(100dvh - 12px);
+    max-height: calc(100vh - 28px);
+    max-height: calc(100dvh - 28px);
     border-radius: var(--radius-md);
   }
 
-  #crawler-catalog-modal .modal-header {
+  #crawler-catalog-modal .modal-header,
+  #crawler-update-modal .modal-header {
     padding: 0.75rem 0.9rem;
   }
 
-  #crawler-catalog-modal .modal-title {
+  #crawler-catalog-modal .modal-title,
+  #crawler-update-modal .modal-title {
     font-size: 1rem;
   }
 
-  #crawler-catalog-modal .catalog-preview-body {
+  #crawler-catalog-modal .catalog-preview-body,
+  #crawler-update-modal .modal-body {
     padding: 0.75rem 0.85rem;
     gap: 8px;
   }
 
-  #crawler-catalog-modal .modal-footer {
-    padding: 0.65rem 0.85rem;
+  /* 堆疊 2 行文字高度(~2.8rem / 45px) + iOS 安全區，將按鈕向上提拔脫離 iPhone 邊緣與手勢感應區 (Story 56) */
+  #crawler-catalog-modal .modal-footer,
+  #crawler-update-modal .modal-footer {
+    padding-top: 0.75rem;
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+    padding-bottom: calc(0.85rem + 2.8rem + env(safe-area-inset-bottom, 0px)) !important;
     gap: 8px;
+  }
+
+  /* 行動裝置優化觸控響應與無延遲點擊 */
+  #crawler-catalog-modal .modal-footer .btn,
+  #crawler-update-modal .modal-footer .btn {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+    min-height: 42px;
   }
 
   #crawler-catalog-modal .preview-summary-box {
@@ -299,16 +326,19 @@
     padding: 5px 10px !important;
   }
 
-  #preview-chapters-container {
+  #preview-chapters-container,
+  #crawler-update-chapters-list {
     min-height: 110px;
   }
 
-  #btn-confirm-catalog-download {
+  #btn-confirm-catalog-download,
+  #btn-confirm-crawler-update {
     font-size: 0.84rem !important;
     padding: 7px 12px !important;
   }
 
-  #btn-cancel-catalog-preview {
+  #btn-cancel-catalog-preview,
+  #btn-cancel-crawler-update {
     font-size: 0.84rem !important;
     padding: 7px 12px !important;
   }

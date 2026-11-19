@@ -16,6 +16,7 @@ import { PlayerBarView } from './ui/playerBarView.js';
 import { SettingsView } from './ui/settingsView.js';
 import { ChapterManagerView } from './ui/chapterManagerView.js';
 import { ContentEditModal } from './ui/contentEditModal.js';
+import { downloadQueue } from './core/downloadQueue.js';
 
 class App {
   constructor() {
@@ -87,6 +88,13 @@ class App {
       logger.info('Audio', `語音引擎就緒 (${elapsed}ms)`);
     }).catch(err => {
       console.error('[App] Player initialization error:', err);
+    });
+
+    // 4. Initialize Download Queue Persistence (Story 57)
+    downloadQueue.init().then(() => {
+      if (this.crawlerView) this.crawlerView.renderQueueUI();
+    }).catch(err => {
+      console.warn('[App] downloadQueue init error:', err);
     });
 
     console.log(`[App] new_Xreader ready in ${(performance.now() - t0).toFixed(1)}ms!`);

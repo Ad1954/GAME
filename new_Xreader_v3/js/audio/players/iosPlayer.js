@@ -66,14 +66,15 @@ export class IosVoicePlayer {
   }
 
   setupLifecycleCleanup() {
-    // 當關閉分頁、清除網頁或切換離開時，強制終止系統級語音服務，杜絕孤兒音軌
-    const forceCleanup = () => {
+    const forceCleanup = (e) => {
+      // 在 iOS Safari 中，鎖屏或切換至背景時 pagehide 的 e.persisted 為 true，嚴禁殺死背景播放
+      if (e && e.persisted) return;
       try {
         this.stop(true);
         if (this.synth) {
           this.synth.cancel();
         }
-      } catch (e) {}
+      } catch (err) {}
     };
     window.addEventListener('pagehide', forceCleanup);
     window.addEventListener('beforeunload', forceCleanup);

@@ -11,6 +11,7 @@ export class SettingsView {
   constructor() {
     this.platformBadge = document.getElementById('settings-platform-badge');
     this.platformOverrideSelect = document.getElementById('settings-platform-override');
+    this.iosEngineSelect = document.getElementById('settings-ios-engine');
     this.voiceSelect = document.getElementById('settings-voice-select');
     this.defaultRateSlider = document.getElementById('settings-default-rate');
     this.defaultRateVal = document.getElementById('settings-default-rate-val');
@@ -56,6 +57,11 @@ export class SettingsView {
     if (this.platformOverrideSelect) {
       const savedOverride = localStorage.getItem('platformOverride') || 'auto';
       this.platformOverrideSelect.value = savedOverride;
+    }
+
+    if (this.iosEngineSelect) {
+      const savedEngine = localStorage.getItem('iosEngineVersion') || 'auto';
+      this.iosEngineSelect.value = savedEngine;
     }
   }
 
@@ -164,6 +170,23 @@ export class SettingsView {
         } else {
           // Rollback to previous option on cancel
           this.platformOverrideSelect.value = previousVal;
+        }
+      });
+    }
+
+    // iOS Engine Version toggle (Story 58, 59)
+    if (this.iosEngineSelect) {
+      this.iosEngineSelect.addEventListener('change', (e) => {
+        const previousVal = localStorage.getItem('iosEngineVersion') || 'auto';
+        const nextVal = e.target.value;
+        if (previousVal === nextVal) return;
+
+        const confirmed = confirm('變更 iOS 朗讀核心引擎需要重新載入頁面，是否確定切換並立即重新整理？');
+        if (confirmed) {
+          localStorage.setItem('iosEngineVersion', nextVal);
+          location.reload();
+        } else {
+          this.iosEngineSelect.value = previousVal;
         }
       });
     }

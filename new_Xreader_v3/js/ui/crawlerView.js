@@ -91,6 +91,7 @@ export class CrawlerView {
     this.btnPreviewDeselectAll = document.getElementById('btn-preview-deselect-all');
     this.btnPreviewSmartSelect = document.getElementById('btn-preview-smart-select');
     this.chkPreviewTrim = document.getElementById('chk-preview-trim-head-tail');
+    this.chkPreviewReverse = document.getElementById('chk-preview-reverse-order');
     this.previewTrimTip = document.getElementById('preview-trim-tip');
     this.previewRangeStart = document.getElementById('preview-range-start');
     this.previewRangeEnd = document.getElementById('preview-range-end');
@@ -461,6 +462,9 @@ export class CrawlerView {
     if (this.chkPreviewTrim) {
       this.chkPreviewTrim.addEventListener('change', (e) => this.handleToggleTrim(e.target.checked));
     }
+    if (this.chkPreviewReverse) {
+      this.chkPreviewReverse.addEventListener('change', (e) => this.handleToggleReverseOrder(e.target.checked));
+    }
     if (this.btnPreviewApplyRange) {
       this.btnPreviewApplyRange.addEventListener('click', () => this.handlePreviewApplyRange());
     }
@@ -644,7 +648,11 @@ export class CrawlerView {
   openCatalogPreview(url, catalog, options = {}) {
     this.pendingCatalog = {
       url,
-      catalog,
+      catalog: {
+        ...catalog,
+        chapters: [...catalog.chapters]
+      },
+      isReversed: false,
       isRedownload: !!options.isRedownload,
       redownloadRecord: options.redownloadRecord || null,
       redownloadMode: options.redownloadMode || 'overwrite'
@@ -661,7 +669,13 @@ export class CrawlerView {
       }
     }
     if (this.previewBookAuthor) this.previewBookAuthor.textContent = catalog.author || options.redownloadRecord?.bookAuthor || '未知';
-    if (this.previewTotalBadge) this.previewTotalBadge.textContent = `共解析出 ${catalog.chapters.length} 篇`;
+    if (this.previewTotalBadge) {
+      if (url && url.includes('twkan.com')) {
+        this.previewTotalBadge.textContent = `共解析出 ${catalog.chapters.length} 篇 (收納目錄，下載時自動接力補全全書)`;
+      } else {
+        this.previewTotalBadge.textContent = `共解析出 ${catalog.chapters.length} 篇`;
+      }
+    }
 
     // 預設智慧推薦：自動勾選符合正文章節特徵者 (GWT 42.2, 43.2)
     catalog.chapters.forEach((chap, idx) => {
@@ -671,6 +685,7 @@ export class CrawlerView {
     });
 
     if (this.chkPreviewTrim) this.chkPreviewTrim.checked = true;
+    if (this.chkPreviewReverse) this.chkPreviewReverse.checked = false;
     if (this.previewTrimTip) this.previewTrimTip.textContent = '';
 
     if (this.previewRangeStart) this.previewRangeStart.value = '1';
@@ -694,6 +709,7 @@ export class CrawlerView {
     if (this.catalogModal) {
       this.catalogModal.classList.remove('active');
     }
+    if (this.chkPreviewReverse) this.chkPreviewReverse.checked = false;
     this.pendingCatalog = null;
     this.previewSelections.clear();
   }
@@ -819,6 +835,34 @@ export class CrawlerView {
   handleToggleTrim(isChecked) {
     if (!this.pendingCatalog) return;
     this.applyTrimFilter(isChecked, true);
+  }
+
+  handleToggleReverseOrder(isReversed) {
+    if (!this.pendingCatalog || !this.pendingCatalog.catalog?.chapters) return;
+    if (this.pendingCatalog.isReversed === isReversed) return;
+    this.pendingCatalog.isReversed = isReversed;
+
+    const chapters = this.pendingCatalog.catalog.chapters;
+    const total = chapters.length;
+
+    // 翻轉全書章節陣列
+    chapters.reverse();
+
+    // 翻轉已選取章節索引映射
+    const newSelections = new Set();
+    this.previewSelections.forEach((idx) => {
+      newSelections.add(total - 1 - idx);
+    });
+    this.previewSelections = newSelections;
+
+    this.renderPreviewChaptersList();
+    this.updatePreviewStats();
+
+    if (isReversed) {
+      this.showTrimTip('✔ 已反轉章節順序');
+    } else {
+      this.showTrimTip('✔ 已恢復原始順序');
+    }
   }
 
   applyTrimFilter(shouldTrim, showTip = true) {
@@ -1732,7 +1776,13 @@ export class CrawlerView {
             downloadQueue.resumeTask(paused.id);
             eventBus.emit('toast', { message: `恢復《${paused.bookTitle}》下載` });
           } else {
-            eventBus.emit('toast', { message: '目前無正在進行中的下載任務' });
+            const firstPending = pending.find(t => t.status === 'pending');
+            if (firstPending) {
+              downloadQueue.processNext();
+              eventBus.emit('toast', { message: `開始下載《${firstPending.bookTitle}》` });
+            } else {
+              eventBus.emit('toast', { message: '目前無正在進行中的下載任務' });
+            }
           }
         }
       });
@@ -1802,6 +1852,25 @@ export class CrawlerView {
     this.queueContainer.style.display = 'block';
     const totalInFlight = (activeTask ? 1 : 0) + pendingTasks.length;
     if (this.queueBadgeCount) this.queueBadgeCount.textContent = String(totalInFlight);
+
+    // 動態更新頂部佇列控制按鈕文字 (Story 57: 暫停 / 繼續切換)
+    if (this.btnQueuePauseAll) {
+      if (activeTask) {
+        this.btnQueuePauseAll.textContent = '⏸️ 暫停當前';
+        this.btnQueuePauseAll.style.display = 'inline-block';
+      } else {
+        const hasPaused = pendingTasks.some(t => t.status === 'paused');
+        if (hasPaused) {
+          this.btnQueuePauseAll.textContent = '▶️ 繼續下載';
+          this.btnQueuePauseAll.style.display = 'inline-block';
+        } else if (pendingTasks.length > 0) {
+          this.btnQueuePauseAll.textContent = '▶️ 開始下載';
+          this.btnQueuePauseAll.style.display = 'inline-block';
+        } else {
+          this.btnQueuePauseAll.style.display = 'none';
+        }
+      }
+    }
 
     // 1. 渲染當前活躍任務
     if (this.queueActiveSection) {

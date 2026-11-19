@@ -1,12 +1,37 @@
 /**
  * downloadQueue.js
- * 爬蟲多任務下載排程佇列管理器 (Story 54)
+ * 爬蟲多任務下載排程佇列管理器 (Story 54, Story 57)
  * 支援多任務排隊接力、非搶佔式常規排序 (上移/下移)、⚡ 立即插隊 (搶佔式暫停與斷點續傳)、❌ 放棄與中斷取消。
+ * Story 57: 具備本機持久化記憶與重啟接關續傳機制（支援 IndexedDB + localStorage 雙重防護）。
  */
 import { eventBus } from '../eventBus.js';
 import { crawler } from './crawler.js';
 import { bahaCrawler } from './bahaCrawler.js';
 import { storage } from './storage.js';
+
+const DB_NAME = 'XreaderQueueDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'tasks';
+const QUEUE_STORAGE_KEY = 'xreader_active_queue_tasks';
+
+function openQueueDB() {
+  return new Promise((resolve) => {
+    if (typeof indexedDB === 'undefined') return resolve(null);
+    try {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = (e) => resolve(e.target.result);
+      req.onerror = () => resolve(null);
+    } catch (e) {
+      resolve(null);
+    }
+  });
+}
 
 export class DownloadQueueManager {
   constructor() {
@@ -14,6 +39,149 @@ export class DownloadQueueManager {
     this.activeTaskId = null;
     this.isProcessing = false;
     this.coolDownMs = 1500; // 友善防封鎖冷卻間隔 (毫秒)
+    this._saveTimer = null;
+    this.isInitialized = false;
+
+    // 視窗關閉或分頁被切換前，強制同步保存當前排程至 localStorage (Story 57, GWT 57.2)
+    if (typeof window !== 'undefined') {
+      const unloadHandler = () => {
+        this.saveSyncToLocalStorage();
+      };
+      window.addEventListener('beforeunload', unloadHandler);
+      window.addEventListener('pagehide', unloadHandler);
+    }
+  }
+
+  /**
+   * 初始化排程佇列：自本機持久化資料庫載入未完成之任務 (Story 57, GWT 57.2)
+   */
+  async init() {
+    if (this.isInitialized) return;
+    this.isInitialized = true;
+    await this.loadFromStorage();
+  }
+
+  /**
+   * 同步寫入 localStorage（供 beforeunload/pagehide 瞬間調用）
+   */
+  saveSyncToLocalStorage() {
+    try {
+      const persistable = this.tasks.filter(t => t.status === 'pending' || t.status === 'downloading' || t.status === 'paused');
+      // 將中斷時之 downloading 任務先轉換為 paused 再保存
+      const toSave = persistable.map(t => {
+        if (t.status === 'downloading') {
+          return {
+            ...t,
+            status: 'paused',
+            isPreempted: false,
+            progress: {
+              ...(t.progress || {}),
+              message: `⏸️ 斷點已保存 (${t.progress?.current || 0}/${t.progress?.total || 0} 章)，點擊繼續自動續傳`
+            }
+          };
+        }
+        return t;
+      });
+      localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(toSave));
+    } catch (e) {}
+  }
+
+  /**
+   * 非同步保存任務佇列至持久化儲存 (IndexedDB + localStorage 雙重防護)
+   */
+  async saveToStorage() {
+    const persistable = this.tasks.filter(t => t.status === 'pending' || t.status === 'downloading' || t.status === 'paused');
+
+    // 1. 同步保存至 localStorage 快取
+    try {
+      localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(persistable));
+    } catch (e) {
+      console.warn('[downloadQueue] localStorage save error:', e);
+    }
+
+    // 2. 寫入 IndexedDB（無大小限制）
+    try {
+      const db = await openQueueDB();
+      if (db) {
+        const tx = db.transaction([STORE_NAME], 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.clear();
+        for (const t of persistable) {
+          store.put(t);
+        }
+      }
+    } catch (e) {
+      console.warn('[downloadQueue] IndexedDB save error:', e);
+    }
+  }
+
+  /**
+   * 防抖排程儲存 (避免頻繁章節進度更新拖慢效能)
+   */
+  _scheduleSave() {
+    if (this._saveTimer) return;
+    this._saveTimer = setTimeout(() => {
+      this._saveTimer = null;
+      this.saveToStorage();
+    }, 350);
+  }
+
+  /**
+   * 自本機儲存讀取復原任務清單 (Story 57)
+   */
+  async loadFromStorage() {
+    let loaded = null;
+
+    // 1. 優先自 IndexedDB 讀取
+    try {
+      const db = await openQueueDB();
+      if (db) {
+        const tx = db.transaction([STORE_NAME], 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        loaded = await new Promise((resolve) => {
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve(null);
+        });
+      }
+    } catch (e) {
+      console.warn('[downloadQueue] IndexedDB load error:', e);
+    }
+
+    // 2. 若 IndexedDB 無資料或讀取失敗，回退至 localStorage
+    if (!loaded || loaded.length === 0) {
+      try {
+        const raw = localStorage.getItem(QUEUE_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) loaded = parsed;
+        }
+      } catch (e) {
+        console.warn('[downloadQueue] localStorage load error:', e);
+      }
+    }
+
+    if (Array.isArray(loaded) && loaded.length > 0) {
+      // 復原任務：任何在關閉前為 downloading 的任務一律轉為 paused（保存斷點）
+      this.tasks = loaded.map(t => {
+        if (t.status === 'downloading') {
+          return {
+            ...t,
+            status: 'paused',
+            isPreempted: false,
+            progress: {
+              ...(t.progress || {}),
+              message: `⏸️ 斷點已保存 (${t.progress?.current || 0}/${t.progress?.total || 0} 章)，點擊繼續自動續傳`
+            }
+          };
+        }
+        return t;
+      });
+      this.activeTaskId = null;
+      this.isProcessing = false;
+      this.emitChange();
+      console.log(`[downloadQueue] 成功復原 ${this.tasks.length} 部排程小說。`);
+    }
   }
 
   /**
@@ -243,6 +411,7 @@ export class DownloadQueueManager {
       totalCount: this.tasks.length,
       pendingCount: this.getPendingTasks().length
     });
+    this._scheduleSave();
   }
 
   /**
@@ -278,6 +447,7 @@ export class DownloadQueueManager {
             message: info.message || ''
           };
           eventBus.emit('queue:progress', { task: nextTask, info });
+          this._scheduleSave();
         } else if (info.status === 'completed') {
           nextTask.progress.percent = 100;
           nextTask.progress.message = info.message || '全書下載完成！';
@@ -286,6 +456,7 @@ export class DownloadQueueManager {
             nextTask.targetBookId = info.book.id;
           }
           eventBus.emit('queue:progress', { task: nextTask, info });
+          this._scheduleSave();
         } else if (info.status === 'paused') {
           nextTask.status = 'paused';
           nextTask.progress.message = info.message || '已暫停（斷點已保存）';
@@ -293,10 +464,12 @@ export class DownloadQueueManager {
             nextTask.targetBookId = info.book.id;
           }
           eventBus.emit('queue:progress', { task: nextTask, info });
+          this._scheduleSave();
         } else if (info.status === 'cancelled') {
           nextTask.status = 'cancelled';
           nextTask.progress.message = info.message || '下載已取消';
           eventBus.emit('queue:progress', { task: nextTask, info });
+          this._scheduleSave();
         }
       };
 

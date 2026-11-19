@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="css/crawler.css?v=9.6">
   <link rel="stylesheet" href="css/bookshelf.css?v=9.6">
   <link rel="stylesheet" href="css/reader.css?v=9.6">
-  <link rel="stylesheet" href="css/modal.css?v=9.7">
+  <link rel="stylesheet" href="css/modal.css?v=9.11">
 </head>
 <body>
 
@@ -400,6 +400,18 @@
               <option value="Android">強制指定為 Android (背景保活策略)</option>
             </select>
           </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="settings-ios-engine">iOS 朗讀核心引擎 (跨版本支援)</label>
+          <select id="settings-ios-engine" class="form-select">
+            <option value="auto">自動判定 (推薦: 適用最新 iOS / iPadOS)</option>
+            <option value="v2">iOS v2 (新版強效模式: 防 GC 斷流、無縫跨章、動態微振保活)</option>
+            <option value="v1">iOS v1 (經典相容模式: 適用舊版 iOS 設備)</option>
+          </select>
+          <small style="color: var(--text-muted); font-size: 0.8rem; display: block; margin-top: 4px;">
+            更新至新版 iOS 17.2+ 或 M 系列 iPad 若發生自動停止朗讀、無法跨章或鎖屏中斷，請選擇 v2 強效模式。
+          </small>
         </div>
 
         <div class="form-group">
@@ -924,7 +936,7 @@
        Crawler Incremental Update Preview Modal (Story 27)
        ======================================================== -->
   <div id="crawler-update-modal" class="modal-backdrop">
-    <div class="modal-card" style="max-width: 720px; width: 95%; max-height: 85vh; display: flex; flex-direction: column;">
+    <div class="modal-card" style="display: flex; flex-direction: column;">
       <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
         <div>
           <h3 class="modal-title" id="crawler-update-modal-title" style="margin-bottom: 2px;">發現新發布章節 - 追更確認</h3>
@@ -947,7 +959,7 @@
             </button>
           </div>
         </div>
-        <div id="crawler-update-chapters-list" style="flex: 1; min-height: 220px; max-height: 48vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px; background: var(--bg-surface);">
+        <div id="crawler-update-chapters-list" style="flex: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px; background: var(--bg-surface);">
         </div>
         <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0;">
           💡 提示：系統已區分「✨ 最新連載」（預設勾選）與「⏭️ 先前未下載」（預設不選），勾選之補抓章節將自動依目錄正確順序歸位入庫。
@@ -1069,6 +1081,10 @@
               <input type="checkbox" id="chk-preview-trim-head-tail" checked style="cursor: pointer; margin: 0;">
               <span>去除首尾雜項</span>
             </label>
+            <label style="display: flex; align-items: center; gap: 5px; font-size: 0.82rem; color: var(--text-primary); cursor: pointer; user-select: none; background: var(--bg-surface); padding: 3px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);" title="勾選時將章節清單前後倒轉（由第 1 章至最新章），方便下載倒序排列的目錄網站">
+              <input type="checkbox" id="chk-preview-reverse-order" style="cursor: pointer; margin: 0;">
+              <span>反轉順序</span>
+            </label>
             <span id="preview-trim-tip" style="font-size: 0.78rem; color: var(--accent-primary); margin-left: 2px;"></span>
           </div>
           <!-- Range Select -->
@@ -1110,7 +1126,7 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Main ES Module Bootstrap -->
-  <script type="module" src="js/app.js?v=9.8"></script>
+  <script type="module" src="js/app.js?v=9.14"></script>
 </body>
 </html>
 

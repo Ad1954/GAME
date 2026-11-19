@@ -24,11 +24,14 @@ class StorageModule {
     this.initPromise = null;
 
     if (typeof window !== 'undefined') {
-      const closeHandler = () => {
+      const closeHandler = (e) => {
+        // 如果是背景掛起 (persisted)，嚴禁關閉資料庫連線，防止背景換章更新進度失敗
+        if (e && e.persisted) return;
         if (this.db) {
-          try { this.db.close(); } catch (e) {}
+          try { this.db.close(); } catch (err) {}
           this.db = null;
         }
+        this.initPromise = null;
       };
       window.addEventListener('beforeunload', closeHandler);
       window.addEventListener('pagehide', closeHandler);

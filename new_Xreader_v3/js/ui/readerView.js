@@ -176,17 +176,17 @@ export class ReaderView {
         const arrayIdx = this.currentChapters.findIndex(c => c.id === chapId);
         if (arrayIdx !== -1) {
           const wasPlaying = player.isPlaying;
-          this.loadChapterByIndex(arrayIdx, 0, wasPlaying);
+          this.loadChapterByIndex(arrayIdx, 0, wasPlaying, wasPlaying);
         }
       });
     }
 
     if (this.btnPrevChap) {
-      this.btnPrevChap.addEventListener('click', () => this.handlePrevChapter());
+      this.btnPrevChap.addEventListener('click', () => this.handlePrevChapter(null, true));
     }
 
     if (this.btnNextChap) {
-      this.btnNextChap.addEventListener('click', () => this.handleNextChapter());
+      this.btnNextChap.addEventListener('click', () => this.handleNextChapter(null, true));
     }
 
     // Sentence tap interaction with mobile scroll guard (ADR 0005)
@@ -432,13 +432,13 @@ export class ReaderView {
     }
   }
 
-  handlePrevChapter(forceAutoPlay = null) {
+  handlePrevChapter(forceAutoPlay = null, isContinuousTransition = false) {
     if (!this.currentChapter || !this.currentChapters || this.currentChapters.length === 0) return;
     const currentArrayIdx = this.currentChapters.findIndex(c => c.id === this.currentChapter.id);
     const prevIdx = (currentArrayIdx !== -1) ? currentArrayIdx - 1 : -1;
     const shouldPlay = (typeof forceAutoPlay === 'boolean') ? forceAutoPlay : player.isPlaying;
     if (prevIdx >= 0) {
-      this.loadChapterByIndex(prevIdx, 0, shouldPlay);
+      this.loadChapterByIndex(prevIdx, 0, shouldPlay, isContinuousTransition);
     }
   }
 
