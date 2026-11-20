@@ -63,10 +63,14 @@ export class ReaderView {
       }
     });
 
-    // Story 60: 監聽導覽列切換分頁，若切換至其他分頁自動釋放閱讀器滾動鎖定
+    // Story 60 / Story 1: 監聽導覽列切換分頁，若切換至其他分頁僅暫時釋放外層視窗滾動鎖定，不關閉閱讀器
     eventBus.on('nav:switchTab', (tabId) => {
       if (tabId !== 'tab-bookshelf') {
-        this.hideReader();
+        document.documentElement.classList.remove('reader-active');
+        document.body.classList.remove('reader-active');
+      } else if (this.isReaderVisible()) {
+        document.documentElement.classList.add('reader-active');
+        document.body.classList.add('reader-active');
       }
     });
   }
@@ -316,21 +320,22 @@ export class ReaderView {
     // Double-guard: ensure chapter has paragraphs (Story 10, 11)
     this.ensureChapterSegmented(chapter);
 
+    // Load into audio engine FIRST and start playback BEFORE heavy DOM rendering,
+    // so iOS Safari never drops user gesture / audio context during chapter transition!
+    player.loadChapter(chapter, sentenceIndex, this.currentBook ? this.currentBook.title : 'Xreader', isContinuousTransition);
+
+    if (autoPlay) {
+      player.play(true);
+    }
+
     // Render paragraphs and sentences
     this.renderChapterText(chapter);
-
-    // Load into audio engine with transition flag
-    player.loadChapter(chapter, sentenceIndex, this.currentBook ? this.currentBook.title : 'Xreader', isContinuousTransition);
 
     // Update progress in DB (ADR 0004) - 非阻塞非同步寫入，確保播放與背景排程絕不延遲
     if (this.currentBook) {
       storage.updateProgress(this.currentBook.id, boundedIdx, sentenceIndex).catch(err => {
         console.warn('Update progress background error:', err);
       });
-    }
-
-    if (autoPlay) {
-      player.play(isContinuousTransition);
     }
   }
 
@@ -440,6 +445,10 @@ export class ReaderView {
     if (prevIdx >= 0) {
       this.loadChapterByIndex(prevIdx, 0, shouldPlay, isContinuousTransition);
     }
+  }
+
+  isReaderVisible() {
+    return !!(this.panel && this.panel.style.display !== 'none' && this.currentBook);
   }
 
   showReader() {

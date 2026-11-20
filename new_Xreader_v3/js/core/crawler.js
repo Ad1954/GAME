@@ -13,12 +13,14 @@ export const DEFAULT_PROXIES = [
 ];
 
 /**
- * 智慧環境檢測：判定當前是否為本地伺服器環境 (如透過 .bat 啟動訪問 localhost 或 127.0.0.1)
+ * 智慧環境檢測：判定當前是否為本地伺服器或區域網路直連環境 (localhost / 127.0.0.1 / 192.168.x.x / 10.x.x.x / 172.16~31.x.x)
  */
 export function isLocalEnvironment() {
   if (typeof window === 'undefined' || !window.location) return true;
   const host = window.location.hostname || '';
-  return host === 'localhost' || host === '127.0.0.1' || host === '';
+  if (host === 'localhost' || host === '127.0.0.1' || host === '') return true;
+  if (/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(host)) return true;
+  return false;
 }
 
 export class CrawlerService {

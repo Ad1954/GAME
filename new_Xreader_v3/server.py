@@ -1,5 +1,6 @@
 import http.server
 import socketserver
+import socket
 import os
 import sys
 import urllib.request
@@ -8,6 +9,26 @@ import urllib.error
 import json
 
 PORT = 8000
+
+def get_lan_ips():
+    ips = []
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        primary_ip = s.getsockname()[0]
+        s.close()
+        if primary_ip and not primary_ip.startswith("127."):
+            ips.append(primary_ip)
+    except Exception:
+        pass
+    try:
+        hostname = socket.gethostname()
+        for ip in socket.gethostbyname_ex(hostname)[2]:
+            if not ip.startswith("127.") and ip not in ips:
+                ips.append(ip)
+    except Exception:
+        pass
+    return ips or ["127.0.0.1"]
 
 class EnhancedHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
@@ -96,20 +117,27 @@ class EnhancedHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         super().do_GET()
 
+class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
 def run():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(script_dir)
     
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", PORT), EnhancedHTTPRequestHandler) as httpd:
-        print("=" * 60)
+    lan_ips = get_lan_ips()
+    with ThreadedTCPServer(("", PORT), EnhancedHTTPRequestHandler) as httpd:
+        print("=" * 64)
         print(" [new_Xreader] Zero-Cache & Direct-Proxy Server Running!")
-        print(f" URL: http://localhost:{PORT}")
+        print(f" [PC Local URL]       http://localhost:{PORT}")
+        for ip in lan_ips:
+            print(f" [iPad / Mobile Wi-Fi] http://{ip}:{PORT}")
+        print("-" * 64)
         print(" Features:")
         print("  - Cache Policy: NO-CACHE / NO-STORE (Always live latest code)")
-        print("  - Local Proxy Endpoint: http://localhost:8000/proxy?url=...")
-        print("  - Live Console Logger:  POST /api/log")
-        print("=" * 60, flush=True)
+        print(f"  - Local Proxy Endpoint: http://{lan_ips[0]}:{PORT}/proxy?url=...")
+        print("  - Live Console Logger:  POST /api/log (iPad logs print here!)")
+        print("=" * 64, flush=True)
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

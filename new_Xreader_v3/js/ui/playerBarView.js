@@ -72,10 +72,12 @@ export class PlayerBarView {
   }
 
   bindEvents() {
-    // Play / Pause
+    // Play / Pause (含 iOS 失步自癒檢測：若 player.isPlaying 為 true 但底層發音已被系統靜默中斷，點擊按鈕直接觸發重啟發音)
     if (this.btnPlay) {
       this.btnPlay.addEventListener('click', () => {
-        if (player.isPlaying) {
+        if (typeof player.togglePlayPause === 'function') {
+          player.togglePlayPause();
+        } else if (player.isPlaying) {
           player.pause();
         } else {
           player.play();

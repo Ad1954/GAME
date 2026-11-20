@@ -198,17 +198,29 @@ export class IosVoicePlayer {
     return allVoices;
   }
 
+  togglePlayPause() {
+    if (this.isPlaying) {
+      const isActuallyAlive = this.synth && (this.synth.speaking || this.synth.pending) && !this.synth.paused;
+      if (!isActuallyAlive) {
+        logger.info('iOS v1 SelfHeal', '偵測到狀態失步，點擊按鈕直接觸發自癒重播');
+        this.play(true);
+        return;
+      }
+      this.pause();
+    } else {
+      this.play();
+    }
+  }
+
   loadChapter(chapter, startSentenceIndex = 0, bookTitle = 'Xreader', isContinuousTransition = false) {
     this.playbackToken++;
+    this.isProactiveEvade = false;
+    this.isPausedByUser = false;
 
-    if (isContinuousTransition) {
-      // 跨章連續播放：維持保活音訊不斷流，前一章自然結束時發音佇列已排空，不調用 cancel() 以免誤殺新章節首句
-      this.isProactiveEvade = false;
-    } else {
-      this.stop(false);
+    if (!isContinuousTransition && this.synth && (this.synth.speaking || this.synth.pending || this.synth.paused)) {
+      try { this.synth.cancel(); } catch (e) {}
     }
 
-    this.isPausedByUser = false;
     this.currentChapter = chapter;
     this.bookTitle = bookTitle;
     this.flatSentences = [];

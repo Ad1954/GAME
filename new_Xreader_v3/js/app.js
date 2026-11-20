@@ -112,9 +112,14 @@ class App {
   }
 
   switchTab(tabId) {
-    // Story 1: 若當前處於小說內文閱讀器畫面，切換到其他標籤時自動退出閱讀器並解除視窗捲動鎖定
-    if (tabId !== 'tab-bookshelf' && this.readerView) {
-      this.readerView.hideReader();
+    // Story 1: 切換至非書櫃分頁（爬蟲/設定）時，僅暫時解除外層視窗滾動鎖定，絕不關閉閱讀器 (hideReader)，
+    // 確保切回「書櫃與閱讀」時，小說內文與朗讀狀態原封不動保持，不觸發 openBook() 重置語音！
+    if (tabId !== 'tab-bookshelf') {
+      document.documentElement.classList.remove('reader-active');
+      document.body.classList.remove('reader-active');
+    } else if (this.readerView && this.readerView.isReaderVisible()) {
+      document.documentElement.classList.add('reader-active');
+      document.body.classList.add('reader-active');
     }
 
     this.navTabs.forEach(t => {
