@@ -14,6 +14,7 @@
 
 import { eventBus } from '../../eventBus.js';
 import { logger } from '../../core/logger.js';
+import { SILENT_15S_WAV_BASE64 } from '../silentAudioData.js';
 
 // Global Utterance Anchor to protect active utterances from WebKit GC
 if (typeof window !== 'undefined' && !window.__xreaderActiveUtterances) {
@@ -129,39 +130,25 @@ export class IosVoicePlayerV2 {
       document.body.appendChild(audio);
     }
 
-    try {
-      this.microDitherDataUrl = generateMicroDitherBase64Wav();
-      audio.src = this.microDitherDataUrl;
-    } catch (e) {
-      console.warn('[iOS v2] Failed to generate micro-dither Data URL, fallback to silent:', e);
-    }
-
+    // Story 61: 改用純數位零振幅相容靜音音軌 (SILENT_15S_WAV_BASE64)，避免觸發 CoreAudio 聲道互斥與壓縮鴨子音 (Ducking)
+    audio.src = SILENT_15S_WAV_BASE64;
     audio.loop = true;
-    audio.volume = 0.01; // Inaudible to user, non-zero for CoreAudio hardware routing
+    audio.volume = 0.01;
 
-    // Auto-recover if WebKit attempts to pause background audio while still playing
-    audio.addEventListener('pause', () => {
-      if (this.isPlaying && !this.isPausedByUser && !this.isProactiveEvade) {
-        logger.warn('iOS v2 KeepAlive', '偵測到保活音訊遭系統暫停，自動發起恢復...');
-        audio.play().catch(() => {});
-      }
-    });
-
+    // 關鍵修復：絕不在 audio 上加 pause 監聽反撲 play()，避免與 speechSynthesis 搶佔聲道導致 1~2 字腰斬！
     this.silentAudio = audio;
   }
 
   startKeepAlive() {
-    if (this.silentAudio) {
-      if (this.silentAudio.paused) {
-        this.silentAudio.play().then(() => {
-          this.isAudioSessionActive = true;
-          logger.info('iOS v2 KeepAlive', '微振保活音訊播放中 (AudioSession 已啟動)');
-        }).catch(err => {
-          console.warn('[iOS v2] KeepAlive play blocked (waiting user interaction):', err);
-        });
-      } else {
+    if (this.silentAudio && this.silentAudio.paused) {
+      this.silentAudio.play().then(() => {
         this.isAudioSessionActive = true;
-      }
+        logger.info('iOS v2 KeepAlive', '靜音保活音訊已啟動 (AudioSession 活化)');
+      }).catch(err => {
+        console.warn('[iOS v2] KeepAlive play blocked (waiting user interaction):', err);
+      });
+    } else if (this.silentAudio) {
+      this.isAudioSessionActive = true;
     }
   }
 
@@ -363,9 +350,8 @@ export class IosVoicePlayerV2 {
       try { this.synth.resume(); } catch(e) {}
     }
 
-    // 關鍵修復：絕不在此使用 setTimeout！
-    // 在 iOS Safari 中，speechSynthesis.speak() 必須處於手勢點擊的同步堆疊中，否則被視為未授權調用
-    if (this.synth.speaking) {
+    // 換章或連續播放時絕不呼叫 cancel()，避免 iOS WebKit 取消佇列後鎖死後續 speak()
+    if (!force && this.synth.speaking) {
       try { this.synth.cancel(); } catch(e) {}
     }
 
@@ -402,19 +388,31 @@ export class IosVoicePlayerV2 {
 
     const text = this.flatSentences[this.currentIndex];
     const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'zh-TW'; // Story 61: 明確設定繁體中文語言代碼，避免 iOS 誤用外語引擎
     utterance.rate = Math.min(Math.max(this.rate, 0.5), 2.5);
     utterance.pitch = this.pitch;
 
     if (this.activeVoice) {
       utterance.voice = this.activeVoice;
+    } else {
+      // 容錯機制：若尚未綁定聲音，從系統即時尋找中文聲音
+      try {
+        const voices = this.synth.getVoices();
+        const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('cmn'));
+        if (zhVoice) {
+          this.activeVoice = zhVoice;
+          utterance.voice = zhVoice;
+        }
+      } catch (e) {}
     }
 
     this.currentUtterance = utterance;
 
-    // 【核心防護 1: GC 錨定】註冊至全域 Set
+    // 【核心防護 1: GC 錨定】註冊至全域 Set 與頂層引用
     if (window.__xreaderActiveUtterances) {
       window.__xreaderActiveUtterances.add(utterance);
     }
+    window.__xreaderCurrentUtterance = utterance;
 
     let hasTriggeredStart = false;
     const triggerStart = () => {
@@ -433,6 +431,9 @@ export class IosVoicePlayerV2 {
       if (window.__xreaderActiveUtterances) {
         window.__xreaderActiveUtterances.delete(utterance);
       }
+      if (window.__xreaderCurrentUtterance === utterance) {
+        window.__xreaderCurrentUtterance = null;
+      }
       if (this.playbackToken !== currentToken) return;
       if (this.isProactiveEvade || !this.isPlaying) return;
       this.currentIndex++;
@@ -448,6 +449,9 @@ export class IosVoicePlayerV2 {
       if (window.__xreaderActiveUtterances) {
         window.__xreaderActiveUtterances.delete(utterance);
       }
+      if (window.__xreaderCurrentUtterance === utterance) {
+        window.__xreaderCurrentUtterance = null;
+      }
       if (this.playbackToken !== currentToken) return;
       if (this.isProactiveEvade || !this.isPlaying) return;
 
@@ -462,12 +466,12 @@ export class IosVoicePlayerV2 {
       this.speakCurrentSentence();
     };
 
-    // 【核心防護 2: 動態看門狗 Watchdog】防止 WebKit 在標點/符號丟失 onend
+    // 【核心防護 2: 動態看門狗 Watchdog】放寬逾時時間至 8 秒以上，僅作為異常凍結之最後防線，不提前干擾正常朗讀
     const textLen = (text || '').length;
-    const estimatedDurationMs = Math.max(2000, Math.round((textLen / (Math.max(this.rate, 0.5) * 3.5)) * 1000) + 1800);
+    const estimatedDurationMs = Math.max(8000, Math.round((textLen / (Math.max(this.rate, 0.5) * 2.5)) * 1000) + 4000);
     this.watchdogTimer = setTimeout(() => {
       if (this.playbackToken === currentToken && this.isPlaying) {
-        logger.warn('iOS v2 Watchdog', `第 ${this.currentIndex + 1} 句逾時 (${estimatedDurationMs}ms)，Watchdog 自動推進至下一句`);
+        logger.warn('iOS v2 Watchdog', `第 ${this.currentIndex + 1} 句異常逾時 (${estimatedDurationMs}ms)，Watchdog 自動推進至下一句`);
         cleanupAndNext();
       }
     }, estimatedDurationMs);

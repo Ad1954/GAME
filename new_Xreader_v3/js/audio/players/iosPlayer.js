@@ -300,11 +300,25 @@ export class IosVoicePlayer {
     const text = this.flatSentences[this.currentIndex];
 
     this.currentUtterance = new SpeechSynthesisUtterance(text);
+    this.currentUtterance.lang = 'zh-TW'; // Story 61: 明確設定繁中語言代碼
     this.currentUtterance.rate = Math.min(Math.max(this.rate, 0.5), 2.5);
     this.currentUtterance.pitch = this.pitch;
 
     if (this.activeVoice) {
       this.currentUtterance.voice = this.activeVoice;
+    } else {
+      try {
+        const voices = this.synth.getVoices();
+        const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('cmn'));
+        if (zhVoice) {
+          this.activeVoice = zhVoice;
+          this.currentUtterance.voice = zhVoice;
+        }
+      } catch (e) {}
+    }
+
+    if (typeof window !== 'undefined') {
+      window.__xreaderCurrentUtterance = this.currentUtterance;
     }
 
     // GWT 20.1: Millisecond-accurate audio-visual synchronization (onstart trigger)
