@@ -1,30 +1,34 @@
 /**
- * new_Xreader - iOS Voice Player v2 (Story 58, 59, 60, 61, 62)
- * High-performance mobile voice player optimized for modern iOS/iPadOS (iPadOS 27.2.1 / M-series / WebKit).
+ * new_Xreader - iOS Voice Player v2 (Story 58 ~ 63, v9.18)
+ * High-performance mobile voice player optimized for iPadOS 27.2.1 / iOS Safari WebKit.
  *
- * Key Architecture & Resiliency:
- * 1. Sliding-Window Native Queue Pre-feeding (PREQUEUE_SIZE = 8):
- *    Pre-queues up to 8 sentences into iOS native AVSpeechSynthesizer queue so background /
- *    other-tab / lock-screen playback continues seamlessly even when WebKit throttles background JS timers!
- * 2. Safe Cancel-to-Speak Isolation (60ms settle delay when cancelling an active queue):
- *    Never calls synth.cancel() and synth.speak() in the same 0ms tick, preventing WebKit zombie queue lockups.
- * 3. Self-Healing Toggle & Visibility Recovery:
- *    Detects desync (isPlaying=true while synth.speaking=false) on button tap or tab return,
- *    automatically recovering without requiring a page reload.
- * 4. Compliant Zero-Amplitude KeepAlive Audio & navigator.audioSession ('playback') declaration.
- * 5. Global Utterance GC Protection Anchor (window.__xreaderActiveUtterances).
+ * Core Solutions for the 4 Mandatory Priorities:
+ * 1. Full-Chapter Playback (Priority 1):
+ *    - Single active SpeechSynthesisUtterance anchored to window.__xreaderCurrentUtterance (prevents WebKit GC).
+ *    - Compliant 15s zero-amplitude WAV KeepAlive + navigator.audioSession.type = 'playback'.
+ * 2. Zero-Deadlock Sentence Seeking & Pause/Resume (Priority 2):
+ *    - NEVER wraps user-gesture seekSentence() or play() in a setTimeout!
+ *      Executes detach -> synth.cancel() -> synth.speak() synchronously (0ms) within the user's tap gesture,
+ *      preserving iOS WebKit User Activation Token and eliminating 1-2 sentence seek deadlocks.
+ * 3. Seamless Cross-Chapter Continuation (Priority 3):
+ *    - When a chapter ends naturally (isContinuousTransition = true), NEVER calls synth.cancel()!
+ *      (In WebKit, synth.speaking is still true inside onend; calling cancel() inside onend kills the next chapter).
+ * 4. Background & Cross-Tab Long-Stream Relay (Priority 4):
+ *    - When document.hidden becomes true (switching browser tabs, minimizing Safari, or locking screen),
+ *      immediately merges remaining chapter sentences from currentIndex into one continuous background Utterance,
+ *      tracking sentence progress via onboundary + elapsed time estimation so iOS AVSpeechSynthesizer reads the
+ *      entire chapter continuously without needing background JS timers to fire between sentences!
+ *    - When returning to the tab (document.hidden === false), syncs sentence highlight without calling
+ *      gestureless cancel()+speak(), completely preventing tab-return deadlocks.
  */
 
 import { eventBus } from '../../eventBus.js';
 import { logger } from '../../core/logger.js';
 import { SILENT_15S_WAV_BASE64 } from '../silentAudioData.js';
 
-// Global Utterance Anchor to protect active utterances from WebKit GC
 if (typeof window !== 'undefined' && !window.__xreaderActiveUtterances) {
   window.__xreaderActiveUtterances = new Set();
 }
-
-const PREQUEUE_WINDOW_SIZE = 8;
 
 export class IosVoicePlayerV2 {
   constructor() {
@@ -33,7 +37,6 @@ export class IosVoicePlayerV2 {
     this.bookTitle = 'Xreader';
     this.flatSentences = [];
     this.currentIndex = 0;
-    this.nextQueueIndex = 0;
     this.isPlaying = false;
     this.rate = 1.0;
     this.pitch = 1.0;
@@ -43,17 +46,18 @@ export class IosVoicePlayerV2 {
     this.isProactiveEvade = false;
     this.isPausedByUser = false;
 
-    // Mutex & Re-entrancy guards
+    // Background Long-Stream Relay tracking
+    this.isBackgroundStreamMode = false;
+    this.bgStreamStartIndex = 0;
+    this.bgStreamOffsets = [];
+    this.bgStreamStartTime = 0;
+
+    // Mutex & Generation token
     this.instanceId = 'xreader_iosv2_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     this.playbackToken = 0;
     this.mutexChannel = null;
 
-    // Timers
-    this.watchdogTimer = null;
-    this.cancelSettleTimer = null;
-    this.resumeHeartbeatTimer = null;
-
-    // Background Keep-Alive Audio Element
+    // Keep-Alive Audio Element
     this.silentAudio = null;
     this.isAudioSessionActive = false;
   }
@@ -70,43 +74,19 @@ export class IosVoicePlayerV2 {
     this.setupVisibilitySync();
     this.setupMutexChannel();
     this.setupLifecycleCleanup();
-    this.startResumeHeartbeat();
 
     if (this.synth && this.synth.onvoiceschanged !== undefined) {
       this.synth.onvoiceschanged = () => this.loadVoices();
     }
-    logger.info('iOS v2 Engine', 'iOS 朗讀核心引擎 v2 (滑動預載佇列 + 自癒防死鎖模式) 初始化完成');
+    logger.info('iOS v2 Engine', 'iOS 朗讀核心引擎 v2 (v9.18 同步手勢直通 + 背景長流接力模式) 初始化完成');
   }
 
-  /**
-   * Safari 16.4+ / iPadOS 27+: Explicitly declare audioSession type as 'playback'
-   * so iOS routes speech & keep-alive as primary media playback (continuing in background / lock screen).
-   */
   configureNativeAudioSession() {
     try {
       if (typeof navigator !== 'undefined' && 'audioSession' in navigator && navigator.audioSession) {
         navigator.audioSession.type = 'playback';
-        logger.info('iOS v2 AudioSession', '已啟用原生 navigator.audioSession.type = playback');
       }
-    } catch (e) {
-      console.warn('[iOS v2] navigator.audioSession setup warning:', e);
-    }
-  }
-
-  /**
-   * Periodic lightweight check: if iOS WebKit unexpectedly pauses speechSynthesis while isPlaying is true
-   * (e.g. tab switch or system notification), kick it back with synth.resume().
-   */
-  startResumeHeartbeat() {
-    if (this.resumeHeartbeatTimer) clearInterval(this.resumeHeartbeatTimer);
-    this.resumeHeartbeatTimer = setInterval(() => {
-      if (!this.isPlaying || this.isPausedByUser || this.isProactiveEvade) return;
-      try {
-        if (this.synth.speaking && this.synth.paused) {
-          this.synth.resume();
-        }
-      } catch (e) {}
-    }, 600);
+    } catch (e) {}
   }
 
   setupKeepAliveAudio() {
@@ -131,9 +111,7 @@ export class IosVoicePlayerV2 {
     if (this.silentAudio && this.silentAudio.paused) {
       this.silentAudio.play().then(() => {
         this.isAudioSessionActive = true;
-      }).catch(err => {
-        console.warn('[iOS v2] KeepAlive play blocked (waiting user interaction):', err);
-      });
+      }).catch(() => {});
     } else if (this.silentAudio) {
       this.isAudioSessionActive = true;
     }
@@ -158,77 +136,176 @@ export class IosVoicePlayerV2 {
         this.mutexChannel.onmessage = (event) => {
           if (event.data && event.data.type === 'CLAIM_PLAYBACK') {
             if (event.data.instanceId !== this.instanceId && this.isPlaying) {
-              logger.info('iOS v2 Mutex', '偵測到其他分頁發起播放，本實例讓位釋放音訊');
               this.stop(true);
             }
           }
         };
-      } catch (e) {
-        console.warn('[iOS v2] BroadcastChannel not supported:', e);
-      }
+      } catch (e) {}
     }
   }
 
   setupLifecycleCleanup() {
     const forceCleanup = (e) => {
-      if (e && e.persisted) {
-        logger.info('iOS v2 Lifecycle', '偵測到頁面進入背景快取 (pagehide persisted)，維持背景播放');
-        return;
-      }
+      if (e && e.persisted) return;
       try {
-        this.clearTimers();
         this.stop(true);
-        if (this.synth) {
-          this.synth.cancel();
-        }
-        if (window.__xreaderActiveUtterances) {
-          window.__xreaderActiveUtterances.clear();
-        }
       } catch (err) {}
     };
 
     window.addEventListener('pagehide', (e) => {
-      if (!e.persisted) {
-        forceCleanup(e);
-      }
+      if (!e.persisted) forceCleanup(e);
     });
     window.addEventListener('beforeunload', forceCleanup);
   }
 
   /**
-   * Story 3: Visibility Self-Healing
-   * When user switches back from another browser tab or unlocks the screen:
-   * 1. Sync sentence highlight & MediaSession metadata immediately.
-   * 2. If isPlaying is true, check if iOS suspended/dropped the speech queue while hidden:
-   *    - If paused, resume it and top-up the pre-queue window.
-   *    - If completely stopped (!speaking && !pending), automatically re-ignite from currentIndex
-   *      or cleanly reset state so the play button NEVER gets stuck in a flashing dead state!
+   * Story 3 (Priority 4): Background Long-Stream Relay & Zero-Deadlock Tab Return
+   * - When entering background / switching away to another tab (document.hidden === true):
+   *   While JS is still active in the visibilitychange callback, switch from single-sentence mode
+   *   to a merged multi-sentence utterance so iOS AVSpeechSynthesizer keeps speaking continuously
+   *   even after Safari suspends background JS timers!
+   * - When returning to the tab (document.hidden === false):
+   *   NEVER call cancel() + speak() without a user gesture!
+   *   If speech is still running, keep it running and sync UI highlight;
+   *   if iOS stopped it in background, sync isPlaying = false cleanly so the user can tap Play with 0 deadlock.
    */
   setupVisibilitySync() {
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
+      if (document.hidden) {
+        if (this.isPlaying && !this.isPausedByUser && !this.isBackgroundStreamMode) {
+          this.enterBackgroundStreamMode();
+        }
+      } else {
+        // Returned to foreground tab
         if (this.isPlaying) {
+          // If background stream was running without boundary events, estimate current sentence by elapsed time
+          if (this.isBackgroundStreamMode && this.bgStreamStartTime > 0 && this.bgStreamOffsets.length > 0) {
+            this.syncBackgroundProgressByElapsed();
+          }
+
           this.notifySentenceChange();
           this.updateMediaSessionMetadata();
-          this.startKeepAlive();
 
-          try {
-            if (this.synth.paused) {
-              this.synth.resume();
-            }
-            if (!this.synth.speaking && !this.synth.pending) {
-              logger.info('iOS v2 Visibility', '切回分頁偵測到背景語音佇列已排空或被系統中斷，自動接續重啟當前句');
-              this.restartFromCurrentIndex(true);
-            } else {
-              // Top up sliding window queue if still speaking
-              this.fillPreQueue(this.playbackToken);
-            }
-          } catch (e) {
-            console.warn('[iOS v2] Visibility recovery error:', e);
+          // Check actual hardware synthesizer state without firing gestureless cancel()+speak()
+          const isSynthAlive = this.synth && (this.synth.speaking || this.synth.pending);
+          if (!isSynthAlive) {
+            logger.info('iOS v2 Visibility', '切回分頁偵測到系統已結束或暫停背景語音，已自動同步按鈕為待播放狀態');
+            this.isBackgroundStreamMode = false;
+            this.isPlaying = false;
+            this.notifyStateChange();
+            this.updateMediaSessionMetadata();
+          } else if (this.synth.paused && !this.isPausedByUser) {
+            try { this.synth.resume(); } catch (e) {}
           }
         }
       }
     });
+  }
+
+  /**
+   * Merges sentences from currentIndex (up to 60 sentences / ~2500 chars) into a single continuous utterance
+   * right as the page enters background/hidden state, allowing uninterrupted background reading.
+   */
+  enterBackgroundStreamMode() {
+    if (!this.isPlaying || this.currentIndex >= this.flatSentences.length) return;
+    // If only 1 sentence left in chapter, let it finish normally
+    if (this.currentIndex >= this.flatSentences.length - 1) return;
+
+    const token = ++this.playbackToken;
+    this.isBackgroundStreamMode = true;
+    this.bgStreamStartIndex = this.currentIndex;
+    this.bgStreamStartTime = Date.now();
+    this.bgStreamOffsets = [];
+
+    const maxBatch = Math.min(this.flatSentences.length, this.currentIndex + 60);
+    let combinedText = '';
+    for (let idx = this.currentIndex; idx < maxBatch; idx++) {
+      const s = this.flatSentences[idx] || '';
+      const startChar = combinedText.length;
+      combinedText += s + ' ';
+      const endChar = combinedText.length;
+      this.bgStreamOffsets.push({
+        sentenceIndex: idx,
+        startChar,
+        endChar,
+        length: s.length
+      });
+    }
+
+    this.detachCurrentUtterance();
+    try {
+      this.synth.cancel();
+    } catch (e) {}
+
+    const bgUtterance = this.createConfiguredUtterance(combinedText);
+    this.anchorUtterance(bgUtterance);
+
+    bgUtterance.onboundary = (e) => {
+      if (this.playbackToken !== token || !this.isPlaying) return;
+      if (typeof e.charIndex === 'number') {
+        for (let i = this.bgStreamOffsets.length - 1; i >= 0; i--) {
+          if (e.charIndex >= this.bgStreamOffsets[i].startChar) {
+            const mappedIdx = this.bgStreamOffsets[i].sentenceIndex;
+            if (mappedIdx !== this.currentIndex) {
+              this.currentIndex = mappedIdx;
+              this.notifySentenceChange();
+              this.updateMediaSessionMetadata();
+            }
+            break;
+          }
+        }
+      }
+    };
+
+    bgUtterance.onend = () => {
+      this.releaseUtterance(bgUtterance);
+      if (this.playbackToken !== token || !this.isPlaying) return;
+      this.isBackgroundStreamMode = false;
+      this.currentIndex = maxBatch;
+      if (this.currentIndex >= this.flatSentences.length) {
+        eventBus.emit('audio:chapterEnd', {
+          chapterIndex: this.currentChapter ? this.currentChapter.index : 0,
+          isAutoTransition: true
+        });
+      } else if (!document.hidden) {
+        this.speakCurrentSentence();
+      } else {
+        this.enterBackgroundStreamMode();
+      }
+    };
+
+    bgUtterance.onerror = (e) => {
+      this.releaseUtterance(bgUtterance);
+      if (this.playbackToken !== token || !this.isPlaying) return;
+      this.isBackgroundStreamMode = false;
+      if (e && (e.error === 'interrupted' || e.error === 'canceled')) return;
+      if (!document.hidden) {
+        this.speakCurrentSentence();
+      }
+    };
+
+    try {
+      this.synth.speak(bgUtterance);
+      logger.info('iOS v2 Background', `已啟動背景長流接力模式 (合併第 ${this.bgStreamStartIndex + 1} ~ ${maxBatch} 句)`);
+    } catch (err) {
+      this.isBackgroundStreamMode = false;
+    }
+  }
+
+  syncBackgroundProgressByElapsed() {
+    // Only use elapsed fallback if onboundary didn't already advance currentIndex
+    if (this.currentIndex > this.bgStreamStartIndex) return;
+    const elapsedSec = (Date.now() - this.bgStreamStartTime) / 1000;
+    if (elapsedSec < 2) return;
+    const charsPerSec = 4.2 * Math.max(this.rate, 0.5);
+    const approxCharsRead = Math.floor(elapsedSec * charsPerSec);
+    for (let i = 0; i < this.bgStreamOffsets.length; i++) {
+      if (approxCharsRead >= this.bgStreamOffsets[i].startChar) {
+        this.currentIndex = this.bgStreamOffsets[i].sentenceIndex;
+      } else {
+        break;
+      }
+    }
   }
 
   setupMediaSession() {
@@ -288,27 +365,13 @@ export class IosVoicePlayerV2 {
     return allVoices;
   }
 
-  clearWatchdog() {
-    if (this.watchdogTimer) {
-      clearTimeout(this.watchdogTimer);
-      this.watchdogTimer = null;
-    }
-  }
-
-  clearTimers() {
-    this.clearWatchdog();
-    if (this.cancelSettleTimer) {
-      clearTimeout(this.cancelSettleTimer);
-      this.cancelSettleTimer = null;
-    }
-  }
-
-  clearActiveUtterances() {
+  detachCurrentUtterance() {
     if (window.__xreaderActiveUtterances) {
       window.__xreaderActiveUtterances.forEach(u => {
         u.onstart = null;
         u.onend = null;
         u.onerror = null;
+        u.onboundary = null;
       });
       window.__xreaderActiveUtterances.clear();
     }
@@ -316,6 +379,7 @@ export class IosVoicePlayerV2 {
       this.currentUtterance.onstart = null;
       this.currentUtterance.onend = null;
       this.currentUtterance.onerror = null;
+      this.currentUtterance.onboundary = null;
       this.currentUtterance = null;
     }
     if (typeof window !== 'undefined') {
@@ -323,37 +387,80 @@ export class IosVoicePlayerV2 {
     }
   }
 
+  anchorUtterance(utterance) {
+    this.currentUtterance = utterance;
+    if (typeof window !== 'undefined') {
+      window.__xreaderCurrentUtterance = utterance;
+      if (window.__xreaderActiveUtterances) {
+        window.__xreaderActiveUtterances.add(utterance);
+      }
+    }
+  }
+
+  releaseUtterance(utterance) {
+    if (typeof window !== 'undefined' && window.__xreaderActiveUtterances) {
+      window.__xreaderActiveUtterances.delete(utterance);
+    }
+    if (this.currentUtterance === utterance) {
+      this.currentUtterance = null;
+    }
+  }
+
+  createConfiguredUtterance(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'zh-TW';
+    utterance.rate = Math.min(Math.max(this.rate, 0.5), 2.5);
+    utterance.pitch = this.pitch;
+
+    if (this.activeVoice) {
+      utterance.voice = this.activeVoice;
+    } else {
+      try {
+        const voices = this.synth.getVoices();
+        const zhVoice = voices.find(v => v.lang && (v.lang.includes('zh') || v.lang.includes('cmn')));
+        if (zhVoice) {
+          this.activeVoice = zhVoice;
+          utterance.voice = zhVoice;
+        }
+      } catch (e) {}
+    }
+    return utterance;
+  }
+
   /**
-   * Story 2: Self-healing Play/Pause Toggle
-   * If UI thinks player.isPlaying === true, but WebKit speechSynthesis is actually dead (!speaking && !pending),
-   * treat the user's tap as an immediate fresh Play (re-igniting audio with user gesture) instead of pausing!
+   * Self-healing Play/Pause Toggle (called directly from user click on Play/Pause button)
    */
   togglePlayPause() {
     if (this.isPlaying) {
       const isActuallyAlive = this.synth && (this.synth.speaking || this.synth.pending) && !this.synth.paused;
       if (!isActuallyAlive) {
-        logger.info('iOS v2 SelfHeal', '偵測到狀態失步 (UI顯示播放中但底層已停音)，點擊按鈕直接觸發自癒重播');
-        this.restartFromCurrentIndex(true);
+        logger.info('iOS v2 SelfHeal', '偵測到底層已停音，利用使用者點擊手勢直接同步重啟朗讀');
+        this.isPlaying = false;
+        this.play(false);
         return;
       }
       this.pause();
     } else {
-      this.play();
+      this.play(false);
     }
   }
 
   loadChapter(chapter, startSentenceIndex = 0, bookTitle = 'Xreader', isContinuousTransition = false) {
     this.playbackToken++;
-    this.clearTimers();
-    this.clearActiveUtterances();
-
+    this.isBackgroundStreamMode = false;
     this.isPausedByUser = false;
     this.isProactiveEvade = false;
+    this.detachCurrentUtterance();
 
-    // Only cancel hardware queue if not a natural end-of-chapter transition (when queue is already empty)
-    if (!isContinuousTransition && this.synth && (this.synth.speaking || this.synth.pending || this.synth.paused)) {
+    // CRITICAL FIX for Priority 3 (Cross-Chapter Continuation):
+    // When isContinuousTransition === true (triggered from last sentence's onend),
+    // WebKit's synth.speaking is STILL true during the onend callback!
+    // We MUST NOT call synth.cancel() here during an auto-transition, otherwise WebKit locks the queue!
+    if (!isContinuousTransition) {
       try {
-        this.synth.cancel();
+        if (this.synth && (this.synth.speaking || this.synth.pending || this.synth.paused)) {
+          this.synth.cancel();
+        }
       } catch (e) {}
     }
 
@@ -371,53 +478,11 @@ export class IosVoicePlayerV2 {
     }
 
     this.currentIndex = Math.max(0, Math.min(startSentenceIndex, Math.max(0, this.flatSentences.length - 1)));
-    this.nextQueueIndex = this.currentIndex;
     this.notifySentenceChange();
     this.updateMediaSessionMetadata();
   }
 
-  /**
-   * Safely flushes any existing WebKit speech queue and starts speaking from currentIndex
-   * after a 60ms settle window (if cancel was required) so WebKit never deadlocks on 0ms cancel+speak.
-   */
-  restartFromCurrentIndex(useSettleDelay = true) {
-    const token = ++this.playbackToken;
-    this.clearTimers();
-    this.clearActiveUtterances();
-
-    this.isPausedByUser = false;
-    this.isProactiveEvade = false;
-    this.isPlaying = true;
-    this.nextQueueIndex = this.currentIndex;
-
-    this.startKeepAlive();
-    this.notifyStateChange();
-    this.updateMediaSessionMetadata();
-
-    const needsCancel = this.synth && (this.synth.speaking || this.synth.pending || this.synth.paused);
-    if (needsCancel) {
-      try {
-        this.synth.cancel();
-      } catch (e) {}
-    }
-
-    if (needsCancel && useSettleDelay) {
-      this.cancelSettleTimer = setTimeout(() => {
-        if (this.playbackToken !== token || !this.isPlaying) return;
-        try {
-          if (this.synth.paused) this.synth.resume();
-        } catch (e) {}
-        this.fillPreQueue(token);
-      }, 65);
-    } else {
-      try {
-        if (this.synth.paused) this.synth.resume();
-      } catch (e) {}
-      this.fillPreQueue(token);
-    }
-  }
-
-  play(isTransitionOrForce = false) {
+  play(isContinuousTransition = false) {
     if (!this.currentChapter || this.flatSentences.length === 0) {
       logger.warn('iOS v2 Player', 'play() 略過: 無章節或句子長度為 0');
       return;
@@ -430,9 +495,10 @@ export class IosVoicePlayerV2 {
     }
 
     this.startKeepAlive();
+    this.isBackgroundStreamMode = false;
 
-    // Clean resume if paused by user and queue is still genuinely intact in WebKit
-    if (!isTransitionOrForce && this.isPausedByUser && this.synth.speaking && this.synth.paused) {
+    // Clean resume if paused by user via synth.pause() and queue is still paused
+    if (!isContinuousTransition && this.isPausedByUser && this.synth.speaking && this.synth.paused) {
       this.isPausedByUser = false;
       this.isPlaying = true;
       try {
@@ -441,206 +507,114 @@ export class IosVoicePlayerV2 {
       logger.info('iOS v2 Player', 'synth.resume() 恢復朗讀');
       this.notifyStateChange();
       this.updateMediaSessionMetadata();
-      this.fillPreQueue(this.playbackToken);
       return;
     }
-
-    const token = ++this.playbackToken;
-    this.clearTimers();
-    this.clearActiveUtterances();
 
     this.isPausedByUser = false;
     this.isProactiveEvade = false;
     this.isPlaying = true;
-    this.nextQueueIndex = this.currentIndex;
 
-    logger.info('iOS v2 Player', `開始朗讀 (第 ${this.currentIndex + 1}/${this.flatSentences.length} 句, transition=${isTransitionOrForce})`);
+    // CRITICAL FIX:
+    // If this is a natural cross-chapter transition (isContinuousTransition === true),
+    // NEVER call synth.cancel()! The previous chapter's last utterance just ended naturally.
+    if (!isContinuousTransition) {
+      this.detachCurrentUtterance();
+      if (this.synth.paused || this.synth.speaking || this.synth.pending) {
+        try {
+          this.synth.cancel();
+        } catch (e) {}
+      }
+    }
+
+    logger.info('iOS v2 Player', `開始朗讀 (第 ${this.currentIndex + 1}/${this.flatSentences.length} 句, autoTransition=${isContinuousTransition})`);
     this.notifyStateChange();
     this.updateMediaSessionMetadata();
 
-    // If transitioning from natural chapter end, queue is already empty — speak immediately!
-    // If cancelling an active speech queue, wait 60ms settle time so iOS WebKit doesn't eat the new utterance.
-    const hadActiveQueue = this.synth && (this.synth.speaking || this.synth.pending || this.synth.paused);
-    if (hadActiveQueue) {
-      try {
-        this.synth.cancel();
-      } catch (e) {}
-      this.cancelSettleTimer = setTimeout(() => {
-        if (this.playbackToken !== token || !this.isPlaying) return;
-        try {
-          if (this.synth.paused) this.synth.resume();
-        } catch (e) {}
-        this.fillPreQueue(token);
-      }, 65);
-    } else {
-      try {
-        if (this.synth.paused) this.synth.resume();
-      } catch (e) {}
-      this.fillPreQueue(token);
-    }
+    // Speak synchronously (0ms) to preserve User Gesture token or onend audio chain!
+    this.speakCurrentSentence();
   }
 
-  /**
-   * Story 3: Sliding-Window Native Queue Pre-feeding
-   * Keeps up to PREQUEUE_WINDOW_SIZE (8) sentences queued in iOS native AVSpeechSynthesizer.
-   * When Safari goes to background or another tab, iOS native speech daemon continues reading
-   * the pre-queued utterances back-to-back without stalling when JS timers are throttled!
-   */
-  fillPreQueue(token) {
-    if (!this.isPlaying || this.playbackToken !== token) return;
-
-    // Check if the entire chapter has finished
-    if (this.currentIndex >= this.flatSentences.length) {
-      logger.info('iOS v2 Player', `本章全數朗讀完成 (共 ${this.flatSentences.length} 句)，立即跨章銜接`);
-      eventBus.emit('audio:chapterEnd', {
-        chapterIndex: this.currentChapter ? this.currentChapter.index : 0,
-        isAutoTransition: true
-      });
-      return;
-    }
-
-    // Resolve preferred Chinese voice once
-    if (!this.activeVoice) {
-      try {
-        const voices = this.synth.getVoices();
-        const zhVoice = voices.find(v => v.lang && (v.lang.includes('zh') || v.lang.includes('cmn')));
-        if (zhVoice) {
-          this.activeVoice = zhVoice;
-        }
-      } catch (e) {}
-    }
-
-    const targetLimit = Math.min(this.flatSentences.length, this.currentIndex + PREQUEUE_WINDOW_SIZE);
-
-    while (this.nextQueueIndex < targetLimit) {
-      const sentenceIdx = this.nextQueueIndex;
-      this.nextQueueIndex++;
-      this.enqueueSentence(sentenceIdx, token);
-    }
-  }
-
-  enqueueSentence(sentenceIdx, token) {
-    const text = this.flatSentences[sentenceIdx];
-    if (!text) return;
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'zh-TW';
-    utterance.rate = Math.min(Math.max(this.rate, 0.5), 2.5);
-    utterance.pitch = this.pitch;
-    if (this.activeVoice) {
-      utterance.voice = this.activeVoice;
-    }
-
-    // Protect from WebKit Garbage Collector
-    if (window.__xreaderActiveUtterances) {
-      window.__xreaderActiveUtterances.add(utterance);
-    }
-    if (sentenceIdx === this.currentIndex) {
-      this.currentUtterance = utterance;
-      window.__xreaderCurrentUtterance = utterance;
-    }
-
-    utterance.onstart = () => {
-      if (this.playbackToken !== token || !this.isPlaying || this.isProactiveEvade) return;
-      this.currentIndex = sentenceIdx;
-      this.currentUtterance = utterance;
-      window.__xreaderCurrentUtterance = utterance;
-      this.notifySentenceChange();
-      this.updateMediaSessionMetadata();
-      this.armWatchdogForSentence(sentenceIdx, text, token);
-    };
-
-    const handleSentenceComplete = () => {
-      if (window.__xreaderActiveUtterances) {
-        window.__xreaderActiveUtterances.delete(utterance);
-      }
-      if (this.playbackToken !== token || !this.isPlaying || this.isProactiveEvade) return;
-
-      // Advance currentIndex to the sentence after this one
-      if (sentenceIdx >= this.currentIndex) {
-        this.currentIndex = sentenceIdx + 1;
-      }
-
-      if (this.currentIndex >= this.flatSentences.length) {
-        this.clearWatchdog();
-        logger.info('iOS v2 Player', `本章全數朗讀完成 (共 ${this.flatSentences.length} 句)，維持保活音訊並立即跨章銜接`);
+  speakCurrentSentence() {
+    if (!this.isPlaying || this.currentIndex >= this.flatSentences.length) {
+      if (this.currentIndex >= this.flatSentences.length && this.isPlaying) {
+        logger.info('iOS v2 Player', `本章全數朗讀完成 (共 ${this.flatSentences.length} 句)，立即跨章銜接`);
         eventBus.emit('audio:chapterEnd', {
           chapterIndex: this.currentChapter ? this.currentChapter.index : 0,
           isAutoTransition: true
         });
-        return;
       }
+      return;
+    }
 
-      // Highlight next sentence & top up sliding window pre-queue
+    // If page is currently in background when chapter transitions or advances, use background stream mode
+    if (typeof document !== 'undefined' && document.hidden) {
+      this.enterBackgroundStreamMode();
+      return;
+    }
+
+    const currentToken = ++this.playbackToken;
+    this.detachCurrentUtterance();
+
+    const text = this.flatSentences[this.currentIndex];
+    const utterance = this.createConfiguredUtterance(text);
+    this.anchorUtterance(utterance);
+
+    let hasTriggeredStart = false;
+    const triggerStart = () => {
+      if (this.playbackToken !== currentToken) return;
+      if (hasTriggeredStart || this.isProactiveEvade || !this.isPlaying) return;
+      hasTriggeredStart = true;
       this.notifySentenceChange();
       this.updateMediaSessionMetadata();
-      this.armWatchdogForSentence(this.currentIndex, this.flatSentences[this.currentIndex] || '', token);
-      this.fillPreQueue(token);
     };
 
+    utterance.onstart = triggerStart;
+    setTimeout(triggerStart, 180);
+
     utterance.onend = () => {
-      handleSentenceComplete();
+      this.releaseUtterance(utterance);
+      if (this.playbackToken !== currentToken) return;
+      if (this.isProactiveEvade || !this.isPlaying) return;
+      this.currentIndex++;
+      this.speakCurrentSentence();
     };
 
     utterance.onerror = (e) => {
-      if (window.__xreaderActiveUtterances) {
-        window.__xreaderActiveUtterances.delete(utterance);
-      }
-      if (this.playbackToken !== token || !this.isPlaying || this.isProactiveEvade) return;
+      this.releaseUtterance(utterance);
+      if (this.playbackToken !== currentToken) return;
+      if (this.isProactiveEvade || !this.isPlaying) return;
       if (e && (e.error === 'interrupted' || e.error === 'canceled')) {
         return;
       }
       console.warn('[iOS v2 Player] Utterance error, advancing:', e ? e.error : 'unknown');
-      handleSentenceComplete();
+      this.currentIndex++;
+      this.speakCurrentSentence();
     };
 
-    // Arm watchdog if this is the immediate active sentence
-    if (sentenceIdx === this.currentIndex) {
-      this.armWatchdogForSentence(sentenceIdx, text, token);
-    }
-
     try {
+      if (this.synth.paused) {
+        this.synth.resume();
+      }
       this.synth.speak(utterance);
     } catch (err) {
       console.warn('[iOS v2] synth.speak error:', err);
     }
   }
 
-  armWatchdogForSentence(sentenceIdx, text, token) {
-    this.clearWatchdog();
-    const textLen = (text || '').length;
-    const estimatedDurationMs = Math.max(10000, Math.round((textLen / (Math.max(this.rate, 0.5) * 2.5)) * 1000) + 5000);
-    this.watchdogTimer = setTimeout(() => {
-      if (this.playbackToken !== token || !this.isPlaying || this.isPausedByUser) return;
-      // Only intervene if speechSynthesis is completely idle/stuck (not speaking)
-      if (!this.synth.speaking) {
-        logger.warn('iOS v2 Watchdog', `第 ${sentenceIdx + 1} 句偵測到底層發音靜默卡死，Watchdog 自動自癒推進`);
-        this.currentIndex = sentenceIdx + 1;
-        if (this.currentIndex >= this.flatSentences.length) {
-          eventBus.emit('audio:chapterEnd', {
-            chapterIndex: this.currentChapter ? this.currentChapter.index : 0,
-            isAutoTransition: true
-          });
-        } else {
-          this.restartFromCurrentIndex(true);
-        }
-      }
-    }, estimatedDurationMs);
-  }
-
   pause() {
     this.playbackToken++;
-    this.clearTimers();
     this.isPlaying = false;
     this.isPausedByUser = true;
     logger.info('iOS v2 Player', `使用者暫停 (停於第 ${this.currentIndex + 1} 句)`);
 
-    // On iOS WebKit, synth.cancel() on pause + fresh pre-queue on play() is far more reliable
-    // than synth.pause(), which frequently corrupts multi-utterance queues in WebKit!
-    this.clearActiveUtterances();
-    try {
-      this.synth.cancel();
-    } catch (e) {}
+    // If we were in background merged stream mode, cancel cleanly so resuming in foreground starts at exact sentence
+    if (this.isBackgroundStreamMode) {
+      this.isBackgroundStreamMode = false;
+      this.detachCurrentUtterance();
+      try { this.synth.cancel(); } catch (e) {}
+    } else if (this.synth.speaking) {
+      try { this.synth.pause(); } catch (e) {}
+    }
 
     this.stopKeepAlive(false);
     this.notifyStateChange();
@@ -649,47 +623,67 @@ export class IosVoicePlayerV2 {
 
   stop(forceDestroy = false) {
     this.playbackToken++;
-    this.clearTimers();
+    this.isBackgroundStreamMode = false;
     this.isPlaying = false;
     this.isPausedByUser = false;
     this.isProactiveEvade = true;
 
-    this.clearActiveUtterances();
-    try {
-      this.synth.cancel();
-    } catch (e) {}
-    setTimeout(() => {
-      this.isProactiveEvade = false;
-    }, 80);
+    this.detachCurrentUtterance();
+    try { this.synth.cancel(); } catch (e) {}
+    setTimeout(() => { this.isProactiveEvade = false; }, 60);
 
     this.stopKeepAlive(forceDestroy);
     this.notifyStateChange();
     this.updateMediaSessionMetadata();
   }
 
+  /**
+   * CRITICAL FIX for Priority 2 (Manual Sentence Seeking without deadlock):
+   * Executed SYNCHRONOUSLY (0ms, NO setTimeout!) inside the user's tap/click event handler.
+   * Detaches old utterance callbacks first, cancels old speech, and immediately speaks the target sentence
+   * while the iOS Safari User Gesture Activation Token is active!
+   */
   seekSentence(sentenceIndex) {
+    this.playbackToken++;
+    this.isBackgroundStreamMode = false;
     const wasPlaying = this.isPlaying;
+    this.isPausedByUser = false;
+    this.isProactiveEvade = false;
+
+    // 1. Detach old callbacks BEFORE cancel() so old onerror/onend cannot fire and corrupt state
+    this.detachCurrentUtterance();
+    try {
+      this.synth.cancel();
+    } catch (e) {}
+
+    // 2. Update index and UI immediately
     this.currentIndex = Math.max(0, Math.min(sentenceIndex, Math.max(0, this.flatSentences.length - 1)));
-    this.nextQueueIndex = this.currentIndex;
     this.notifySentenceChange();
 
+    // 3. Synchronously speak right inside the user tap gesture (NO setTimeout!)
     if (wasPlaying) {
-      this.restartFromCurrentIndex(true);
-    } else {
-      this.playbackToken++;
-      this.clearTimers();
-      this.clearActiveUtterances();
-      this.isPausedByUser = false;
-      try {
-        this.synth.cancel();
-      } catch (e) {}
+      this.isPlaying = true;
+      this.startKeepAlive();
+      this.speakCurrentSentence();
     }
   }
 
   setRate(rate) {
+    this.playbackToken++;
+    this.isBackgroundStreamMode = false;
+    const wasPlaying = this.isPlaying;
+    this.isPausedByUser = false;
+    this.isProactiveEvade = false;
     this.rate = rate;
-    if (this.isPlaying) {
-      this.restartFromCurrentIndex(true);
+
+    this.detachCurrentUtterance();
+    try {
+      this.synth.cancel();
+    } catch (e) {}
+
+    if (wasPlaying) {
+      this.isPlaying = true;
+      this.speakCurrentSentence();
     }
   }
 
@@ -698,7 +692,11 @@ export class IosVoicePlayerV2 {
     const voices = this.synth ? this.synth.getVoices() : [];
     this.activeVoice = voices.find(v => v.name === voiceName) || null;
     if (this.isPlaying) {
-      this.restartFromCurrentIndex(true);
+      this.playbackToken++;
+      this.isBackgroundStreamMode = false;
+      this.detachCurrentUtterance();
+      try { this.synth.cancel(); } catch (e) {}
+      this.speakCurrentSentence();
     }
   }
 

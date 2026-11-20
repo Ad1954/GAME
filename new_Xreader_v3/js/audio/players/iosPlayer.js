@@ -396,35 +396,43 @@ export class IosVoicePlayer {
   seekSentence(sentenceIndex) {
     this.playbackToken++;
     const wasPlaying = this.isPlaying;
-    this.isProactiveEvade = true;
-    this.isPausedByUser = false; // GWT 20.2: Reset paused flag so it never resumes empty queue!
+    this.isProactiveEvade = false;
+    this.isPausedByUser = false;
+
+    if (this.currentUtterance) {
+      this.currentUtterance.onstart = null;
+      this.currentUtterance.onend = null;
+      this.currentUtterance.onerror = null;
+    }
     try { this.synth.cancel(); } catch (e) {}
 
     this.currentIndex = Math.max(0, Math.min(sentenceIndex, this.flatSentences.length - 1));
     this.notifySentenceChange();
 
-    setTimeout(() => {
-      this.isProactiveEvade = false;
-      if (wasPlaying) {
-        this.play();
-      }
-    }, 100);
+    if (wasPlaying) {
+      this.isPlaying = true;
+      this.startKeepAlive();
+      this.speakCurrentSentence();
+    }
   }
 
   setRate(rate) {
     this.playbackToken++;
     const wasPlaying = this.isPlaying;
-    this.isProactiveEvade = true;
+    this.isProactiveEvade = false;
     this.isPausedByUser = false;
+    if (this.currentUtterance) {
+      this.currentUtterance.onstart = null;
+      this.currentUtterance.onend = null;
+      this.currentUtterance.onerror = null;
+    }
     try { this.synth.cancel(); } catch (e) {}
     this.rate = rate;
 
-    setTimeout(() => {
-      this.isProactiveEvade = false;
-      if (wasPlaying) {
-        this.play();
-      }
-    }, 100);
+    if (wasPlaying) {
+      this.isPlaying = true;
+      this.speakCurrentSentence();
+    }
   }
 
   setVoice(voiceName) {

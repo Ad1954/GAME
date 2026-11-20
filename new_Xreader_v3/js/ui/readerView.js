@@ -320,16 +320,15 @@ export class ReaderView {
     // Double-guard: ensure chapter has paragraphs (Story 10, 11)
     this.ensureChapterSegmented(chapter);
 
-    // Load into audio engine FIRST and start playback BEFORE heavy DOM rendering,
-    // so iOS Safari never drops user gesture / audio context during chapter transition!
+    // Render paragraphs and sentences first so sentence spans exist in DOM when highlight triggers
+    this.renderChapterText(chapter);
+
+    // Load into audio engine and start playback synchronously
     player.loadChapter(chapter, sentenceIndex, this.currentBook ? this.currentBook.title : 'Xreader', isContinuousTransition);
 
     if (autoPlay) {
-      player.play(true);
+      player.play(isContinuousTransition);
     }
-
-    // Render paragraphs and sentences
-    this.renderChapterText(chapter);
 
     // Update progress in DB (ADR 0004) - 非阻塞非同步寫入，確保播放與背景排程絕不延遲
     if (this.currentBook) {
