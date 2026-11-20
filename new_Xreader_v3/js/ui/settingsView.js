@@ -3,9 +3,9 @@
  * Manages platform display, independent PC vs iOS voice memories, default rate, and themes.
  */
 
-import { player, currentPlatform, activeConfig } from '../audio/playerFactory.js';
+import { player, currentPlatform, activeConfig } from '../audio/playerFactory.js?v=9.19';
 import { eventBus } from '../eventBus.js';
-import { logger } from '../core/logger.js';
+import { logger } from '../core/logger.js?v=9.19';
 
 export class SettingsView {
   constructor() {
@@ -179,11 +179,17 @@ export class SettingsView {
       });
     }
 
-    // Force reload cache button (Story 60)
+    // Force reload cache button (Story 60, v9.19: unregisters Service Workers + clears CacheStorage)
     if (this.btnForceReloadCache) {
       this.btnForceReloadCache.addEventListener('click', async () => {
-        const confirmed = confirm('確定要清除瀏覽器快取並強制重載最新版本嗎？\n(這能徹底解決 iPad/Safari 讀到舊版本代碼的問題)');
+        const confirmed = confirm('確定要清除瀏覽器快取與離線工作者 (Service Worker) 並強制重載最新版本嗎？\n(這能徹底解決 iPad/Safari 讀到舊版本子模組代碼的問題)');
         if (confirmed) {
+          try {
+            if ('serviceWorker' in navigator) {
+              const regs = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(regs.map(r => r.unregister()));
+            }
+          } catch (err) {}
           try {
             if ('caches' in window) {
               const keys = await caches.keys();

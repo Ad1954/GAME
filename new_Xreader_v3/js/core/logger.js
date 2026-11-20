@@ -110,15 +110,19 @@ class SystemLogger {
       console.log(consoleMsg);
     }
 
-    // Remote terminal logger for local Python server (Story 52)
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      try {
-        fetch('/api/log', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ level, tag, message: entry.message })
-        }).catch(() => {});
-      } catch (e) {}
+    // Remote terminal logger for local Python server & LAN iPad testing (Story 52, v9.19)
+    if (typeof window !== 'undefined' && window.location) {
+      const host = window.location.hostname || '';
+      const isLocalOrLan = host === 'localhost' || host === '127.0.0.1' || /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(host);
+      if (isLocalOrLan) {
+        try {
+          fetch('/api/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ level, tag, message: entry.message })
+          }).catch(() => {});
+        } catch (e) {}
+      }
     }
 
     eventBus.emit('logger:newEntry', entry);
