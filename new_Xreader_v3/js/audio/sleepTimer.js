@@ -3,8 +3,8 @@
  * Manages timed shutdowns and safe keep-alive release.
  */
 
-import { eventBus } from '../eventBus.js';
-import { player } from './playerFactory.js';
+import { eventBus } from '../eventBus.js?v=9.20';
+import { player } from './playerFactory.js?v=9.20';
 
 class SleepTimer {
   constructor() {

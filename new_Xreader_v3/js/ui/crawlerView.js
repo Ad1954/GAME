@@ -3,13 +3,13 @@
  * Handles Web sequential crawler, file ingestion, paste text, crawler history records, and incremental updates.
  */
 
-import { crawler, DEFAULT_PROXIES, diffOnlineChapters, isLocalEnvironment } from '../core/crawler.js';
-import { bahaCrawler } from '../core/bahaCrawler.js';
-import { storage } from '../core/storage.js';
-import { TextSegmenter } from '../core/segmenter.js';
-import { TxtParser } from '../core/txtParser.js';
-import { eventBus } from '../eventBus.js';
-import { downloadQueue } from '../core/downloadQueue.js';
+import { crawler, DEFAULT_PROXIES, diffOnlineChapters, isLocalEnvironment } from '../core/crawler.js?v=9.20';
+import { bahaCrawler } from '../core/bahaCrawler.js?v=9.20';
+import { storage } from '../core/storage.js?v=9.20';
+import { TextSegmenter } from '../core/segmenter.js?v=9.20';
+import { TxtParser } from '../core/txtParser.js?v=9.20';
+import { eventBus } from '../eventBus.js?v=9.20';
+import { downloadQueue } from '../core/downloadQueue.js?v=9.20';
 
 export class CrawlerView {
   constructor() {

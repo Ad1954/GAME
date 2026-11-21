@@ -3,8 +3,8 @@
  * Manages bookshelf chapter reordering (splice & shift) and batch deletion with smooth re-indexing.
  */
 
-import { storage } from '../core/storage.js';
-import { eventBus } from '../eventBus.js';
+import { storage } from '../core/storage.js?v=9.20';
+import { eventBus } from '../eventBus.js?v=9.20';
 
 export class ChapterManagerView {
   constructor() {

@@ -3,7 +3,7 @@
  * Employs Stale-While-Revalidate / Network-First with Cache Fallback for zero-network reading.
  */
 
-const CACHE_NAME = 'xreader-offline-v9.19';
+const CACHE_NAME = 'xreader-offline-v9.20';
 
 const PRECACHE_ASSETS = [
   './',
@@ -16,28 +16,28 @@ const PRECACHE_ASSETS = [
   './css/bookshelf.css?v=9.6',
   './css/reader.css?v=9.6',
   './css/modal.css?v=9.11',
-  './js/app.js?v=9.19',
-  './js/eventBus.js',
-  './js/audio/playerFactory.js',
-  './js/audio/silentAudioData.js',
-  './js/audio/sleepTimer.js',
-  './js/audio/players/iosPlayer.js',
-  './js/audio/players/iosPlayerV2.js',
-  './js/audio/players/pcPlayer.js',
-  './js/core/bahaCrawler.js',
-  './js/core/crawler.js',
-  './js/core/downloadQueue.js',
-  './js/core/logger.js',
-  './js/core/segmenter.js',
-  './js/core/storage.js',
-  './js/core/txtParser.js',
-  './js/ui/bookshelfView.js',
-  './js/ui/chapterManagerView.js',
-  './js/ui/contentEditModal.js',
-  './js/ui/crawlerView.js',
-  './js/ui/playerBarView.js',
-  './js/ui/readerView.js',
-  './js/ui/settingsView.js'
+  './js/app.js?v=9.20',
+  './js/eventBus.js?v=9.20',
+  './js/audio/playerFactory.js?v=9.20',
+  './js/audio/silentAudioData.js?v=9.20',
+  './js/audio/sleepTimer.js?v=9.20',
+  './js/audio/players/iosPlayer.js?v=9.20',
+  './js/audio/players/iosPlayerV2.js?v=9.20',
+  './js/audio/players/pcPlayer.js?v=9.20',
+  './js/core/bahaCrawler.js?v=9.20',
+  './js/core/crawler.js?v=9.20',
+  './js/core/downloadQueue.js?v=9.20',
+  './js/core/logger.js?v=9.20',
+  './js/core/segmenter.js?v=9.20',
+  './js/core/storage.js?v=9.20',
+  './js/core/txtParser.js?v=9.20',
+  './js/ui/bookshelfView.js?v=9.20',
+  './js/ui/chapterManagerView.js?v=9.20',
+  './js/ui/contentEditModal.js?v=9.20',
+  './js/ui/crawlerView.js?v=9.20',
+  './js/ui/playerBarView.js?v=9.20',
+  './js/ui/readerView.js?v=9.20',
+  './js/ui/settingsView.js?v=9.20'
 ];
 
 self.addEventListener('install', (event) => {

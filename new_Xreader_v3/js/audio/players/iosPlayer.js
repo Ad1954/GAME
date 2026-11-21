@@ -4,9 +4,9 @@
  * visibility auto-sync, and proactive evade lifecycle.
  */
 
-import { eventBus } from '../../eventBus.js';
-import { SILENT_15S_WAV_BASE64 } from '../silentAudioData.js';
-import { logger } from '../../core/logger.js?v=9.19';
+import { eventBus } from '../../eventBus.js?v=9.20';
+import { SILENT_15S_WAV_BASE64 } from '../silentAudioData.js?v=9.20';
+import { logger } from '../../core/logger.js?v=9.20';
 
 export class IosVoicePlayer {
   constructor() {
@@ -394,9 +394,9 @@ export class IosVoicePlayer {
   }
 
   seekSentence(sentenceIndex) {
-    const token = ++this.playbackToken;
+    this.playbackToken++;
     const wasPlaying = this.isPlaying;
-    this.isProactiveEvade = true;
+    this.isProactiveEvade = false;
     this.isPausedByUser = false;
 
     if (this.currentUtterance) {
@@ -405,28 +405,24 @@ export class IosVoicePlayer {
       this.currentUtterance.onerror = null;
     }
     try {
-      if (this.synth.speaking) this.synth.pause();
       this.synth.cancel();
     } catch (e) {}
 
     this.currentIndex = Math.max(0, Math.min(sentenceIndex, this.flatSentences.length - 1));
     this.notifySentenceChange();
 
-    setTimeout(() => {
-      this.isProactiveEvade = false;
-      if (this.playbackToken !== token) return;
-      if (wasPlaying) {
-        this.isPlaying = true;
-        this.startKeepAlive();
-        this.speakCurrentSentence();
-      }
-    }, 90);
+    if (wasPlaying) {
+      this.isPlaying = true;
+      this.startKeepAlive();
+      this.speakCurrentSentence();
+      try { if (this.synth.paused) this.synth.resume(); } catch (e) {}
+    }
   }
 
   setRate(rate) {
-    const token = ++this.playbackToken;
+    this.playbackToken++;
     const wasPlaying = this.isPlaying;
-    this.isProactiveEvade = true;
+    this.isProactiveEvade = false;
     this.isPausedByUser = false;
     if (this.currentUtterance) {
       this.currentUtterance.onstart = null;
@@ -434,19 +430,15 @@ export class IosVoicePlayer {
       this.currentUtterance.onerror = null;
     }
     try {
-      if (this.synth.speaking) this.synth.pause();
       this.synth.cancel();
     } catch (e) {}
     this.rate = rate;
 
-    setTimeout(() => {
-      this.isProactiveEvade = false;
-      if (this.playbackToken !== token) return;
-      if (wasPlaying) {
-        this.isPlaying = true;
-        this.speakCurrentSentence();
-      }
-    }, 90);
+    if (wasPlaying) {
+      this.isPlaying = true;
+      this.speakCurrentSentence();
+      try { if (this.synth.paused) this.synth.resume(); } catch (e) {}
+    }
   }
 
   setVoice(voiceName) {

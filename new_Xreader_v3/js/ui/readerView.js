@@ -3,11 +3,11 @@
  * Renders paragraph-preserved text, handles mobile tap-scroll guard, and sentence highlighting.
  */
 
-import { storage } from '../core/storage.js?v=9.19';
-import { eventBus } from '../eventBus.js';
-import { player } from '../audio/playerFactory.js?v=9.19';
-import { TextSegmenter } from '../core/segmenter.js';
-import { logger } from '../core/logger.js?v=9.19';
+import { storage } from '../core/storage.js?v=9.20';
+import { eventBus } from '../eventBus.js?v=9.20';
+import { player } from '../audio/playerFactory.js?v=9.20';
+import { TextSegmenter } from '../core/segmenter.js?v=9.20';
+import { logger } from '../core/logger.js?v=9.20';
 
 export class ReaderView {
   constructor() {
@@ -307,7 +307,7 @@ export class ReaderView {
     }
   }
 
-  async loadChapterByIndex(chapIndex, sentenceIndex = 0, autoPlay = false, isContinuousTransition = false) {
+  loadChapterByIndex(chapIndex, sentenceIndex = 0, autoPlay = false, isContinuousTransition = false) {
     if (!this.currentChapters || this.currentChapters.length === 0) return;
     const boundedIdx = Math.max(0, Math.min(chapIndex, this.currentChapters.length - 1));
     const chapter = this.currentChapters[boundedIdx];
@@ -323,7 +323,7 @@ export class ReaderView {
     // Render paragraphs and sentences first so sentence spans exist in DOM when highlight triggers
     this.renderChapterText(chapter);
 
-    // Load into audio engine and start playback synchronously
+    // Load into audio engine and start playback synchronously (0ms, no async/Promise wrapper!)
     player.loadChapter(chapter, sentenceIndex, this.currentBook ? this.currentBook.title : 'Xreader', isContinuousTransition);
 
     if (autoPlay) {

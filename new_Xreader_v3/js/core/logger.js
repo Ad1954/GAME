@@ -4,7 +4,7 @@
  * visibility state, MediaSession remote commands, and error interception.
  */
 
-import { eventBus } from '../eventBus.js';
+import { eventBus } from '../eventBus.js?v=9.20';
 
 class SystemLogger {
   constructor() {

@@ -3,7 +3,7 @@
  * Database: NewXreaderDB (Decoupled from legacy database per ADR 0001)
  */
 
-import { TextSegmenter } from './segmenter.js';
+import { TextSegmenter } from './segmenter.js?v=9.20';
 
 export async function sendServerLog(tag, message, level = 'info') {
   try {
