@@ -3,9 +3,9 @@
  * Handles cross-page crawling, API parsing, and article extraction from Bahamut Gamer Home.
  */
 
-import { storage } from './storage.js?v=9.23';
-import { TextSegmenter } from './segmenter.js?v=9.23';
-import { DEFAULT_PROXIES, isLocalEnvironment } from './crawler.js?v=9.23';
+import { storage } from './storage.js?v=9.24';
+import { TextSegmenter } from './segmenter.js?v=9.24';
+import { DEFAULT_PROXIES, isLocalEnvironment } from './crawler.js?v=9.24';
 
 export class BahaCrawlerService {
   constructor() {

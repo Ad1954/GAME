@@ -4,9 +4,9 @@
  * Auto-pauses audio playback on modal launch to avoid race conditions.
  */
 
-import { storage } from '../core/storage.js?v=9.23';
-import { eventBus } from '../eventBus.js?v=9.23';
-import { player } from '../audio/playerFactory.js?v=9.23';
+import { storage } from '../core/storage.js?v=9.24';
+import { eventBus } from '../eventBus.js?v=9.24';
+import { player } from '../audio/playerFactory.js?v=9.24';
 
 export class ContentEditModal {
   constructor() {

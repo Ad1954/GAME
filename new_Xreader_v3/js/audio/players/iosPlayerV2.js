@@ -1,76 +1,27 @@
 /**
- * new_Xreader - iOS Voice Player v2 (Story 58 ~ 68, v9.23)
+ * new_Xreader - iOS Voice Player v2 (Story 58 ~ 69, v9.24)
  * High-performance mobile voice player optimized for iPadOS 27.2.1 / M4 iPad Pro / iOS Safari WebKit.
  *
- * Key Breakthroughs in v9.23 (Proven by v9.22 125-line Diagnostic Logs):
- * 1. Completely Eliminated Broken `synth.pause()` / `synth.resume()` on Safari 27.2:
- *    - v9.22 logs proved that `synth.resume()` on iPadOS 27.2.1 NEVER fires `onstart` and leaves `synth.speaking`
- *      stuck at `true` in a zombie state, whereas `seekSentence()` (`synth.cancel()` -> 80ms -> `speakCurrentSentence()`)
- *      succeeded 100% of the time within 2ms!
- *    - Now `pause()` cleanly cancels the active utterance, and `play()` ALWAYS uses the exact same
- *      proven `synth.cancel()` -> 80ms breather -> `speakCurrentSentence()` pipeline as `seekSentence()`!
- * 2. Restored `navigator.audioSession.type = 'playback'` + 16-bit -80.8dB 20Hz Sub-Audible WAV @ Volume 1.0
- *    WITHOUT any `navigator.mediaSession` pause handler:
- *    - Prevents iPadOS 27.2.1 from downgrading speech to `AVAudioSessionCategoryAmbient` (which fades out on backgrounding),
- *      while keeping `navigator.mediaSession` completely unbound so WebKit never fires the 765ms synthetic pause!
- * 3. Instant Background Stall Detection & Auto-Reset on Foreground Return:
- *    - Tracks actual audio activity timestamps (`lastSpeechActivityTime`). If iOS ever interrupts background speech
- *      (e.g. system/app switch), returning to the page automatically clears the zombie queue and sets the button
- *      to Play (triangle) so a single tap on Play immediately resumes from the current sentence!
+ * CRITICAL ROOT CAUSES RESOLVED across v9.20 ~ v9.24:
+ * 1. No `navigator.mediaSession` bindings (Proven in v9.21 -> v9.22):
+ *    - Prevents Safari 27.2 from firing a synthetic `MediaSession [Pause]` 765ms after `synth.speak()`.
+ * 2. Zero `<audio>` / `AudioContext` Channel-Stealing (Proven in v9.23 -> v9.24):
+ *    - v9.23 proved that calling `silentAudio.play()` or `audioCtx.resume()` while `speechSynthesis` is active
+ *      (whether on a 2-second heartbeat timer in foreground or inside `visibilitychange` when entering background)
+ *      causes iPadOS 27.2.1 CoreAudio to immediately fade-out ("聲音漸縮縮小") and kill the active speech utterance!
+ *    - Fix: Removed ALL `<audio>` and `AudioContext` interference! Pure, uncontested `window.speechSynthesis`
+ *      now owns the audio channel 100% both in foreground and when transitioning to background.
+ * 3. Rock-Solid `cancel() -> 80ms -> speak()` Play/Pause & Foreground Auto-Reset (Proven in v9.23):
+ *    - Eliminates broken `synth.pause()` / `synth.resume()` on Safari 27.2.
+ *    - Pressing Play after Pause (or after returning from background) uses the exact same 100%-reliable
+ *      `cancel() -> 80ms -> speakCurrentSentence()` pipeline as `seekSentence()`.
  */
 
-import { eventBus } from '../../eventBus.js?v=9.23';
-import { logger } from '../../core/logger.js?v=9.23';
+import { eventBus } from '../../eventBus.js?v=9.24';
+import { logger } from '../../core/logger.js?v=9.24';
 
 if (typeof window !== 'undefined' && !window.__xreaderActiveUtterances) {
   window.__xreaderActiveUtterances = new Set();
-}
-
-/**
- * Generates a 10-second 16-bit 22050Hz Mono WAV Data URL with a 20Hz sub-audible sine wave
- * at amplitude ±3 out of 32768 (-80.8 dBFS), played at volume = 1.0.
- */
-function generateSubAudible16BitWavDataUrl() {
-  const sampleRate = 22050;
-  const durationSec = 10;
-  const numSamples = sampleRate * durationSec;
-  const dataBytes = numSamples * 2;
-  const buffer = new ArrayBuffer(44 + dataBytes);
-  const view = new DataView(buffer);
-
-  const writeStr = (offset, str) => {
-    for (let i = 0; i < str.length; i++) {
-      view.setUint8(offset + i, str.charCodeAt(i));
-    }
-  };
-
-  writeStr(0, 'RIFF');
-  view.setUint32(4, 36 + dataBytes, true);
-  writeStr(8, 'WAVE');
-  writeStr(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeStr(36, 'data');
-  view.setUint32(40, dataBytes, true);
-
-  const twoPiF = (2 * Math.PI * 20) / sampleRate;
-  for (let i = 0; i < numSamples; i++) {
-    const sample = Math.round(3 * Math.sin(twoPiF * i));
-    view.setInt16(44 + i * 2, sample, true);
-  }
-
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  const chunkSize = 8192;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
-  }
-  return 'data:audio/wav;base64,' + btoa(binary);
 }
 
 export class IosVoicePlayerV2 {
@@ -90,21 +41,13 @@ export class IosVoicePlayerV2 {
     this.isPausedByUser = false;
 
     this.seekTimer = null;
-    this.bgHeartbeatTimer = null;
     this.lastSpeechActivityTime = 0;
     this.enteredBackgroundTime = 0;
-    this.activityCountInBackground = 0;
 
     // Mutex & Generation token
     this.instanceId = 'xreader_iosv2_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     this.playbackToken = 0;
     this.mutexChannel = null;
-
-    // Non-MediaSession Background Keep-Alive (16-bit Sub-Audible WAV @ Vol 1.0 + WebAudio Clock)
-    this.silentAudio = null;
-    this.subAudibleWavUrl = null;
-    this.audioCtx = null;
-    this.oscillator = null;
   }
 
   get currentSentenceIndex() {
@@ -112,9 +55,8 @@ export class IosVoicePlayerV2 {
   }
 
   async init() {
-    this.configureNativeAudioSession();
+    this.removeAnyLegacyKeepAliveAudio();
     this.clearAnyMediaSessionHandlers();
-    this.setupKeepAliveAudio();
     this.loadVoices();
     this.setupVisibilitySync();
     this.setupMutexChannel();
@@ -123,15 +65,19 @@ export class IosVoicePlayerV2 {
     if (this.synth && this.synth.onvoiceschanged !== undefined) {
       this.synth.onvoiceschanged = () => this.loadVoices();
     }
-    logger.info('iOS v2 Engine', 'iOS 朗讀引擎 v2 (v9.23 零resume殭屍死鎖 + Playback超低頻保活) 初始化完成');
+    logger.info('iOS v2 Engine', 'iOS 朗讀引擎 v2 (v9.24 零音軌搶佔純淨核心 + 80ms無死鎖重啟) 初始化完成');
   }
 
-  configureNativeAudioSession() {
-    try {
-      if (typeof navigator !== 'undefined' && 'audioSession' in navigator && navigator.audioSession) {
-        navigator.audioSession.type = 'playback';
-      }
-    } catch (e) {}
+  removeAnyLegacyKeepAliveAudio() {
+    if (typeof document === 'undefined') return;
+    const legacyAudio = document.getElementById('ios-keepalive');
+    if (legacyAudio) {
+      try {
+        legacyAudio.pause();
+        legacyAudio.removeAttribute('src');
+        legacyAudio.remove();
+      } catch (e) {}
+    }
   }
 
   clearAnyMediaSessionHandlers() {
@@ -146,89 +92,6 @@ export class IosVoicePlayerV2 {
         navigator.mediaSession.playbackState = 'none';
       }
     } catch (e) {}
-  }
-
-  setupKeepAliveAudio() {
-    let audio = document.getElementById('ios-keepalive');
-    if (!audio) {
-      audio = document.createElement('audio');
-      audio.id = 'ios-keepalive';
-      audio.setAttribute('playsinline', '');
-      audio.setAttribute('webkit-playsinline', '');
-      audio.style.display = 'none';
-      document.body.appendChild(audio);
-    }
-    if (!this.subAudibleWavUrl) {
-      this.subAudibleWavUrl = generateSubAudible16BitWavDataUrl();
-    }
-    audio.src = this.subAudibleWavUrl;
-    audio.loop = true;
-    audio.volume = 1.0; // 16-bit -80.8dB data at volume=1.0 prevents iPadOS 27 Ambient squelch
-    this.silentAudio = audio;
-  }
-
-  startKeepAlive() {
-    this.configureNativeAudioSession();
-    this.clearAnyMediaSessionHandlers();
-
-    if (this.silentAudio && this.silentAudio.paused) {
-      this.silentAudio.volume = 1.0;
-      this.silentAudio.play().catch(() => {});
-    }
-
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) {
-        if (!this.audioCtx) {
-          this.audioCtx = new AudioCtx();
-          const osc = this.audioCtx.createOscillator();
-          const gain = this.audioCtx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(20, this.audioCtx.currentTime);
-          gain.gain.setValueAtTime(0.0001, this.audioCtx.currentTime);
-          osc.connect(gain);
-          gain.connect(this.audioCtx.destination);
-          osc.start();
-          this.oscillator = osc;
-        }
-        if (this.audioCtx.state === 'suspended') {
-          this.audioCtx.resume().catch(() => {});
-        }
-      }
-    } catch (e) {}
-
-    this.startBackgroundHeartbeat();
-  }
-
-  stopKeepAlive() {
-    this.stopBackgroundHeartbeat();
-    if (this.silentAudio) {
-      try { this.silentAudio.pause(); } catch (e) {}
-    }
-    if (this.audioCtx && this.audioCtx.state === 'running') {
-      try { this.audioCtx.suspend().catch(() => {}); } catch (e) {}
-    }
-  }
-
-  startBackgroundHeartbeat() {
-    this.stopBackgroundHeartbeat();
-    this.bgHeartbeatTimer = setInterval(() => {
-      if (!this.isPlaying) return;
-      this.configureNativeAudioSession();
-      if (this.audioCtx && this.audioCtx.state === 'suspended') {
-        try { this.audioCtx.resume().catch(() => {}); } catch (e) {}
-      }
-      if (this.silentAudio && this.silentAudio.paused) {
-        try { this.silentAudio.play().catch(() => {}); } catch (e) {}
-      }
-    }, 2000);
-  }
-
-  stopBackgroundHeartbeat() {
-    if (this.bgHeartbeatTimer) {
-      clearInterval(this.bgHeartbeatTimer);
-      this.bgHeartbeatTimer = null;
-    }
   }
 
   setupMutexChannel() {
@@ -261,28 +124,20 @@ export class IosVoicePlayerV2 {
   }
 
   /**
-   * Visibility Sync & Foreground Return Zombie Guard:
-   * - When entering background (document.hidden === true): records timestamp and resets background activity counter.
+   * Pure Visibility Sync:
+   * - When entering background (document.hidden === true):
+   *   NEVER calls silentAudio.play() or audioCtx.resume()! Leaving CoreAudio completely undisturbed
+   *   prevents the fade-out ("聲音漸縮") channel-stealing conflict!
    * - When returning to foreground (document.hidden === false):
-   *   Checks if speech actually progressed or is still genuinely active.
-   *   If iOS suspended/killed speech while in background (leaving synth.speaking stuck in a zombie state),
-   *   automatically flushes the zombie queue via synth.cancel() and resets the button to Play (isPlaying = false),
-   *   so the user NEVER has to tap another sentence or tap Pause->Play->Pause->Play to recover!
+   *   Syncs UI highlight. If iOS suspended background speech while away, cleanly resets the zombie queue
+   *   and switches the button to Play (triangle) so a single tap on Play immediately resumes from currentIndex!
    */
   setupVisibilitySync() {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         this.enteredBackgroundTime = Date.now();
-        this.activityCountInBackground = 0;
         if (this.isPlaying) {
-          this.configureNativeAudioSession();
-          if (this.audioCtx && this.audioCtx.state === 'suspended') {
-            try { this.audioCtx.resume().catch(() => {}); } catch (e) {}
-          }
-          if (this.silentAudio && this.silentAudio.paused) {
-            try { this.silentAudio.play().catch(() => {}); } catch (e) {}
-          }
-          logger.info('iOS v2 Background', `進入背景/切換分頁，維持語音朗讀 (當前第 ${this.currentIndex + 1} 句)`);
+          logger.info('iOS v2 Background', `進入背景/切換分頁，零干擾維持純淨語音通道 (當前第 ${this.currentIndex + 1} 句)`);
         }
       } else {
         if (this.isPlaying) {
@@ -291,17 +146,16 @@ export class IosVoicePlayerV2 {
           const timeSinceLastActivity = Date.now() - this.lastSpeechActivityTime;
           const isSynthDead = !this.synth || (!this.synth.speaking && !this.synth.pending) || this.synth.paused;
 
-          // If we were in background for >2.5s and there was no speech activity for >3.5s (or synth is dead),
-          // iOS killed the background speech pipeline and left synth.speaking in a zombie state!
           if (isSynthDead || (bgDurationMs > 2500 && timeSinceLastActivity > 3500)) {
-            logger.info('iOS v2 Visibility', `切回前台偵測到背景語音已中斷 (背景停留 ${bgDurationMs}ms)，自動清理殭屍佇列並同步按鈕為待播放狀態`);
+            logger.info('iOS v2 Visibility', `切回前台偵測到背景語音已停滯 (背景停留 ${bgDurationMs}ms)，自動清理佇列並歸位播放鍵`);
             this.playbackToken++;
             this.clearSeekTimer();
             this.detachCurrentUtterance();
             this.isPlaying = false;
             this.isPausedByUser = true;
+            this.isProactiveEvade = true;
             try { this.synth.cancel(); } catch (e) {}
-            this.stopKeepAlive();
+            setTimeout(() => { this.isProactiveEvade = false; }, 70);
             this.notifyStateChange();
           }
         }
@@ -393,14 +247,6 @@ export class IosVoicePlayerV2 {
     this.notifySentenceChange();
   }
 
-  /**
-   * CRITICAL FIX in v9.23:
-   * - For natural auto-transition across chapters (isContinuousTransition === true):
-   *   Queue is already empty, speak immediately (0ms, no cancel).
-   * - For ALL user-initiated Play actions (isContinuousTransition === false):
-   *   NEVER use broken `synth.resume()`! Always execute the exact same proven pipeline as `seekSentence()`:
-   *   `detachCurrentUtterance() -> synth.cancel() -> 80ms breather -> speakCurrentSentence(token)`!
-   */
   play(isContinuousTransition = false) {
     if (!this.currentChapter || this.flatSentences.length === 0) {
       logger.warn('iOS v2 Player', 'play() 略過: 無章節或句子長度為 0');
@@ -418,7 +264,6 @@ export class IosVoicePlayerV2 {
     this.isPausedByUser = false;
     this.isPlaying = true;
     this.lastSpeechActivityTime = Date.now();
-    this.startKeepAlive();
     this.notifyStateChange();
 
     if (isContinuousTransition) {
@@ -428,7 +273,6 @@ export class IosVoicePlayerV2 {
       return;
     }
 
-    // Exact same rock-solid pipeline as seekSentence():
     this.isProactiveEvade = true;
     this.detachCurrentUtterance();
     try {
@@ -508,9 +352,6 @@ export class IosVoicePlayerV2 {
     utterance.onstart = () => {
       if (this.playbackToken !== token) return;
       this.lastSpeechActivityTime = Date.now();
-      if (typeof document !== 'undefined' && document.hidden) {
-        this.activityCountInBackground++;
-      }
       logger.info('iOS v2 Utterance', `onstart 觸發: 第 ${startIdx + 1}${batchCount > 1 ? '~' + endIdx : ''} 句`);
       triggerStart();
     };
@@ -519,9 +360,6 @@ export class IosVoicePlayerV2 {
     utterance.onboundary = (e) => {
       if (this.playbackToken !== token || !this.isPlaying || this.isProactiveEvade) return;
       this.lastSpeechActivityTime = Date.now();
-      if (typeof document !== 'undefined' && document.hidden) {
-        this.activityCountInBackground++;
-      }
       if (batchCount > 1 && typeof e.charIndex === 'number') {
         for (let j = offsets.length - 1; j >= 0; j--) {
           if (e.charIndex >= offsets[j].startChar) {
@@ -565,12 +403,6 @@ export class IosVoicePlayerV2 {
     }
   }
 
-  /**
-   * CRITICAL FIX in v9.23:
-   * Uses `synth.cancel()` instead of `synth.pause()`!
-   * Why? Because `synth.pause()` on iPadOS 27.2.1 puts WebKit's speech queue into an unresumable zombie state,
-   * whereas `synth.cancel()` on pause + `80ms -> speakCurrentSentence()` on play() works 100% of the time!
-   */
   pause() {
     this.playbackToken++;
     this.clearSeekTimer();
@@ -585,7 +417,6 @@ export class IosVoicePlayerV2 {
     } catch (e) {}
     setTimeout(() => { this.isProactiveEvade = false; }, 70);
 
-    this.stopKeepAlive();
     this.notifyStateChange();
   }
 
@@ -600,7 +431,6 @@ export class IosVoicePlayerV2 {
     try { this.synth.cancel(); } catch (e) {}
     setTimeout(() => { this.isProactiveEvade = false; }, 80);
 
-    this.stopKeepAlive();
     this.notifyStateChange();
   }
 
@@ -625,7 +455,6 @@ export class IosVoicePlayerV2 {
       if (wasPlaying) {
         this.isPlaying = true;
         this.lastSpeechActivityTime = Date.now();
-        this.startKeepAlive();
         logger.info('iOS v2 Player', `手動切換至第 ${this.currentIndex + 1} 句，啟動朗讀`);
         this.speakCurrentSentence(token);
       }

@@ -3,9 +3,9 @@
  * Manages platform display, independent PC vs iOS voice memories, default rate, and themes.
  */
 
-import { player, currentPlatform, activeConfig } from '../audio/playerFactory.js?v=9.23';
-import { eventBus } from '../eventBus.js?v=9.23';
-import { logger } from '../core/logger.js?v=9.23';
+import { player, currentPlatform, activeConfig } from '../audio/playerFactory.js?v=9.24';
+import { eventBus } from '../eventBus.js?v=9.24';
+import { logger } from '../core/logger.js?v=9.24';
 
 export class SettingsView {
   constructor() {

@@ -4,9 +4,9 @@
  * Supports unified selection: auto / ios-v2 / ios-v1 / pc / android.
  */
 
-import { PcVoicePlayer } from './players/pcPlayer.js?v=9.23';
-import { IosVoicePlayer } from './players/iosPlayer.js?v=9.23';
-import { IosVoicePlayerV2 } from './players/iosPlayerV2.js?v=9.23';
+import { PcVoicePlayer } from './players/pcPlayer.js?v=9.24';
+import { IosVoicePlayer } from './players/iosPlayer.js?v=9.24';
+import { IosVoicePlayerV2 } from './players/iosPlayerV2.js?v=9.24';
 
 class PlayerFactory {
   static getEngineSetting() {

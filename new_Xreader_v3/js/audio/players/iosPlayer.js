@@ -4,9 +4,9 @@
  * visibility auto-sync, and proactive evade lifecycle.
  */
 
-import { eventBus } from '../../eventBus.js?v=9.23';
-import { SILENT_15S_WAV_BASE64 } from '../silentAudioData.js?v=9.23';
-import { logger } from '../../core/logger.js?v=9.23';
+import { eventBus } from '../../eventBus.js?v=9.24';
+import { SILENT_15S_WAV_BASE64 } from '../silentAudioData.js?v=9.24';
+import { logger } from '../../core/logger.js?v=9.24';
 
 export class IosVoicePlayer {
   constructor() {
@@ -81,47 +81,17 @@ export class IosVoicePlayer {
   }
 
   setupSilentAudio() {
-    // Mount to DOM to guarantee primary media element recognition in WebKit
-    let audio = document.getElementById('ios-keepalive');
-    if (!audio) {
-      audio = document.createElement('audio');
-      audio.id = 'ios-keepalive';
-      audio.setAttribute('playsinline', '');
-      audio.setAttribute('webkit-playsinline', '');
-      audio.style.display = 'none';
-      document.body.appendChild(audio);
-    }
-    audio.src = SILENT_15S_WAV_BASE64;
-    audio.loop = true;
-    audio.volume = 0.01; // Non-zero volume ensures audio pipeline stays active
-
-    this.silentAudio = audio;
+    // Removed HTML5 <audio> keepalive on iPadOS 27.2.1 to prevent CoreAudio channel-stealing fade-out
+    this.silentAudio = null;
   }
 
   startKeepAlive() {
-    if (this.silentAudio) {
-      if (this.silentAudio.paused) {
-        this.silentAudio.play().then(() => {
-          this.isAudioSessionActive = true;
-          logger.info('iOS KeepAlive', '15s 靜音音訊播放成功 (AudioSession 已活化)');
-        }).catch(err => {
-          console.warn('[iOS Player] Silent audio play blocked (requires user gesture):', err);
-          logger.warn('iOS KeepAlive', '靜音音訊遭 WebKit 攔截 (需使用者互動授權): ' + err);
-        });
-      } else {
-        this.isAudioSessionActive = true;
-      }
-    }
+    this.isAudioSessionActive = true;
   }
 
   stopKeepAlive(forceDestroy = false) {
-    if (this.silentAudio) {
-      this.silentAudio.pause();
-      if (forceDestroy) {
-        this.silentAudio.currentTime = 0;
-        this.isAudioSessionActive = false;
-      }
-      logger.info('iOS KeepAlive', `靜音音訊已暫停 (forceDestroy: ${forceDestroy})`);
+    if (forceDestroy) {
+      this.isAudioSessionActive = false;
     }
   }
 
