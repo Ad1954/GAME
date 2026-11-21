@@ -3,9 +3,9 @@
  * Controls playback bar, sentence skipping, progress slider, debounced speed slider, and sleep timer.
  */
 
-import { player, currentPlatform } from '../audio/playerFactory.js?v=9.20';
-import { sleepTimer } from '../audio/sleepTimer.js?v=9.20';
-import { eventBus } from '../eventBus.js?v=9.20';
+import { player, currentPlatform } from '../audio/playerFactory.js?v=9.21';
+import { sleepTimer } from '../audio/sleepTimer.js?v=9.21';
+import { eventBus } from '../eventBus.js?v=9.21';
 
 export class PlayerBarView {
   constructor() {

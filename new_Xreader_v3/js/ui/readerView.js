@@ -3,11 +3,11 @@
  * Renders paragraph-preserved text, handles mobile tap-scroll guard, and sentence highlighting.
  */
 
-import { storage } from '../core/storage.js?v=9.20';
-import { eventBus } from '../eventBus.js?v=9.20';
-import { player } from '../audio/playerFactory.js?v=9.20';
-import { TextSegmenter } from '../core/segmenter.js?v=9.20';
-import { logger } from '../core/logger.js?v=9.20';
+import { storage } from '../core/storage.js?v=9.21';
+import { eventBus } from '../eventBus.js?v=9.21';
+import { player } from '../audio/playerFactory.js?v=9.21';
+import { TextSegmenter } from '../core/segmenter.js?v=9.21';
+import { logger } from '../core/logger.js?v=9.21';
 
 export class ReaderView {
   constructor() {
@@ -180,17 +180,17 @@ export class ReaderView {
         const arrayIdx = this.currentChapters.findIndex(c => c.id === chapId);
         if (arrayIdx !== -1) {
           const wasPlaying = player.isPlaying;
-          this.loadChapterByIndex(arrayIdx, 0, wasPlaying, wasPlaying);
+          this.loadChapterByIndex(arrayIdx, 0, wasPlaying, false);
         }
       });
     }
 
     if (this.btnPrevChap) {
-      this.btnPrevChap.addEventListener('click', () => this.handlePrevChapter(null, true));
+      this.btnPrevChap.addEventListener('click', () => this.handlePrevChapter(null, false));
     }
 
     if (this.btnNextChap) {
-      this.btnNextChap.addEventListener('click', () => this.handleNextChapter(null, true));
+      this.btnNextChap.addEventListener('click', () => this.handleNextChapter(null, false));
     }
 
     // Sentence tap interaction with mobile scroll guard (ADR 0005)
