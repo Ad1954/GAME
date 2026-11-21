@@ -3,20 +3,20 @@
  * Orchestrates TAG navigation, modular views, and event bus.
  */
 
-import { storage } from './core/storage.js?v=9.22';
-import { player, currentPlatform } from './audio/playerFactory.js?v=9.22';
-import { crawler, diffOnlineChapters } from './core/crawler.js?v=9.22';
-import { eventBus } from './eventBus.js?v=9.22';
-import { logger } from './core/logger.js?v=9.22';
+import { storage } from './core/storage.js?v=9.23';
+import { player, currentPlatform } from './audio/playerFactory.js?v=9.23';
+import { crawler, diffOnlineChapters } from './core/crawler.js?v=9.23';
+import { eventBus } from './eventBus.js?v=9.23';
+import { logger } from './core/logger.js?v=9.23';
 
-import { CrawlerView } from './ui/crawlerView.js?v=9.22';
-import { BookshelfView } from './ui/bookshelfView.js?v=9.22';
-import { ReaderView } from './ui/readerView.js?v=9.22';
-import { PlayerBarView } from './ui/playerBarView.js?v=9.22';
-import { SettingsView } from './ui/settingsView.js?v=9.22';
-import { ChapterManagerView } from './ui/chapterManagerView.js?v=9.22';
-import { ContentEditModal } from './ui/contentEditModal.js?v=9.22';
-import { downloadQueue } from './core/downloadQueue.js?v=9.22';
+import { CrawlerView } from './ui/crawlerView.js?v=9.23';
+import { BookshelfView } from './ui/bookshelfView.js?v=9.23';
+import { ReaderView } from './ui/readerView.js?v=9.23';
+import { PlayerBarView } from './ui/playerBarView.js?v=9.23';
+import { SettingsView } from './ui/settingsView.js?v=9.23';
+import { ChapterManagerView } from './ui/chapterManagerView.js?v=9.23';
+import { ContentEditModal } from './ui/contentEditModal.js?v=9.23';
+import { downloadQueue } from './core/downloadQueue.js?v=9.23';
 
 class App {
   constructor() {

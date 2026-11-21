@@ -4,9 +4,9 @@
  * visibility auto-sync, and proactive evade lifecycle.
  */
 
-import { eventBus } from '../../eventBus.js?v=9.22';
-import { SILENT_15S_WAV_BASE64 } from '../silentAudioData.js?v=9.22';
-import { logger } from '../../core/logger.js?v=9.22';
+import { eventBus } from '../../eventBus.js?v=9.23';
+import { SILENT_15S_WAV_BASE64 } from '../silentAudioData.js?v=9.23';
+import { logger } from '../../core/logger.js?v=9.23';
 
 export class IosVoicePlayer {
   constructor() {
@@ -215,35 +215,31 @@ export class IosVoicePlayer {
 
     this.startKeepAlive();
 
-    // GWT 5.2 & GWT 20.2: Clean resume check using internal pause flag
-    if (this.isPausedByUser && this.synth.speaking && this.synth.paused) {
-      this.isPausedByUser = false;
-      this.isPlaying = true;
-      this.synth.resume();
-      logger.info('iOS Player', 'synth.resume() 恢復播放');
-      this.notifyStateChange();
-      this.updateMediaSessionMetadata();
-      return;
-    }
-
-    // 防重入檢查：只有在「非強制換章」且「底層發音引擎當前正在朗讀中」時，才攔截連點以防止雙音軌
-    if (!force && this.isPlaying && !this.isPausedByUser && (this.synth.speaking || this.synth.pending)) {
-      logger.info('iOS Player', 'play() 略過: 當前句子正在發音中，防止重入產生雙音軌');
-      return;
-    }
-
+    const token = ++this.playbackToken;
     this.isPausedByUser = false;
     this.isPlaying = true;
+    this.notifyStateChange();
 
-    // 若底層有卡住的暫停狀態，解除暫停
-    if (this.synth.paused) {
-      try { this.synth.resume(); } catch(e) {}
+    if (force) {
+      this.isProactiveEvade = false;
+      this.speakCurrentSentence();
+      return;
     }
 
-    logger.info('iOS Player', `開始朗讀 (第 ${this.currentIndex + 1}/${this.flatSentences.length} 句, force=${force})`);
-    this.notifyStateChange();
-    this.updateMediaSessionMetadata();
-    this.speakCurrentSentence();
+    this.isProactiveEvade = true;
+    if (this.currentUtterance) {
+      this.currentUtterance.onstart = null;
+      this.currentUtterance.onend = null;
+      this.currentUtterance.onerror = null;
+    }
+    try { this.synth.cancel(); } catch (e) {}
+
+    logger.info('iOS Player', `開始朗讀 (80ms 乾淨佇列重啟 -> 第 ${this.currentIndex + 1}/${this.flatSentences.length} 句)`);
+    setTimeout(() => {
+      this.isProactiveEvade = false;
+      if (this.playbackToken !== token || !this.isPlaying) return;
+      this.speakCurrentSentence();
+    }, 80);
   }
 
   speakCurrentSentence() {
@@ -331,14 +327,17 @@ export class IosVoicePlayer {
     this.playbackToken++;
     this.isPlaying = false;
     this.isPausedByUser = true;
-    logger.info('iOS Player', `使用者暫停 (停於第 ${this.currentIndex + 1} 句)`);
-    if (this.synth.speaking) {
-      // Use pause instead of cancel so lock screen / earphone resume works (GWT 5.2)
-      this.synth.pause();
+    this.isProactiveEvade = true;
+    logger.info('iOS Player', `使用者暫停 (已乾淨清空佇列並停於第 ${this.currentIndex + 1} 句)`);
+    if (this.currentUtterance) {
+      this.currentUtterance.onstart = null;
+      this.currentUtterance.onend = null;
+      this.currentUtterance.onerror = null;
     }
+    try { this.synth.cancel(); } catch (e) {}
+    setTimeout(() => { this.isProactiveEvade = false; }, 70);
     this.stopKeepAlive(false);
     this.notifyStateChange();
-    this.updateMediaSessionMetadata();
   }
 
   stop(forceDestroy = false) {

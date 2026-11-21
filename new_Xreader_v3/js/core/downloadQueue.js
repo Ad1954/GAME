@@ -4,10 +4,10 @@
  * 支援多任務排隊接力、非搶佔式常規排序 (上移/下移)、⚡ 立即插隊 (搶佔式暫停與斷點續傳)、❌ 放棄與中斷取消。
  * Story 57: 具備本機持久化記憶與重啟接關續傳機制（支援 IndexedDB + localStorage 雙重防護）。
  */
-import { eventBus } from '../eventBus.js?v=9.22';
-import { crawler } from './crawler.js?v=9.22';
-import { bahaCrawler } from './bahaCrawler.js?v=9.22';
-import { storage } from './storage.js?v=9.22';
+import { eventBus } from '../eventBus.js?v=9.23';
+import { crawler } from './crawler.js?v=9.23';
+import { bahaCrawler } from './bahaCrawler.js?v=9.23';
+import { storage } from './storage.js?v=9.23';
 
 const DB_NAME = 'XreaderQueueDB';
 const DB_VERSION = 1;

@@ -3,8 +3,8 @@
  * Handles sequential chapter downloads via dedicated/custom Cloudflare Worker proxy (Story 8, ADR 0003)
  */
 
-import { storage } from './storage.js?v=9.22';
-import { TextSegmenter } from './segmenter.js?v=9.22';
+import { storage } from './storage.js?v=9.23';
+import { TextSegmenter } from './segmenter.js?v=9.23';
 
 export const DEFAULT_PROXIES = [
   { id: 'local', name: '本地伺服器直通代理 (住宅 IP/免 403 封鎖)', template: '/proxy?url={url}' },
