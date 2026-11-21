@@ -7,7 +7,6 @@ import { AudioEffects } from './src/presentation/AudioEffects.js';
 import { TutorialOverlay } from './src/presentation/TutorialOverlay.js';
 import { StageListView } from './src/presentation/StageListView.js';
 import { Direction, TileType, STAGE_CONFIGS, STAGE_0_CONFIG, Events, MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS, DEFEAT_TACTICAL_TIPS, getEquipmentImagePath, getMonsterImagePath, getHeroImagePath, getMonsterThemeByChapter, CharacterClass, CHARACTER_SKILL_CONFIGS } from './src/core/Constants.js';
-import { GwtRunner } from './src/tests/GwtRunner.js';
 import { CombatVfxEngine } from './src/presentation/CombatVfxEngine.js';
 import { DailyLoopManager } from './src/core/DailyLoopManager.js';
 import { DailyLoopView } from './src/presentation/DailyLoopView.js';
@@ -852,6 +851,7 @@ class AppController {
         contentEl.textContent = '⏳ 正在執行 Phase 1 GWT 驗收測試...';
 
         try {
+          const { GwtRunner } = await import('./src/tests/GwtRunner.js');
           const runner = new GwtRunner();
           await runner.runAllTests();
           const passed = runner.results.filter(r => r.status === 'PASS').length;
