@@ -94,8 +94,12 @@ export class InventoryManager {
   }
 
   // Batch Auto-Merge: Greedily and recursively merges all matching pairs from lowest value up
+  // C-STORY-160: Exclude locked items (isLocked === true) from batch merge
   batchAutoMerge() {
-    if (this.items.length < 2) {
+    const lockedItems = this.items.filter(it => it.isLocked);
+    const unlockedItems = this.items.filter(it => !it.isLocked);
+
+    if (unlockedItems.length < 2) {
       return {
         mergedCount: 0,
         beforeCount: this.items.length,
@@ -107,7 +111,7 @@ export class InventoryManager {
 
     const beforeCount = this.items.length;
     const counts = new Map();
-    for (const item of this.items) {
+    for (const item of unlockedItems) {
       counts.set(item.value, (counts.get(item.value) || 0) + 1);
     }
 
@@ -142,8 +146,8 @@ export class InventoryManager {
       if (!mergedAny) break;
     }
 
-    // Rebuild items array (sorted by value ascending)
-    const newItems = [];
+    // Rebuild items array: merge unlocked items + preserve locked items
+    const newItems = [...lockedItems];
     const sortedValues = Array.from(counts.keys())
       .filter(v => counts.get(v) > 0)
       .sort((a, b) => a - b);
@@ -154,7 +158,8 @@ export class InventoryManager {
         newItems.push({
           id: 'eq_' + Math.random().toString(36).substr(2, 9),
           value: val,
-          type: 'EQUIPMENT'
+          type: 'EQUIPMENT',
+          isLocked: false
         });
       }
     }
@@ -226,7 +231,8 @@ export class InventoryManager {
       this.items = data.items.map(it => ({
         id: it.id || ('eq_' + Math.random().toString(36).substr(2, 9)),
         value: Number(it.value),
-        type: 'EQUIPMENT'
+        type: 'EQUIPMENT',
+        isLocked: !!it.isLocked
       }));
     }
     if (data.equippedItem) {

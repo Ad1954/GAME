@@ -7,6 +7,7 @@ import { GameEventBus } from './GameEventBus.js';
 import { GachaEngine } from './GachaEngine.js';
 import { InventoryManager } from './InventoryManager.js';
 import { TutorialManager } from './TutorialManager.js';
+import { TelemetryLogger } from './TelemetryLogger.js';
 import { 
   Events, 
   STAGE_CONFIGS, 
@@ -23,10 +24,15 @@ import {
   CURRENT_GAME_VERSION,
   TileType,
   CharacterClass,
-  CHARACTER_SKILL_CONFIGS
+  CHARACTER_SKILL_CONFIGS,
+  getEditionProfile,
+  getEditionStorageKey,
+  getDailyEconomyScaling
 } from './Constants.js';
 
-const SAVE_KEY = '2048RPG_Commercial_Save_v1';
+const SAVE_KEY = getEditionProfile().saveKey || '2048RPG_Commercial_Save_v1';
+const ACTIVE_BATTLE_KEY = getEditionStorageKey('2048RPG_Commercial_Active_Battle_v1');
+const DAILY_LOOP_KEY = getEditionStorageKey('2048RPG_DailyLoop_Save_v1');
 
 export class StageManager {
   constructor(eventBus = new GameEventBus()) {
@@ -38,6 +44,32 @@ export class StageManager {
     this.gachaEngine = new GachaEngine();
     this.inventory = new InventoryManager();
     this.tutorialManager = new TutorialManager(this);
+    this.telemetry = new TelemetryLogger();
+
+    // Auto-capture battle item & character skill telemetry with exact board state
+    this.eventBus.on(Events.ITEM_USED, (payload) => {
+      if (!this.telemetry) return;
+      const itype = payload && payload.itemType ? String(payload.itemType).toUpperCase() : 'UNKNOWN';
+      const target = (payload && typeof payload.r === 'number' && typeof payload.c === 'number')
+        ? { r: payload.r, c: payload.c } : null;
+      this.telemetry.recordBattleAction({
+        action: `ITEM_${itype}`,
+        turn: this.turnCount,
+        target,
+        board: this.board,
+        detail: payload ? { itemType: payload.itemType } : null
+      });
+    });
+    this.eventBus.on(Events.SKILL_USED, (payload) => {
+      if (!this.telemetry) return;
+      this.telemetry.recordBattleAction({
+        action: 'SKILL_USED',
+        turn: this.turnCount,
+        target: null,
+        board: this.board,
+        detail: payload ? { character: payload.character || this.selectedCharacter, isAutoRescue: !!payload.isAutoRescue } : null
+      });
+    });
 
     // Player Profile State
     this.gold = 300;
@@ -240,7 +272,7 @@ export class StageManager {
     try {
       localStorage.removeItem(SAVE_KEY);
       localStorage.removeItem('2048RPG_Tutorial_Completed');
-      localStorage.removeItem('2048RPG_DailyLoop_Save_v1');
+      localStorage.removeItem(DAILY_LOOP_KEY);
       if (this.dailyLoopManager) {
         this.dailyLoopManager.resetAll();
       }
@@ -313,10 +345,20 @@ export class StageManager {
       return { success: false, reason: `金幣不足！擴充需要 ${config.cost} 🪙（持有: ${this.gold} 🪙）` };
     }
 
+    const goldBefore = this.gold;
     this.gold -= config.cost;
     this.warehouseExpansionLevel++;
     this.inventory.upgradeCapacity(4);
     this.saveData();
+
+    this.telemetry.recordTownAction({
+      action: 'WAREHOUSE_UPGRADE',
+      goldBefore,
+      goldAfter: this.gold,
+      techTier: this.baseTier,
+      equippedPower: this.inventory.getEquippedPower(),
+      detail: { level: this.warehouseExpansionLevel, newCapacity: this.inventory.maxCapacity, cost: config.cost }
+    });
 
     this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
     this.eventBus.emit(Events.WAREHOUSE_EXPANDED, {
@@ -353,7 +395,8 @@ export class StageManager {
   upgradeBaseTier() {
     const next = this.getNextBaseTierConfig();
     if (!next) {
-      return { success: false, reason: '王國軍備科技已達最高階級 (Tier 48)！' };
+      const maxT = BASE_STAT_TIERS.length > 0 ? BASE_STAT_TIERS[BASE_STAT_TIERS.length - 1].tier : 66;
+      return { success: false, reason: `王國軍備科技已達最高階級 (Tier ${maxT})！` };
     }
     // Check gear gate requirement (C-STORY-024 & C-STORY-106: checks both equipped & inventory items)
     const highestGearVal = this.getHighestOwnedOrEquippedWeapon();
@@ -367,9 +410,19 @@ export class StageManager {
       return { success: false, reason: `金幣不足！升級需要 ${next.cost} 🪙（持有: ${this.gold} 🪙）` };
     }
 
+    const goldBefore = this.gold;
     this.gold -= next.cost;
     this.baseTier = next.tier;
     this.saveData();
+
+    this.telemetry.recordTownAction({
+      action: 'FORGE_UPGRADE',
+      goldBefore,
+      goldAfter: this.gold,
+      techTier: this.baseTier,
+      equippedPower: this.inventory.getEquippedPower(),
+      detail: { tier: this.baseTier, name: next.name, cost: next.cost, isMajor: !!next.isMajor }
+    });
 
     this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
     this.eventBus.emit(Events.BASE_TIER_UPGRADED, {
@@ -399,6 +452,7 @@ export class StageManager {
       return { success: false, reason: '裝備背包已滿，請先進行合成整理！' };
     }
 
+    const goldBefore = this.gold;
     this.gold -= cost;
     const oldLevel = this.gachaLevel;
     this.gachaExp += times;
@@ -423,6 +477,14 @@ export class StageManager {
     }
 
     this.saveData();
+    this.telemetry.recordTownAction({
+      action: 'GACHA_PULL',
+      goldBefore,
+      goldAfter: this.gold,
+      techTier: this.baseTier,
+      equippedPower: this.inventory.getEquippedPower(),
+      detail: { times, cost, rolledValues, bonusItems: bonusItems.map(b => b.type), gachaLevel: this.gachaLevel }
+    });
     this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
     this.eventBus.emit(Events.INVENTORY_CHANGED, { items: this.inventory.items });
     this.eventBus.emit(Events.GACHA_PULLED, {
@@ -451,6 +513,16 @@ export class StageManager {
   batchAutoMerge() {
     const result = this.inventory.batchAutoMerge();
     this.saveData();
+    if (result && result.mergedCount > 0) {
+      this.telemetry.recordTownAction({
+        action: 'BATCH_AUTO_MERGE',
+        goldBefore: this.gold,
+        goldAfter: this.gold,
+        techTier: this.baseTier,
+        equippedPower: this.inventory.getEquippedPower(),
+        detail: { mergedCount: result.mergedCount }
+      });
+    }
     this.eventBus.emit(Events.INVENTORY_CHANGED, { items: this.inventory.items });
     if (result && result.mergedCount > 0) {
       this.eventBus.emit(Events.TILE_MERGED, { count: result.mergedCount, source: 'inventory_auto' });
@@ -460,9 +532,18 @@ export class StageManager {
 
   // Equip item
   equipItem(itemId) {
+    const prevPower = this.inventory.getEquippedPower();
     const res = this.inventory.equip(itemId);
     if (res.success) {
       this.saveData();
+      this.telemetry.recordTownAction({
+        action: 'EQUIP_CHANGE',
+        goldBefore: this.gold,
+        goldAfter: this.gold,
+        techTier: this.baseTier,
+        equippedPower: this.inventory.getEquippedPower(),
+        detail: { prevPower, newPower: this.inventory.getEquippedPower(), itemId }
+      });
       this.eventBus.emit(Events.EQUIPMENT_CHANGED, { equippedItem: this.inventory.equippedItem });
       this.eventBus.emit(Events.INVENTORY_CHANGED, { items: this.inventory.items });
     }
@@ -471,9 +552,18 @@ export class StageManager {
 
   // Unequip item
   unequipItem() {
+    const prevPower = this.inventory.getEquippedPower();
     const res = this.inventory.unequip();
     if (res.success) {
       this.saveData();
+      this.telemetry.recordTownAction({
+        action: 'EQUIP_UNEQUIP',
+        goldBefore: this.gold,
+        goldAfter: this.gold,
+        techTier: this.baseTier,
+        equippedPower: this.inventory.getEquippedPower(),
+        detail: { prevPower }
+      });
       this.eventBus.emit(Events.EQUIPMENT_CHANGED, { equippedItem: null });
       this.eventBus.emit(Events.INVENTORY_CHANGED, { items: this.inventory.items });
     }
@@ -485,6 +575,14 @@ export class StageManager {
     const res = this.inventory.mergeItems(id1, id2);
     if (res.success) {
       this.saveData();
+      this.telemetry.recordTownAction({
+        action: 'EQUIP_MERGE',
+        goldBefore: this.gold,
+        goldAfter: this.gold,
+        techTier: this.baseTier,
+        equippedPower: this.inventory.getEquippedPower(),
+        detail: { newItemValue: res.newItem ? res.newItem.value : null }
+      });
       this.eventBus.emit(Events.INVENTORY_CHANGED, { items: this.inventory.items });
       this.eventBus.emit(Events.TILE_MERGED, { count: 1, source: 'inventory_manual' });
     }
@@ -603,13 +701,26 @@ export class StageManager {
       return { success: false, reason: '今日福利廣告獎勵已全數領取完畢！' };
     }
 
+    const goldBefore = this.gold;
+    const scaling = getDailyEconomyScaling(this.unlockedStageId);
+    const scaledReward = Math.round(DAILY_AD_GOLD_REWARD * scaling.dailyMult);
     this.dailyAdRemain--;
-    this.claimTestGold(DAILY_AD_GOLD_REWARD);
+    this.claimTestGold(scaledReward);
     this.saveData();
+
+    this.telemetry.recordTownAction({
+      action: 'AD_GOLD_REWARD',
+      goldBefore,
+      goldAfter: this.gold,
+      techTier: this.baseTier,
+      equippedPower: this.inventory.getEquippedPower(),
+      detail: { reward: scaledReward, mult: scaling.dailyMult, remain: this.dailyAdRemain }
+    });
 
     return {
       success: true,
-      reward: DAILY_AD_GOLD_REWARD,
+      reward: scaledReward,
+      mult: scaling.dailyMult,
       remain: this.dailyAdRemain,
       totalGold: this.gold
     };
@@ -718,6 +829,17 @@ export class StageManager {
       chargeTurns: this.skillChargeTurns,
       maxTurns: maxCd,
       isReady: this.isSkillReady
+    });
+
+    this.telemetry.startBattle({
+      stageId: config.id,
+      stageName: config.name,
+      board: this.board,
+      techTier: this.baseTier,
+      equippedPower: this.inventory.getEquippedPower(),
+      heroStartPower: actualHeroPower,
+      goldBefore: this.gold,
+      characterClass: this.selectedCharacter
     });
 
     this.emitState();
@@ -1003,9 +1125,29 @@ export class StageManager {
         if (this.pendingWaves && this.pendingWaves.length > 0) {
           const nextWave = this.pendingWaves.shift();
           this.spawnWaveMonsters(nextWave.monsters || nextWave);
+          this.telemetry.recordMove({
+            turn: this.turnCount,
+            direction,
+            spawnedTile: null,
+            kills: result.kills || 0,
+            merges: result.merges || 0,
+            goldEarned: result.goldEarned || 0,
+            board: this.board,
+            extra: { waveSpawned: true }
+          });
           this.emitState();
           return result;
         } else {
+          this.telemetry.recordMove({
+            turn: this.turnCount,
+            direction,
+            spawnedTile: null,
+            kills: result.kills || 0,
+            merges: result.merges || 0,
+            goldEarned: result.goldEarned || 0,
+            board: this.board,
+            extra: { winningMove: true }
+          });
           this.handleVictory({ moves: result.moves, vfxEvents: result.vfxEvents });
           return result;
         }
@@ -1031,8 +1173,9 @@ export class StageManager {
         currentDrop = { type: TileType.EQUIPMENT, value: 2 };
       }
 
+      let spawnedTile = null;
       if (currentDrop.type === TileType.GOLD) {
-        this.spawner.spawnGold(currentDrop.value);
+        spawnedTile = this.spawner.spawnGold(currentDrop.value);
         this.remainingGoldBudget -= currentDrop.value;
         this.goldDropsCount++;
 
@@ -1048,12 +1191,22 @@ export class StageManager {
         this.nextGoldDropTurn = this.turnCount + this.goldDropInterval;
       } else {
         // Spawn equipment strictly using the preview value
-        this.spawner.spawnEquipment(currentDrop.value);
+        spawnedTile = this.spawner.spawnEquipment(currentDrop.value);
         if (this.turnCount > 0 && this.turnCount === this.nextGoldDropTurn) {
           // If gold was scheduled but budget was exhausted or skipped
           this.nextGoldDropTurn = Infinity;
         }
       }
+
+      this.telemetry.recordMove({
+        turn: this.turnCount,
+        direction,
+        spawnedTile,
+        kills: result.kills || 0,
+        merges: result.merges || 0,
+        goldEarned: result.goldEarned || 0,
+        board: this.board
+      });
 
       // Roll upcoming tile preview for the next turn
       this.rollNextTilePreview();
@@ -1073,6 +1226,7 @@ export class StageManager {
       }
 
       this.emitState({ moves: result.moves, vfxEvents: result.vfxEvents });
+      this.saveActiveBattleSnapshot();
     }
 
     return result;
@@ -1095,6 +1249,14 @@ export class StageManager {
 
     this.board.removeTile(r, c);
     this.saveData();
+
+    this.telemetry.recordBattleAction({
+      action: 'GOLD_CASHOUT',
+      turn: this.turnCount,
+      target: { r, c },
+      goldEarned: amount,
+      board: this.board
+    });
 
     this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
     this.eventBus.emit(Events.GOLD_CASHED_OUT, { 
@@ -1270,6 +1432,141 @@ export class StageManager {
     return { success: true, remaining: this.items.snipe, slainMonster: slain };
   }
 
+  
+  // ==========================================
+  // C-STORY-176 & C-STORY-177: ACTIVE BATTLE STATE PERSISTENCE (AUTO-RESUME)
+  // ==========================================
+  saveActiveBattleSnapshot() {
+    if (!this.isInBattle || this.isVictory || this.isGameOver || !this.currentStageConfig || this.currentStageConfig.id === 0) {
+      return false;
+    }
+    try {
+      const serializedTiles = [];
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+          const tile = this.board.getTile(r, c);
+          if (tile) {
+            serializedTiles.push({
+              r, c,
+              type: tile.type,
+              value: tile.value,
+              id: tile.id,
+              splitOnDeath: !!tile.splitOnDeath,
+              splitValue: tile.splitValue || 0,
+              splitCount: tile.splitCount || 0
+            });
+          }
+        }
+      }
+      const payload = {
+        timestamp: Date.now(),
+        stageId: this.currentStageConfig.id,
+        stageConfig: this.currentStageConfig,
+        turnCount: this.turnCount,
+        monstersKilled: this.monstersKilled,
+        stageGoldEarned: this.stageGoldEarned,
+        inBattleGold: this.inBattleGold || 0,
+        battleStartGold: this.battleStartGold || this.gold,
+        goldSpawnBudget: this.goldSpawnBudget,
+        remainingGoldBudget: this.remainingGoldBudget,
+        currentGoldValue: this.currentGoldValue,
+        goldDropsCount: this.goldDropsCount,
+        goldDropInterval: this.goldDropInterval,
+        nextGoldDropTurn: this.nextGoldDropTurn,
+        nextTilePreview: this.nextTilePreview,
+        skillChargeTurns: this.skillChargeTurns,
+        isSkillReady: this.isSkillReady,
+        selectedCharacter: this.selectedCharacter,
+        tiles: serializedTiles,
+        pendingWaves: this.pendingWaves || []
+      };
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(ACTIVE_BATTLE_KEY, JSON.stringify(payload));
+      }
+      return true;
+    } catch (e) {
+      console.warn('Failed to save active battle snapshot', e);
+      return false;
+    }
+  }
+
+  hasActiveBattleSnapshot() {
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      const raw = localStorage.getItem(ACTIVE_BATTLE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      return !!(data && data.stageId !== undefined && data.tiles && data.tiles.length > 0);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  getActiveBattleSnapshot() {
+    try {
+      if (typeof localStorage === 'undefined') return null;
+      const raw = localStorage.getItem(ACTIVE_BATTLE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  clearActiveBattleSnapshot() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(ACTIVE_BATTLE_KEY);
+      }
+    } catch (e) {}
+  }
+
+  resumeActiveBattle() {
+    const snap = this.getActiveBattleSnapshot();
+    if (!snap) return { success: false, reason: '無進行中的戰鬥快照' };
+
+    this.currentStageConfig = snap.stageConfig;
+    this.isInBattle = true;
+    this.isVictory = false;
+    this.isGameOver = false;
+    this.turnCount = snap.turnCount || 0;
+    this.monstersKilled = snap.monstersKilled || 0;
+    this.stageGoldEarned = snap.stageGoldEarned || 0;
+    this.inBattleGold = snap.inBattleGold || 0;
+    this.battleStartGold = snap.battleStartGold || this.gold;
+    this.goldSpawnBudget = snap.goldSpawnBudget;
+    this.remainingGoldBudget = snap.remainingGoldBudget;
+    this.currentGoldValue = snap.currentGoldValue;
+    this.goldDropsCount = snap.goldDropsCount || 0;
+    this.goldDropInterval = snap.goldDropInterval || 4;
+    this.nextGoldDropTurn = snap.nextGoldDropTurn;
+    this.nextTilePreview = snap.nextTilePreview;
+    this.skillChargeTurns = snap.skillChargeTurns || 0;
+    this.isSkillReady = !!snap.isSkillReady;
+    this.pendingWaves = snap.pendingWaves || [];
+
+    // Reconstruct Board
+    this.board = new Board(BOARD_SIZE);
+    this.moveEngine = new MoveEngine(this.board);
+    this.spawner = new Spawner(this.board);
+
+    if (snap.tiles && Array.isArray(snap.tiles)) {
+      for (const t of snap.tiles) {
+        const tile = new Tile(t.type, t.value, t.id);
+        if (t.splitOnDeath) {
+          tile.splitOnDeath = true;
+          tile.splitValue = t.splitValue;
+          tile.splitCount = t.splitCount;
+        }
+        this.board.setTile(t.r, t.c, tile);
+      }
+    }
+
+    this.history = [];
+    this.emitState();
+    this.eventBus.emit(Events.BATTLE_RESUMED, { stageId: snap.stageId, turnCount: this.turnCount });
+    return { success: true, stageId: snap.stageId, turnCount: this.turnCount };
+  }
+
   handleVictory(extraState = {}) {
     this.isVictory = true;
     this.isInBattle = false;
@@ -1319,6 +1616,17 @@ export class StageManager {
     const mergedVfxEvents = [...(extraState.vfxEvents || []), ...sweptGoldVfx];
     this.emitState({ ...extraState, vfxEvents: mergedVfxEvents });
     this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
+    this.clearActiveBattleSnapshot();
+    this.telemetry.endBattle({
+      outcome: 'VICTORY',
+      turns: this.turnCount,
+      firstClearGold: baseReward,
+      inBattleGold,
+      sweepGold,
+      totalGoldEarned: totalEarned,
+      goldAfter: this.gold,
+      board: this.board
+    });
     this.eventBus.emit(Events.STAGE_VICTORY, {
       stage: this.currentStageConfig,
       turns: this.turnCount,
@@ -1339,6 +1647,17 @@ export class StageManager {
     this.isInBattle = false;
     this.consumeStaminaOnDefeat();
 
+    this.clearActiveBattleSnapshot();
+    this.telemetry.endBattle({
+      outcome: 'DEFEAT',
+      turns: this.turnCount,
+      firstClearGold: 0,
+      inBattleGold: this.inBattleGold || 0,
+      sweepGold: 0,
+      totalGoldEarned: this.inBattleGold || 0,
+      goldAfter: this.gold,
+      board: this.board
+    });
     this.eventBus.emit(Events.STAGE_DEFEAT, {
       stage: this.currentStageConfig,
       turns: this.turnCount,
@@ -1350,6 +1669,7 @@ export class StageManager {
 
   // Abandon Battle Rewards upon quitting/exiting combat mid-game (C-STORY-033)
   abandonBattleRewards() {
+    this.clearActiveBattleSnapshot();
     if (this.isInBattle && !this.isVictory && !this.isGameOver) {
       if (this.battleStartGold !== undefined) {
         this.gold = this.battleStartGold;
@@ -1359,6 +1679,16 @@ export class StageManager {
       this.inBattleGold = 0;
       this.stageGoldEarned = 0;
       this.saveData();
+      this.telemetry.endBattle({
+        outcome: 'RETREAT',
+        turns: this.turnCount,
+        firstClearGold: 0,
+        inBattleGold: 0,
+        sweepGold: 0,
+        totalGoldEarned: 0,
+        goldAfter: this.gold,
+        board: this.board
+      });
       this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
     }
   }
@@ -1407,9 +1737,19 @@ export class StageManager {
       return { success: false, reason: `金幣不足！升級至 Lv.${nextLevel} 需要 ${cost.toLocaleString()} 金幣` };
     }
 
+    const goldBefore = this.gold;
     this.gold -= cost;
     this.characterLevels[classId] = nextLevel;
     this.saveData();
+
+    this.telemetry.recordTownAction({
+      action: 'SKILL_UPGRADE',
+      goldBefore,
+      goldAfter: this.gold,
+      techTier: this.baseTier,
+      equippedPower: this.inventory.getEquippedPower(),
+      detail: { classId, level: nextLevel, cost }
+    });
 
     this.eventBus.emit(Events.GOLD_CHANGED, { gold: this.gold });
     this.eventBus.emit(Events.SKILL_UPGRADED, {

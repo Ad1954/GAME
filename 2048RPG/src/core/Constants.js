@@ -1,5 +1,31 @@
 // Commercial Edition: Constants & Configurations
 
+import {
+  CHAPTER_CONFIGS_350,
+  STAGE_CONFIGS_350,
+  getStageRecommendedProgression350
+} from './Stages350.js';
+
+export function getEditionProfile() {
+  if (typeof window !== 'undefined' && window.__RPG_EDITION_PROFILE__) {
+    return window.__RPG_EDITION_PROFILE__;
+  }
+  return {
+    edition: 'v3_500',
+    stageMode: '500',
+    saveKey: '2048RPG_Commercial_Save_v1',
+    storagePrefix: '',
+    telemetryDbName: 'RPG2048_TelemetryDB_v1'
+  };
+}
+
+export function getEditionStorageKey(baseKey) {
+  const prof = getEditionProfile();
+  return (prof.storagePrefix || '') + baseKey;
+}
+
+const IS_350_STAGE_MODE = (getEditionProfile().stageMode === '350');
+
 export const BOARD_SIZE = 5;
 
 export const Direction = {
@@ -22,6 +48,7 @@ export const Events = {
   MONSTER_KILLED: 'MONSTER_KILLED',
   STAGE_VICTORY: 'STAGE_VICTORY',
   STAGE_DEFEAT: 'STAGE_DEFEAT',
+  BATTLE_RESUMED: 'BATTLE_RESUMED',
   GOLD_CHANGED: 'GOLD_CHANGED',
   STAGE_UNLOCKED: 'STAGE_UNLOCKED',
   GOLD_MERGED: 'GOLD_MERGED',
@@ -202,6 +229,38 @@ export const DAILY_ACTIVITY_CHEST_CONFIG = {
 };
 
 // ==========================================
+// PROGRESSIVE DAILY ECONOMY SCALING & EVENT STAGE TIERS
+// Scales daily rewards (Shop/Ad/Sign-in/Quests) & unlocks tiered Event Stage by progression
+// ==========================================
+export const EVENT_STAGE_TIERS = [
+  { level: 0, minStage: 1,   maxStage: 20,  dailyMult: 1.0, unlocked: false, name: '未解鎖',       rewardGold: 0 },
+  { level: 1, minStage: 21,  maxStage: 50,  dailyMult: 1.8, unlocked: true,  name: 'LV.1 黃金試煉', rewardGold: 1000 },
+  { level: 2, minStage: 51,  maxStage: 90,  dailyMult: 2.6, unlocked: true,  name: 'LV.2 荒漠掘金', rewardGold: 2500 },
+  { level: 3, minStage: 91,  maxStage: 150, dailyMult: 3.4, unlocked: true,  name: 'LV.3 地宮尋寶', rewardGold: 4500 },
+  { level: 4, minStage: 151, maxStage: 220, dailyMult: 4.0, unlocked: true,  name: 'LV.4 黑曜金庫', rewardGold: 7000 },
+  { level: 5, minStage: 221, maxStage: 280, dailyMult: 4.6, unlocked: true,  name: 'LV.5 深淵秘寶', rewardGold: 10000 },
+  { level: 6, minStage: 281, maxStage: 999, dailyMult: 5.2, unlocked: true,  name: 'LV.6 神域寶庫', rewardGold: 14000 }
+];
+
+export function getDailyEconomyScaling(unlockedStageId = 1) {
+  const st = Math.max(1, Number(unlockedStageId) || 1);
+  let idx = EVENT_STAGE_TIERS.findIndex(t => st >= t.minStage && st <= t.maxStage);
+  if (idx === -1) idx = EVENT_STAGE_TIERS.length - 1;
+  const cur = EVENT_STAGE_TIERS[idx];
+  const next = EVENT_STAGE_TIERS[idx + 1] || null;
+  return {
+    dailyMult: cur.dailyMult,
+    eventUnlocked: cur.unlocked,
+    eventLevel: cur.level,
+    eventName: cur.name,
+    eventRewardGold: cur.rewardGold,
+    nextUnlockStage: next ? next.minStage : null,
+    nextEventName: next ? next.name : null,
+    nextEventRewardGold: next ? next.rewardGold : null
+  };
+}
+
+// ==========================================
 // C-STORY-008 & C-STORY-037 & C-STORY-102 & C-STORY-106: 48-TIER BASE STAT UPGRADES (8 Cycles, Total: 2,700,000G)
 // Cycle 1: 6,000G (T6=3,000)    | Cycle 2: 18,000G (T12=7,000)   | Cycle 3: 46,000G (T18=20,000)  | Cycle 4: 110,000G (T24=55,000)
 // Cycle 5: 220,000G (T30=110k)  | Cycle 6: 400,000G (T36=200k)   | Cycle 7: 700,000G (T42=350k)   | Cycle 8: 1,200,000G (T48=600k)
@@ -269,50 +328,67 @@ export const BASE_STAT_TIERS = [
   { tier: 45, cost: 120000, isMajor: false, baseRange: [256, 512, 1024], weights: [0.60, 0.30, 0.10], name: '無上神威', desc: '大額提升 1024 階產出' },
   { tier: 46, cost: 135000, isMajor: false, baseRange: [256, 512, 1024], weights: [0.55, 0.32, 0.13], name: '鴻濛造化', desc: '神域造化極限' },
   { tier: 47, cost: 145000, isMajor: false, baseRange: [256, 512, 1024], weights: [0.50, 0.34, 0.16], name: '終焉審判', desc: '創世神話大突破前哨' },
-  { tier: 48, cost: 600000, isMajor: true, minEquippedWeapon: 65536, baseRange: [512, 1024, 2048], weights: [0.75, 0.22, 0.03], name: '【大突破】創世神話', desc: '🚨 徹底淘汰 256！盤面基礎產出達到神話頂峰 [512, 1024, 2048]' }
+  { tier: 48, cost: 600000, isMajor: true, minEquippedWeapon: 65536, baseRange: [512, 1024, 2048], weights: [0.75, 0.22, 0.03], name: '【大突破】創世神話', desc: '🚨 徹底淘汰 256！盤面基礎產出達到神話頂峰 [512, 1024, 2048]' },
+
+  // Cycle 9: [512, 1024, 2048] -> Subtotal: 2,050,000 (Cumulative: 4,750,000)
+  { tier: 49, cost: 160000, isMajor: false, baseRange: [512, 1024, 2048], weights: [0.70, 0.25, 0.05], name: '始源微光', desc: '1024 階裝備產出提升' },
+  { tier: 50, cost: 180000, isMajor: false, baseRange: [512, 1024, 2048], weights: [0.65, 0.28, 0.07], name: '原初聖印', desc: '穩固 1024 與 2048 掉落' },
+  { tier: 51, cost: 200000, isMajor: false, baseRange: [512, 1024, 2048], weights: [0.60, 0.30, 0.10], name: '始源神鍛', desc: '大額提升 2048 階產出' },
+  { tier: 52, cost: 230000, isMajor: false, baseRange: [512, 1024, 2048], weights: [0.55, 0.32, 0.13], name: '原初化境', desc: '始源神力凝聚' },
+  { tier: 53, cost: 280000, isMajor: false, baseRange: [512, 1024, 2048], weights: [0.50, 0.34, 0.16], name: '始源裁決', desc: '始源主宰大突破前哨' },
+  { tier: 54, cost: 1000000, isMajor: true, minEquippedWeapon: 131072, baseRange: [1024, 2048, 4096], weights: [0.75, 0.22, 0.03], name: '【大突破】始源主宰', desc: '🚨 徹底淘汰 512！盤面基礎產出達到 [1024, 2048, 4096]' },
+
+  // Cycle 10: [1024, 2048, 4096] -> Subtotal: 2,900,000 (Cumulative: 7,650,000)
+  { tier: 55, cost: 240000, isMajor: false, baseRange: [1024, 2048, 4096], weights: [0.70, 0.25, 0.05], name: '創世神火', desc: '2048 階裝備產出提升' },
+  { tier: 56, cost: 270000, isMajor: false, baseRange: [1024, 2048, 4096], weights: [0.65, 0.28, 0.07], name: '聖堂光輝', desc: '穩固 2048 與 4096 掉落' },
+  { tier: 57, cost: 300000, isMajor: false, baseRange: [1024, 2048, 4096], weights: [0.60, 0.30, 0.10], name: '秩序神殿', desc: '大額提升 4096 階產出' },
+  { tier: 58, cost: 340000, isMajor: false, baseRange: [1024, 2048, 4096], weights: [0.55, 0.32, 0.13], name: '神聖矩陣', desc: '創世神力淬鍊' },
+  { tier: 59, cost: 400000, isMajor: false, baseRange: [1024, 2048, 4096], weights: [0.50, 0.34, 0.16], name: '創世真理', desc: '創世聖皇大突破前哨' },
+  { tier: 60, cost: 1350000, isMajor: true, minEquippedWeapon: 262144, baseRange: [2048, 4096, 8192], weights: [0.75, 0.22, 0.03], name: '【大突破】創世聖皇', desc: '🚨 徹底淘汰 1024！盤面基礎產出達到 [2048, 4096, 8192]' },
+
+  // Cycle 11: [2048, 4096, 8192] -> Subtotal: 3,500,000 (Cumulative: 11,150,000)
+  { tier: 61, cost: 320000, isMajor: false, baseRange: [2048, 4096, 8192], weights: [0.70, 0.25, 0.05], name: '萬古洪荒', desc: '4096 階裝備產出提升' },
+  { tier: 62, cost: 360000, isMajor: false, baseRange: [2048, 4096, 8192], weights: [0.65, 0.28, 0.07], name: '終焉寂滅', desc: '穩固 4096 與 8192 掉落' },
+  { tier: 63, cost: 400000, isMajor: false, baseRange: [2048, 4096, 8192], weights: [0.60, 0.30, 0.10], name: '虛無之眼', desc: '大額提升 8192 階產出' },
+  { tier: 64, cost: 450000, isMajor: false, baseRange: [2048, 4096, 8192], weights: [0.55, 0.32, 0.13], name: '紀元崩毀', desc: '萬古神力交織' },
+  { tier: 65, cost: 520000, isMajor: false, baseRange: [2048, 4096, 8192], weights: [0.50, 0.34, 0.16], name: '萬古至尊', desc: '萬古終焉天尊前哨' },
+  { tier: 66, cost: 1450000, isMajor: true, minEquippedWeapon: 524288, baseRange: [4096, 8192, 16384], weights: [0.75, 0.22, 0.03], name: '【大突破】萬古終焉天尊', desc: '🚨 徹底淘汰 2048！盤面基礎達到神界極限 [4096, 8192, 16384]' }
+
 ];
 
 // C-STORY-106: Pure Reference Recommended Weapon & Tech Tier Progression for Stages 1~350
 // (Strictly informational in Briefing UI; players are 100% free to challenge any stage naked!)
+// C-STORY-106 & C-STORY-177: Pure Reference Recommended Weapon & Tech Tier Progression for Stages 1~500
+// (Strictly informational in Briefing UI; players are 100% free to challenge any stage naked!)
 export function getStageRecommendedProgression(s) {
+  if (IS_350_STAGE_MODE) return getStageRecommendedProgression350(s);
   if (s <= 0) return { recPower: 2, recTechTier: 1 };
-  if (s <= 5) return { recPower: 8, recTechTier: 2 };
-  if (s <= 12) return { recPower: 16, recTechTier: 4 };
-  if (s <= 19) return { recPower: 32, recTechTier: 5 };
-  if (s === 20) return { recPower: 64, recTechTier: 6 };
-  if (s <= 27) return { recPower: 64, recTechTier: 7 };
-  if (s <= 30) return { recPower: 128, recTechTier: 8 };
-  if (s <= 41) return { recPower: 128, recTechTier: 9 };
-  if (s <= 50) return { recPower: 256, recTechTier: 11 };
-  if (s <= 60) return { recPower: 256, recTechTier: 12 };
-  if (s <= 75) return { recPower: 512, recTechTier: 13 };
-  if (s <= 90) return { recPower: 512, recTechTier: 15 };
-  if (s <= 100) return { recPower: 1024, recTechTier: 18 };
-  if (s <= 120) return { recPower: 1024, recTechTier: 20 };
-  if (s <= 135) return { recPower: 2048, recTechTier: 22 };
-  if (s <= 150) return { recPower: 2048, recTechTier: 24 };
-  if (s <= 165) return { recPower: 4096, recTechTier: 28 };
-  if (s <= 180) return { recPower: 4096, recTechTier: 29 };
-  if (s <= 200) return { recPower: 8192, recTechTier: 34 };
-  if (s <= 220) return { recPower: 8192, recTechTier: 35 };
-  if (s <= 250) return { recPower: 16384, recTechTier: 40 };
-  if (s <= 280) return { recPower: 16384, recTechTier: 41 };
-  if (s <= 315) return { recPower: 32768, recTechTier: 46 };
-  return { recPower: 65536, recTechTier: 47 };
+  if (s <= 40) return { recPower: 4, recTechTier: Math.max(1, Math.min(6, 1 + Math.floor(s / 8))) };
+  if (s <= 80) return { recPower: 16, recTechTier: Math.max(7, Math.min(12, 7 + Math.floor((s - 40) / 8))) };
+  if (s <= 120) return { recPower: 64, recTechTier: Math.max(13, Math.min(18, 13 + Math.floor((s - 80) / 8))) };
+  if (s <= 170) return { recPower: 256, recTechTier: Math.max(19, Math.min(24, 19 + Math.floor((s - 120) / 10))) };
+  if (s <= 230) return { recPower: 1024, recTechTier: Math.max(25, Math.min(30, 25 + Math.floor((s - 170) / 10))) };
+  if (s <= 300) return { recPower: 4096, recTechTier: Math.max(31, Math.min(36, 31 + Math.floor((s - 230) / 12))) };
+  if (s <= 380) return { recPower: 16384, recTechTier: Math.max(37, Math.min(42, 37 + Math.floor((s - 300) / 14))) };
+  if (s <= 450) return { recPower: 65536, recTechTier: Math.max(43, Math.min(48, 43 + Math.floor((s - 380) / 12))) };
+  return { recPower: 262144, recTechTier: Math.max(49, Math.min(66, 49 + Math.floor((s - 450) / 3))) };
 }
 
-// 9 Chapters (Prologue Chapter 0 + Chapters 1~8)
-export const CHAPTER_CONFIGS = [
+// 10 Chapters (Prologue Chapter 0 + Chapters 1~9, Covering 500 Stages with 40/40/40 Baseline)
+export const CHAPTER_CONFIGS_500 = [
   { id: 0, name: '序章：新手訓練所', range: [0, 0], desc: '王國皇家訓練營，熟悉英雄成長與魔物討伐！', icon: '🎓' },
-  { id: 1, name: '第 I 章：微風之境', range: [1, 5], desc: '勇者初出茅廬，討伐邊境散落的魔物！', icon: '🌾' },
-  { id: 2, name: '第 II 章：灼熱熔岩', range: [6, 20], desc: '地底烈焰噴湧，深入熔岩剿滅高階魔物！', icon: '🔥' },
-  { id: 3, name: '第 III 章：孤峰岩地', range: [21, 50], desc: '懸崖峭壁險峻，擊潰盤據險要的強盜軍團！', icon: '⛰️' },
-  { id: 4, name: '第 IV 章：蛛魔荒漠', range: [51, 90], desc: '無垠黃沙之下，潛伏著無數毒蛛與分裂母體！', icon: '🏜️' },
-  { id: 5, name: '第 V 章：遠古地宮', range: [91, 150], desc: '千年前的沉沒皇陵，不死守衛盤據其中！', icon: '🏛️' },
-  { id: 6, name: '第 VI 章：滅世黑曜', range: [151, 220], desc: '黑曜龍巢核心！迎戰萬級戰力的遠古黑曜巨龍！', icon: '🌋' },
-  { id: 7, name: '第 VII 章：神魔深淵', range: [221, 280], desc: '撕裂空間的深淵裂隙，混沌惡魔傾巢而出！', icon: '🌌' },
-  { id: 8, name: '第 VIII 章：終焉神域', range: [281, 350], desc: '世界之巔的創世王座，考驗凡人勇者的終極之戰！', icon: '☀️' }
+  { id: 1, name: '第 I 章：微風之境', range: [1, 40], desc: '勇者初試鋒芒！1 隻魔物超大自由盤面，輕鬆體會合成樂趣！', icon: '🌾' },
+  { id: 2, name: '第 II 章：灼熱熔岩', range: [41, 80], desc: '雙雄走位磨礪！2 隻魔物盤據，學習引導走位與集火斬殺！', icon: '🔥' },
+  { id: 3, name: '第 III 章：孤峰岩地', range: [81, 120], desc: '戰術小隊突圍！3 隻魔物陣列，體驗波次接力與分裂機制！', icon: '⛰️' },
+  { id: 4, name: '第 IV 章：蛛魔荒漠', range: [121, 170], desc: '無垠黃沙之下，潛伏著無數毒蛛與分裂母體！', icon: '🏜️' },
+  { id: 5, name: '第 V 章：遠古地宮', range: [171, 230], desc: '千年前的沉沒皇陵，不死守衛盤據其中！', icon: '🏛️' },
+  { id: 6, name: '第 VI 章：滅世黑曜', range: [231, 300], desc: '黑曜龍巢核心！迎戰萬級戰力的遠古黑曜巨龍！', icon: '🌋' },
+  { id: 7, name: '第 VII 章：神魔深淵', range: [301, 380], desc: '撕裂空間的深淵裂隙，混沌惡魔傾巢而出！', icon: '🌌' },
+  { id: 8, name: '第 VIII 章：終焉神域', range: [381, 450], desc: '世界之巔的創世王座，考驗凡人勇者的神話之戰！', icon: '☀️' },
+  { id: 9, name: '第 IX 章：萬古混沌', range: [451, 500], desc: '宇宙初開的終焉虛空！迎戰 524,288 終極神魔「混沌吞天獸」！', icon: '🪐' }
 ];
+
+export const CHAPTER_CONFIGS = IS_350_STAGE_MODE ? CHAPTER_CONFIGS_350 : CHAPTER_CONFIGS_500;
 
 // ==========================================
 // Chapter 0: 序章：新手訓練所 (Stage 0) (C-STORY-032)
@@ -327,253 +403,241 @@ export const STAGE_0_CONFIG = {
 // ==========================================
 // C-STORY-008: 350 STAGES PROCEDURAL GENERATOR
 // ==========================================
+// ==========================================
+// C-STORY-177: 500 STAGES PROCEDURAL GENERATOR
+// - Stage 1 ~ 40: 1 Monster Only (Ultra-wide 15 empty tiles, 20~40 turns)
+// - Stage 41 ~ 80: 2 Monsters (14 empty tiles, 50~80 turns)
+// - Stage 81 ~ 120: 3 Monsters (13 empty tiles, 80~120 turns)
+// - Stage 121 ~ 500: Seamless Scaling (2~3 monsters on normal, 4 only on Bosses, all <= 300 turns)
+// ==========================================
 function generateAllStages() {
   const stages = [];
 
-  // ==========================================
-  // Chapter 1: 微風之境 (Stage 1 ~ 5)
-  // 數值起點：單隻登場怪物數值最大是 32，每關 3~4 隻怪！
-  // ==========================================
-  const chapter1Stages = [
-    {
-      id: 1, chapter: 1, name: '第 1 關：微風平原', subtitle: '初試鋒芒',
-      desc: '討伐哥布林前鋒！場上盤踞 3 隻敵軍，合成裝備餵給勇者一舉擊破！',
-      recPower: 2, rewardGold: 100, goldCap: 40, goldBaseValue: 4,
-      monsters: [8, 2, 4], starterEquipment: [2, 2], waves: [], icon: '🌾'
-    },
-    {
-      id: 2, chapter: 1, name: '第 2 關：暗夜密林', subtitle: '狂狼出沒',
-      desc: '密林中潛伏著狂暴之狼與前鋒！先強化至 16 再行逐一斬殺！',
-      recPower: 4, rewardGold: 105, goldCap: 50, goldBaseValue: 4,
-      monsters: [16, 4, 4], starterEquipment: [2, 4], waves: [], icon: '🌲'
-    },
-    {
-      id: 3, chapter: 1, name: '第 3 關：孤峰岩地', subtitle: '強盜攔路',
-      desc: '強盜小隊包夾隘口！善用 2048 滑動合體突破重圍！',
-      recPower: 4, rewardGold: 110, goldCap: 60, goldBaseValue: 4,
-      monsters: [16, 4, 8], starterEquipment: [4, 4], waves: [], icon: '⛰️'
-    },
-    {
-      id: 4, chapter: 1, name: '第 4 關：獸人前哨', subtitle: '雙雄夾擊',
-      desc: '獸人督軍 (32) 率隊扼守！先斬殺 8 級雜兵削弱敵勢再戰督軍！',
-      recPower: 8, rewardGold: 115, goldCap: 70, goldBaseValue: 4,
-      monsters: [32, 8, 8], starterEquipment: [4, 4, 8], waves: [], icon: '⛺'
-    },
-    {
-      id: 5, chapter: 1, name: '第 5 關：蛛魔地穴', subtitle: '石像鬼守衛',
-      desc: '地穴深處第一章關底！石像鬼領主 (32) 率領三隻護衛形成 4 怪包夾防線！',
-      recPower: 16, rewardGold: 120, goldCap: 80, goldBaseValue: 4,
-      monsters: [32, 8, 16, 16], starterEquipment: [8, 8, 16], waves: [], icon: '🕸️'
-    }
-  ];
-  stages.push(...chapter1Stages);
-
-  // ==========================================
-  // Chapter 2: 灼熱熔岩 (Stage 6 ~ 20)
-  // 階梯過渡：接續第一章的 32 向上延伸至 64 ~ 512，怪數 3~4 隻！
-  // 首通賞金平滑階梯：80 ~ 220 🪙，徹底抑制成長速度，絕不超過單抽/十連
-  // ==========================================
-  const chapter2Stages = [
-    {
-      id: 6, chapter: 2, name: '第 6 關：火鱗前哨', subtitle: '雙蜥盤據',
-      desc: '火鱗蜥蜴 (64) 率領 16、32 扼守熔岩入口！逐一擊破！',
-      recPower: 16, rewardGold: 125, goldCap: 90, goldBaseValue: 4,
-      monsters: [64, 16, 32], starterEquipment: [8, 16, 16], waves: [], icon: '🦎'
-    },
-    {
-      id: 7, chapter: 2, name: '第 7 關：熔岩巢穴', subtitle: '分裂母體',
-      desc: '盤踞著異變的熔岩史萊姆母體 (64)！斬殺後將分裂為兩隻 32！',
-      recPower: 32, rewardGold: 130, goldCap: 100, goldBaseValue: 4,
-      monsters: [{ value: 64, splitOnDeath: true, splitValue: 32, splitCount: 2 }, 16, 32],
-      starterEquipment: [8, 16, 16], waves: [], icon: '🦠'
-    },
-    {
-      id: 8, chapter: 2, name: '第 8 關：赤炎隘口', subtitle: '炎魔督軍',
-      desc: '炎魔督軍 (128) 率領 32、64 雜兵扼守！必須逐一擊破！',
-      recPower: 64, rewardGold: 135, goldCap: 110, goldBaseValue: 4,
-      monsters: [128, 32, 64], starterEquipment: [16, 16, 32], waves: [], icon: '🔥'
-    },
-    {
-      id: 9, chapter: 2, name: '第 9 關：熔火魔窟', subtitle: '炎魔母衛',
-      desc: '高階混編！炎魔母衛 (128) 率領三隻前鋒形成 4 怪包夾防禦！',
-      recPower: 64, rewardGold: 140, goldCap: 120, goldBaseValue: 8,
-      monsters: [128, 32, 32, 64], starterEquipment: [16, 32, 32], waves: [], icon: '🌋'
-    },
-    {
-      id: 10, chapter: 2, name: '第 10 關：終焉火山口', subtitle: '黑曜熔岩龍',
-      desc: '熔岩之地的霸主！三大護衛簇擁 256 滅世黑曜熔岩巨龍！',
-      recPower: 128, rewardGold: 145, goldCap: 130, goldBaseValue: 8,
-      monsters: [256, 32, 64, 64], starterEquipment: [32, 32, 64], waves: [], icon: '🐉'
-    },
-    {
-      id: 11, chapter: 2, name: '第 11 關：熔岩走廊', subtitle: '熔炎先鋒',
-      desc: '深入地底熔脈！128 熔炎先鋒率領 3 隻前鋒形成 4 怪陣列！',
-      recPower: 64, rewardGold: 150, goldCap: 140, goldBaseValue: 8,
-      monsters: [128, 32, 64, 64], starterEquipment: [16, 32, 32], waves: [], icon: '🔥'
-    },
-    {
-      id: 12, chapter: 2, name: '第 12 關：熾熱石窟', subtitle: '火魔哨長',
-      desc: '炎魔巡防隊！128 哨長率領精銳前鋒夾擊！',
-      recPower: 64, rewardGold: 155, goldCap: 150, goldBaseValue: 8,
-      monsters: [128, 32, 64, 64], starterEquipment: [16, 32, 32], waves: [], icon: '🔥'
-    },
-    {
-      id: 13, chapter: 2, name: '第 13 關：灼熱熔泉', subtitle: '烈焰巨魔',
-      desc: '巨魔盤據熔泉！先擊殺低階前鋒再戰 256 巨魔！',
-      recPower: 128, rewardGold: 160, goldCap: 160, goldBaseValue: 8,
-      monsters: [256, 32, 64, 64], starterEquipment: [32, 32, 64], waves: [], icon: '🔥'
-    },
-    {
-      id: 14, chapter: 2, name: '第 14 關：熔核裂隙', subtitle: '裂變熔核',
-      desc: '異變的熔核母體 (256)！斬殺後將分裂為兩隻 128 小熔核！',
-      recPower: 128, rewardGold: 165, goldCap: 170, goldBaseValue: 8,
-      monsters: [{ value: 256, splitOnDeath: true, splitValue: 128, splitCount: 2 }, 32, 64, 64],
-      starterEquipment: [32, 32, 64], waves: [], icon: '🦠'
-    },
-    {
-      id: 15, chapter: 2, name: '第 15 關：黑曜石階', subtitle: '黑曜近衛',
-      desc: '黑曜石近衛團！256 強敵率領 3 隻前鋒形成堅實防線！',
-      recPower: 128, rewardGold: 170, goldCap: 180, goldBaseValue: 8,
-      monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🌋'
-    },
-    {
-      id: 16, chapter: 2, name: '第 16 關：熔岩巨橋', subtitle: '熔岩督戰官',
-      desc: '督戰官親臨戰線！合成強大武器擊破 256 督戰官！',
-      recPower: 128, rewardGold: 175, goldCap: 190, goldBaseValue: 8,
-      monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🔥'
-    },
-    {
-      id: 17, chapter: 2, name: '第 17 關：地火祭壇', subtitle: '祭壇主祭',
-      desc: '祭壇主祭守護地心之火！256 強敵率護衛頑抗！',
-      recPower: 128, rewardGold: 180, goldCap: 200, goldBaseValue: 8,
-      monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🔥'
-    },
-    {
-      id: 18, chapter: 2, name: '第 18 關：烈焰深淵', subtitle: '深淵炎煞',
-      desc: '深淵底部煞氣騰騰！四怪包夾，步步為營！',
-      recPower: 128, rewardGold: 185, goldCap: 210, goldBaseValue: 8,
-      monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🔥'
-    },
-    {
-      id: 19, chapter: 2, name: '第 19 關：熔岩巨門', subtitle: '門扉巨獸',
-      desc: '通往王座的巨門守衛！256 領主扼守通道！',
-      recPower: 128, rewardGold: 190, goldCap: 220, goldBaseValue: 8,
-      monsters: [256, 64, 64, 128], starterEquipment: [32, 64, 64], waves: [], icon: '🔥'
-    },
-    {
-      id: 20, chapter: 2, name: '第 20 關：烈焰王座', subtitle: '熔岩領主',
-      desc: '第二章終極關底！512 熔岩君王率領 64、128、256 三大護衛決死一戰！',
-      recPower: 256, rewardGold: 195, goldCap: 240, goldBaseValue: 16,
-      monsters: [512, 64, 128, 256], starterEquipment: [64, 64, 128], waves: [], icon: '👑'
-    }
-  ];
-  stages.push(...chapter2Stages);
-
-  // ==========================================
-  // Stages 21 ~ 350
-  // Chapter 3 (21~50): 主力 512 ~ 2048, 4~5 隻怪混編！
-  // 首通賞金嚴格大於第二章 (Stage 21 起為 230 🪙 > Stage 20 的 220 🪙)
-  // Chapter 4~8 (51~350): 主力指數攀升至 262,144, 4~6 隻怪混編！
-  // ==========================================
-  for (let s = 21; s <= 350; s++) {
-    let chapter = 3;
-    for (const ch of CHAPTER_CONFIGS) {
+  for (let s = 1; s <= 500; s++) {
+    let chapter = 1;
+    for (const ch of CHAPTER_CONFIGS_500) {
       if (s >= ch.range[0] && s <= ch.range[1]) {
         chapter = ch.id;
         break;
       }
     }
 
-    // Moderate acceleration reward curve (C-STORY-037):
-    // Stage 1~20: 100 + (s - 1) * 5 (Stage 20 = 195)
-    // Stage 21~50: 195 + (s - 20) * 10 (Stage 50 = 495)
-    // Stage 51~90: 495 + (s - 50) * 20 (Stage 65 = 795, Stage 90 = 1295)
-    // Stage 91~350: 1295 + (s - 90) * 30 (Stage 350 = 9095)
+    const chInfo = CHAPTER_CONFIGS_500.find(c => c.id === chapter);
+    const stageInCh = s - chInfo.range[0] + 1;
+
+    // Smooth Reward Gold Curve (Cumulative ~6.57M G for 500 stages)
     let rewardGold = 100;
-    if (s <= 20) {
-      rewardGold = 100 + (s - 1) * 5;
-    } else if (s <= 50) {
-      rewardGold = 195 + (s - 20) * 10;
-    } else if (s <= 90) {
-      rewardGold = 495 + (s - 50) * 20;
+    if (s <= 40) {
+      rewardGold = 100 + (s - 1) * 5; // 100 ~ 295
+    } else if (s <= 80) {
+      rewardGold = 300 + (s - 40) * 10; // 310 ~ 700
+    } else if (s <= 120) {
+      rewardGold = 700 + (s - 80) * 15; // 715 ~ 1300
+    } else if (s <= 350) {
+      rewardGold = 1300 + (s - 120) * 30; // 1330 ~ 8200
     } else {
-      rewardGold = 1295 + (s - 90) * 30;
+      rewardGold = 8200 + (s - 350) * 50; // 8250 ~ 15700
     }
 
-    const goldCap = Math.floor(80 + s * 4);
-    const goldBaseValue = s <= 35 ? 8 : s <= 90 ? 16 : s <= 180 ? 32 : 64;
-
-    // Boss Power Scaling:
-    // Ch 3 (21~50): 512 ~ 2048 (exp 9 ~ 11)
-    // Ch 4 (51~90): 2048 ~ 4096 (exp 11 ~ 12)
-    // Ch 5 (91~150): 4096 ~ 16384 (exp 12 ~ 14)
-    // Ch 6 (151~220): 16384 ~ 65536 (exp 14 ~ 16)
-    // Ch 7 (221~280): 65536 ~ 131072 (exp 16 ~ 17)
-    // Ch 8 (281~350): 131072 ~ 262144 (exp 17 ~ 18)
-    let bossExp = 9;
-    if (s <= 27) bossExp = 9;         // 512
-    else if (s <= 41) bossExp = 10;   // 1024
-    else if (s <= 60) bossExp = 11;   // 2048
-    else if (s <= 90) bossExp = 12;   // 4096
-    else if (s <= 120) bossExp = 13;  // 8192
-    else if (s <= 150) bossExp = 14;  // 16384
-    else if (s <= 180) bossExp = 15;  // 32768
-    else if (s <= 220) bossExp = 16;  // 65536
-    else if (s <= 280) bossExp = 17;  // 131072
-    else bossExp = 18;                // 262144 (Stage 281~350)
-
-    const bossVal = Math.pow(2, bossExp);
-
-    // Minion scaling (dynamic 4~6 monsters)
-    const minion1 = Math.pow(2, Math.max(1, bossExp - 3));
-    const minion2 = Math.pow(2, Math.max(1, bossExp - 2));
-    const minion3 = Math.pow(2, Math.max(1, bossExp - 1));
-
-    let monsterCount = 4;
-    if (s >= 22 && s <= 50) {
-      monsterCount = (s % 2 === 0) ? 5 : 4;
-    } else if (s > 50 && s <= 150) {
-      monsterCount = 5;
-    } else if (s > 150) {
-      monsterCount = 6;
-    }
+    const goldCap = Math.floor(60 + s * 4);
+    const goldBaseValue = s <= 40 ? 4 : s <= 120 ? 8 : s <= 230 ? 16 : s <= 380 ? 32 : 64;
 
     const monsters = [];
-    const minionPool = [minion1, minion2, minion3];
-    for (let i = 0; i < monsterCount - 1; i++) {
-      monsters.push(minionPool[i % minionPool.length]);
+    let isSplitter = false;
+    let subtitle = '敵軍前鋒';
+    let desc = '';
+
+    // ==========================================
+    // Tier 1: Stage 1 ~ 40 (Strictly 1 Monster, 4 ~ 32)
+    // ==========================================
+    if (s <= 40) {
+      let mVal = 4;
+      if (s > 30) mVal = 32;
+      else if (s > 20) mVal = 16;
+      else if (s > 10) mVal = 8;
+      else mVal = 4;
+
+      if (s === 40) {
+        subtitle = '章節領主';
+        desc = `微風之境最終試煉！孤傲石像鬼 (${mVal}) 盤據，盤面留有 15 格寬敞空間，一擊必殺！`;
+      } else {
+        subtitle = '單騎突入';
+        desc = `初階試煉！場上僅有 1 隻魔物 (${mVal})，盡情滑動合成高階武器，秒殺過關！`;
+      }
+      monsters.push(mVal);
+    }
+    // ==========================================
+    // Tier 2: Stage 41 ~ 80 (Strictly 2 Monsters, 8 ~ 64)
+    // ==========================================
+    else if (s <= 80) {
+      let bossVal = 16;
+      if (s > 70) bossVal = 64;
+      else if (s > 60) bossVal = 64;
+      else if (s > 50) bossVal = 32;
+      else bossVal = 16;
+
+      const minionVal = Math.max(4, Math.floor(bossVal / 2));
+      isSplitter = (s % 9 === 0);
+
+      if (isSplitter) {
+        subtitle = '異變母體';
+        desc = `遭遇分裂魔物 (${bossVal})！斬殺後分裂為幼體，搭配侍從 (${minionVal})，精準走位！`;
+        monsters.push({
+          value: bossVal,
+          splitOnDeath: true,
+          splitValue: minionVal,
+          splitCount: 2
+        });
+        monsters.push(minionVal);
+      } else {
+        if (s === 80) {
+          subtitle = '雙雄領主';
+          desc = `熔岩領主攜帶精銳護衛阻截！場上僅 2 隻強敵，掌握擊殺順序！`;
+        } else {
+          subtitle = '雙雄夾擊';
+          desc = `雙怪突襲！主怪 (${bossVal}) 與侍從 (${minionVal}) 夾擊，善用 14 格空間逐一擊破！`;
+        }
+        monsters.push(bossVal);
+        monsters.push(minionVal);
+      }
+    }
+    // ==========================================
+    // Tier 3: Stage 81 ~ 120 (Strictly 3 Monsters, 16 ~ 256)
+    // ==========================================
+    else if (s <= 120) {
+      let bossVal = 32;
+      if (s > 110) bossVal = 256;
+      else if (s > 100) bossVal = 128;
+      else if (s > 90) bossVal = 64;
+      else bossVal = 32;
+
+      const minion1 = Math.max(8, Math.floor(bossVal / 4));
+      const minion2 = Math.max(8, Math.floor(bossVal / 2));
+      isSplitter = (s % 8 === 0);
+
+      if (isSplitter) {
+        subtitle = '母體裂變';
+        desc = `遠古異變 (${bossVal}) 裂變母體！斬殺後裂解，搭配 2 隻侍從嚴陣以待！`;
+        monsters.push({
+          value: bossVal,
+          splitOnDeath: true,
+          splitValue: Math.max(2, Math.floor(bossVal / 2)),
+          splitCount: 2
+        });
+        monsters.push(minion1);
+        monsters.push(minion2);
+      } else {
+        subtitle = (s % 10 === 0) ? '小隊精英' : '戰術小隊';
+        desc = `三怪戰陣！主力魔物 (${bossVal}) 率領 2 隻前鋒形成穩固防線，破防連擊！`;
+        monsters.push(bossVal);
+        monsters.push(minion2);
+        monsters.push(minion1);
+      }
+    }
+    // ==========================================
+    // Tier 4 & 5: Stage 121 ~ 500 (Seamless Scaling, 2~3 monsters, 4 only on Bosses)
+    // ==========================================
+    else {
+      // Boss Power Scaling (Monotonically strictly increasing, no regression)
+      let bossExp = 8; // 256
+      if (s <= 140) bossExp = 8;        // 256
+      else if (s <= 170) bossExp = 9;   // 512
+      else if (s <= 200) bossExp = 10;  // 1024
+      else if (s <= 230) bossExp = 11;  // 2048
+      else if (s <= 265) bossExp = 12;  // 4096
+      else if (s <= 300) bossExp = 13;  // 8192
+      else if (s <= 340) bossExp = 14;  // 16384
+      else if (s <= 380) bossExp = 15;  // 32768
+      else if (s <= 420) bossExp = 16;  // 65536
+      else if (s <= 460) bossExp = 17;  // 131072
+      else if (s < 500) bossExp = 18;   // 262144
+      else bossExp = 19;                // 524288 (Stage 500 Pinnacle Chaos Beast)
+
+      const bossVal = Math.pow(2, bossExp);
+      const minion1 = Math.pow(2, Math.max(1, bossExp - 3));
+      const minion2 = Math.pow(2, Math.max(1, bossExp - 2));
+
+      const isBossStage = (s % 10 === 0);
+      isSplitter = (!isBossStage && s % 7 === 0);
+
+      if (isBossStage) {
+        subtitle = s === 500 ? '👑 終焉天尊巔峰對決' : '守關領主';
+        desc = s === 500
+          ? '迎戰 524,288 終極神魔「混沌吞天獸」！四大護衛簇擁，神話終焉之役！'
+          : `強敵來襲！${bossVal} 階關底領主親臨戰場，率護法包夾，全力以赴！`;
+        monsters.push(bossVal);
+        monsters.push(minion2);
+        monsters.push(minion1);
+        monsters.push(minion1); // 4 monsters only on boss stages
+      } else {
+        subtitle = isSplitter ? '深淵分裂' : '精銳前鋒';
+        desc = isSplitter
+          ? `盤踞著 ${bossVal} 階分裂異種，斬殺後即刻分裂幼體，步步為營！`
+          : `討伐魔物！敵軍主力為 ${bossVal} 階強敵，率侍從扼守陣地！`;
+        if (isSplitter) {
+          monsters.push({
+            value: bossVal,
+            splitOnDeath: true,
+            splitValue: Math.max(2, Math.floor(bossVal / 2)),
+            splitCount: 2
+          });
+          monsters.push(minion2);
+        } else {
+          monsters.push(bossVal);
+          monsters.push(minion2);
+          if (s % 2 === 0) monsters.push(minion1); // 2 or 3 monsters max
+        }
+      }
     }
 
-    const isSplitter = (s % 7 === 0);
-    if (isSplitter) {
-      monsters.push({
-        value: bossVal,
-        splitOnDeath: true,
-        splitValue: Math.max(2, Math.floor(bossVal / 2)),
-        splitCount: 2
-      });
+    // C-STORY-185: 開局裝備三大火種準則 (單件 <= BOSS/4, 總和 < BOSS, 總和 <= 怪物總額/2)
+    const recProg = getStageRecommendedProgression(s);
+    const rawBossVal = Math.max(...monsters.map(m => typeof m === 'object' ? m.value : m));
+    let starterEquipment = [];
+    if (s <= 3) {
+      // Stage 1~3 (啟蒙期): 固定 [2, 2]，讓新手體驗人生第一次合成 4
+      starterEquipment = [2, 2];
+    } else if (s <= 10) {
+      // Stage 4~10: [2, 2]，提供平穩啟動
+      starterEquipment = [2, 2];
+    } else if (s <= 20) {
+      // Stage 11~20: [2, 2] (BOSS=8 -> 2 為 1/4)
+      starterEquipment = [2, 2];
+    } else if (s <= 30) {
+      // Stage 21~30: [2, 4] (BOSS=16 -> 4 為 1/4)
+      starterEquipment = [2, 4];
+    } else if (s < 40) {
+      // Stage 31~39: [4, 8] (BOSS=32 -> 8 為 1/4)
+      starterEquipment = [4, 8];
+    } else if (s === 40) {
+      // Stage 40 (第 I 章關底 Boss): [4, 4, 8] (BOSS=32, Sum=16 <= 32/2)
+      starterEquipment = [4, 4, 8];
+    } else if (s <= 50) {
+      // Stage 41~50: [2, 4] (BOSS=16)
+      starterEquipment = [2, 4];
     } else {
-      monsters.push(bossVal);
+      // Stage 51 ~ 500 後續各章節：嚴格遵守三大火種準則
+      const p1 = Math.max(2, Math.floor(rawBossVal / 4));
+      const p2 = Math.max(2, Math.floor(p1 / 2));
+      const isBossStage = (s % 10 === 0);
+
+      if (isBossStage) {
+        // Boss 關 3 件微型火種支援：[p2, p2, p1] -> Sum = 0.5 * BOSS <= 怪物總額/2
+        starterEquipment = [p2, p2, p1];
+      } else {
+        // 一般推進關 2 件火種支援：[p2, p1] -> Sum = 0.375 * BOSS
+        starterEquipment = [p2, p1];
+      }
     }
-
-    const eqExp = Math.max(1, bossExp - 3);
-    const eqVal = Math.pow(2, eqExp);
-    const starterEquipment = [eqVal, eqVal];
-    if (s > 30) starterEquipment.push(eqVal);
-    if (s > 100) starterEquipment.push(Math.pow(2, eqExp + 1));
-
-    const chInfo = CHAPTER_CONFIGS.find(c => c.id === chapter);
-    const stageInCh = s - chInfo.range[0] + 1;
 
     stages.push({
       id: s,
       chapter: chapter,
       name: `第 ${s} 關：${chInfo.name.split('：')[1]} (${stageInCh})`,
-      subtitle: isSplitter ? '異變裂變' : (s % 10 === 0 ? '守關領主' : '敵軍前鋒'),
-      desc: isSplitter 
-        ? `盤踞著異變分裂魔物 (${bossVal})！斬殺後將分裂幼體，步步為營！`
-        : `討伐敵陣！敵軍主力為 ${bossVal} 階強敵，率領 ${monsterCount - 1} 隻前鋒包夾！`,
-      recPower: minion2,
+      subtitle: subtitle,
+      desc: desc,
+      recPower: recProg.recPower,
+      recTechTier: recProg.recTechTier,
       rewardGold: rewardGold,
       goldCap: goldCap,
       goldBaseValue: goldBaseValue,
@@ -584,17 +648,13 @@ function generateAllStages() {
     });
   }
 
-  // Apply pure reference recPower & recTechTier aligned with 800-turn curve (C-STORY-106)
-  for (const st of stages) {
-    const recProg = getStageRecommendedProgression(st.id);
-    st.recPower = recProg.recPower;
-    st.recTechTier = recProg.recTechTier;
-  }
-
   return stages;
 }
 
-export const STAGE_CONFIGS = generateAllStages();
+
+export const STAGE_CONFIGS_500 = generateAllStages();
+export { STAGE_CONFIGS_350, CHAPTER_CONFIGS_350 };
+export const STAGE_CONFIGS = IS_350_STAGE_MODE ? STAGE_CONFIGS_350 : STAGE_CONFIGS_500;
 
 // Warehouse Capacity Expansion Formula (C-STORY-022)
 // Level 0 (to Lv.1, 24 -> 28 slots): cost 2000
@@ -620,47 +680,55 @@ export function getWarehouseUpgradeConfig(level = 0) {
   };
 }
 
-// High contrast themes for tiles up to 262144 (C-STORY-021: Character Concept Themes)
+// High contrast themes for tiles up to 524288 (C-STORY-173: Hero Theme Realignment & 524288 Expansion)
 export const HERO_THEMES = {
   2:      { name: '見習冒險者', badge: '🧑‍🌾', bg: '#1e3a8a', text: '#93c5fd', border: '#3b82f6' },
-  4:      { name: '輕裝遊俠',   badge: '🧝',   bg: '#1e40af', text: '#bfdbfe', border: '#60a5fa' },
-  8:      { name: '影刃浪人',   badge: '🥷',   bg: '#1d4ed8', text: '#dbeafe', border: '#93c5fd' },
-  16:     { name: '精鋼衛士',   badge: '💂',   bg: '#2563eb', text: '#eff6ff', border: '#60a5fa' },
-  32:     { name: '聖殿神官',   badge: '🧙',   bg: '#4338ca', text: '#e0e7ff', border: '#818cf8' },
-  64:     { name: '皇家大領主', badge: '🤴',   bg: '#6d28d9', text: '#ede9fe', border: '#a78bfa' },
-  128:    { name: '屠龍戰狂',   badge: '🦸',   bg: '#b91c1c', text: '#fee2e2', border: '#f87171' },
-  256:    { name: '神域武聖',   badge: '🦹',   bg: '#b45309', text: '#fef3c7', border: '#fbbf24' },
-  512:    { name: '星辰大賢者', badge: '🧙‍♂️',  bg: '#0f766e', text: '#ccfbf1', border: '#2dd4bf' },
-  1024:   { name: '創世神選天使', badge: '👼', bg: '#047857', text: '#d1fae5', border: '#34d399' },
-  2048:   { name: '天界審判長', badge: '🪽',   bg: '#1e1b4b', text: '#e0e7ff', border: '#6366f1' },
-  4096:   { name: '不朽皇權者', badge: '👑',   bg: '#311042', text: '#fae8ff', border: '#d946ef' },
-  8192:   { name: '滅世血魔尊', badge: '🧛',   bg: '#450a0a', text: '#fecdd3', border: '#f43f5e' },
-  16384:  { name: '星穹主宰者', badge: '🧞',   bg: '#064e3b', text: '#a7f3d0', border: '#10b981' },
-  32768:  { name: '超維超脫者', badge: '🌌',   bg: '#0f172a', text: '#bae6fd', border: '#0284c7' },
-  65536:  { name: '太古始源神', badge: '⚡',   bg: '#172554', text: '#fed7aa', border: '#f97316' },
-  131072: { name: '天理命運神', badge: '🔮',   bg: '#2e1065', text: '#f5d0fe', border: '#a855f7' },
-  262144: { name: '萬古創世神', badge: '☀️',   bg: '#78350f', text: '#fef08a', border: '#fbbf24' }
+  4:      { name: '見習戰士',   badge: '🗡️',   bg: '#1e40af', text: '#bfdbfe', border: '#60a5fa' },
+  8:      { name: '輕裝遊俠',   badge: '🧝',   bg: '#1d4ed8', text: '#dbeafe', border: '#93c5fd' },
+  16:     { name: '影刃浪人',   badge: '🥷',   bg: '#2563eb', text: '#eff6ff', border: '#60a5fa' },
+  32:     { name: '精鋼衛士',   badge: '💂',   bg: '#4338ca', text: '#e0e7ff', border: '#818cf8' },
+  64:     { name: '聖殿神官',   badge: '🧙',   bg: '#6d28d9', text: '#ede9fe', border: '#a78bfa' },
+  128:    { name: '皇家大領主', badge: '🤴',   bg: '#b91c1c', text: '#fee2e2', border: '#f87171' },
+  256:    { name: '屠龍戰狂',   badge: '🦸',   bg: '#b45309', text: '#fef3c7', border: '#fbbf24' },
+  512:    { name: '神域武聖',   badge: '🦹',   bg: '#0f766e', text: '#ccfbf1', border: '#2dd4bf' },
+  1024:   { name: '星辰大賢者', badge: '🧙‍♂️',  bg: '#047857', text: '#d1fae5', border: '#34d399' },
+  2048:   { name: '神選天使',   badge: '👼',   bg: '#1e1b4b', text: '#e0e7ff', border: '#6366f1' },
+  4096:   { name: '天界審判長', badge: '🪽',   bg: '#311042', text: '#fae8ff', border: '#d946ef' },
+  8192:   { name: '不朽皇權者', badge: '👑',   bg: '#450a0a', text: '#fecdd3', border: '#f43f5e' },
+  16384:  { name: '滅世血魔尊', badge: '🧛',   bg: '#064e3b', text: '#a7f3d0', border: '#10b981' },
+  32768:  { name: '星穹主宰者', badge: '🧞',   bg: '#0f172a', text: '#bae6fd', border: '#0284c7' },
+  65536:  { name: '超維超脫者', badge: '🌌',   bg: '#172554', text: '#fed7aa', border: '#f97316' },
+  131072: { name: '太古始源神', badge: '⚡',   bg: '#2e1065', text: '#f5d0fe', border: '#a855f7' },
+  262144: { name: '萬古創世神', badge: '☀️',   bg: '#78350f', text: '#fef08a', border: '#fbbf24' },
+  524288: { name: '終焉天尊',   badge: '👑',   bg: '#311042', text: '#f5d0fe', border: '#a855f7' }
 };
 
+// Pure Single-Item Equipment 4-Cycle [劍 ➔ 盾 ➔ 靴 ➔ 鎧] up to 524288 (C-STORY-173)
 export const EQUIPMENT_THEMES = {
-  2:      { name: '粗糙木棒', badge: '🪵', bg: '#78350f', text: '#fef3c7', border: '#b45309' },
-  4:      { name: '獵戶短刃', badge: '🔪', bg: '#854d0e', text: '#fef9c3', border: '#ca8a04' },
-  8:      { name: '鍛造鐵劍', badge: '🗡️', bg: '#475569', text: '#f1f5f9', border: '#94a3b8' },
-  16:     { name: '精鋼甲胄', badge: '🛡️', bg: '#334155', text: '#f8fafc', border: '#cbd5e1' },
-  32:     { name: '附魔秘銀刃', badge: '⚡', bg: '#0e7490', text: '#cffafe', border: '#22d3ee' },
-  64:     { name: '炫彩精金鎧', badge: '💎', bg: '#4338ca', text: '#e0e7ff', border: '#818cf8' },
-  128:    { name: '巨龍炎息盾', badge: '🔥', bg: '#991b1b', text: '#fee2e2', border: '#ef4444' },
-  256:    { name: '泰坦破天斧', badge: '🪓', bg: '#92400e', text: '#fef3c7', border: '#f59e0b' },
-  512:    { name: '星穹權杖',   badge: '✨', bg: '#115e59', text: '#ccfbf1', border: '#14b8a6' },
-  1024:   { name: '永恆聖劍',   badge: '🌟', bg: '#831843', text: '#fce7f3', border: '#ec4899' },
-  2048:   { name: '聖靈滅神劍', badge: '⚔️', bg: '#1e1b4b', text: '#c7d2fe', border: '#818cf8' },
-  4096:   { name: '混沌開闢斧', badge: '🪓', bg: '#311042', text: '#f5d0fe', border: '#c026d3' },
-  8192:   { name: '龍皇破滅盾', badge: '🛡️', bg: '#450a0a', text: '#fecdd3', border: '#e11d48' },
-  16384:  { name: '神話創世紀', badge: '⚡', bg: '#064e3b', text: '#6ee7b7', border: '#059669' },
-  32768:  { name: '星雲裂滅刃', badge: '🌌', bg: '#0f172a', text: '#7dd3fc', border: '#0284c7' },
-  65536:  { name: '超維斷空戟', badge: '💥', bg: '#172554', text: '#fdba74', border: '#ea580c' },
-  131072: { name: '天理秩序杖', badge: '🔮', bg: '#2e1065', text: '#e9d5ff', border: '#9333ea' },
-  262144: { name: '創世萬界核', badge: '☀️', bg: '#78350f', text: '#fef08a', border: '#f59e0b' }
+  // Cycle 1: 新手冒險套裝
+  2:      { name: '冒險短刃', badge: '🗡️', bg: '#78350f', text: '#fef3c7', border: '#b45309' },
+  4:      { name: '獵戶木盾', badge: '🛡️', bg: '#854d0e', text: '#fef9c3', border: '#ca8a04' },
+  8:      { name: '冒險皮靴', badge: '👢', bg: '#475569', text: '#f1f5f9', border: '#94a3b8' },
+  16:     { name: '精鋼胸甲', badge: '🥋', bg: '#334155', text: '#f8fafc', border: '#cbd5e1' },
+  // Cycle 2: 王國騎士套裝
+  32:     { name: '附魔秘銀刃', badge: '🗡️', bg: '#0e7490', text: '#cffafe', border: '#22d3ee' },
+  64:     { name: '領主金盾',   badge: '🛡️', bg: '#4338ca', text: '#e0e7ff', border: '#818cf8' },
+  128:    { name: '龍鱗戰靴',   badge: '👢', bg: '#991b1b', text: '#fee2e2', border: '#ef4444' },
+  256:    { name: '泰坦重鎧',   badge: '🥋', bg: '#92400e', text: '#fef3c7', border: '#f59e0b' },
+  // Cycle 3: 聖殿神使套裝
+  512:    { name: '聖殿光刃',   badge: '🗡️', bg: '#115e59', text: '#ccfbf1', border: '#14b8a6' },
+  1024:   { name: '天使翼盾',   badge: '🛡️', bg: '#1e3a8a', text: '#dbeafe', border: '#3b82f6' },
+  2048:   { name: '日冕戰靴',   badge: '👢', bg: '#581c87', text: '#f3e8ff', border: '#9333ea' },
+  4096:   { name: '龍皇金鎧',   badge: '🥋', bg: '#701a75', text: '#fae8ff', border: '#c026d3' },
+  // Cycle 4: 創世神尊套裝
+  8192:   { name: '星辰滅刃',   badge: '🗡️', bg: '#0c4a6e', text: '#e0f2fe', border: '#38bdf8' },
+  16384:  { name: '虛空裂盾',   badge: '🛡️', bg: '#3b0764', text: '#f3e8ff', border: '#a855f7' },
+  32768:  { name: '創世神靴',   badge: '👢', bg: '#14532d', text: '#dcfce7', border: '#22c55e' },
+  65536:  { name: '天尊神像',   badge: '👑', bg: '#713f12', text: '#fef9c3', border: '#eab308' },
+  // Cycle 5: 萬古極限套裝
+  131072: { name: '始源神刃',   badge: '🗡️', bg: '#1e1b4b', text: '#e0e7ff', border: '#6366f1' },
+  262144: { name: '創世神盾',   badge: '🛡️', bg: '#78350f', text: '#fef08a', border: '#fbbf24' },
+  524288: { name: '萬古神靴',   badge: '👢', bg: '#0f172a', text: '#bae6fd', border: '#38bdf8' }
 };
 
 export const MONSTER_THEMES = {
@@ -681,7 +749,8 @@ export const MONSTER_THEMES = {
   32768:  { name: '虛空天魔',   badge: '🌌', bg: '#09090b', text: '#93c5fd', border: '#3b82f6' },
   65536:  { name: '萬象混沌神', badge: '💥', bg: '#172554', text: '#bfdbfe', border: '#60a5fa' },
   131072: { name: '終焉智腦',   badge: '🔮', bg: '#042f2e', text: '#99f6e4', border: '#2dd4bf' },
-  262144: { name: '萬古始祖神', badge: '☀️', bg: '#451a03', text: '#fed7aa', border: '#f59e0b' }
+  262144: { name: '萬古始祖神', badge: '☀️', bg: '#451a03', text: '#fed7aa', border: '#f59e0b' },
+  524288: { name: '混沌吞天獸', badge: '👾', bg: '#311042', text: '#fae8ff', border: '#d946ef' }
 };
 
 // ==========================================
@@ -772,6 +841,14 @@ export const CHAPTER_MONSTER_POOLS = {
       65536:  { name: '天界裁決者', badge: '⚔️', bg: '#172554', text: '#e0e7ff', border: '#4f46e5', clayImg: 'assets/images/monsters_clay/monster_ch08_65536.png' },
       131072: { name: '終焉智腦', badge: '🔮', bg: '#042f2e', text: '#99f6e4', border: '#0d9488', clayImg: 'assets/images/monsters_clay/monster_ch08_131072.png' },
       262144: { name: '萬古始祖神', badge: '☀️', isBoss: true, bg: '#451a03', text: '#fef08a', border: '#ea580c', clayImg: 'assets/images/monsters_clay/monster_ch08_262144.png' }
+    }
+  },
+  9: {
+    id: 9, name: '第 IX 章：萬古混沌', range: [131072, 524288],
+    monsters: {
+      131072: { name: '深淵眼魔', badge: '👁️', bg: '#042f2e', text: '#99f6e4', border: '#0d9488', clayImg: 'assets/images/monsters_clay/monster_ch08_131072.png' },
+      262144: { name: '混沌原體', badge: '🔮', bg: '#451a03', text: '#fef08a', border: '#ea580c', clayImg: 'assets/images/monsters_clay/monster_ch08_262144.png' },
+      524288: { name: '混沌吞天獸', badge: '👾', isBoss: true, bg: '#311042', text: '#fae8ff', border: '#d946ef', clayImg: 'assets/images/monsters_clay/monster_ch09_524288.png' }
     }
   }
 };
@@ -922,9 +999,9 @@ export function getEquipmentImagePath(value, iconStyle = 'style_a_pixel') {
   if (!value || value <= 0) return null;
   const tier = Math.round(Math.log2(value));
   if (tier >= 1) {
-    // 風格 E (實體桌遊微縮模型 / 黏土浮雕風，C-STORY-057: 支援全 16 階與超限安全封頂)
+    // 風格 E (實體桌遊微縮模型 / 黏土浮雕風，C-STORY-057 / C-STORY-173: 支援全 19 階與 524288 安全封頂)
     if (iconStyle === 'style_e_clay') {
-      const clampedTier = Math.min(16, tier);
+      const clampedTier = Math.min(19, tier);
       const padded = String(clampedTier).padStart(2, '0');
       return `assets/images/equipment_clay/equip_${padded}.png`;
     }
@@ -973,10 +1050,10 @@ export function getHeroImagePath(value, iconStyle = 'style_e_clay', characterCla
     return null;
   }
 
-  // 騎士／勇者與軍備共同綁定至『微縮模型』(style_e_clay) 套組 (C-STORY-057 / C-STORY-058)
+  // 騎士／勇者與軍備共同綁定至『微縮模型』(style_e_clay) 套組 (C-STORY-057 / C-STORY-058 / C-STORY-173)
   if (iconStyle === 'style_e_clay' || !iconStyle) {
     if (tier >= 1) {
-      const clampedTier = Math.min(17, tier);
+      const clampedTier = Math.min(19, tier);
       const padded = String(clampedTier).padStart(2, '0');
       return `assets/images/hero_knight/hero_${padded}.png`;
     }
@@ -1005,9 +1082,10 @@ export function getTileTheme(type, value, skin = 'kingdom') {
   if (skin === 'icon_focus') {
     if (type === TileType.HERO) {
       const heroBadges = {
-        2: '🧑‍🌾', 4: '🧝', 8: '🥷', 16: '💂', 32: '🧙', 64: '🤴',
-        128: '🦸', 256: '🦹', 512: '🧙‍♂️', 1024: '👼', 2048: '🪽',
-        4096: '👑', 8192: '🧛', 16384: '🧞', 32768: '🌌', 65536: '⚡'
+        2: '🧑‍🌾', 4: '🗡️', 8: '🧝', 16: '🥷', 32: '💂', 64: '🧙',
+        128: '🤴', 256: '🦸', 512: '🦹', 1024: '🧙‍♂️', 2048: '👼',
+        4096: '🪽', 8192: '👑', 16384: '🧛', 32768: '🧞', 65536: '🌌',
+        131072: '⚡', 262144: '☀️', 524288: '👑'
       };
       return {
         ...baseTheme,

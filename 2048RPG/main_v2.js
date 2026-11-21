@@ -8,12 +8,15 @@ import { DailyLoopManager } from './src/core/DailyLoopManager.js';
 import { GachaEngine } from './src/core/GachaEngine.js';
 import { InventoryManager } from './src/core/InventoryManager.js';
 import { TutorialOverlay } from './src/presentation/TutorialOverlay.js';
+import { ReplayView } from './src/presentation/ReplayView.js';
+import { SmartHintEngine } from './src/core/SmartHintEngine.js';
 import {
   Direction, TileType, STAGE_CONFIGS, STAGE_0_CONFIG, Events,
-  MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS,
+  MONSTER_THEMES, HERO_THEMES, EQUIPMENT_THEMES, CHAPTER_CONFIGS, CHAPTER_MONSTER_POOLS,
   DEFEAT_TACTICAL_TIPS, getEquipmentImagePath, getMonsterImagePath,
   getHeroImagePath, getMonsterThemeByChapter, getTileTheme, CharacterClass, CHARACTER_SKILL_CONFIGS,
-  DAILY_SIGNIN_REWARDS, DAILY_QUEST_CONFIGS, DAILY_ACTIVITY_CHEST_CONFIG, BASE_STAT_TIERS
+  DAILY_SIGNIN_REWARDS, DAILY_QUEST_CONFIGS, DAILY_ACTIVITY_CHEST_CONFIG, BASE_STAT_TIERS,
+  getEditionStorageKey, getDailyEconomyScaling, EVENT_STAGE_TIERS
 } from './src/core/Constants.js';
 
 class AppRouter {
@@ -22,6 +25,7 @@ class AppRouter {
     this.STAGE_CONFIGS = STAGE_CONFIGS;
     this.STAGE_0_CONFIG = STAGE_0_CONFIG;
     this.CHAPTER_CONFIGS = CHAPTER_CONFIGS;
+    this.CHAPTER_MONSTER_POOLS = CHAPTER_MONSTER_POOLS;
     this.MONSTER_THEMES = MONSTER_THEMES;
     this.HERO_THEMES = HERO_THEMES;
     this.EQUIPMENT_THEMES = EQUIPMENT_THEMES;
@@ -34,8 +38,24 @@ class AppRouter {
     this.DAILY_QUEST_CONFIGS = DAILY_QUEST_CONFIGS;
     this.DAILY_ACTIVITY_CHEST_CONFIG = DAILY_ACTIVITY_CHEST_CONFIG;
     this.BASE_STAT_TIERS = BASE_STAT_TIERS;
+    this.getDailyEconomyScaling = getDailyEconomyScaling;
+    this.EVENT_STAGE_TIERS = EVENT_STAGE_TIERS;
     this.eventBus = new GameEventBus();
     this.stageManager = new StageManager(this.eventBus);
+    this.replayView = new ReplayView(this.stageManager.telemetry);
+    this.idleHintTimer = null;
+    this.IDLE_HINT_MS = 10000;
+
+    // Auto-reset 10s Smart Hint timer on any combat state change, and stop on Victory/Defeat
+    this.eventBus.on(Events.BOARD_CHANGED, () => {
+      if (this.state === 'COMBAT' && this.stageManager.isInBattle && !this.stageManager.isVictory && !this.stageManager.isGameOver) {
+        this.resetIdleHintTimer();
+      } else {
+        this.stopIdleHintTimer();
+      }
+    });
+    this.eventBus.on(Events.STAGE_VICTORY, () => this.stopIdleHintTimer());
+    this.eventBus.on(Events.STAGE_DEFEAT, () => this.stopIdleHintTimer());
     this.audio = new AudioEffects();
     this.dailyLoopManager = new DailyLoopManager(this.eventBus, this.stageManager);
     this.stageManager.dailyLoopManager = this.dailyLoopManager;
@@ -102,8 +122,9 @@ class AppRouter {
   // INVENTORY & LOADOUT MANAGEMENT (ITEM 6 & 9)
   // ----------------------------------------------------
   initInventoryManager() {
-    this.inventoryManager = new InventoryManager(16);
-    const raw = localStorage.getItem('rpg_2048_inventory_v2');
+    const initCap = 16 + (this.stageManager.warehouseExpansionLevel || 0) * 4;
+    this.inventoryManager = new InventoryManager(initCap);
+    const raw = localStorage.getItem(getEditionStorageKey('rpg_2048_inventory_v2'));
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
@@ -122,11 +143,11 @@ class AppRouter {
   }
 
   saveInventory() {
-    localStorage.setItem('rpg_2048_inventory_v2', JSON.stringify(this.inventoryManager.items));
+    localStorage.setItem(getEditionStorageKey('rpg_2048_inventory_v2'), JSON.stringify(this.inventoryManager.items));
   }
 
   getEquippedGear() {
-    const raw = localStorage.getItem('rpg_2048_equipped_gear');
+    const raw = localStorage.getItem(getEditionStorageKey('rpg_2048_equipped_gear'));
     if (raw === 'none' || raw === 'null') return null;
     if (raw) {
       try { return JSON.parse(raw); } catch (e) {}
@@ -135,9 +156,21 @@ class AppRouter {
   }
 
   unequipGear() {
-    localStorage.setItem('rpg_2048_equipped_gear', 'none');
+    const prev = this.getEquippedGear();
+    const prevPower = prev ? (prev.value || prev.val || 0) : 0;
+    localStorage.setItem(getEditionStorageKey('rpg_2048_equipped_gear'), 'none');
     if (this.inventoryManager) {
       this.inventoryManager.equippedItem = null;
+    }
+    if (this.stageManager && this.stageManager.telemetry) {
+      this.stageManager.telemetry.recordTownAction({
+        action: 'EQUIP_UNEQUIP',
+        goldBefore: this.stageManager.gold,
+        goldAfter: this.stageManager.gold,
+        techTier: this.stageManager.baseTier,
+        equippedPower: 0,
+        detail: { prevPower }
+      });
     }
     if (this.audio) this.audio.playClick();
     this.syncHud();
@@ -146,8 +179,10 @@ class AppRouter {
     }
   }
 
-  equipGearItem(item) {
+  equipGearItem(item, isAuto = false) {
     if (!item) return;
+    const prev = this.getEquippedGear();
+    const prevPower = prev ? (prev.value || prev.val || 0) : 0;
     const v = item.value || item.val || 2;
     const tier = Math.max(1, Math.min(16, Math.round(Math.log2(v))));
     const pad = String(tier).padStart(2, '0');
@@ -159,56 +194,159 @@ class AppRouter {
       value: v,
       img: `assets/images/equipment_clay/equip_${pad}.png`
     };
-    localStorage.setItem('rpg_2048_equipped_gear', JSON.stringify(gear));
+    localStorage.setItem(getEditionStorageKey('rpg_2048_equipped_gear'), JSON.stringify(gear));
     if (this.inventoryManager) {
       this.inventoryManager.equippedItem = gear;
     }
-    if (this.audio) this.audio.playCoin();
+    if (this.stageManager && this.stageManager.telemetry && prevPower !== v) {
+      this.stageManager.telemetry.recordTownAction({
+        action: 'EQUIP_CHANGE',
+        goldBefore: this.stageManager.gold,
+        goldAfter: this.stageManager.gold,
+        techTier: this.stageManager.baseTier,
+        equippedPower: v,
+        detail: { prevPower, newPower: v, itemId: gear.id, auto: !!isAuto }
+      });
+    }
+    if (this.audio && !isAuto) this.audio.playCoin();
     this.syncHud();
     if (typeof window.renderGearInventory === 'function') {
       window.renderGearInventory();
     }
   }
 
+  autoEquipStrongest() {
+    if (!this.inventoryManager || !Array.isArray(this.inventoryManager.items)) return;
+    if (this.inventoryManager.items.length === 0) {
+      this.unequipGear();
+      return;
+    }
+    const sortedDesc = [...this.inventoryManager.items].sort((a, b) => ((b.value || b.val || 0) - (a.value || a.val || 0)));
+    const best = sortedDesc[0];
+    const cur = this.getEquippedGear();
+    const curVal = cur ? (cur.value || cur.val || 0) : 0;
+    const bestVal = best ? (best.value || best.val || 0) : 0;
+    const curStillExists = cur && this.inventoryManager.items.some(it => it.id === cur.id);
+    if (best && (!curStillExists || bestVal > curVal)) {
+      this.equipGearItem(best, true);
+    }
+  }
+
   // ----------------------------------------------------
-  // REAL GACHA BRIDGE (ITEM 4)
+  // REAL GACHA BRIDGE (Single Source of Truth via StageManager.pullGacha)
   // ----------------------------------------------------
   performGacha(count) {
-    const cost = count === 1 ? 100 : 900;
-    if (this.stageManager.gold < cost) {
-      alert(`⚠️ 金幣不足！轉蛋需要 ${cost} 🪙，目前僅有 ${this.stageManager.gold} 🪙！`);
+    const res = this.stageManager.pullGacha(count);
+    if (!res.success) {
+      alert(`⚠️ ${res.reason}`);
       return { success: false };
     }
 
-    if (!this.inventoryManager.canAdd(count)) {
-      alert(`⚠️ 背包空間不足！請先前往工坊「擴充容量」或清理裝備！`);
-      return { success: false };
-    }
-
-    this.stageManager.gold -= cost;
-    this.stageManager.saveData();
-
-    const rolledTiers = count === 1
-      ? [this.stageManager.gachaEngine.roll(1)]
-      : this.stageManager.gachaEngine.rollMulti(1, 10);
-    const rolledItems = [];
-
-    rolledTiers.forEach((tier) => {
-      const it = this.inventoryManager.addItem(tier);
-      if (it) {
-        const tIdx = Math.max(1, Math.min(16, Math.round(Math.log2(tier))));
-        const pad = String(tIdx).padStart(2, '0');
-        it.name = (EQUIPMENT_THEMES[tier] && EQUIPMENT_THEMES[tier].name) ? EQUIPMENT_THEMES[tier].name : '神裝';
-        it.img = `assets/images/equipment_clay/equip_${pad}.png`;
-        rolledItems.push(it);
-      }
+    const rolledItems = (res.items || []).map((it) => {
+      const tier = it.value || 2;
+      const tIdx = Math.max(1, Math.min(16, Math.round(Math.log2(tier))));
+      const pad = String(tIdx).padStart(2, '0');
+      it.name = (EQUIPMENT_THEMES[tier] && EQUIPMENT_THEMES[tier].name) ? EQUIPMENT_THEMES[tier].name : '神裝';
+      it.img = `assets/images/equipment_clay/equip_${pad}.png`;
+      return it;
     });
 
     this.saveInventory();
+    this.autoEquipStrongest();
     if (this.audio) this.audio.playVictory();
     this.syncHud();
+    if (typeof window.renderCampUpgrades === 'function') {
+      window.renderCampUpgrades();
+    }
 
-    return { success: true, items: rolledItems };
+    return { success: true, items: rolledItems, bonusItems: res.bonusItems, cost: res.cost, level: res.level, exp: res.exp, levelUp: res.levelUp };
+  }
+
+  // ----------------------------------------------------
+  // 10-SECOND IDLE SMART HINT ENGINE (課題 2)
+  // ----------------------------------------------------
+  clearSmartHint() {
+    const pill = document.getElementById('combat-smart-hint-pill');
+    if (pill) pill.style.display = 'none';
+    document.querySelectorAll('.smart-hint-glow').forEach(el => {
+      el.classList.remove('smart-hint-glow');
+      el.style.outline = '';
+      el.style.boxShadow = '';
+    });
+  }
+
+  stopIdleHintTimer() {
+    if (this.idleHintTimer) {
+      clearTimeout(this.idleHintTimer);
+      this.idleHintTimer = null;
+    }
+    this.clearSmartHint();
+  }
+
+  resetIdleHintTimer() {
+    this.stopIdleHintTimer();
+    if (this.state !== 'COMBAT' || !this.stageManager || !this.stageManager.isInBattle || this.stageManager.isVictory || this.stageManager.isGameOver) {
+      return;
+    }
+    this.idleHintTimer = setTimeout(() => {
+      this.showSmartHint();
+    }, this.IDLE_HINT_MS);
+  }
+
+  showSmartHint() {
+    if (this.state !== 'COMBAT' || !this.stageManager || !this.stageManager.isInBattle || this.stageManager.isVictory || this.stageManager.isGameOver) {
+      return;
+    }
+    const hint = SmartHintEngine.computeHint(this.stageManager);
+    if (!hint) return;
+
+    const pill = document.getElementById('combat-smart-hint-pill');
+    if (pill) {
+      if (hint.type === 'CHECKMATE') {
+        pill.style.borderColor = '#ef4444';
+        pill.style.boxShadow = '0 0 14px rgba(239,68,68,0.8)';
+        pill.style.color = '#fecaca';
+      } else if (hint.type === 'GOLD_CASHOUT' || hint.type === 'SKILL' || hint.type.startsWith('ITEM_')) {
+        pill.style.borderColor = '#fbbf24';
+        pill.style.boxShadow = '0 0 14px rgba(251,191,36,0.75)';
+        pill.style.color = '#fef3c7';
+      } else {
+        pill.style.borderColor = '#38bdf8';
+        pill.style.boxShadow = '0 0 12px rgba(56,189,248,0.65)';
+        pill.style.color = '#f8fafc';
+      }
+      pill.textContent = `${hint.label}（${hint.reason}）`;
+      pill.style.display = 'block';
+    }
+
+    // Highlight target board cell (r, c) if applicable
+    if (hint.target && this.boardGridEl) {
+      const cells = this.boardGridEl.querySelectorAll('.grid-cell');
+      const idx = hint.target.r * (this.stageManager.board.size || 5) + hint.target.c;
+      const targetCell = cells[idx];
+      if (targetCell) {
+        targetCell.classList.add('smart-hint-glow');
+        targetCell.style.outline = '2.5px solid #fbbf24';
+        targetCell.style.boxShadow = '0 0 14px rgba(251,191,36,0.95)';
+      }
+    }
+
+    // Highlight skill or item button if applicable
+    if (hint.type === 'SKILL') {
+      const skillBtn = document.getElementById('btn-combat-skill') || document.getElementById('btn-char-skill');
+      if (skillBtn) {
+        skillBtn.classList.add('smart-hint-glow');
+        skillBtn.style.outline = '2.5px solid #fbbf24';
+        skillBtn.style.boxShadow = '0 0 14px rgba(251,191,36,0.95)';
+      }
+    } else if (hint.itemType) {
+      const itemBtn = document.getElementById(`btn-item-${hint.itemType}`);
+      if (itemBtn) {
+        itemBtn.classList.add('smart-hint-glow');
+        itemBtn.style.outline = '2.5px solid #fbbf24';
+        itemBtn.style.boxShadow = '0 0 14px rgba(251,191,36,0.95)';
+      }
+    }
   }
 
   // ----------------------------------------------------
@@ -230,10 +368,13 @@ class AppRouter {
         this.combatOverlay.focus();
       }
 
+      this.resetIdleHintTimer();
+
       requestAnimationFrame(() => {
         if (this.vfxEngine) this.vfxEngine.resize();
       });
     } else {
+      this.stopIdleHintTimer();
       if (this.combatOverlay) this.combatOverlay.style.display = 'none';
       if (this.lobbyWrapper) this.lobbyWrapper.style.display = 'flex';
       this.syncHud();
@@ -650,8 +791,21 @@ class AppRouter {
     this.eventBus.on(Events.STAMINA_CHANGED, () => this.syncHud());
   }
 
-  // C-STORY-155: Title Splash Screen Controller & Progress Loading
+  // C-STORY-155 & C-STORY-156: Title Splash Screen Controller & Custom UI Theme Initialization
   bindTitleScreen() {
+    // Initialize Theme & Splash from LocalStorage
+    if (typeof window.initCustomThemeFromStorage === 'function') {
+      window.initCustomThemeFromStorage();
+    }
+
+    // C-STORY-157: Hide progress bar automatically once 100% / resources ready
+    const loadingBox = document.getElementById('title-loading-box');
+    if (loadingBox) {
+      setTimeout(() => {
+        loadingBox.classList.add('completed');
+      }, 300);
+    }
+
     const titleScreen = document.getElementById('view-title-screen');
     const btnStart = document.getElementById('btn-start-game');
     if (!titleScreen) return;
@@ -736,8 +890,102 @@ class AppRouter {
       });
     }
 
-    // Comprehensive PC Cross / Arrow Keys & WASD Event Listener (Item 8)
+    // Comprehensive PC Cross / Arrow Keys, WASD & Enter Start/End Stage Shortcut
+    let lastEnterTs = 0;
+    const isElVisible = (id) => {
+      const el = document.getElementById(id);
+      if (!el) return false;
+      const st = window.getComputedStyle(el);
+      return st.display !== 'none' && st.visibility !== 'hidden' && st.opacity !== '0';
+    };
+    const BLOCKING_MODALS = [
+      'modal-settings',
+      'modal-battle-replay',
+      'modal-camp-info',
+      'modal-daily-signin',
+      'modal-daily-quests',
+      'modal-hero-detail',
+      'modal-stamina-empty',
+      'modal-quick-gacha',
+      'modal-upgrade-capacity',
+      'modal-gacha-result'
+    ];
+
     const handleKeyDown = (e) => {
+      // PC Enter Shortcut for Starting / Ending Stages
+      if (e.key === 'Enter' || e.code === 'Enter' || e.code === 'NumpadEnter') {
+        if (e.repeat) return;
+        const tag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (document.activeElement && document.activeElement.isContentEditable)) {
+          return;
+        }
+        const now = Date.now();
+        if (now - lastEnterTs < 300) return;
+
+        // Ignore Enter when any system/utility modal is open
+        if (BLOCKING_MODALS.some(id => isElVisible(id))) return;
+
+        // 1. Victory Modal -> Confirm & End Stage
+        if (isElVisible('modal-victory')) {
+          const btnVic = document.getElementById('btn-victory-confirm');
+          if (btnVic) {
+            e.preventDefault();
+            e.stopPropagation();
+            lastEnterTs = now;
+            btnVic.click();
+            return;
+          }
+        }
+
+        // 2. Defeat Modal -> Confirm & Return to Lobby
+        if (isElVisible('modal-defeat')) {
+          const btnDef = document.getElementById('btn-defeat-lobby');
+          if (btnDef) {
+            e.preventDefault();
+            e.stopPropagation();
+            lastEnterTs = now;
+            btnDef.click();
+            return;
+          }
+        }
+
+        // 3. Stage Detail Modal -> Deploy / Start Stage
+        if (isElVisible('modal-stage-detail')) {
+          const deploySpan = document.getElementById('modal-stage-btn-deploy');
+          const deployBtn = deploySpan ? deploySpan.closest('button') : null;
+          if (deployBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            lastEnterTs = now;
+            deployBtn.click();
+            return;
+          }
+        }
+
+        // 4. Title Splash Screen -> Enter Lobby
+        const btnTitleStart = document.getElementById('btn-start-game');
+        if (btnTitleStart && btnTitleStart.offsetParent !== null && isElVisible('title-screen-overlay')) {
+          e.preventDefault();
+          e.stopPropagation();
+          lastEnterTs = now;
+          btnTitleStart.click();
+          return;
+        }
+
+        // 5. Lobby Main Adventure Screen -> Start Stage directly
+        if (this.state === 'LOBBY' && !this.stageManager.isInBattle) {
+          const btnMainBattle = document.getElementById('btn-main-battle');
+          if (btnMainBattle && btnMainBattle.offsetParent !== null) {
+            e.preventDefault();
+            e.stopPropagation();
+            lastEnterTs = now;
+            btnMainBattle.click();
+            return;
+          }
+        }
+        return;
+      }
+
       if (this.state !== 'COMBAT' || !this.stageManager.isInBattle) return;
 
       let dir = null;
