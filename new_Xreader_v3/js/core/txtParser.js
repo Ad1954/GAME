@@ -4,7 +4,7 @@
  * Supports Markdown headings, traditional Simplified/Traditional Chinese numbering, and fallback single-chapter.
  */
 
-import { TextSegmenter } from './segmenter.js?v=9.21';
+import { TextSegmenter } from './segmenter.js?v=9.22';
 
 export class TxtParser {
   /**

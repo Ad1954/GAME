@@ -3,7 +3,7 @@
  * Pure native Web Speech API with 0ms switch latency and proactive evade.
  */
 
-import { eventBus } from '../../eventBus.js?v=9.21';
+import { eventBus } from '../../eventBus.js?v=9.22';
 
 export class PcVoicePlayer {
   constructor() {

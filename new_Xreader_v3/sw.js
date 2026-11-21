@@ -3,7 +3,7 @@
  * Employs Stale-While-Revalidate / Network-First with Cache Fallback for zero-network reading.
  */
 
-const CACHE_NAME = 'xreader-offline-v9.21';
+const CACHE_NAME = 'xreader-offline-v9.22';
 
 const PRECACHE_ASSETS = [
   './',
@@ -16,28 +16,28 @@ const PRECACHE_ASSETS = [
   './css/bookshelf.css?v=9.6',
   './css/reader.css?v=9.6',
   './css/modal.css?v=9.11',
-  './js/app.js?v=9.21',
-  './js/eventBus.js?v=9.21',
-  './js/audio/playerFactory.js?v=9.21',
-  './js/audio/silentAudioData.js?v=9.21',
-  './js/audio/sleepTimer.js?v=9.21',
-  './js/audio/players/iosPlayer.js?v=9.21',
-  './js/audio/players/iosPlayerV2.js?v=9.21',
-  './js/audio/players/pcPlayer.js?v=9.21',
-  './js/core/bahaCrawler.js?v=9.21',
-  './js/core/crawler.js?v=9.21',
-  './js/core/downloadQueue.js?v=9.21',
-  './js/core/logger.js?v=9.21',
-  './js/core/segmenter.js?v=9.21',
-  './js/core/storage.js?v=9.21',
-  './js/core/txtParser.js?v=9.21',
-  './js/ui/bookshelfView.js?v=9.21',
-  './js/ui/chapterManagerView.js?v=9.21',
-  './js/ui/contentEditModal.js?v=9.21',
-  './js/ui/crawlerView.js?v=9.21',
-  './js/ui/playerBarView.js?v=9.21',
-  './js/ui/readerView.js?v=9.21',
-  './js/ui/settingsView.js?v=9.21'
+  './js/app.js?v=9.22',
+  './js/eventBus.js?v=9.22',
+  './js/audio/playerFactory.js?v=9.22',
+  './js/audio/silentAudioData.js?v=9.22',
+  './js/audio/sleepTimer.js?v=9.22',
+  './js/audio/players/iosPlayer.js?v=9.22',
+  './js/audio/players/iosPlayerV2.js?v=9.22',
+  './js/audio/players/pcPlayer.js?v=9.22',
+  './js/core/bahaCrawler.js?v=9.22',
+  './js/core/crawler.js?v=9.22',
+  './js/core/downloadQueue.js?v=9.22',
+  './js/core/logger.js?v=9.22',
+  './js/core/segmenter.js?v=9.22',
+  './js/core/storage.js?v=9.22',
+  './js/core/txtParser.js?v=9.22',
+  './js/ui/bookshelfView.js?v=9.22',
+  './js/ui/chapterManagerView.js?v=9.22',
+  './js/ui/contentEditModal.js?v=9.22',
+  './js/ui/crawlerView.js?v=9.22',
+  './js/ui/playerBarView.js?v=9.22',
+  './js/ui/readerView.js?v=9.22',
+  './js/ui/settingsView.js?v=9.22'
 ];
 
 self.addEventListener('install', (event) => {

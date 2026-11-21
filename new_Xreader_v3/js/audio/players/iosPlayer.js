@@ -4,9 +4,9 @@
  * visibility auto-sync, and proactive evade lifecycle.
  */
 
-import { eventBus } from '../../eventBus.js?v=9.21';
-import { SILENT_15S_WAV_BASE64 } from '../silentAudioData.js?v=9.21';
-import { logger } from '../../core/logger.js?v=9.21';
+import { eventBus } from '../../eventBus.js?v=9.22';
+import { SILENT_15S_WAV_BASE64 } from '../silentAudioData.js?v=9.22';
+import { logger } from '../../core/logger.js?v=9.22';
 
 export class IosVoicePlayer {
   constructor() {
@@ -136,58 +136,19 @@ export class IosVoicePlayer {
   }
 
   setupMediaSession() {
-    if (!('mediaSession' in navigator)) return;
-
-    // GWT 5.2: Remote controls for Lock Screen & Bluetooth
-    navigator.mediaSession.setActionHandler('play', () => {
-      console.log('[MediaSession] Play remote action received');
-      logger.info('MediaSession', '鎖屏面板 [Play 播放] 遠端觸發');
-      this.play();
-    });
-
-    navigator.mediaSession.setActionHandler('pause', () => {
-      console.log('[MediaSession] Pause remote action received');
-      logger.info('MediaSession', '鎖屏面板 [Pause 暫停] 遠端觸發');
-      this.pause();
-    });
-
-    // GWT 5.3: Chapter skipping
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
-      console.log('[MediaSession] Next chapter remote action received');
-      logger.info('MediaSession', '鎖屏面板 [NextTrack 下一章] 遠端觸發');
-      eventBus.emit('audio:requestNextChapter');
-    });
-
-    navigator.mediaSession.setActionHandler('previoustrack', () => {
-      console.log('[MediaSession] Prev chapter remote action received');
-      logger.info('MediaSession', '鎖屏面板 [PrevTrack 上一章] 遠端觸發');
-      eventBus.emit('audio:requestPrevChapter');
-    });
+    // Disabled on iPadOS 27.2.1 to prevent WebKit's 765ms synthetic MediaSession pause event from killing speechSynthesis
+    try {
+      if ('mediaSession' in navigator && navigator.mediaSession) {
+        navigator.mediaSession.setActionHandler('play', null);
+        navigator.mediaSession.setActionHandler('pause', null);
+        navigator.mediaSession.metadata = null;
+        navigator.mediaSession.playbackState = 'none';
+      }
+    } catch (e) {}
   }
 
   updateMediaSessionMetadata() {
-    if (!('mediaSession' in navigator)) return;
-
-    // Resolve safe absolute URL for 512x512 PNG artwork (GWT 5.1)
-    const origin = window.location.origin;
-    const basePath = window.location.pathname.replace(/\/[^/]*$/, '');
-    const iconUrl = `${origin}${basePath}/icon.png`;
-
-    const chapterTitle = this.currentChapter ? this.currentChapter.title : '小說朗讀';
-    const sentenceProgress = this.flatSentences.length > 0
-      ? `${this.bookTitle} (${this.currentIndex + 1}/${this.flatSentences.length})`
-      : this.bookTitle;
-
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: chapterTitle,
-      artist: sentenceProgress,
-      album: 'Xreader 聽書',
-      artwork: [
-        { src: iconUrl, sizes: '512x512', type: 'image/png' }
-      ]
-    });
-
-    navigator.mediaSession.playbackState = this.isPlaying ? 'playing' : 'paused';
+    // No-op on iPadOS 27.2.1: writing playbackState='playing' without an active foreground media stream triggers WebKit's 765ms auto-pause
   }
 
   loadVoices() {

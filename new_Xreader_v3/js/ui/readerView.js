@@ -3,11 +3,11 @@
  * Renders paragraph-preserved text, handles mobile tap-scroll guard, and sentence highlighting.
  */
 
-import { storage } from '../core/storage.js?v=9.21';
-import { eventBus } from '../eventBus.js?v=9.21';
-import { player } from '../audio/playerFactory.js?v=9.21';
-import { TextSegmenter } from '../core/segmenter.js?v=9.21';
-import { logger } from '../core/logger.js?v=9.21';
+import { storage } from '../core/storage.js?v=9.22';
+import { eventBus } from '../eventBus.js?v=9.22';
+import { player } from '../audio/playerFactory.js?v=9.22';
+import { TextSegmenter } from '../core/segmenter.js?v=9.22';
+import { logger } from '../core/logger.js?v=9.22';
 
 export class ReaderView {
   constructor() {

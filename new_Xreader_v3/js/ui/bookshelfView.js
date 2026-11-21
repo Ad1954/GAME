@@ -3,10 +3,10 @@
  * Manages bookshelf cards, single-book deletion, and export popup.
  */
 
-import { storage } from '../core/storage.js?v=9.21';
-import { eventBus } from '../eventBus.js?v=9.21';
-import { TextSegmenter } from '../core/segmenter.js?v=9.21';
-import { TxtParser } from '../core/txtParser.js?v=9.21';
+import { storage } from '../core/storage.js?v=9.22';
+import { eventBus } from '../eventBus.js?v=9.22';
+import { TextSegmenter } from '../core/segmenter.js?v=9.22';
+import { TxtParser } from '../core/txtParser.js?v=9.22';
 
 export class BookshelfView {
   constructor() {
